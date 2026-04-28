@@ -1,0 +1,10 @@
+# macOS
+.DS_Store
+._*
+
+# Vercel
+.vercel
+
+# Editors
+.vscode
+.idea
