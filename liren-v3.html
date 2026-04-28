@@ -224,36 +224,73 @@
       flex: 1; position: relative; overflow: hidden;
       background: rgba(0, 0, 0, 0.10);
     }
-    .db-scene {
+    /* Continuous scrolling chat thread — 24 messages over 96s */
+    .db-thread {
       position: absolute; inset: 0;
-      padding: 24px 28px;
-      overflow-y: hidden;
-      opacity: 0;
-      animation: dbScene 72s ease-in-out infinite;
-      display: flex; flex-direction: column; gap: 14px;
+      overflow: hidden;
+      padding: 22px 28px;
+      mask-image: linear-gradient(to bottom, transparent 0, #000 36px, #000 calc(100% - 24px), transparent 100%);
+      -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 36px, #000 calc(100% - 24px), transparent 100%);
     }
-    @media (max-width: 767px) { .db-scene { padding: 18px 18px; gap: 10px; } }
+    @media (max-width: 767px) { .db-thread { padding: 16px 18px; } }
 
-    /* 12 scenes × 6s each = 72s */
-    .db-scene:nth-child(1)  { animation-delay: 0s; }
-    .db-scene:nth-child(2)  { animation-delay: 6s; }
-    .db-scene:nth-child(3)  { animation-delay: 12s; }
-    .db-scene:nth-child(4)  { animation-delay: 18s; }
-    .db-scene:nth-child(5)  { animation-delay: 24s; }
-    .db-scene:nth-child(6)  { animation-delay: 30s; }
-    .db-scene:nth-child(7)  { animation-delay: 36s; }
-    .db-scene:nth-child(8)  { animation-delay: 42s; }
-    .db-scene:nth-child(9)  { animation-delay: 48s; }
-    .db-scene:nth-child(10) { animation-delay: 54s; }
-    .db-scene:nth-child(11) { animation-delay: 60s; }
-    .db-scene:nth-child(12) { animation-delay: 66s; }
+    .db-thread-content {
+      display: flex; flex-direction: column; gap: 12px;
+      animation: threadScroll 96s linear infinite;
+      will-change: transform;
+    }
+    @keyframes threadScroll {
+      0%   { transform: translateY(0); }
+      4%   { transform: translateY(0); }
+      100% { transform: translateY(-2100px); }
+    }
 
-    @keyframes dbScene {
-      0% { opacity: 0; transform: translateY(10px); }
-      1.5% { opacity: 1; transform: translateY(0); }
-      7% { opacity: 1; transform: translateY(0); }
-      8.3% { opacity: 0; transform: translateY(-6px); }
-      100% { opacity: 0; }
+    .db-bubble-row {
+      opacity: 0;
+      animation: bubbleAppear 96s linear infinite;
+      will-change: opacity, transform;
+    }
+    @keyframes bubbleAppear {
+      0%, 1.5% { opacity: 0; transform: translateY(10px); }
+      3%, 100% { opacity: 1; transform: translateY(0); }
+    }
+    /* 24 messages × 4s slot = 96s */
+    .db-bubble-row:nth-child(1)  { animation-delay: 0s; }
+    .db-bubble-row:nth-child(2)  { animation-delay: 4s; }
+    .db-bubble-row:nth-child(3)  { animation-delay: 8s; }
+    .db-bubble-row:nth-child(4)  { animation-delay: 12s; }
+    .db-bubble-row:nth-child(5)  { animation-delay: 16s; }
+    .db-bubble-row:nth-child(6)  { animation-delay: 20s; }
+    .db-bubble-row:nth-child(7)  { animation-delay: 24s; }
+    .db-bubble-row:nth-child(8)  { animation-delay: 28s; }
+    .db-bubble-row:nth-child(9)  { animation-delay: 32s; }
+    .db-bubble-row:nth-child(10) { animation-delay: 36s; }
+    .db-bubble-row:nth-child(11) { animation-delay: 40s; }
+    .db-bubble-row:nth-child(12) { animation-delay: 44s; }
+    .db-bubble-row:nth-child(13) { animation-delay: 48s; }
+    .db-bubble-row:nth-child(14) { animation-delay: 52s; }
+    .db-bubble-row:nth-child(15) { animation-delay: 56s; }
+    .db-bubble-row:nth-child(16) { animation-delay: 60s; }
+    .db-bubble-row:nth-child(17) { animation-delay: 64s; }
+    .db-bubble-row:nth-child(18) { animation-delay: 68s; }
+    .db-bubble-row:nth-child(19) { animation-delay: 72s; }
+    .db-bubble-row:nth-child(20) { animation-delay: 76s; }
+    .db-bubble-row:nth-child(21) { animation-delay: 80s; }
+    .db-bubble-row:nth-child(22) { animation-delay: 84s; }
+    .db-bubble-row:nth-child(23) { animation-delay: 88s; }
+    .db-bubble-row:nth-child(24) { animation-delay: 92s; }
+
+    .db-bubble-row.user { display: flex; justify-content: flex-end; }
+    .db-bubble-row.agent { display: flex; gap: 12px; align-items: flex-start; }
+    .db-bubble-row.agent .db-avatar { margin-top: 2px; }
+    .db-bubble-row.system {
+      align-self: center;
+      font-family: 'JetBrains Mono', monospace; font-size: 9.5px;
+      letter-spacing: 0.16em; text-transform: uppercase;
+      color: rgba(255,255,255,0.30);
+      padding: 6px 12px; border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.06);
+      background: rgba(255,255,255,0.02);
     }
 
     /* User msg + Agent msg + content */
@@ -420,10 +457,15 @@
       8.3% { opacity: 0; }
       100% { opacity: 0; }
     }
+    .db-input-placeholder {
+      font-family: 'Inter', sans-serif; font-size: 13px;
+      color: rgba(255, 255, 255, 0.45);
+      display: inline-flex; align-items: center;
+    }
     .db-input-caret {
       display: inline-block;
       width: 1.5px; height: 14px; background: #E5322D;
-      vertical-align: middle; margin-left: 1px;
+      vertical-align: middle; margin-left: 2px;
       animation: pvBlink 0.9s steps(2) infinite;
     }
     .db-send {
@@ -1841,13 +1883,163 @@
               </aside>
 
               <main className="db-main">
-                {/* 1 — Email Triage */}
-                <div className="db-scene">
+                <div className="db-thread">
+                  <div className="db-thread-content">
+                    <div className="db-bubble-row system">07:02 · Pagi briefing</div>
+                    <div className="db-bubble-row agent">
+                      <div className="db-avatar">●</div>
+                      <div className="db-bubble">
+                        Selamat pagi, Jason. <strong>Top 5</strong> yang relevan buat kamu hari ini.
+                        <div className="db-list">
+                          <div className="item"><span className="marker" />Cuaca Jakarta · Sunny 28° <span className="meta">+breeze</span></div>
+                          <div className="item"><span className="marker" />IDR/USD turun 0.2% <span className="meta">15.892</span></div>
+                          <div className="item"><span className="marker" />Portfolio kamu naik 1.8% <span className="meta">+Rp 4,2jt</span></div>
+                          <div className="item"><span className="marker" />Filing GST deadline hari ini <span className="meta">23:59</span></div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="db-bubble-row user"><div className="db-msg-user">Inbox urgent today?</div></div>
+                    <div className="db-bubble-row agent">
+                      <div className="db-avatar">●</div>
+                      <div className="db-bubble">
+                        Sorted <strong>247 emails</strong> in 8s. Tiga butuh balasan, PR <strong>#142</strong> approved, meeting besok moved <strong>2pm</strong>.
+                        <div className="db-stats">
+                          <div className="db-stat"><div className="num">3</div><div className="lbl">Urgent</div></div>
+                          <div className="db-stat"><div className="num">12</div><div className="lbl">Important</div></div>
+                          <div className="db-stat"><div className="num">232</div><div className="lbl">Filed</div></div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="db-bubble-row user"><div className="db-msg-user">Draft replies untuk 3 itu, tone casual</div></div>
+                    <div className="db-bubble-row agent">
+                      <div className="db-avatar">●</div>
+                      <div className="db-bubble">
+                        Done — <strong>3 drafts in queue</strong>, mirip gaya nulis kamu. Tinggal review &amp; send.
+                        <div className="db-list">
+                          <div className="item"><span className="marker" />Re: Q4 review · Sarah <span className="meta">2 paragraf</span></div>
+                          <div className="item"><span className="marker" />Re: Vendor approval · Andre <span className="meta">1 paragraf</span></div>
+                          <div className="item"><span className="marker" />Re: Schedule conflict · Marcus <span className="meta">1 paragraf</span></div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="db-bubble-row user"><div className="db-msg-user">Recap meeting product strategy kemarin?</div></div>
+                    <div className="db-bubble-row agent">
+                      <div className="db-avatar">●</div>
+                      <div className="db-bubble">
+                        2 jam meeting → <strong>7 action items</strong>. Top 3 paling kritis:
+                        <div className="db-list">
+                          <div className="item"><span className="marker" />Deploy v2.3 by Jumat <span className="meta">@jason</span></div>
+                          <div className="item"><span className="marker" />Sarah owns marketing draft <span className="meta">deadline Rabu</span></div>
+                          <div className="item"><span className="marker" />Follow up Andre re: partnership <span className="meta">this week</span></div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="db-bubble-row user"><div className="db-msg-user">Schedule call sama Andre minggu depan</div></div>
+                    <div className="db-bubble-row agent">
+                      <div className="db-avatar">●</div>
+                      <div className="db-bubble">
+                        Selasa 10am bentrok family lunch (Mama). Saran: <strong>Rabu 2pm</strong> atau <strong>Jumat 11am</strong> — Andre's calendar both open.
+                        <div className="db-cal-row">
+                          <div className="db-cal-cell">Sen</div>
+                          <div className="db-cal-cell conflict">Sel<br/>2 evt</div>
+                          <div className="db-cal-cell evt">Rab<br/>2pm</div>
+                          <div className="db-cal-cell">Kam</div>
+                          <div className="db-cal-cell evt">Jum<br/>11am</div>
+                          <div className="db-cal-cell">Sab</div>
+                          <div className="db-cal-cell">Min</div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="db-bubble-row user"><div className="db-msg-user">Rabu 2pm aja</div></div>
+                    <div className="db-bubble-row agent">
+                      <div className="db-avatar">●</div>
+                      <div className="db-bubble">Sent invite. <strong>Andre confirmed dalam 4 menit ✓</strong> Calendar update: Rabu 2pm — Polaris HQ.</div>
+                    </div>
+                    <div className="db-bubble-row user"><div className="db-msg-user">Bikin pitch deck buat ketemu dia — angel ask Rp 2,5M</div></div>
+                    <div className="db-bubble-row agent">
+                      <div className="db-avatar">●</div>
+                      <div className="db-bubble">
+                        Done. <strong>12 slides</strong>, oxblood theme. Story arc: problem → solution → market → traction → ask.
+                        <div className="db-attach"><span className="ic">PDF</span><span className="nm">pitch-andre-v3.pdf · 12 slides</span></div>
+                      </div>
+                    </div>
+                    <div className="db-bubble-row user"><div className="db-msg-user">TikTok lagi trending apa hari ini?</div></div>
+                    <div className="db-bubble-row agent">
+                      <div className="db-avatar">●</div>
+                      <div className="db-bubble">
+                        Trend baru terdeteksi 6 jam terakhir: <strong>#5MinuteRoutine</strong> naik <strong>312%</strong>. Cocok buat brand wellness kamu.
+                        <div className="db-radar">
+                          <svg viewBox="0 0 60 60">
+                            <circle className="ring" cx="30" cy="30" r="24" />
+                            <circle className="ring" cx="30" cy="30" r="16" />
+                            <circle className="ring" cx="30" cy="30" r="8" />
+                            <line className="sw" x1="30" y1="30" x2="30" y2="6" />
+                            <circle className="blip" cx="42" cy="22" r="2" />
+                            <circle className="blip" cx="20" cy="40" r="1.6" />
+                          </svg>
+                          <div className="info">
+                            <div className="t">#5MinuteRoutine · +312%</div>
+                            <div className="s">TikTok · last 6h</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="db-bubble-row user"><div className="db-msg-user">Bikin script TikTok 60s pake trend itu, gaya humor</div></div>
+                    <div className="db-bubble-row agent">
+                      <div className="db-avatar">●</div>
+                      <div className="db-bubble">
+                        Ready. Sound: <strong>"morning anchor" remix #4</strong> (matching trend).
+                        <div className="db-script">
+                          <div className="db-script-row"><span className="t">0:03</span><span className="lbl">HOOK</span><span className="bar" style={{ background: '#E5322D' }} /></div>
+                          <div className="db-script-row"><span className="t">0:48</span><span className="lbl">BODY</span><span className="bar" /></div>
+                          <div className="db-script-row"><span className="t">1:00</span><span className="lbl">CTA</span><span className="bar" style={{ width: '70%' }} /></div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="db-bubble-row user"><div className="db-msg-user">Customer chats overnight, ada yang escalate?</div></div>
+                    <div className="db-bubble-row agent">
+                      <div className="db-avatar">●</div>
+                      <div className="db-bubble">
+                        Handled <strong>23 chats</strong> overnight. 18 closed langsung, <strong>5 escalated</strong> ke pagi queue.
+                        <div className="db-list">
+                          <div className="item"><span className="marker" />"Refund process berapa lama?" <span className="meta">05:08</span></div>
+                          <div className="item"><span className="marker" />"Bisa custom warna?" <span className="meta">04:21</span></div>
+                          <div className="item"><span className="marker" />"Ada wholesale discount?" <span className="meta">03:14</span></div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="db-bubble-row user"><div className="db-msg-user">Pivot table Q4 sales by region — file Sheets gue</div></div>
+                    <div className="db-bubble-row agent">
+                      <div className="db-avatar">●</div>
+                      <div className="db-bubble">
+                        Done. Formula: <strong style={{ fontFamily: "'JetBrains Mono', monospace", color: '#E5322D' }}>=SUMIFS(C:C, A:A, "Q4", B:B, region)</strong>. Atau langsung file siap, include chart.
+                        <div className="db-attach"><span className="ic">XLSX</span><span className="nm">q4-sales-pivot.xlsx · 4 sheets</span></div>
+                      </div>
+                    </div>
+                    <div className="db-bubble-row user"><div className="db-msg-user">Post listing rumah BSD 2,8M ke semua platform</div></div>
+                    <div className="db-bubble-row agent">
+                      <div className="db-avatar">●</div>
+                      <div className="db-bubble">
+                        Live di <strong>6 platform</strong>. Caption dioptimalkan per kanal — formal di Lamudi, casual di IG.
+                        <div className="db-chips">
+                          <span className="db-chip">OLX</span>
+                          <span className="db-chip">Lamudi</span>
+                          <span className="db-chip">Rumah123</span>
+                          <span className="db-chip">Instagram</span>
+                          <span className="db-chip">Facebook</span>
+                          <span className="db-chip">TikTok</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="db-bubble-row user"><div className="db-msg-user">Trims. Networking — siapa yang harus follow up minggu ini?</div></div>
+                  </div>
+                </div>
+                {false && (<>
                   <div className="db-msg-user">Anything urgent in my inbox today?</div>
                   <div className="db-msg-agent">
                     <div className="db-avatar">●</div>
                     <div className="db-bubble">
-                      Sorted <strong>247 emails</strong> in 8s. Three need your reply, PR <strong>#142</strong> got approved, tomorrow's meeting moved to <strong>2pm</strong>.
+                      Sorted <strong>247 emails</strong> in 8s.
                       <div className="db-stats">
                         <div className="db-stat"><div className="num">3</div><div className="lbl">Urgent</div></div>
                         <div className="db-stat"><div className="num">12</div><div className="lbl">Important</div></div>
@@ -1855,7 +2047,6 @@
                       </div>
                     </div>
                   </div>
-                </div>
 
                 {/* 2 — Auto-Slide */}
                 <div className="db-scene">
@@ -2049,26 +2240,14 @@
                     </div>
                   </div>
                 </div>
+                </>)}
               </main>
             </div>
 
-            {/* Input area — typing cycles per scene */}
+            {/* Input area — static placeholder */}
             <div className="db-input">
               <div className="db-input-box">
-                <div className="db-input-text">
-                  <span className="typing">Anything urgent in my inbox today?<span className="db-input-caret" /></span>
-                  <span className="typing">Bikin slide deck dari brief Q4 strategy.docx<span className="db-input-caret" /></span>
-                  <span className="typing">Post listing rumah BSD 2,8M ke semua platform<span className="db-input-caret" /></span>
-                  <span className="typing">Cek customer chats yang masuk semalem<span className="db-input-caret" /></span>
-                  <span className="typing">Pitch deck buat angel investor besok pagi<span className="db-input-caret" /></span>
-                  <span className="typing">Siapa yang harus gue follow-up minggu ini?<span className="db-input-caret" /></span>
-                  <span className="typing">Cek trending TikTok buat brand wellness<span className="db-input-caret" /></span>
-                  <span className="typing">Bikin script TikTok 60 detik tentang AI<span className="db-input-caret" /></span>
-                  <span className="typing">Bantuin pivot table Q4 sales by region<span className="db-input-caret" /></span>
-                  <span className="typing">Recap meeting product strategy tadi<span className="db-input-caret" /></span>
-                  <span className="typing">Schedule call sama Andre minggu depan<span className="db-input-caret" /></span>
-                  <span className="typing">Brief gue pagi ini<span className="db-input-caret" /></span>
-                </div>
+                <span className="db-input-placeholder">Tanya apa aja...<span className="db-input-caret" /></span>
               </div>
               <button className="db-send"><ArrowUpRight size={18} stroke={2.4} /></button>
             </div>
