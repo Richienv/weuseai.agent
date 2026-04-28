@@ -90,6 +90,350 @@
     button { cursor: pointer; }
     html { scroll-behavior: smooth; }
 
+    /* ─── DASHBOARD DEMO (12-scene cycle, 72s total) ─── */
+    .db-section {
+      position: relative;
+      padding: 80px 16px 100px;
+      background: #050505;
+      overflow: hidden;
+    }
+    .db-section::before {
+      content: ''; position: absolute; inset: 0; pointer-events: none;
+      background: radial-gradient(ellipse 60% 50% at 50% 30%, rgba(229, 50, 45, 0.08), transparent 70%);
+    }
+    .db-section .db-eyebrow {
+      display: flex; flex-direction: column; align-items: center; gap: 14px;
+      margin-bottom: 36px; text-align: center;
+    }
+    .db-section .db-eyebrow-pill {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 5px 14px; border-radius: 999px;
+      background: rgba(229, 50, 45, 0.10);
+      border: 1px solid rgba(229, 50, 45, 0.40);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px; letter-spacing: 0.20em; text-transform: uppercase;
+      color: #E5322D;
+    }
+    .db-section .db-eyebrow-pill .live-dot {
+      width: 5px; height: 5px; border-radius: 50%; background: #E5322D;
+      animation: priceLiveDot 1.4s ease-in-out infinite;
+    }
+    .db-section .db-headline {
+      font-family: 'Instrument Serif', serif;
+      color: #fff;
+      font-size: 28px; line-height: 1.05; letter-spacing: -0.03em;
+      max-width: 28ch;
+      margin: 0 auto;
+    }
+    @media (min-width: 768px) { .db-section .db-headline { font-size: 40px; } }
+    .db-section .db-sub {
+      margin-top: 8px;
+      font-family: 'Inter', sans-serif; font-weight: 300;
+      font-size: 13px; line-height: 1.5;
+      color: rgba(255, 255, 255, 0.55);
+      max-width: 42ch;
+      margin-left: auto; margin-right: auto;
+    }
+
+    /* Frame */
+    .db-frame {
+      max-width: 1080px; margin: 0 auto;
+      border-radius: 14px;
+      overflow: hidden;
+      background: rgba(8, 8, 10, 0.92);
+      border: 1px solid rgba(255,255,255,0.08);
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,0.03),
+        0 24px 64px rgba(0,0,0,0.6),
+        0 0 80px rgba(229, 50, 45, 0.06);
+      display: flex; flex-direction: column;
+      height: 540px;
+    }
+    @media (max-width: 767px) { .db-frame { height: 480px; } }
+
+    .db-topbar {
+      height: 38px; flex-shrink: 0;
+      display: flex; align-items: center; gap: 14px;
+      padding: 0 14px;
+      background: rgba(0, 0, 0, 0.45);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .db-traffic { display: flex; gap: 6px; }
+    .db-traffic span { width: 11px; height: 11px; border-radius: 50%; }
+    .db-traffic span:nth-child(1) { background: #FF5F57; }
+    .db-traffic span:nth-child(2) { background: #FEBC2E; }
+    .db-traffic span:nth-child(3) { background: #28C840; }
+    .db-title {
+      font-family: 'JetBrains Mono', monospace; font-size: 12px;
+      color: rgba(255, 255, 255, 0.55); letter-spacing: 0.04em;
+    }
+    .db-status {
+      margin-left: auto; display: flex; align-items: center; gap: 6px;
+      font-family: 'JetBrains Mono', monospace; font-size: 10px;
+      color: #6FA08F; letter-spacing: 0.10em;
+    }
+    .db-status::before {
+      content: ''; width: 6px; height: 6px; border-radius: 50%;
+      background: #6FA08F; box-shadow: 0 0 6px rgba(111, 160, 143, 0.7);
+    }
+
+    .db-body { flex: 1; display: flex; min-height: 0; }
+    .db-sidebar {
+      width: 200px; flex-shrink: 0;
+      display: flex; flex-direction: column;
+      padding: 18px 12px 14px;
+      background: rgba(0, 0, 0, 0.30);
+      border-right: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    @media (max-width: 767px) { .db-sidebar { display: none; } }
+    .db-nav {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 11px; border-radius: 7px;
+      background: transparent; border: none;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.45);
+      margin-bottom: 4px;
+      letter-spacing: 0.02em;
+      cursor: default;
+    }
+    .db-nav .sq {
+      width: 16px; height: 16px; border-radius: 4px;
+      background: rgba(255, 255, 255, 0.08);
+    }
+    .db-nav.active {
+      background: rgba(229, 50, 45, 0.12);
+      color: #E5322D; font-weight: 500;
+    }
+    .db-nav.active .sq { background: #E5322D; }
+    .db-user {
+      margin-top: auto;
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 11px;
+      font-family: 'JetBrains Mono', monospace; font-size: 12px;
+      color: rgba(255, 255, 255, 0.55);
+    }
+    .db-user-avatar {
+      width: 24px; height: 24px; border-radius: 50%;
+      background: #E5322D;
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-size: 11px; font-weight: 600;
+    }
+
+    .db-main {
+      flex: 1; position: relative; overflow: hidden;
+      background: rgba(0, 0, 0, 0.10);
+    }
+    .db-scene {
+      position: absolute; inset: 0;
+      padding: 24px 28px;
+      overflow-y: hidden;
+      opacity: 0;
+      animation: dbScene 72s ease-in-out infinite;
+      display: flex; flex-direction: column; gap: 14px;
+    }
+    @media (max-width: 767px) { .db-scene { padding: 18px 18px; gap: 10px; } }
+
+    /* 12 scenes × 6s each = 72s */
+    .db-scene:nth-child(1)  { animation-delay: 0s; }
+    .db-scene:nth-child(2)  { animation-delay: 6s; }
+    .db-scene:nth-child(3)  { animation-delay: 12s; }
+    .db-scene:nth-child(4)  { animation-delay: 18s; }
+    .db-scene:nth-child(5)  { animation-delay: 24s; }
+    .db-scene:nth-child(6)  { animation-delay: 30s; }
+    .db-scene:nth-child(7)  { animation-delay: 36s; }
+    .db-scene:nth-child(8)  { animation-delay: 42s; }
+    .db-scene:nth-child(9)  { animation-delay: 48s; }
+    .db-scene:nth-child(10) { animation-delay: 54s; }
+    .db-scene:nth-child(11) { animation-delay: 60s; }
+    .db-scene:nth-child(12) { animation-delay: 66s; }
+
+    @keyframes dbScene {
+      0% { opacity: 0; transform: translateY(10px); }
+      1.5% { opacity: 1; transform: translateY(0); }
+      7% { opacity: 1; transform: translateY(0); }
+      8.3% { opacity: 0; transform: translateY(-6px); }
+      100% { opacity: 0; }
+    }
+
+    /* User msg + Agent msg + content */
+    .db-msg-user {
+      align-self: flex-end; max-width: 75%;
+      padding: 8px 14px; border-radius: 14px 14px 4px 14px;
+      background: rgba(229, 50, 45, 0.12);
+      border: 1px solid rgba(229, 50, 45, 0.35);
+      font-family: 'Inter', sans-serif; font-size: 13px; line-height: 1.4;
+      color: #fff;
+    }
+    .db-msg-agent {
+      display: flex; gap: 12px; align-items: flex-start;
+      max-width: 92%;
+    }
+    .db-avatar {
+      width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+      background: linear-gradient(135deg, #E5322D, #8B1410);
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-size: 13px;
+    }
+    .db-bubble {
+      padding: 12px 16px; border-radius: 4px 14px 14px 14px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      font-family: 'Inter', sans-serif; font-size: 13px; line-height: 1.45;
+      color: rgba(255, 255, 255, 0.92); flex: 1;
+    }
+    .db-bubble strong { color: #fff; font-weight: 500; }
+
+    /* Scene-specific content blocks */
+    .db-list { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+    .db-list .item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 7px 10px; border-radius: 7px;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06);
+      font-family: 'JetBrains Mono', monospace; font-size: 11px;
+      color: rgba(255,255,255,0.78);
+    }
+    .db-list .item .marker {
+      width: 6px; height: 6px; border-radius: 2px; background: #E5322D; flex-shrink: 0;
+    }
+    .db-list .item .meta { color: rgba(255,255,255,0.40); margin-left: auto; }
+
+    .db-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+    .db-chip {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 9px; border-radius: 999px;
+      background: rgba(229,50,45,0.10);
+      border: 1px solid rgba(229,50,45,0.45);
+      font-family: 'JetBrains Mono', monospace; font-size: 10px;
+      color: #E5322D; letter-spacing: 0.04em;
+    }
+    .db-chip::before { content: '✓'; font-size: 9px; }
+    .db-chip.dim { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.10); color: rgba(255,255,255,0.6); }
+    .db-chip.dim::before { content: ''; width: 4px; height: 4px; border-radius: 50%; background: rgba(255,255,255,0.4); }
+
+    .db-slides { display: flex; gap: 8px; margin-top: 10px; }
+    .db-slide {
+      flex: 1; aspect-ratio: 16/10;
+      border: 1px solid rgba(255,255,255,0.18); border-radius: 4px;
+      padding: 6px 7px;
+      display: flex; flex-direction: column; gap: 3px;
+      background: rgba(0,0,0,0.30);
+    }
+    .db-slide .h { height: 3px; background: #E5322D; width: 60%; border-radius: 1px; }
+    .db-slide .l { height: 2px; background: rgba(255,255,255,0.30); border-radius: 1px; }
+
+    .db-stats { display: flex; gap: 10px; margin-top: 10px; }
+    .db-stat {
+      flex: 1; padding: 10px 12px;
+      border-radius: 8px; background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.07);
+    }
+    .db-stat .num { font-family: 'Instrument Serif', serif; font-size: 22px; line-height: 1; color: #fff; letter-spacing: -0.02em; }
+    .db-stat .lbl { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(255,255,255,0.45); margin-top: 6px; }
+
+    .db-attach {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 6px 10px 6px 6px; border-radius: 8px;
+      background: rgba(229,50,45,0.10); border: 1px solid rgba(229,50,45,0.45);
+      margin-top: 10px;
+    }
+    .db-attach .ic {
+      font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 600;
+      color: #fff; background: #E5322D;
+      padding: 3px 6px; border-radius: 3px; letter-spacing: 0.06em;
+    }
+    .db-attach .nm { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: rgba(255,255,255,0.92); }
+
+    .db-cal-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 10px; }
+    .db-cal-cell {
+      aspect-ratio: 1; border-radius: 4px;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06);
+      display: flex; flex-direction: column; padding: 4px; gap: 2px;
+      font-family: 'JetBrains Mono', monospace; font-size: 9px;
+      color: rgba(255,255,255,0.4);
+    }
+    .db-cal-cell.evt { background: rgba(229,50,45,0.10); border-color: rgba(229,50,45,0.45); color: #E5322D; }
+    .db-cal-cell.conflict { background: rgba(229,50,45,0.20); border-color: #E5322D; }
+
+    .db-script { display: flex; flex-direction: column; gap: 5px; margin-top: 10px; }
+    .db-script-row { display: flex; align-items: center; gap: 8px; }
+    .db-script-row .t { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #E5322D; width: 36px; }
+    .db-script-row .lbl { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: rgba(255,255,255,0.55); width: 50px; letter-spacing: 0.10em; }
+    .db-script-row .bar { flex: 1; height: 3px; background: rgba(255,255,255,0.15); border-radius: 1.5px; }
+
+    .db-radar { display: flex; align-items: center; gap: 14px; margin-top: 10px; }
+    .db-radar svg { width: 56px; height: 56px; flex-shrink: 0; }
+    .db-radar .ring { fill: none; stroke: rgba(255,255,255,0.15); stroke-width: 0.8; }
+    .db-radar .sw { stroke: #E5322D; stroke-width: 1.2; transform-origin: 30px 30px; animation: capSweep 3s linear infinite; }
+    .db-radar .blip { fill: #E5322D; }
+    .db-radar .info { display: flex; flex-direction: column; gap: 4px; }
+    .db-radar .info .t { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #fff; }
+    .db-radar .info .s { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; color: rgba(255,255,255,0.5); letter-spacing: 0.08em; text-transform: uppercase; }
+
+    /* Input area */
+    .db-input {
+      flex-shrink: 0;
+      padding: 14px 16px;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      background: rgba(0, 0, 0, 0.30);
+      display: flex; align-items: center; gap: 10px;
+    }
+    .db-input-box {
+      flex: 1;
+      padding: 10px 14px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.10);
+      border-radius: 10px;
+      font-family: 'Inter', sans-serif; font-size: 13px;
+      color: rgba(255, 255, 255, 0.85);
+      position: relative;
+      min-height: 40px;
+      display: flex; align-items: center;
+    }
+    .db-input-text {
+      position: relative;
+      width: 100%;
+      height: 1.4em;
+      overflow: hidden;
+    }
+    .db-input-text .typing {
+      position: absolute; top: 0; left: 0;
+      white-space: nowrap; opacity: 0;
+      animation: dbInputTyping 72s ease-in-out infinite;
+    }
+    .db-input-text .typing:nth-child(1)  { animation-delay: 0s; }
+    .db-input-text .typing:nth-child(2)  { animation-delay: 6s; }
+    .db-input-text .typing:nth-child(3)  { animation-delay: 12s; }
+    .db-input-text .typing:nth-child(4)  { animation-delay: 18s; }
+    .db-input-text .typing:nth-child(5)  { animation-delay: 24s; }
+    .db-input-text .typing:nth-child(6)  { animation-delay: 30s; }
+    .db-input-text .typing:nth-child(7)  { animation-delay: 36s; }
+    .db-input-text .typing:nth-child(8)  { animation-delay: 42s; }
+    .db-input-text .typing:nth-child(9)  { animation-delay: 48s; }
+    .db-input-text .typing:nth-child(10) { animation-delay: 54s; }
+    .db-input-text .typing:nth-child(11) { animation-delay: 60s; }
+    .db-input-text .typing:nth-child(12) { animation-delay: 66s; }
+    @keyframes dbInputTyping {
+      0% { opacity: 0; }
+      1% { opacity: 1; }
+      7% { opacity: 1; }
+      8.3% { opacity: 0; }
+      100% { opacity: 0; }
+    }
+    .db-input-caret {
+      display: inline-block;
+      width: 1.5px; height: 14px; background: #E5322D;
+      vertical-align: middle; margin-left: 1px;
+      animation: pvBlink 0.9s steps(2) infinite;
+    }
+    .db-send {
+      width: 40px; height: 40px; border-radius: 10px;
+      background: #E5322D;
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; flex-shrink: 0;
+      box-shadow: 0 0 16px rgba(229, 50, 45, 0.35);
+    }
+
     /* Film-grain overlay — masks low-quality video compression */
     .hero-grain {
       position: absolute; inset: 0; pointer-events: none;
@@ -1443,19 +1787,291 @@
           <FadeTop /> <FadeBottom />
           <div className="relative z-10 flex flex-col items-center text-center px-6 py-40" style={{ minHeight: 500 }}>
             <div className="liquid-glass rounded-full px-3.5 py-1 text-xs font-medium font-body text-white/90">
-              Cara kerjanya
+              The wave
             </div>
             <BlurText
               as="h2"
-              text="Kamu yang membayangkan. Agent yang menyelesaikan."
-              className="mt-8 text-4xl md:text-5xl lg:text-6xl font-heading tracking-tight leading-[0.9] max-w-3xl"
+              text="More than AI. We craft a hand-built super agent."
+              className="mt-8 text-4xl md:text-5xl lg:text-6xl font-heading tracking-tight leading-[0.95] md:leading-[0.9] max-w-3xl"
+              style={{ letterSpacing: '-0.04em' }}
               delay={80} />
-            <p className="mt-6 max-w-xl text-white/60 font-body font-light text-sm md:text-base">
-              Satu brief singkat di Telegram. Kamu dapat hasilnya — notulen, draft, shortlist — dalam hitungan menit. Bukan minggu.
+            <p className="mt-6 max-w-xl text-white/65 font-body font-light text-sm md:text-base leading-relaxed">
+              The wave is coming. The next billion-dollar company won't have 1,000 employees — just 1.
             </p>
             <button className="mt-10 liquid-glass-strong rounded-full px-6 py-3 text-sm font-medium flex items-center gap-2">
               Mulai hari ini <ArrowUpRight size={14} stroke={2.2} />
             </button>
+          </div>
+        </section>
+      );
+    }
+
+    // ─────────────────────── DASHBOARD DEMO ───────────────────────
+    function DashboardDemo() {
+      return (
+        <section className="db-section">
+          <div className="db-eyebrow">
+            <div className="db-eyebrow-pill">
+              <span className="live-dot" />
+              <span>Agent in action</span>
+            </div>
+            <h2 className="db-headline">A single agent. Twelve capabilities. Zero context-switching.</h2>
+            <p className="db-sub">Lihat agent kamu kerja — bukan demo dummy, ini contoh nyata dari 12 cara dia membantu kamu setiap hari.</p>
+          </div>
+
+          <div className="db-frame">
+            {/* Top bar */}
+            <div className="db-topbar">
+              <div className="db-traffic"><span /><span /><span /></div>
+              <div className="db-title">weuseai.agent · dashboard</div>
+              <div className="db-status">Online</div>
+            </div>
+
+            {/* Body: sidebar + main */}
+            <div className="db-body">
+              <aside className="db-sidebar">
+                <button className="db-nav active"><span className="sq" /> Chat</button>
+                <button className="db-nav"><span className="sq" /> Tasks</button>
+                <button className="db-nav"><span className="sq" /> Memory</button>
+                <button className="db-nav"><span className="sq" /> Settings</button>
+                <div className="db-user">
+                  <div className="db-user-avatar">J</div>
+                  <span>Jason</span>
+                </div>
+              </aside>
+
+              <main className="db-main">
+                {/* 1 — Email Triage */}
+                <div className="db-scene">
+                  <div className="db-msg-user">Anything urgent in my inbox today?</div>
+                  <div className="db-msg-agent">
+                    <div className="db-avatar">●</div>
+                    <div className="db-bubble">
+                      Sorted <strong>247 emails</strong> in 8s. Three need your reply, PR <strong>#142</strong> got approved, tomorrow's meeting moved to <strong>2pm</strong>.
+                      <div className="db-stats">
+                        <div className="db-stat"><div className="num">3</div><div className="lbl">Urgent</div></div>
+                        <div className="db-stat"><div className="num">12</div><div className="lbl">Important</div></div>
+                        <div className="db-stat"><div className="num">232</div><div className="lbl">Filed</div></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2 — Auto-Slide */}
+                <div className="db-scene">
+                  <div className="db-msg-user">Bikin slide deck dari brief Q4 strategy.docx</div>
+                  <div className="db-msg-agent">
+                    <div className="db-avatar">●</div>
+                    <div className="db-bubble">
+                      <strong>12 slides</strong> ready — judul, isi, speaker notes, layout. Format Senin morning-meeting.
+                      <div className="db-slides">
+                        <div className="db-slide"><div className="h" /><div className="l" style={{ width: '80%' }} /><div className="l" style={{ width: '60%' }} /></div>
+                        <div className="db-slide"><div className="h" /><div className="l" style={{ width: '90%' }} /><div className="l" style={{ width: '70%' }} /><div className="l" style={{ width: '50%' }} /></div>
+                        <div className="db-slide"><div className="h" /><div className="l" style={{ width: '75%' }} /><div className="l" style={{ width: '55%' }} /></div>
+                      </div>
+                      <div className="db-attach"><span className="ic">PDF</span><span className="nm">q4-strategy.pdf</span></div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3 — Multi-Post */}
+                <div className="db-scene">
+                  <div className="db-msg-user">Post listing rumah BSD 2,8M ke semua platform</div>
+                  <div className="db-msg-agent">
+                    <div className="db-avatar">●</div>
+                    <div className="db-bubble">
+                      Live di <strong>6 platform</strong>. Caption dioptimalkan per kanal — formal di Lamudi, casual di IG.
+                      <div className="db-chips">
+                        <span className="db-chip">OLX</span>
+                        <span className="db-chip">Lamudi</span>
+                        <span className="db-chip">Rumah123</span>
+                        <span className="db-chip">Instagram</span>
+                        <span className="db-chip">Facebook</span>
+                        <span className="db-chip">TikTok</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4 — Auto-Reply 24/7 */}
+                <div className="db-scene">
+                  <div className="db-msg-agent">
+                    <div className="db-avatar">●</div>
+                    <div className="db-bubble">
+                      Lo lagi tidur, gue handle <strong>23 customer chats</strong> overnight. 18 closed langsung, 5 di-escalate ke morning queue.
+                      <div className="db-list">
+                        <div className="item"><span className="marker" />"Masih ada size M?" — direplied <span className="meta">02:14</span></div>
+                        <div className="item"><span className="marker" />"Bisa COD area Jaksel?" — direplied <span className="meta">03:42</span></div>
+                        <div className="item"><span className="marker" />"Refund process berapa lama?" — escalated <span className="meta">05:08</span></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 5 — Pitch Deck */}
+                <div className="db-scene">
+                  <div className="db-msg-user">Pitch deck buat angel investor besok pagi — oxblood theme</div>
+                  <div className="db-msg-agent">
+                    <div className="db-avatar">●</div>
+                    <div className="db-bubble">
+                      Ready. Story arc: <strong>problem → solution → market → traction → team → ask</strong>. Investor-grade typography, references attached.
+                      <div className="db-chips">
+                        <span className="db-chip dim">01 · Problem</span>
+                        <span className="db-chip dim">02 · Solution</span>
+                        <span className="db-chip dim">03 · Market</span>
+                        <span className="db-chip dim">04 · Traction</span>
+                        <span className="db-chip">05 · Ask</span>
+                      </div>
+                      <div className="db-attach"><span className="ic">PDF</span><span className="nm">pitch-deck-v3.pdf · 12 slides</span></div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 6 — Personal CRM */}
+                <div className="db-scene">
+                  <div className="db-msg-user">Siapa yang harus gue follow-up minggu ini?</div>
+                  <div className="db-msg-agent">
+                    <div className="db-avatar">●</div>
+                    <div className="db-bubble">
+                      Lima hangat. Dua paling penting: <strong>Andre</strong> baru launch produk minggu ini, <strong>Sarah</strong> anniversary nikah Sabtu.
+                      <div className="db-list">
+                        <div className="item"><span className="marker" />Andre Tanoesoedibjo · CEO Polaris <span className="meta">3mo silent</span></div>
+                        <div className="item"><span className="marker" />Sarah Kusuma · VP Sequoia SEA <span className="meta">anniv Sabtu</span></div>
+                        <div className="item"><span className="marker" />Marcus Chen · Founder Helix <span className="meta">launched fundraise</span></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 7 — Trend Radar */}
+                <div className="db-scene">
+                  <div className="db-msg-agent">
+                    <div className="db-avatar">●</div>
+                    <div className="db-bubble">
+                      Trend baru terdeteksi 6 jam terakhir: <strong>#5MinuteRoutine</strong> naik <strong>312%</strong> di TikTok. Cocok buat brand wellness kamu.
+                      <div className="db-radar">
+                        <svg viewBox="0 0 60 60">
+                          <circle className="ring" cx="30" cy="30" r="24" />
+                          <circle className="ring" cx="30" cy="30" r="16" />
+                          <circle className="ring" cx="30" cy="30" r="8" />
+                          <line className="sw" x1="30" y1="30" x2="30" y2="6" />
+                          <circle className="blip" cx="42" cy="22" r="2" />
+                          <circle className="blip" cx="20" cy="40" r="1.6" />
+                        </svg>
+                        <div className="info">
+                          <div className="t">#5MinuteRoutine · +312%</div>
+                          <div className="s">TikTok · last 6h</div>
+                          <div className="t" style={{ marginTop: 4 }}>"morning anchor" sound · +180%</div>
+                          <div className="s">Reels · last 12h</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 8 — Script Generator */}
+                <div className="db-scene">
+                  <div className="db-msg-user">Bikin script TikTok 60 detik tentang AI agent buat Gen-Z, gaya humor</div>
+                  <div className="db-msg-agent">
+                    <div className="db-avatar">●</div>
+                    <div className="db-bubble">
+                      Ready. Hook 3 detik, body, CTA. Sound trending: <strong>"morning anchor" remix #4</strong>.
+                      <div className="db-script">
+                        <div className="db-script-row"><span className="t">0:03</span><span className="lbl">HOOK</span><span className="bar" style={{ background: '#E5322D' }} /></div>
+                        <div className="db-script-row"><span className="t">0:48</span><span className="lbl">BODY</span><span className="bar" /></div>
+                        <div className="db-script-row"><span className="t">1:00</span><span className="lbl">CTA</span><span className="bar" style={{ width: '70%' }} /></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 9 — Excel Wizard */}
+                <div className="db-scene">
+                  <div className="db-msg-user">[screenshot.png] Bantuin pivot table Q4 sales by region</div>
+                  <div className="db-msg-agent">
+                    <div className="db-avatar">●</div>
+                    <div className="db-bubble">
+                      Done. Formula: <strong style={{ fontFamily: "'JetBrains Mono', monospace", color: '#E5322D' }}>=SUMIFS(C:C, A:A, "Q4", B:B, region)</strong>. Atau download file langsung — udah include chart.
+                      <div className="db-attach"><span className="ic">XLSX</span><span className="nm">q4-sales-pivot.xlsx · 4 sheets</span></div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 10 — Zoom Recap */}
+                <div className="db-scene">
+                  <div className="db-msg-user">Recap meeting product strategy tadi (2 jam)</div>
+                  <div className="db-msg-agent">
+                    <div className="db-avatar">●</div>
+                    <div className="db-bubble">
+                      Diringkas dari 2 jam → <strong>7 action items</strong>. Top 3 most-mentioned topics tracked.
+                      <div className="db-list">
+                        <div className="item"><span className="marker" />Deploy v2.3 by Jumat <span className="meta">@jason</span></div>
+                        <div className="item"><span className="marker" />Sarah owns marketing draft <span className="meta">deadline Rabu</span></div>
+                        <div className="item"><span className="marker" />Follow up Andre re: partnership <span className="meta">this week</span></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 11 — Smart Calendar */}
+                <div className="db-scene">
+                  <div className="db-msg-user">Schedule call sama Andre minggu depan</div>
+                  <div className="db-msg-agent">
+                    <div className="db-avatar">●</div>
+                    <div className="db-bubble">
+                      Selasa 10am bentrok sama family lunch (Mama). Saran: <strong>Rabu 2pm</strong> atau <strong>Jumat 11am</strong> — Andre's calendar both open, lo juga free.
+                      <div className="db-cal-row">
+                        <div className="db-cal-cell">Sen<br/>· · ·</div>
+                        <div className="db-cal-cell conflict">Sel<br/>2 evt</div>
+                        <div className="db-cal-cell evt">Rab<br/>2pm</div>
+                        <div className="db-cal-cell">Kam<br/>· · ·</div>
+                        <div className="db-cal-cell evt">Jum<br/>11am</div>
+                        <div className="db-cal-cell">Sab</div>
+                        <div className="db-cal-cell">Min</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 12 — Morning Brief */}
+                <div className="db-scene">
+                  <div className="db-msg-agent">
+                    <div className="db-avatar">●</div>
+                    <div className="db-bubble">
+                      Selamat pagi. <strong>07:00 · 28 Apr</strong> — top 5 yang relevan untuk kamu hari ini.
+                      <div className="db-list">
+                        <div className="item"><span className="marker" />Cuaca Jakarta · Sunny 28° <span className="meta">+breeze</span></div>
+                        <div className="item"><span className="marker" />IDR/USD turun 0.2% <span className="meta">15.892</span></div>
+                        <div className="item"><span className="marker" />Portfolio kamu naik 1.8% <span className="meta">+Rp 4,2jt</span></div>
+                        <div className="item"><span className="marker" />Trending: #LayoffMcKinsey <span className="meta">market signal</span></div>
+                        <div className="item"><span className="marker" />Filing GST deadline hari ini <span className="meta">23:59</span></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </main>
+            </div>
+
+            {/* Input area — typing cycles per scene */}
+            <div className="db-input">
+              <div className="db-input-box">
+                <div className="db-input-text">
+                  <span className="typing">Anything urgent in my inbox today?<span className="db-input-caret" /></span>
+                  <span className="typing">Bikin slide deck dari brief Q4 strategy.docx<span className="db-input-caret" /></span>
+                  <span className="typing">Post listing rumah BSD 2,8M ke semua platform<span className="db-input-caret" /></span>
+                  <span className="typing">Cek customer chats yang masuk semalem<span className="db-input-caret" /></span>
+                  <span className="typing">Pitch deck buat angel investor besok pagi<span className="db-input-caret" /></span>
+                  <span className="typing">Siapa yang harus gue follow-up minggu ini?<span className="db-input-caret" /></span>
+                  <span className="typing">Cek trending TikTok buat brand wellness<span className="db-input-caret" /></span>
+                  <span className="typing">Bikin script TikTok 60 detik tentang AI<span className="db-input-caret" /></span>
+                  <span className="typing">Bantuin pivot table Q4 sales by region<span className="db-input-caret" /></span>
+                  <span className="typing">Recap meeting product strategy tadi<span className="db-input-caret" /></span>
+                  <span className="typing">Schedule call sama Andre minggu depan<span className="db-input-caret" /></span>
+                  <span className="typing">Brief gue pagi ini<span className="db-input-caret" /></span>
+                </div>
+              </div>
+              <button className="db-send"><ArrowUpRight size={18} stroke={2.4} /></button>
+            </div>
           </div>
         </section>
       );
@@ -2466,6 +3082,7 @@
             <Hero />
             <div className="bg-black">
               <StartSection />
+              <DashboardDemo />
               <FeaturesChess />
               <VelvetSection />
               <FeaturesGrid />
