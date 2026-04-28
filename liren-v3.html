@@ -224,35 +224,35 @@
       flex: 1; position: relative; overflow: hidden;
       background: rgba(0, 0, 0, 0.10);
     }
-    /* Continuous scrolling chat thread — 24 messages over 96s */
+    /* Bottom-anchored chat thread — newest at bottom, older pushed up + clipped */
     .db-thread {
       position: absolute; inset: 0;
       overflow: hidden;
       padding: 22px 28px;
-      mask-image: linear-gradient(to bottom, transparent 0, #000 36px, #000 calc(100% - 24px), transparent 100%);
-      -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 36px, #000 calc(100% - 24px), transparent 100%);
+      display: flex;
+      mask-image: linear-gradient(to bottom, transparent 0, #000 56px, #000 100%);
+      -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 56px, #000 100%);
     }
     @media (max-width: 767px) { .db-thread { padding: 16px 18px; } }
 
     .db-thread-content {
-      display: flex; flex-direction: column; gap: 10px;
-      animation: threadScroll 96s linear infinite;
-      will-change: transform;
-    }
-    @keyframes threadScroll {
-      0%   { transform: translateY(0); }
-      4%   { transform: translateY(0); }
-      100% { transform: translateY(-2300px); }
+      display: flex; flex-direction: column;
+      justify-content: flex-end;
+      gap: 10px;
+      width: 100%; min-height: 100%;
     }
 
     .db-bubble-row {
+      max-height: 0;
       opacity: 0;
-      animation: bubbleAppear 96s linear infinite;
-      will-change: opacity, transform;
+      overflow: hidden;
+      animation: bubbleReveal 96s linear infinite;
+      will-change: max-height, opacity, transform;
     }
-    @keyframes bubbleAppear {
-      0%, 1.5% { opacity: 0; transform: translateY(10px); }
-      3%, 100% { opacity: 1; transform: translateY(0); }
+    @keyframes bubbleReveal {
+      0%, 1.2% { max-height: 0; opacity: 0; transform: translateY(8px); }
+      2%, 3.5% { max-height: 400px; opacity: 1; transform: translateY(0); }
+      100% { max-height: 400px; opacity: 1; transform: translateY(0); }
     }
 
     /* Typing indicator row — collapses before message arrives */
