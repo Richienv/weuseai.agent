@@ -140,6 +140,7 @@
       max-width: 1080px; margin: 0 auto;
       border-radius: 14px;
       overflow: hidden;
+      position: relative;
       background: rgba(8, 8, 10, 0.92);
       border: 1px solid rgba(255,255,255,0.08);
       box-shadow:
@@ -243,24 +244,17 @@
     }
 
     .db-bubble-row {
-      max-height: 0;
-      opacity: 0;
-      overflow: hidden;
-      animation: bubbleReveal 96s linear infinite;
-      will-change: max-height, opacity, transform;
+      animation: bubbleMountIn 0.55s cubic-bezier(0.16, 1, 0.3, 1) backwards;
     }
-    @keyframes bubbleReveal {
-      0%, 1.7% { max-height: 0; opacity: 0; transform: translateY(8px); }
-      2.2%, 3.5% { max-height: 500px; opacity: 1; transform: translateY(0); }
-      100% { max-height: 500px; opacity: 1; transform: translateY(0); }
+    @keyframes bubbleMountIn {
+      from { opacity: 0; transform: translateY(14px) scale(0.98); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
     }
 
-    /* Typing indicator row — collapses before message arrives */
+    /* Typing indicator row — mounted by React when agent is composing */
     .db-typing-row {
       display: flex; align-items: flex-start;
-      max-height: 0; opacity: 0; overflow: hidden;
-      animation: typingLifecycle 96s linear infinite;
-      will-change: max-height, opacity;
+      animation: bubbleMountIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) backwards;
     }
     .db-typing-row.user { justify-content: flex-end; }
     .db-typing-row.agent { gap: 12px; }
@@ -286,62 +280,7 @@
       0%, 60%, 100% { opacity: 0.30; transform: translateY(0); }
       30% { opacity: 1; transform: translateY(-2px); }
     }
-    @keyframes typingLifecycle {
-      0%, 0.3% { max-height: 0; opacity: 0; }
-      0.7%, 1.7% { max-height: 60px; opacity: 1; }
-      2.0%, 100% { max-height: 0; opacity: 0; }
-    }
-
-    /* 49 children paired: system shows instantly, then 24 (typing+msg) slots × 4s = 96s */
-    .db-thread-content > :nth-child(1)  { animation-delay: -3s; }
-    .db-thread-content > :nth-child(2),
-    .db-thread-content > :nth-child(3)  { animation-delay: 0s; }
-    .db-thread-content > :nth-child(4),
-    .db-thread-content > :nth-child(5)  { animation-delay: 4s; }
-    .db-thread-content > :nth-child(6),
-    .db-thread-content > :nth-child(7)  { animation-delay: 8s; }
-    .db-thread-content > :nth-child(8),
-    .db-thread-content > :nth-child(9)  { animation-delay: 12s; }
-    .db-thread-content > :nth-child(10),
-    .db-thread-content > :nth-child(11) { animation-delay: 16s; }
-    .db-thread-content > :nth-child(12),
-    .db-thread-content > :nth-child(13) { animation-delay: 20s; }
-    .db-thread-content > :nth-child(14),
-    .db-thread-content > :nth-child(15) { animation-delay: 24s; }
-    .db-thread-content > :nth-child(16),
-    .db-thread-content > :nth-child(17) { animation-delay: 28s; }
-    .db-thread-content > :nth-child(18),
-    .db-thread-content > :nth-child(19) { animation-delay: 32s; }
-    .db-thread-content > :nth-child(20),
-    .db-thread-content > :nth-child(21) { animation-delay: 36s; }
-    .db-thread-content > :nth-child(22),
-    .db-thread-content > :nth-child(23) { animation-delay: 40s; }
-    .db-thread-content > :nth-child(24),
-    .db-thread-content > :nth-child(25) { animation-delay: 44s; }
-    .db-thread-content > :nth-child(26),
-    .db-thread-content > :nth-child(27) { animation-delay: 48s; }
-    .db-thread-content > :nth-child(28),
-    .db-thread-content > :nth-child(29) { animation-delay: 52s; }
-    .db-thread-content > :nth-child(30),
-    .db-thread-content > :nth-child(31) { animation-delay: 56s; }
-    .db-thread-content > :nth-child(32),
-    .db-thread-content > :nth-child(33) { animation-delay: 60s; }
-    .db-thread-content > :nth-child(34),
-    .db-thread-content > :nth-child(35) { animation-delay: 64s; }
-    .db-thread-content > :nth-child(36),
-    .db-thread-content > :nth-child(37) { animation-delay: 68s; }
-    .db-thread-content > :nth-child(38),
-    .db-thread-content > :nth-child(39) { animation-delay: 72s; }
-    .db-thread-content > :nth-child(40),
-    .db-thread-content > :nth-child(41) { animation-delay: 76s; }
-    .db-thread-content > :nth-child(42),
-    .db-thread-content > :nth-child(43) { animation-delay: 80s; }
-    .db-thread-content > :nth-child(44),
-    .db-thread-content > :nth-child(45) { animation-delay: 84s; }
-    .db-thread-content > :nth-child(46),
-    .db-thread-content > :nth-child(47) { animation-delay: 88s; }
-    .db-thread-content > :nth-child(48),
-    .db-thread-content > :nth-child(49) { animation-delay: 92s; }
+    /* (timing handled by React state machine — no CSS-driven scene cycle) */
 
     .db-bubble-row.user { display: flex; justify-content: flex-end; }
     .db-bubble-row.agent { display: flex; gap: 12px; align-items: flex-start; }
@@ -524,6 +463,66 @@
       font-family: 'Inter', sans-serif; font-size: 13px;
       color: rgba(255, 255, 255, 0.45);
       display: inline-flex; align-items: center;
+    }
+    .db-input-typed {
+      font-family: 'Inter', sans-serif; font-size: 13px;
+      color: rgba(255, 255, 255, 0.92);
+      display: inline-flex; align-items: center;
+    }
+
+    /* Send button click flash */
+    .db-send {
+      transition: background 0.18s ease, transform 0.12s ease, box-shadow 0.18s ease;
+    }
+    .db-send.db-send-clicked {
+      background: #B8231F;
+      transform: scale(0.92);
+      box-shadow: 0 0 24px rgba(229, 50, 45, 0.75);
+    }
+
+    /* Animated mouse cursor */
+    .db-cursor {
+      position: absolute;
+      width: 18px; height: 22px;
+      pointer-events: none;
+      z-index: 50;
+      bottom: 110px;
+      right: 50%;
+      opacity: 0;
+      transition:
+        bottom 0.55s cubic-bezier(0.16, 1, 0.3, 1),
+        right 0.55s cubic-bezier(0.16, 1, 0.3, 1),
+        transform 0.18s cubic-bezier(0.4, 0, 0.6, 1),
+        opacity 0.30s ease;
+      filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.55));
+    }
+    .db-cursor svg { width: 100%; height: 100%; display: block; }
+    .db-cursor.cur-user-typing {
+      opacity: 1;
+      bottom: 100px;
+      right: 56%;
+      transform: rotate(-6deg);
+    }
+    .db-cursor.cur-user-moving {
+      opacity: 1;
+      bottom: 30px;
+      right: 36px;
+      transform: rotate(-4deg);
+    }
+    .db-cursor.cur-user-click {
+      opacity: 1;
+      bottom: 30px;
+      right: 36px;
+      transform: rotate(-4deg) scale(0.84);
+    }
+    @media (max-width: 767px) {
+      .db-cursor {
+        bottom: 88px; right: 50%;
+      }
+      .db-cursor.cur-user-moving,
+      .db-cursor.cur-user-click {
+        bottom: 30px; right: 30px;
+      }
     }
     .db-input-caret {
       display: inline-block;
@@ -1913,6 +1912,115 @@
 
     // ─────────────────────── DASHBOARD DEMO ───────────────────────
     function DashboardDemo() {
+      // Conversation: each event has type 'system' | 'user' | 'agent'
+      // user: text shown as typewriter in input then sent as bubble
+      // agent: typing dots appear, then content renders as agent bubble
+      const conversation = [
+        { type: 'system', text: '07:02 · Pagi briefing' },
+        { type: 'agent', content: (<>Selamat pagi, Jason. <strong>Top 5</strong> yang relevan buat kamu hari ini.<div className="db-list"><div className="item"><span className="marker" />Cuaca Jakarta · Sunny 28° <span className="meta">+breeze</span></div><div className="item"><span className="marker" />IDR/USD turun 0.2% <span className="meta">15.892</span></div><div className="item"><span className="marker" />Portfolio kamu naik 1.8% <span className="meta">+Rp 4,2jt</span></div><div className="item"><span className="marker" />Filing GST deadline hari ini <span className="meta">23:59</span></div></div></>) },
+        { type: 'user', text: 'Inbox urgent today?' },
+        { type: 'agent', content: (<>Sorted <strong>247 emails</strong> in 8s. Tiga butuh balasan, PR <strong>#142</strong> approved, meeting besok moved <strong>2pm</strong>.<div className="db-stats"><div className="db-stat"><div className="num">3</div><div className="lbl">Urgent</div></div><div className="db-stat"><div className="num">12</div><div className="lbl">Important</div></div><div className="db-stat"><div className="num">232</div><div className="lbl">Filed</div></div></div></>) },
+        { type: 'user', text: 'Draft replies untuk 3 itu, tone casual' },
+        { type: 'agent', content: (<>Done — <strong>3 drafts in queue</strong>, mirip gaya nulis kamu. Tinggal review &amp; send.<div className="db-list"><div className="item"><span className="marker" />Re: Q4 review · Sarah <span className="meta">2 paragraf</span></div><div className="item"><span className="marker" />Re: Vendor approval · Andre <span className="meta">1 paragraf</span></div><div className="item"><span className="marker" />Re: Schedule conflict · Marcus <span className="meta">1 paragraf</span></div></div></>) },
+        { type: 'user', text: 'Recap meeting product strategy kemarin?' },
+        { type: 'agent', content: (<>2 jam meeting → <strong>7 action items</strong>. Top 3 paling kritis:<div className="db-list"><div className="item"><span className="marker" />Deploy v2.3 by Jumat <span className="meta">@jason</span></div><div className="item"><span className="marker" />Sarah owns marketing draft <span className="meta">deadline Rabu</span></div><div className="item"><span className="marker" />Follow up Andre re: partnership <span className="meta">this week</span></div></div></>) },
+        { type: 'user', text: 'Schedule call sama Andre minggu depan' },
+        { type: 'agent', content: (<>Selasa 10am bentrok family lunch (Mama). Saran: <strong>Rabu 2pm</strong> atau <strong>Jumat 11am</strong> — Andre's calendar both open.<div className="db-cal-row"><div className="db-cal-cell">Sen</div><div className="db-cal-cell conflict">Sel<br/>2 evt</div><div className="db-cal-cell evt">Rab<br/>2pm</div><div className="db-cal-cell">Kam</div><div className="db-cal-cell evt">Jum<br/>11am</div><div className="db-cal-cell">Sab</div><div className="db-cal-cell">Min</div></div></>) },
+        { type: 'user', text: 'Rabu 2pm aja' },
+        { type: 'agent', content: (<>Sent invite. <strong>Andre confirmed dalam 4 menit ✓</strong> Calendar update: Rabu 2pm — Polaris HQ.</>) },
+        { type: 'user', text: 'Pitch deck buat ketemu dia — angel ask Rp 2,5M' },
+        { type: 'agent', content: (<>Done. <strong>12 slides</strong>, oxblood theme. Story arc: problem → solution → market → traction → ask.<div className="db-attach"><span className="ic">PDF</span><span className="nm">pitch-andre-v3.pdf · 12 slides</span></div></>) },
+        { type: 'user', text: 'TikTok lagi trending apa hari ini?' },
+        { type: 'agent', content: (<>Trend baru terdeteksi 6 jam terakhir: <strong>#5MinuteRoutine</strong> naik <strong>312%</strong>. Cocok buat brand wellness kamu.<div className="db-radar"><svg viewBox="0 0 60 60"><circle className="ring" cx="30" cy="30" r="24" /><circle className="ring" cx="30" cy="30" r="16" /><circle className="ring" cx="30" cy="30" r="8" /><line className="sw" x1="30" y1="30" x2="30" y2="6" /><circle className="blip" cx="42" cy="22" r="2" /><circle className="blip" cx="20" cy="40" r="1.6" /></svg><div className="info"><div className="t">#5MinuteRoutine · +312%</div><div className="s">TikTok · last 6h</div></div></div></>) },
+        { type: 'user', text: 'Bikin script TikTok 60s pake trend itu, gaya humor' },
+        { type: 'agent', content: (<>Ready. Sound: <strong>"morning anchor" remix #4</strong>.<div className="db-script"><div className="db-script-row"><span className="t">0:03</span><span className="lbl">HOOK</span><span className="bar" style={{ background: '#E5322D' }} /></div><div className="db-script-row"><span className="t">0:48</span><span className="lbl">BODY</span><span className="bar" /></div><div className="db-script-row"><span className="t">1:00</span><span className="lbl">CTA</span><span className="bar" style={{ width: '70%' }} /></div></div></>) },
+        { type: 'user', text: 'Customer chats overnight, ada yang escalate?' },
+        { type: 'agent', content: (<>Handled <strong>23 chats</strong> overnight. 18 closed langsung, <strong>5 escalated</strong> ke pagi queue.<div className="db-list"><div className="item"><span className="marker" />"Refund process berapa lama?" <span className="meta">05:08</span></div><div className="item"><span className="marker" />"Bisa custom warna?" <span className="meta">04:21</span></div><div className="item"><span className="marker" />"Ada wholesale discount?" <span className="meta">03:14</span></div></div></>) },
+        { type: 'user', text: 'Pivot table Q4 sales by region' },
+        { type: 'agent', content: (<>Done. Formula: <strong style={{ fontFamily: "'JetBrains Mono', monospace", color: '#E5322D' }}>=SUMIFS(C:C, A:A, "Q4", B:B, region)</strong>. Atau langsung file siap.<div className="db-attach"><span className="ic">XLSX</span><span className="nm">q4-sales-pivot.xlsx · 4 sheets</span></div></>) },
+        { type: 'user', text: 'Post listing rumah BSD 2,8M ke semua platform' },
+        { type: 'agent', content: (<>Live di <strong>6 platform</strong>. Caption dioptimalkan per kanal.<div className="db-chips"><span className="db-chip">OLX</span><span className="db-chip">Lamudi</span><span className="db-chip">Rumah123</span><span className="db-chip">Instagram</span><span className="db-chip">Facebook</span><span className="db-chip">TikTok</span></div></>) },
+        { type: 'user', text: 'Networking — siapa yang harus follow up minggu ini?' },
+        { type: 'agent', content: (<>Lima hangat. Top 2: <strong>Andre</strong> baru launch produk, <strong>Sarah</strong> anniversary nikah Sabtu.</>) },
+      ];
+
+      const [step, setStep] = useState(0);
+      const [phase, setPhase] = useState('idle');
+      const [typed, setTyped] = useState(0);
+
+      useEffect(() => {
+        let cleanup = () => {};
+        if (step >= conversation.length) {
+          const t = setTimeout(() => { setStep(0); setPhase('idle'); setTyped(0); }, 5000);
+          return () => clearTimeout(t);
+        }
+        const ev = conversation[step];
+        if (ev.type === 'system') {
+          setPhase('idle');
+          const t = setTimeout(() => setStep(s => s + 1), 1400);
+          cleanup = () => clearTimeout(t);
+        } else if (ev.type === 'agent') {
+          setPhase('agent-typing');
+          const t1 = setTimeout(() => {
+            setPhase('idle');
+            const t2 = setTimeout(() => setStep(s => s + 1), 2400);
+            cleanup = () => clearTimeout(t2);
+          }, 1100);
+          cleanup = () => clearTimeout(t1);
+        } else {
+          // user event
+          setPhase('user-typing');
+          setTyped(0);
+          const text = ev.text;
+          const speed = Math.max(28, Math.min(55, 1400 / text.length));
+          let i = 0;
+          const ti = setInterval(() => {
+            i++;
+            setTyped(i);
+            if (i >= text.length) {
+              clearInterval(ti);
+              const t1 = setTimeout(() => {
+                setPhase('user-moving');
+                const t2 = setTimeout(() => {
+                  setPhase('user-click');
+                  const t3 = setTimeout(() => {
+                    setPhase('idle');
+                    setTyped(0);
+                    const t4 = setTimeout(() => setStep(s => s + 1), 200);
+                    cleanup = () => clearTimeout(t4);
+                  }, 240);
+                  cleanup = () => clearTimeout(t3);
+                }, 380);
+                cleanup = () => clearTimeout(t2);
+              }, 320);
+              cleanup = () => clearTimeout(t1);
+            }
+          }, speed);
+          cleanup = () => clearInterval(ti);
+        }
+        return () => cleanup();
+      }, [step]);
+
+      const ev = conversation[step];
+      const visible = conversation.slice(0, step);
+      if (ev) {
+        if (ev.type === 'system') visible.push(ev);
+        else if (ev.type === 'agent' && phase === 'idle') visible.push(ev);
+      }
+      const showAgentTyping = ev && ev.type === 'agent' && phase === 'agent-typing';
+      const typedText = (ev && ev.type === 'user' && phase === 'user-typing') ? ev.text.slice(0, typed) : '';
+
+      const renderBubble = (m, i) => {
+        if (m.type === 'system') return <div key={i} className="db-bubble-row system">{m.text}</div>;
+        if (m.type === 'user') return <div key={i} className="db-bubble-row user"><div className="db-msg-user">{m.text}</div></div>;
+        return (
+          <div key={i} className="db-bubble-row agent">
+            <div className="db-avatar">●</div>
+            <div className="db-bubble">{m.content}</div>
+          </div>
+        );
+      };
+
       return (
         <section className="db-section">
           <div className="db-eyebrow">
@@ -1945,6 +2053,44 @@
                 </div>
               </aside>
 
+              <main className="db-main">
+                <div className="db-thread">
+                  <div className="db-thread-content">
+                    {visible.map(renderBubble)}
+                    {showAgentTyping && (
+                      <div className="db-typing-row agent">
+                        <div className="typing-bubble"><span className="dot" /><span className="dot" /><span className="dot" /></div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </main>
+            </div>
+
+            {/* Input area — typewriter shows next user prompt */}
+            <div className="db-input">
+              <div className="db-input-box">
+                {typedText
+                  ? <span className="db-input-typed">{typedText}<span className="db-input-caret" /></span>
+                  : <span className="db-input-placeholder">Tanya apa aja...<span className="db-input-caret" /></span>}
+              </div>
+              <button className={`db-send ${phase === 'user-click' ? 'db-send-clicked' : ''}`}>
+                <ArrowUpRight size={18} stroke={2.4} />
+              </button>
+            </div>
+
+            {/* Animated mouse cursor — moves to send button when user message is ready */}
+            <div className={`db-cursor cur-${phase}`}>
+              <svg viewBox="0 0 18 22">
+                <path d="M2 2 L2 17 L6.5 13 L9 18 L11.5 17 L8.8 12 L14 12 Z" fill="#fff" stroke="#000" strokeWidth="0.7" strokeLinejoin="round" />
+              </svg>
+            </div>
+          </div>
+        </section>
+      );
+    }
+
+    function _DASH_DEMO_LEGACY_DEAD_CODE() { return false; /*
               <main className="db-main">
                 <div className="db-thread">
                   <div className="db-thread-content">
@@ -2341,7 +2487,7 @@
           </div>
         </section>
       );
-    }
+    */ }
 
     // ─────────────────────── DIY PAIN ───────────────────────
     function FeaturesChess() {
