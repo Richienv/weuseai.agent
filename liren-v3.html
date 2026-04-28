@@ -250,9 +250,9 @@
       will-change: max-height, opacity, transform;
     }
     @keyframes bubbleReveal {
-      0%, 1.2% { max-height: 0; opacity: 0; transform: translateY(8px); }
-      2%, 3.5% { max-height: 400px; opacity: 1; transform: translateY(0); }
-      100% { max-height: 400px; opacity: 1; transform: translateY(0); }
+      0%, 1.7% { max-height: 0; opacity: 0; transform: translateY(8px); }
+      2.2%, 3.5% { max-height: 500px; opacity: 1; transform: translateY(0); }
+      100% { max-height: 500px; opacity: 1; transform: translateY(0); }
     }
 
     /* Typing indicator row — collapses before message arrives */
@@ -287,61 +287,61 @@
       30% { opacity: 1; transform: translateY(-2px); }
     }
     @keyframes typingLifecycle {
-      0%, 0.5% { max-height: 0; opacity: 0; }
-      1%, 1.7% { max-height: 60px; opacity: 1; }
+      0%, 0.3% { max-height: 0; opacity: 0; }
+      0.7%, 1.7% { max-height: 60px; opacity: 1; }
       2.0%, 100% { max-height: 0; opacity: 0; }
     }
 
-    /* 49 children: 1 system + 24 (typing + message) pairs over 96s */
-    .db-thread-content > :nth-child(1)  { animation-delay: 0s; }
-    .db-thread-content > :nth-child(2)  { animation-delay: 0s; }
-    .db-thread-content > :nth-child(3)  { animation-delay: 2s; }
-    .db-thread-content > :nth-child(4)  { animation-delay: 4s; }
-    .db-thread-content > :nth-child(5)  { animation-delay: 6s; }
-    .db-thread-content > :nth-child(6)  { animation-delay: 8s; }
-    .db-thread-content > :nth-child(7)  { animation-delay: 10s; }
-    .db-thread-content > :nth-child(8)  { animation-delay: 12s; }
-    .db-thread-content > :nth-child(9)  { animation-delay: 14s; }
-    .db-thread-content > :nth-child(10) { animation-delay: 16s; }
-    .db-thread-content > :nth-child(11) { animation-delay: 18s; }
-    .db-thread-content > :nth-child(12) { animation-delay: 20s; }
-    .db-thread-content > :nth-child(13) { animation-delay: 22s; }
-    .db-thread-content > :nth-child(14) { animation-delay: 24s; }
-    .db-thread-content > :nth-child(15) { animation-delay: 26s; }
-    .db-thread-content > :nth-child(16) { animation-delay: 28s; }
-    .db-thread-content > :nth-child(17) { animation-delay: 30s; }
-    .db-thread-content > :nth-child(18) { animation-delay: 32s; }
-    .db-thread-content > :nth-child(19) { animation-delay: 34s; }
-    .db-thread-content > :nth-child(20) { animation-delay: 36s; }
-    .db-thread-content > :nth-child(21) { animation-delay: 38s; }
-    .db-thread-content > :nth-child(22) { animation-delay: 40s; }
-    .db-thread-content > :nth-child(23) { animation-delay: 42s; }
-    .db-thread-content > :nth-child(24) { animation-delay: 44s; }
-    .db-thread-content > :nth-child(25) { animation-delay: 46s; }
-    .db-thread-content > :nth-child(26) { animation-delay: 48s; }
-    .db-thread-content > :nth-child(27) { animation-delay: 50s; }
-    .db-thread-content > :nth-child(28) { animation-delay: 52s; }
-    .db-thread-content > :nth-child(29) { animation-delay: 54s; }
-    .db-thread-content > :nth-child(30) { animation-delay: 56s; }
-    .db-thread-content > :nth-child(31) { animation-delay: 58s; }
-    .db-thread-content > :nth-child(32) { animation-delay: 60s; }
-    .db-thread-content > :nth-child(33) { animation-delay: 62s; }
-    .db-thread-content > :nth-child(34) { animation-delay: 64s; }
-    .db-thread-content > :nth-child(35) { animation-delay: 66s; }
-    .db-thread-content > :nth-child(36) { animation-delay: 68s; }
-    .db-thread-content > :nth-child(37) { animation-delay: 70s; }
-    .db-thread-content > :nth-child(38) { animation-delay: 72s; }
-    .db-thread-content > :nth-child(39) { animation-delay: 74s; }
-    .db-thread-content > :nth-child(40) { animation-delay: 76s; }
-    .db-thread-content > :nth-child(41) { animation-delay: 78s; }
-    .db-thread-content > :nth-child(42) { animation-delay: 80s; }
-    .db-thread-content > :nth-child(43) { animation-delay: 82s; }
-    .db-thread-content > :nth-child(44) { animation-delay: 84s; }
-    .db-thread-content > :nth-child(45) { animation-delay: 86s; }
-    .db-thread-content > :nth-child(46) { animation-delay: 88s; }
-    .db-thread-content > :nth-child(47) { animation-delay: 90s; }
-    .db-thread-content > :nth-child(48) { animation-delay: 92s; }
-    .db-thread-content > :nth-child(49) { animation-delay: 94s; }
+    /* 49 children paired: system shows instantly, then 24 (typing+msg) slots × 4s = 96s */
+    .db-thread-content > :nth-child(1)  { animation-delay: -3s; }
+    .db-thread-content > :nth-child(2),
+    .db-thread-content > :nth-child(3)  { animation-delay: 0s; }
+    .db-thread-content > :nth-child(4),
+    .db-thread-content > :nth-child(5)  { animation-delay: 4s; }
+    .db-thread-content > :nth-child(6),
+    .db-thread-content > :nth-child(7)  { animation-delay: 8s; }
+    .db-thread-content > :nth-child(8),
+    .db-thread-content > :nth-child(9)  { animation-delay: 12s; }
+    .db-thread-content > :nth-child(10),
+    .db-thread-content > :nth-child(11) { animation-delay: 16s; }
+    .db-thread-content > :nth-child(12),
+    .db-thread-content > :nth-child(13) { animation-delay: 20s; }
+    .db-thread-content > :nth-child(14),
+    .db-thread-content > :nth-child(15) { animation-delay: 24s; }
+    .db-thread-content > :nth-child(16),
+    .db-thread-content > :nth-child(17) { animation-delay: 28s; }
+    .db-thread-content > :nth-child(18),
+    .db-thread-content > :nth-child(19) { animation-delay: 32s; }
+    .db-thread-content > :nth-child(20),
+    .db-thread-content > :nth-child(21) { animation-delay: 36s; }
+    .db-thread-content > :nth-child(22),
+    .db-thread-content > :nth-child(23) { animation-delay: 40s; }
+    .db-thread-content > :nth-child(24),
+    .db-thread-content > :nth-child(25) { animation-delay: 44s; }
+    .db-thread-content > :nth-child(26),
+    .db-thread-content > :nth-child(27) { animation-delay: 48s; }
+    .db-thread-content > :nth-child(28),
+    .db-thread-content > :nth-child(29) { animation-delay: 52s; }
+    .db-thread-content > :nth-child(30),
+    .db-thread-content > :nth-child(31) { animation-delay: 56s; }
+    .db-thread-content > :nth-child(32),
+    .db-thread-content > :nth-child(33) { animation-delay: 60s; }
+    .db-thread-content > :nth-child(34),
+    .db-thread-content > :nth-child(35) { animation-delay: 64s; }
+    .db-thread-content > :nth-child(36),
+    .db-thread-content > :nth-child(37) { animation-delay: 68s; }
+    .db-thread-content > :nth-child(38),
+    .db-thread-content > :nth-child(39) { animation-delay: 72s; }
+    .db-thread-content > :nth-child(40),
+    .db-thread-content > :nth-child(41) { animation-delay: 76s; }
+    .db-thread-content > :nth-child(42),
+    .db-thread-content > :nth-child(43) { animation-delay: 80s; }
+    .db-thread-content > :nth-child(44),
+    .db-thread-content > :nth-child(45) { animation-delay: 84s; }
+    .db-thread-content > :nth-child(46),
+    .db-thread-content > :nth-child(47) { animation-delay: 88s; }
+    .db-thread-content > :nth-child(48),
+    .db-thread-content > :nth-child(49) { animation-delay: 92s; }
 
     .db-bubble-row.user { display: flex; justify-content: flex-end; }
     .db-bubble-row.agent { display: flex; gap: 12px; align-items: flex-start; }
