@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Checkout — weuseai.agent</title>
+  <meta name="description" content="Secure checkout for weuseai.agent. One-time setup, lifetime use.">
+  <meta name="theme-color" content="#ffffff">
+  <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Instrument+Serif&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    :root {
+      --bg-page: #ffffff;
+      --bg-summary: #f6f9fc;
+      --border: #e6e6e6;
+      --text: #1a1f36;
+      --text-muted: #6b7c93;
+      --text-subtle: #8898aa;
+      --accent: #635bff;
+      --accent-hover: #5347f5;
+      --field-bg: #ffffff;
+      --field-border: #e0e0e0;
+      --field-border-focus: #635bff;
+      --field-shadow: 0 1px 1px rgba(0,0,0,0.03);
+      --field-shadow-focus: 0 0 0 1px #635bff, 0 1px 3px rgba(99,91,255,0.18);
+      --discount: #16a34a;
+    }
+    html, body { background: var(--bg-page); color: var(--text); font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; -webkit-font-smoothing: antialiased; }
+    body { margin: 0; }
+    .serif { font-family: 'Instrument Serif', serif; }
+
+    /* Page split */
+    .checkout-shell { display: grid; grid-template-columns: 1fr; min-height: 100vh; }
+    @media (min-width: 900px) {
+      .checkout-shell { grid-template-columns: 1fr 1fr; }
+    }
+    .summary-pane {
+      background: var(--bg-summary);
+      padding: 32px 24px 56px;
+      position: relative;
+    }
+    @media (min-width: 900px) {
+      .summary-pane {
+        padding: 56px 56px 56px max(56px, calc((100vw - 980px) / 2));
+        min-height: 100vh;
+        border-right: 1px solid var(--border);
+      }
+    }
+    @media (min-width: 1280px) {
+      .summary-pane { padding-left: max(56px, calc((100vw - 1140px) / 2)); }
+    }
+    .form-pane {
+      padding: 28px 24px 56px;
+      background: var(--bg-page);
+    }
+    @media (min-width: 900px) {
+      .form-pane {
+        padding: 56px max(56px, calc((100vw - 980px) / 2)) 56px 56px;
+      }
+    }
+    @media (min-width: 1280px) {
+      .form-pane { padding-right: max(56px, calc((100vw - 1140px) / 2)); }
+    }
+
+    .summary-inner, .form-inner { max-width: 460px; }
+
+    /* Branding */
+    .brand-row { display: flex; align-items: center; gap: 10px; }
+    .brand-logo {
+      width: 32px; height: 32px; border-radius: 8px;
+      background: #0a0a0a; color: #fff; display: grid; place-items: center;
+      font-family: 'Instrument Serif', serif; font-size: 18px; line-height: 1;
+    }
+    .brand-name { font-weight: 600; font-size: 14px; color: var(--text); letter-spacing: -0.01em; }
+
+    .pay-back { display: inline-flex; align-items: center; gap: 6px; color: var(--text-muted); font-size: 13px; text-decoration: none; }
+    .pay-back:hover { color: var(--text); }
+
+    /* Summary content */
+    .pay-label { font-size: 14px; color: var(--text-muted); margin-top: 28px; }
+    .pay-amount { font-size: 36px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.1; margin-top: 4px; color: var(--text); }
+    .pay-subline { font-size: 13px; color: var(--text-muted); margin-top: 6px; }
+
+    .line-item { display: flex; gap: 14px; padding: 18px 0; border-bottom: 1px solid var(--border); }
+    .line-item:first-of-type { border-top: 1px solid var(--border); }
+    .li-thumb {
+      width: 44px; height: 44px; border-radius: 10px;
+      background: linear-gradient(135deg, #1a1f36 0%, #2c3450 100%);
+      color: #fff; display: grid; place-items: center;
+      font-family: 'Instrument Serif', serif; font-size: 22px;
+      flex-shrink: 0;
+    }
+    .li-body { flex: 1; min-width: 0; }
+    .li-title { font-weight: 500; font-size: 14px; color: var(--text); }
+    .li-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; line-height: 1.4; }
+    .li-price { font-weight: 500; font-size: 14px; color: var(--text); white-space: nowrap; }
+    .li-old { font-size: 12px; color: var(--text-subtle); text-decoration: line-through; margin-right: 4px; }
+
+    .totals { padding: 18px 0 0; }
+    .totals-row { display: flex; justify-content: space-between; align-items: baseline; padding: 6px 0; font-size: 14px; }
+    .totals-row .lbl { color: var(--text-muted); }
+    .totals-row .val { color: var(--text); font-weight: 500; }
+    .totals-row .val.discount { color: var(--discount); }
+    .totals-grand { display: flex; justify-content: space-between; align-items: baseline; padding-top: 14px; margin-top: 10px; border-top: 1px solid var(--border); font-size: 18px; font-weight: 600; color: var(--text); letter-spacing: -0.01em; }
+
+    .promo {
+      margin-top: 18px; display: flex; align-items: center; gap: 10px;
+      padding: 12px 14px; border: 1px dashed var(--border); border-radius: 8px;
+      font-size: 13px; color: var(--text-muted); cursor: pointer;
+      transition: background 0.15s ease, border-color 0.15s ease;
+    }
+    .promo:hover { background: #fff; border-color: #c8c8c8; color: var(--text); }
+    .promo .plus { width: 18px; height: 18px; border-radius: 4px; background: #e6e6e6; display: grid; place-items: center; color: var(--text-muted); font-size: 14px; line-height: 1; }
+
+    /* Form */
+    .form-title { font-size: 13px; font-weight: 600; color: var(--text); letter-spacing: 0.02em; margin-bottom: 10px; text-transform: uppercase; }
+    .field-label { display: block; font-size: 13px; color: var(--text); font-weight: 500; margin-bottom: 6px; }
+    .field-input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--field-border);
+      border-radius: 6px;
+      font-size: 14px;
+      color: var(--text);
+      background: var(--field-bg);
+      box-shadow: var(--field-shadow);
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+      font-family: inherit;
+      outline: none;
+      box-sizing: border-box;
+    }
+    .field-input::placeholder { color: var(--text-subtle); }
+    .field-input:focus { border-color: var(--field-border-focus); box-shadow: var(--field-shadow-focus); }
+
+    .field-group { margin-bottom: 14px; }
+
+    /* Card stacked group like Stripe */
+    .card-group {
+      border: 1px solid var(--field-border);
+      border-radius: 6px;
+      background: #fff;
+      box-shadow: var(--field-shadow);
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .card-group:focus-within { border-color: var(--field-border-focus); box-shadow: var(--field-shadow-focus); }
+    .card-group .card-row { display: flex; }
+    .card-group .card-row + .card-row { border-top: 1px solid var(--field-border); }
+    .card-group input {
+      flex: 1; min-width: 0;
+      border: none; outline: none; background: transparent;
+      padding: 10px 12px; font-size: 14px; color: var(--text); font-family: inherit;
+    }
+    .card-group input::placeholder { color: var(--text-subtle); }
+    .card-group .with-icon { display: flex; align-items: center; flex: 1; min-width: 0; }
+    .card-group .with-icon .brands {
+      display: flex; align-items: center; gap: 4px;
+      padding-right: 10px;
+    }
+    .card-group .brands .brand {
+      width: 24px; height: 16px;
+      border-radius: 3px;
+      display: grid; place-items: center;
+      font-size: 8px; font-weight: 700; color: #fff; letter-spacing: 0.04em;
+    }
+    .brand.visa { background: #1a1f71; }
+    .brand.mc { background: linear-gradient(90deg, #eb001b 50%, #f79e1b 50%); }
+    .brand.amex { background: #2e77bb; }
+    .brand.jcb { background: #0e4c96; }
+    .card-group .col + .col { border-left: 1px solid var(--field-border); }
+    .card-group .col { flex: 1; }
+    .card-group .col input { width: 100%; }
+
+    .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    .pay-btn {
+      width: 100%;
+      margin-top: 22px;
+      padding: 12px 16px;
+      border-radius: 6px;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 600;
+      font-size: 15px;
+      border: none;
+      cursor: pointer;
+      transition: background 0.15s ease, transform 0.05s ease;
+      letter-spacing: -0.005em;
+    }
+    .pay-btn:hover { background: var(--accent-hover); }
+    .pay-btn:active { transform: translateY(1px); }
+    .pay-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .lock-line { display: flex; align-items: center; gap: 6px; justify-content: center; font-size: 12px; color: var(--text-muted); margin-top: 14px; }
+    .footer-line { margin-top: 32px; padding-top: 18px; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: var(--text-subtle); flex-wrap: wrap; gap: 8px; }
+    .footer-line a { color: var(--text-muted); text-decoration: none; }
+    .footer-line a:hover { text-decoration: underline; }
+    .footer-brand { display: flex; align-items: center; gap: 6px; }
+    .powered { font-size: 11px; color: var(--text-subtle); }
+    .powered b { color: var(--text-muted); font-weight: 600; }
+
+    /* Mobile order summary collapse */
+    .mobile-summary-toggle {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 16px; background: #fff; border: 1px solid var(--border); border-radius: 8px;
+      font-size: 14px; cursor: pointer;
+    }
+    @media (min-width: 900px) {
+      .mobile-summary-toggle { display: none; }
+    }
+
+    /* ─── Payment method picker ─── */
+    .method-list { display: flex; flex-direction: column; gap: 8px; }
+    .method {
+      display: grid;
+      grid-template-columns: 36px 1fr auto;
+      gap: 12px;
+      align-items: center;
+      padding: 12px 14px;
+      border: 1px solid var(--field-border);
+      border-radius: 8px;
+      background: #fff;
+      cursor: pointer;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+      position: relative;
+    }
+    .method:hover { border-color: #c8c8c8; }
+    .method input[type="radio"] {
+      position: absolute; opacity: 0; pointer-events: none;
+    }
+    .method.is-selected {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent), 0 1px 3px rgba(99,91,255,0.12);
+      background: #fbfaff;
+    }
+    .method-icon {
+      width: 36px; height: 24px; border-radius: 4px;
+      display: grid; place-items: center;
+      font-size: 9px; font-weight: 700; letter-spacing: 0.04em; color: #fff;
+      flex-shrink: 0;
+    }
+    .mi-qris   { background: linear-gradient(135deg, #e63946, #1d3557); }
+    .mi-va     { background: #1a1f36; }
+    .mi-card   { background: linear-gradient(90deg, #1a1f71 50%, #eb001b 50%); }
+    .mi-cicilan{ background: linear-gradient(135deg, #635bff, #00a3ff); }
+    .mi-ewlt   { background: linear-gradient(90deg, #00aa13, #ff7e01); color: #fff; }
+    .mi-bnpl   { background: linear-gradient(135deg, #2e2e4f, #635bff); }
+
+    .method-body { min-width: 0; }
+    .method-name { font-size: 14px; font-weight: 500; color: var(--text); line-height: 1.2; }
+    .method-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; line-height: 1.3; }
+    .method-fee { text-align: right; flex-shrink: 0; }
+    .method-fee .amt { font-size: 13px; font-weight: 500; color: var(--text); }
+    .method-fee .pct { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+    .method.is-cheapest .method-fee .amt::after {
+      content: 'Cheapest';
+      display: inline-block; margin-left: 6px;
+      font-size: 9.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+      color: var(--discount); padding: 2px 5px; border-radius: 3px;
+      background: rgba(22,163,74,0.10);
+    }
+
+    .method-details {
+      margin-top: 14px;
+      padding: 14px;
+      border: 1px dashed #e0e0e0;
+      border-radius: 8px;
+      background: #fafbfc;
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+    .method-details strong { color: var(--text); font-weight: 500; }
+
+    .totals-row .val.fee { color: var(--text); }
+    .totals-row .lbl .pm-tag {
+      display: inline-block;
+      margin-left: 4px;
+      padding: 1px 5px; border-radius: 3px;
+      background: #eef0f3; color: var(--text-muted);
+      font-size: 10.5px; letter-spacing: 0.02em;
+    }
+    .fee-explainer {
+      font-size: 11.5px; color: var(--text-subtle);
+      margin-top: 8px; line-height: 1.45;
+    }
+
+    /* Always-On toggle in checkout */
+    .ao-toggle {
+      margin-top: 16px;
+      display: grid; grid-template-columns: 18px 1fr auto; gap: 12px;
+      align-items: center;
+      padding: 12px 14px;
+      border: 1px solid var(--field-border);
+      border-radius: 8px;
+      background: #fff;
+      cursor: pointer;
+      transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+    }
+    .ao-toggle:hover { border-color: #c8c8c8; }
+    .ao-toggle.is-on {
+      border-color: var(--accent);
+      background: #fbfaff;
+      box-shadow: 0 0 0 1px var(--accent), 0 1px 3px rgba(99,91,255,0.12);
+    }
+    .ao-toggle input { position: absolute; opacity: 0; pointer-events: none; }
+    .ao-checkbox {
+      width: 18px; height: 18px; border-radius: 5px;
+      border: 1.5px solid #c8c8c8;
+      display: grid; place-items: center;
+      transition: border-color 0.18s ease, background 0.18s ease;
+    }
+    .ao-toggle.is-on .ao-checkbox { background: var(--accent); border-color: var(--accent); }
+    .ao-toggle.is-on .ao-checkbox::after {
+      content: ''; width: 10px; height: 5px; margin-top: -2px;
+      border-left: 2px solid #fff; border-bottom: 2px solid #fff;
+      transform: rotate(-45deg);
+    }
+    .ao-title { font-size: 13.5px; font-weight: 500; color: var(--text); line-height: 1.25; }
+    .ao-sub { font-size: 11.5px; color: var(--text-muted); margin-top: 2px; line-height: 1.45; }
+    .ao-price { font-size: 13px; color: var(--accent); font-weight: 600; white-space: nowrap; }
+
+    .recurring-note {
+      margin-top: 12px;
+      padding: 10px 12px;
+      border-radius: 6px;
+      background: #f0f4f8;
+      font-size: 12px; line-height: 1.5;
+      color: var(--text-muted);
+      display: flex; flex-direction: column; gap: 2px;
+    }
+    .recurring-note strong { color: var(--text); font-weight: 600; }
+    .recurring-note .rn-row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+    .recurring-note .rn-icons { display: flex; flex-direction: column; gap: 4px; padding-top: 6px; margin-top: 6px; border-top: 1px solid rgba(0,0,0,0.05); font-size: 11.5px; }
+    .recurring-note .rn-icons div { display: flex; gap: 6px; align-items: flex-start; }
+    .recurring-note .rn-icons div::before { content: '·'; color: var(--text-subtle); }
+  </style>
+</head>
+<body>
+  <div class="checkout-shell">
+    <!-- Order summary (left on desktop) -->
+    <aside class="summary-pane">
+      <div class="summary-inner">
+        <div class="brand-row">
+          <a href="liren-v3.html" class="pay-back" aria-label="Back">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+          </a>
+          <span class="brand-logo">w</span>
+          <span class="brand-name">weuseai.agent</span>
+        </div>
+
+        <div class="pay-label" id="payLabel">Bayar ke weuseai.agent</div>
+        <div class="pay-amount" id="payAmount">Rp 1.308.093</div>
+        <div class="pay-subline" id="paySub">Setup + bulan pertama hosting · Pro</div>
+
+        <div class="line-item">
+          <div class="li-thumb" id="planThumb">P</div>
+          <div class="li-body">
+            <div class="li-title" id="planTitle">Pro plan setup</div>
+            <div class="li-sub" id="planSub">Setup sekali bayar — engineering work yang udah kami lakukan untuk kamu.</div>
+          </div>
+          <div class="li-price">
+            <span class="li-old" id="planOld">Rp 3.500.000</span>
+            <span id="planPrice">Rp 1.200.000</span>
+          </div>
+        </div>
+
+        <div class="line-item">
+          <div class="li-thumb" style="background: linear-gradient(135deg,#3b3b5c 0%,#5e5e8a 100%);">H</div>
+          <div class="li-body">
+            <div class="li-title">Hosting · bulan pertama</div>
+            <div class="li-sub">Auto-pause kalau nggak aktif &gt;30 hari. Stop kapan saja dari dashboard.</div>
+          </div>
+          <div class="li-price">
+            <span>Rp 99.000</span>
+          </div>
+        </div>
+
+        <div class="line-item" id="aoLineItem" style="display:none;">
+          <div class="li-thumb" style="background: linear-gradient(135deg,#E5322D 0%,#7a1c19 100%);">A</div>
+          <div class="li-body">
+            <div class="li-title">Always-On · bulan pertama</div>
+            <div class="li-sub">VPS jalan 24/7, skip auto-suspend. Untuk yang pakai agent setiap hari.</div>
+          </div>
+          <div class="li-price">
+            <span>Rp 49.000</span>
+          </div>
+        </div>
+
+        <label class="ao-toggle" id="aoToggle">
+          <input type="checkbox" id="aoCheckbox">
+          <div class="ao-checkbox" aria-hidden="true"></div>
+          <div>
+            <div class="ao-title">Always-On add-on</div>
+            <div class="ao-sub">VPS 24/7, skip auto-suspend</div>
+          </div>
+          <div class="ao-price">+ Rp 49k/bln</div>
+        </label>
+
+        <div class="totals">
+          <div class="totals-row">
+            <span class="lbl">Setup (full price)</span>
+            <span class="val" id="subtotal">Rp 3.500.000</span>
+          </div>
+          <div class="totals-row">
+            <span class="lbl" id="discountLbl">Launch discount (66%)</span>
+            <span class="val discount" id="discount">−Rp 2.300.000</span>
+          </div>
+          <div class="totals-row">
+            <span class="lbl">Hosting · bulan pertama</span>
+            <span class="val">+Rp 99.000</span>
+          </div>
+          <div class="totals-row" id="aoTotalRow" style="display:none;">
+            <span class="lbl">Always-On · bulan pertama</span>
+            <span class="val">+Rp 49.000</span>
+          </div>
+          <div class="totals-row">
+            <span class="lbl">Payment method fee <span class="pm-tag" id="feeTag">QRIS</span></span>
+            <span class="val fee" id="paymentFee">+Rp 9.100</span>
+          </div>
+          <div class="totals-row">
+            <span class="lbl">Tax</span>
+            <span class="val">Rp 0</span>
+          </div>
+          <div class="totals-grand">
+            <span>Total hari ini</span>
+            <span id="grandTotal">Rp 1.308.100</span>
+          </div>
+
+          <div class="recurring-note">
+            <div class="rn-row">
+              <span>Recurring tiap bulan</span>
+              <strong id="recurringTotal">Rp 99.000</strong>
+            </div>
+            <div class="rn-icons">
+              <div>Hosting auto-pause kalau kamu nggak aktif &gt;30 hari</div>
+              <div>Stop kapan saja dari dashboard, no commitment</div>
+            </div>
+          </div>
+
+          <p class="fee-explainer">Payment processor fees ditanggung pelanggan, transparent di atas. Pilih method paling murah dari pilihan di kanan — VA biasanya yang termurah.</p>
+        </div>
+
+        <div class="promo" id="promoToggle">
+          <span class="plus">+</span>
+          <span>Punya kode promo?</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Payment form (right on desktop) -->
+    <main class="form-pane">
+      <div class="form-inner">
+        <h1 class="serif" style="font-size: 28px; line-height: 1.1; letter-spacing: -0.02em; margin: 0 0 6px;">Pilih cara bayar</h1>
+        <p style="font-size: 13px; color: var(--text-muted); margin: 0 0 22px;">Setup sekali bayar. Hosting Rp 99k/bulan, stop kapan saja. Biaya processor transparent di tiap method.</p>
+
+        <form id="payForm" autocomplete="on" novalidate>
+          <div class="field-group">
+            <label class="field-label" for="email">Email</label>
+            <input class="field-input" type="email" id="email" name="email" placeholder="you@company.com" autocomplete="email" required>
+          </div>
+
+          <div class="field-group">
+            <label class="field-label">Payment method</label>
+            <div class="method-list" id="methodList" role="radiogroup" aria-label="Payment method">
+              <!-- Populated by JS so the fee column reflects the live plan total. -->
+            </div>
+          </div>
+
+          <div id="methodDetails"><!-- swapped per method --></div>
+
+          <div class="field-group" id="cardFields" style="display:none;">
+            <label class="field-label">Card information</label>
+            <div class="card-group">
+              <div class="card-row">
+                <div class="with-icon">
+                  <input type="text" inputmode="numeric" id="cardNumber" placeholder="1234 1234 1234 1234" autocomplete="cc-number" maxlength="23">
+                  <div class="brands" aria-hidden="true">
+                    <span class="brand visa">VISA</span>
+                    <span class="brand mc"></span>
+                    <span class="brand amex">AMEX</span>
+                    <span class="brand jcb">JCB</span>
+                  </div>
+                </div>
+              </div>
+              <div class="card-row">
+                <div class="col">
+                  <input type="text" inputmode="numeric" id="exp" placeholder="MM / YY" autocomplete="cc-exp" maxlength="7">
+                </div>
+                <div class="col">
+                  <input type="text" inputmode="numeric" id="cvc" placeholder="CVC" autocomplete="cc-csc" maxlength="4">
+                </div>
+              </div>
+            </div>
+            <div style="margin-top:10px;">
+              <input class="field-input" type="text" id="cardName" placeholder="Full name on card" autocomplete="cc-name">
+            </div>
+          </div>
+
+          <div class="field-group">
+            <label class="field-label" for="country">Country or region</label>
+            <select class="field-input" id="country" autocomplete="country" style="appearance:none; background-image: url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2210%22 height=%226%22 viewBox=%220 0 10 6%22><path fill=%22%236b7c93%22 d=%22M0 0l5 6 5-6z%22/></svg>'); background-repeat:no-repeat; background-position:right 12px center; padding-right:32px;">
+              <option value="ID" selected>Indonesia</option>
+              <option value="SG">Singapore</option>
+              <option value="MY">Malaysia</option>
+              <option value="US">United States</option>
+              <option value="GB">United Kingdom</option>
+              <option value="AU">Australia</option>
+              <option value="JP">Japan</option>
+            </select>
+            <input class="field-input" type="text" id="postal" placeholder="Postal code" autocomplete="postal-code" style="margin-top:10px;">
+          </div>
+
+          <button class="pay-btn" type="submit" id="payBtn">Pay <span id="payBtnAmount">Rp 1.208.400</span></button>
+
+          <div class="lock-line">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            Secure payment · TLS encrypted
+          </div>
+
+          <div class="footer-line">
+            <div class="powered">Payments by <b>weuseai.agent</b></div>
+            <div style="display:flex; gap:14px;">
+              <a href="#">Terms</a>
+              <a href="#">Privacy</a>
+            </div>
+          </div>
+        </form>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // Plan catalog — kept in sync with the pricing tiers on the landing page.
+    const PLANS = {
+      starter: {
+        name: 'Starter',
+        thumb: 'S',
+        title: 'Starter · setup',
+        sub: 'Setup dasar untuk satu agent personal kamu.',
+        old: 588000,
+        price: 299000,
+      },
+      pro: {
+        name: 'Pro',
+        thumb: 'P',
+        title: 'Pro · setup',
+        sub: '1 agent yang di-fine-tune untuk suara dan workflow kamu.',
+        old: 3500000,
+        price: 1200000,
+      },
+      studio: {
+        name: 'Studio',
+        thumb: 'X',
+        title: 'Studio · setup',
+        sub: '1 fine-tuned agent + 10 platform tersambung untuk monitor seluruh hidupmu.',
+        old: 9900000,
+        price: 4900000,
+      },
+    };
+
+    // Payment methods — fees match published Xendit/Midtrans rates as of 2026-04.
+    // Schema: { id, label, sub, icon, iconClass, pct, flat, requiresCard, details }
+    //   final fee = round(price * pct / 100) + flat
+    //   `details` is the helper text shown under the picker when this method is chosen.
+    const METHODS = [
+      {
+        id: 'qris',  label: 'QRIS',  sub: 'Scan with any Indonesian banking or e-wallet app',
+        icon: 'QRIS', iconClass: 'mi-qris', pct: 0.7, flat: 0, requiresCard: false,
+        details: 'After clicking Pay you will see a <strong>QR code</strong> valid for 30 minutes. Scan it with BCA mobile, Mandiri Livin, BRImo, GoPay, OVO, DANA, ShopeePay — anything that supports QRIS.',
+      },
+      {
+        id: 'va',  label: 'Bank Transfer (Virtual Account)',  sub: 'BCA · Mandiri · BNI · BRI · Permata · CIMB',
+        icon: 'VA', iconClass: 'mi-va', pct: 0, flat: 4000, requiresCard: false,
+        details: 'You will get a <strong>unique virtual account number</strong> after clicking Pay. Transfer the exact amount from your banking app within 24 hours — your account is activated automatically the moment we receive it.',
+      },
+      {
+        id: 'card',  label: 'Credit / Debit Card',  sub: 'Visa · Mastercard · AMEX · JCB',
+        icon: 'CARD', iconClass: 'mi-card', pct: 2.9, flat: 2000, requiresCard: true,
+        details: 'Your card statement will show <strong>WEUSEAI*AGENT</strong>. We never store your card details — they go straight to our payment processor over TLS.',
+      },
+      {
+        id: 'cicilan',  label: 'Cicilan 0% — 3, 6, 12 months',  sub: 'BCA · Mandiri · BNI · BRI · CIMB · Citi',
+        icon: '0%', iconClass: 'mi-cicilan', pct: 3.5, flat: 2000, requiresCard: true,
+        details: 'Pay your card with <strong>zero interest</strong> over 3, 6, or 12 monthly installments. You pick the tenor on your card issuer\'s confirmation page. Available on most major Indonesian credit cards above Rp 500.000.',
+      },
+      {
+        id: 'ewallet',  label: 'E-wallet — GoPay · OVO · DANA · ShopeePay',  sub: 'Pay from your wallet balance',
+        icon: 'WLT', iconClass: 'mi-ewlt', pct: 2.0, flat: 0, requiresCard: false,
+        details: 'You will be redirected to the chosen e-wallet to confirm. Works with <strong>GoPay, OVO, DANA, ShopeePay, LinkAja</strong> and any wallet supporting QRIS.',
+      },
+      {
+        id: 'bnpl',  label: 'Buy Now Pay Later — Kredivo · Akulaku · Indodana',  sub: 'Split into 3, 6, or 12 monthly payments',
+        icon: 'BNPL', iconClass: 'mi-bnpl', pct: 3.0, flat: 0, requiresCard: false,
+        details: 'No card required. You will be redirected to the BNPL provider for a 60-second eligibility check. Subject to provider approval.',
+      },
+    ];
+
+    const HOSTING_MONTHLY = 99000;
+    const ALWAYS_ON_MONTHLY = 49000;
+
+    const fmt = (n) => 'Rp ' + Math.round(n).toLocaleString('id-ID');
+    const calcFee = (amount, m) => Math.round(amount * m.pct / 100) + m.flat;
+
+    let state = {
+      planKey: 'pro',
+      methodId: 'qris',
+      alwaysOn: false,
+    };
+
+    function readURL() {
+      const u = new URL(window.location.href);
+      const p = (u.searchParams.get('plan') || 'pro').toLowerCase();
+      const ao = u.searchParams.get('alwaysOn');
+      return {
+        planKey: PLANS[p] ? p : 'pro',
+        alwaysOn: ao === '1' || ao === 'true',
+      };
+    }
+
+    function writeAlwaysOnToURL(on) {
+      const u = new URL(window.location.href);
+      if (on) u.searchParams.set('alwaysOn', '1');
+      else u.searchParams.delete('alwaysOn');
+      window.history.replaceState({}, '', u.toString());
+    }
+
+    // Pre-payment-fee subtotal: setup + hosting (+ always-on if on).
+    function chargeBeforeFee(plan, alwaysOn) {
+      return plan.price + HOSTING_MONTHLY + (alwaysOn ? ALWAYS_ON_MONTHLY : 0);
+    }
+
+    function renderMethods() {
+      const list = document.getElementById('methodList');
+      const plan = PLANS[state.planKey];
+      const baseAmount = chargeBeforeFee(plan, state.alwaysOn);
+      // Find the cheapest method at the current charge total for the badge.
+      let cheapestId = METHODS[0].id;
+      let cheapestFee = Infinity;
+      METHODS.forEach((m) => {
+        const f = calcFee(baseAmount, m);
+        if (f < cheapestFee) { cheapestFee = f; cheapestId = m.id; }
+      });
+
+      list.innerHTML = '';
+      METHODS.forEach((m) => {
+        const fee = calcFee(baseAmount, m);
+        const id = `pm-${m.id}`;
+        const wrap = document.createElement('label');
+        wrap.className = 'method' + (m.id === state.methodId ? ' is-selected' : '') + (m.id === cheapestId ? ' is-cheapest' : '');
+        wrap.htmlFor = id;
+        const pctTxt = m.pct > 0
+          ? `${m.pct}%${m.flat ? ' + ' + fmt(m.flat) : ''}`
+          : (m.flat ? fmt(m.flat) + ' flat' : 'Free');
+        wrap.innerHTML = `
+          <input type="radio" name="pm" id="${id}" value="${m.id}" ${m.id === state.methodId ? 'checked' : ''}>
+          <div class="method-icon ${m.iconClass}">${m.icon}</div>
+          <div class="method-body">
+            <div class="method-name">${m.label}</div>
+            <div class="method-sub">${m.sub}</div>
+          </div>
+          <div class="method-fee">
+            <div class="amt">+${fmt(fee)}</div>
+            <div class="pct">${pctTxt}</div>
+          </div>
+        `;
+        wrap.addEventListener('click', () => {
+          state.methodId = m.id;
+          renderAll();
+        });
+        list.appendChild(wrap);
+      });
+    }
+
+    function renderTotals() {
+      const plan = PLANS[state.planKey];
+      const m = METHODS.find((x) => x.id === state.methodId) || METHODS[0];
+      const baseAmount = chargeBeforeFee(plan, state.alwaysOn);
+      const fee = calcFee(baseAmount, m);
+      const grand = baseAmount + fee;
+      const discountAmt = plan.old - plan.price;
+      const discountPct = Math.round((discountAmt / plan.old) * 100);
+      const recurring = HOSTING_MONTHLY + (state.alwaysOn ? ALWAYS_ON_MONTHLY : 0);
+
+      document.getElementById('payAmount').textContent = fmt(grand);
+      document.getElementById('paySub').textContent = `Setup + bulan pertama hosting · ${plan.name}`;
+      document.getElementById('planThumb').textContent = plan.thumb;
+      document.getElementById('planTitle').textContent = plan.title;
+      document.getElementById('planSub').textContent = plan.sub;
+      document.getElementById('planOld').textContent = fmt(plan.old);
+      document.getElementById('planPrice').textContent = fmt(plan.price);
+      document.getElementById('subtotal').textContent = fmt(plan.old);
+      document.getElementById('discount').textContent = '−' + fmt(discountAmt);
+      document.getElementById('discountLbl').textContent = `Launch discount (${discountPct}%)`;
+      document.getElementById('paymentFee').textContent = '+' + fmt(fee);
+      document.getElementById('feeTag').textContent = m.label.split(' — ')[0].split(' (')[0];
+      document.getElementById('grandTotal').textContent = fmt(grand);
+      document.getElementById('payBtnAmount').textContent = fmt(grand);
+      document.getElementById('recurringTotal').textContent = fmt(recurring) + '/bulan';
+
+      // Always-On line items: show or hide.
+      const aoVisible = state.alwaysOn ? '' : 'none';
+      document.getElementById('aoLineItem').style.display = aoVisible === 'none' ? 'none' : 'flex';
+      document.getElementById('aoTotalRow').style.display = aoVisible === 'none' ? 'none' : 'flex';
+
+      // Sync the toggle UI to URL state.
+      const tog = document.getElementById('aoToggle');
+      const cb = document.getElementById('aoCheckbox');
+      cb.checked = state.alwaysOn;
+      tog.classList.toggle('is-on', state.alwaysOn);
+
+      document.title = `Checkout · ${plan.name} — weuseai.agent`;
+    }
+
+    function renderMethodDetails() {
+      const m = METHODS.find((x) => x.id === state.methodId) || METHODS[0];
+      const wrap = document.getElementById('methodDetails');
+      wrap.innerHTML = `<div class="method-details">${m.details}</div>`;
+      const cardFields = document.getElementById('cardFields');
+      cardFields.style.display = m.requiresCard ? 'block' : 'none';
+    }
+
+    function renderAll() {
+      renderMethods();
+      renderTotals();
+      renderMethodDetails();
+    }
+
+    // Card formatting helpers (visual only; real validation happens on the gateway side).
+    function formatCardNumber(raw) {
+      const digits = raw.replace(/\D/g, '').slice(0, 19);
+      return digits.replace(/(\d{4})(?=\d)/g, '$1 ');
+    }
+    function formatExp(raw) {
+      const digits = raw.replace(/\D/g, '').slice(0, 4);
+      if (digits.length < 3) return digits;
+      return digits.slice(0, 2) + ' / ' + digits.slice(2);
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const fromURL = readURL();
+      state.planKey = fromURL.planKey;
+      state.alwaysOn = fromURL.alwaysOn;
+      renderAll();
+
+      document.getElementById('aoCheckbox').addEventListener('change', (e) => {
+        state.alwaysOn = !!e.target.checked;
+        writeAlwaysOnToURL(state.alwaysOn);
+        renderAll();
+      });
+
+      // Card-input formatters (handlers attached once; the inputs live inside the swap-in card block,
+      // but they're created up-front in the HTML so the listeners stay valid across method changes).
+      const cn = document.getElementById('cardNumber');
+      cn && cn.addEventListener('input', (e) => { e.target.value = formatCardNumber(e.target.value); });
+      const exp = document.getElementById('exp');
+      exp && exp.addEventListener('input', (e) => { e.target.value = formatExp(e.target.value); });
+      const cvc = document.getElementById('cvc');
+      cvc && cvc.addEventListener('input', (e) => { e.target.value = e.target.value.replace(/\D/g, '').slice(0, 4); });
+
+      document.getElementById('promoToggle').addEventListener('click', () => {
+        const wrap = document.getElementById('promoToggle');
+        if (wrap.dataset.open === '1') return;
+        wrap.dataset.open = '1';
+        wrap.innerHTML = '';
+        const input = document.createElement('input');
+        input.className = 'field-input';
+        input.placeholder = 'Promotion code';
+        input.style.border = 'none';
+        input.style.boxShadow = 'none';
+        input.style.padding = '0';
+        input.style.background = 'transparent';
+        wrap.style.cursor = 'text';
+        wrap.appendChild(input);
+        input.focus();
+      });
+
+      // TODO: wire up to Xendit Invoice API.
+      //   POST /api/create-invoice with { plan: state.planKey, method: state.methodId, email, name, country, postal }
+      //   The server creates a Xendit invoice, sets `payment_methods` to map our methodId -> Xendit's
+      //   payment_channels (e.g. 'qris' -> ['QRIS'], 'va' -> ['BCA','MANDIRI','BNI','BRI','PERMATA']),
+      //   and returns { invoice_url }. Then: window.location.href = invoice_url.
+      //   The fee that is added to the customer total here must also be passed to Xendit
+      //   `fees: [{ type: 'ADMIN', value: fee }]` so the Xendit hosted page shows the same total.
+      document.getElementById('payForm').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('payBtn');
+        btn.disabled = true;
+        btn.textContent = 'Processing…';
+        setTimeout(() => {
+          btn.textContent = 'Payment gateway not connected yet';
+          setTimeout(() => {
+            btn.disabled = false;
+            renderTotals();
+          }, 1800);
+        }, 900);
+      });
+    });
+  </script>
+</body>
+</html>

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>weuseai.agent — Build Your AI Agent.</title>
-  <meta name="description" content="Hand-crafted super agent that handles email, slides, content, calendar — and 8 more capabilities. While you sleep. The wave is coming. The next billion-dollar company won't have 1,000 employees — just 1.">
+  <meta name="description" content="Hand-crafted super agent that handles email, slides, content, calendar — and 8 more capabilities. While you sleep. The wave is coming. The next billion-dollar company won't have 1,000 employees — only 1.">
 
   <!-- Open Graph -->
   <meta property="og:type" content="website">
@@ -114,6 +114,135 @@
     button, a { font-family: inherit; }
     button { cursor: pointer; }
     html { scroll-behavior: smooth; }
+
+    /* count-up red-glow (mirrors .seats-num-big.pulse) */
+    .countup {
+      transition: color 0.55s ease, text-shadow 0.55s ease;
+    }
+    .countup.glow {
+      color: #E5322D;
+      text-shadow: 0 0 32px rgba(229, 50, 45, 0.75);
+    }
+
+    /* nav pills — soft blur backdrop, no border line */
+    .nav-clean {
+      background: rgba(0, 0, 0, 0.24);
+      backdrop-filter: blur(10px) saturate(140%);
+      -webkit-backdrop-filter: blur(10px) saturate(140%);
+    }
+
+    /* ─── Pricing card: hosting + always-on ─── */
+    .pc-setup-sub {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9.5px; letter-spacing: 0.18em; text-transform: uppercase;
+      color: rgba(255,255,255,0.45); margin-top: 4px;
+    }
+    @media (min-width: 768px) { .pc-setup-sub { font-size: 10.5px; } }
+
+    .pc-hosting {
+      margin-top: 18px; padding: 12px 14px;
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 10px;
+      background: rgba(255,255,255,0.02);
+    }
+    .pc-hosting .pch-line {
+      display: flex; align-items: baseline; gap: 6px;
+      font-family: 'Inter', sans-serif; font-size: 13.5px; font-weight: 500; color: rgba(255,255,255,0.92);
+    }
+    .pc-hosting .pch-line .plus { color: rgba(255,255,255,0.55); font-weight: 400; }
+    .pc-hosting .pch-sub {
+      margin-top: 4px; font-size: 11.5px; line-height: 1.45;
+      color: rgba(255,255,255,0.55); font-weight: 300;
+    }
+
+    .pc-toggle {
+      margin-top: 10px;
+      display: grid; grid-template-columns: 18px 1fr; gap: 12px;
+      padding: 12px 14px;
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 10px;
+      background: rgba(255,255,255,0.02);
+      cursor: pointer;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    }
+    .pc-toggle:hover { border-color: rgba(255,255,255,0.20); }
+    .pc-toggle.is-on {
+      border-color: rgba(229,50,45,0.55);
+      box-shadow: 0 0 22px rgba(229,50,45,0.18), inset 0 0 0 1px rgba(229,50,45,0.18);
+      background: rgba(229,50,45,0.04);
+    }
+    .pc-toggle input { position: absolute; opacity: 0; pointer-events: none; }
+    .pc-checkbox {
+      width: 18px; height: 18px; border-radius: 5px;
+      border: 1.5px solid rgba(255,255,255,0.30);
+      display: grid; place-items: center;
+      margin-top: 2px;
+      transition: border-color 0.18s ease, background 0.18s ease;
+    }
+    .pc-toggle.is-on .pc-checkbox {
+      background: #E5322D; border-color: #E5322D;
+    }
+    .pc-toggle.is-on .pc-checkbox::after {
+      content: ''; width: 10px; height: 5px; margin-top: -2px;
+      border-left: 2px solid #fff; border-bottom: 2px solid #fff;
+      transform: rotate(-45deg);
+    }
+    .pc-toggle .pct-title {
+      display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px;
+      font-family: 'Inter', sans-serif; font-size: 13.5px; font-weight: 500; color: rgba(255,255,255,0.92);
+    }
+    .pc-toggle .pct-add {
+      font-size: 12px; color: #E5322D; font-weight: 500;
+    }
+    .pc-toggle .pct-sub {
+      margin-top: 4px; font-size: 11.5px; line-height: 1.45;
+      color: rgba(255,255,255,0.55); font-weight: 300;
+    }
+    .pc-monthly-preview {
+      margin-top: 14px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10.5px; letter-spacing: 0.10em; text-transform: uppercase;
+      color: rgba(255,255,255,0.55);
+      line-height: 1.5;
+    }
+    .pc-monthly-preview b { color: rgba(255,255,255,0.92); font-weight: 600; letter-spacing: 0; text-transform: none; font-family: 'Inter', sans-serif; font-size: 12.5px; }
+
+    /* ─── FAQ ─── */
+    .faq-item {
+      border-bottom: 1px solid rgba(255,255,255,0.10);
+    }
+    .faq-item:first-child { border-top: 1px solid rgba(255,255,255,0.10); }
+    .faq-trigger {
+      width: 100%; padding: 22px 4px;
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+      background: transparent; border: none; cursor: pointer;
+      text-align: left; color: #fff;
+      font-family: 'Instrument Serif', serif;
+      font-size: 20px; line-height: 1.25; letter-spacing: -0.015em;
+      transition: color 0.18s ease;
+    }
+    @media (min-width: 768px) { .faq-trigger { font-size: 26px; padding: 26px 4px; } }
+    .faq-trigger:hover { color: rgba(255,255,255,0.85); }
+    .faq-icon {
+      width: 28px; height: 28px; border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.20);
+      display: grid; place-items: center; flex-shrink: 0;
+      transition: transform 0.3s ease, border-color 0.18s ease;
+      color: rgba(255,255,255,0.70);
+    }
+    .faq-item.is-open .faq-icon { transform: rotate(45deg); border-color: rgba(229,50,45,0.55); color: #E5322D; }
+    .faq-body {
+      max-height: 0; overflow: hidden;
+      transition: max-height 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .faq-item.is-open .faq-body { max-height: 400px; }
+    .faq-body-inner {
+      padding: 0 4px 24px;
+      font-family: 'Inter', sans-serif; font-weight: 300;
+      font-size: 14px; line-height: 1.65; color: rgba(255,255,255,0.70);
+      max-width: 64ch;
+    }
+    @media (min-width: 768px) { .faq-body-inner { font-size: 15px; } }
 
     /* ─── DASHBOARD DEMO (12-scene cycle, 72s total) ─── */
     .db-section {
@@ -1816,6 +1945,45 @@
     const FadeTop = ({ h = 200 }) => <div className="absolute top-0 left-0 right-0 pointer-events-none z-[2]" style={{ height: h, background: 'linear-gradient(to bottom, #000, transparent)' }} />;
     const FadeBottom = ({ h = 200 }) => <div className="absolute bottom-0 left-0 right-0 pointer-events-none z-[2]" style={{ height: h, background: 'linear-gradient(to top, #000, transparent)' }} />;
 
+    // ─────────────────────── COUNT UP ───────────────────────
+    function CountUp({ to, suffix = '', duration = 1800, delay = 0, locale = 'id-ID', className = '', style = {} }) {
+      const [val, setVal] = useState(0);
+      const [active, setActive] = useState(false);
+      const ref = useRef(null);
+      const startedRef = useRef(false);
+
+      useEffect(() => {
+        const el = ref.current; if (!el) return;
+        const obs = new IntersectionObserver((entries) => {
+          entries.forEach((e) => {
+            if (e.isIntersecting && !startedRef.current) {
+              startedRef.current = true;
+              setActive(true);
+              const t0 = performance.now() + delay;
+              let raf;
+              const tick = (now) => {
+                const t = Math.max(0, now - t0);
+                const p = Math.min(1, t / duration);
+                const eased = 1 - Math.pow(1 - p, 3);
+                setVal(Math.round(eased * to));
+                if (p < 1) raf = requestAnimationFrame(tick);
+                else setTimeout(() => setActive(false), 450);
+              };
+              raf = requestAnimationFrame(tick);
+            }
+          });
+        }, { threshold: 0.35 });
+        obs.observe(el);
+        return () => obs.disconnect();
+      }, [to, duration, delay]);
+
+      return (
+        <span ref={ref} className={`countup ${active ? 'glow' : ''} ${className}`} style={style}>
+          {val.toLocaleString(locale)}{suffix}
+        </span>
+      );
+    }
+
     // ─────────────────────── BLUR TEXT ───────────────────────
     function BlurText({ text, className = '', by = 'word', delay = 100, as: Tag = 'h1', style = {} }) {
       const parts = by === 'word' ? text.split(' ') : text.split('');
@@ -1848,24 +2016,31 @@
 
     // ─────────────────────── NAVBAR ───────────────────────
     function Navbar() {
-      const links = ['Beranda', 'Agent', 'Kerja', 'Proses', 'Harga'];
+      const links = [
+        { label: 'Beranda', href: '#beranda' },
+        { label: 'Agent', href: '#agent' },
+        { label: 'Kerja', href: '#kerja' },
+        { label: 'Proses', href: '#proses' },
+        { label: 'Harga', href: '#pricing' },
+        { label: 'FAQ', href: '#faq' },
+      ];
       return (
         <header className="fixed top-3 md:top-4 left-0 right-0 z-50 px-4 md:px-8 lg:px-16 py-3">
           <div className="flex items-center justify-between gap-3">
             <a href="#" className="flex items-center gap-2">
-              <span className="rounded-full liquid-glass grid place-items-center px-4 py-2 md:px-5 md:py-2.5">
+              <span className="rounded-full nav-clean grid place-items-center px-4 py-2 md:px-5 md:py-2.5">
                 <img src="assets/logo.svg" alt="weuseai.agent" className="block h-4 md:h-5 w-auto" />
               </span>
             </a>
-            <nav className="hidden md:flex liquid-glass rounded-full px-1.5 py-1 items-center gap-0">
+            <nav className="hidden md:flex nav-clean rounded-full px-1.5 py-1 items-center gap-0">
               {links.map((l) => (
-                <a key={l} href={`#${l.toLowerCase()}`} className="px-3 py-2 text-sm font-medium text-foreground/90 font-body hover:text-white transition-colors">{l}</a>
+                <a key={l.label} href={l.href} className="px-3 py-2 text-sm font-medium text-foreground/90 font-body hover:text-white transition-colors">{l.label}</a>
               ))}
               <button className="bg-white text-black rounded-full px-3.5 py-1.5 text-sm font-medium flex items-center gap-1.5 ml-1">
                 Get Started <ArrowUpRight size={14} stroke={2.2} />
               </button>
             </nav>
-            <button className="md:hidden liquid-glass rounded-full px-3.5 py-1.5 text-xs font-medium text-white flex items-center gap-1.5 whitespace-nowrap">
+            <button className="md:hidden nav-clean rounded-full px-3.5 py-1.5 text-xs font-medium text-white flex items-center gap-1.5 whitespace-nowrap">
               Mulai <ArrowUpRight size={12} stroke={2.2} />
             </button>
           </div>
@@ -1918,37 +2093,52 @@
               8 menit akan mengubah caramu berinteraksi dengan hidup, selamanya.
             </Mot.p>
 
+            <Mot.p
+              initial={{ filter: 'blur(10px)', opacity: 0, y: 20 }}
+              animate={{ filter: 'blur(0px)', opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, ease: EASE, delay: 0.95 }}
+              className="mt-5 font-mono uppercase tracking-[0.18em] text-[10px] md:text-[11px] text-white/55">
+              Bayar setup sekali. Hosting transparan.
+            </Mot.p>
+
             <Mot.div
               initial={{ filter: 'blur(10px)', opacity: 0, y: 20 }}
               animate={{ filter: 'blur(0px)', opacity: 1, y: 0 }}
               transition={{ duration: 0.6, ease: EASE, delay: 1.1 }}
               className="mt-10 flex items-center gap-4 flex-wrap justify-center">
-              <button className="rounded-full px-5 py-2.5 text-sm font-medium flex items-center gap-2"
+              <a href="checkout.html" className="rounded-full px-5 py-2.5 text-sm font-medium flex items-center gap-2 no-underline"
                 style={{ background: '#fff', color: '#0a0a0a', border: '1px solid #fff' }}>
-                Daftar waitlist <ArrowUpRight size={14} stroke={2.2} />
-              </button>
-              <button className="liquid-glass-strong rounded-full px-5 py-2.5 text-sm font-medium flex items-center gap-2 text-white">
-                <Play size={14} /> Tonton film
-              </button>
+                Start Change Now <ArrowUpRight size={14} stroke={2.2} />
+              </a>
             </Mot.div>
 
             <div className="mt-12 md:mt-auto pb-6 md:pb-12 pt-12 md:pt-20 w-full max-w-5xl mx-auto">
               <div className="liquid-glass rounded-2xl md:rounded-3xl p-5 md:p-10 grid grid-cols-2 md:grid-cols-4 gap-5 md:gap-6 text-center">
                 {[
-                  ['200+', 'Model AI didukung'],
-                  ['40+', 'Tools bawaan'],
-                  ['12+', 'Agent fine-tuned'],
-                  ['79.456', 'Kata ditulis otomatis'],
-                ].map(([v, l], i) => (
-                  <Mot.div key={l}
+                  { kind: 'ratio', a: 10, b: 332, label: 'Recommended for Agentic Use' },
+                  { kind: 'plain', n: 40,  suffix: '+', label: 'Growing Specialized Skills' },
+                  { kind: 'plain', n: 12,  suffix: '+', label: 'Agent fine-tuned' },
+                  { kind: 'plain', n: 12,  suffix: '+', label: 'Dedicated Handcrafted App' },
+                ].map((it, i) => (
+                  <Mot.div key={it.label}
                     initial={{ opacity: 0, y: 16 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true, amount: 0.4 }}
-                    transition={{ duration: 0.6, ease: EASE, delay: 0.08 * i }}
+                    transition={{ duration: 0.6, ease: EASE, delay: 0.06 * i }}
                     className="flex flex-col items-center"
                   >
-                    <div className="text-2xl md:text-4xl lg:text-5xl font-heading text-white leading-none" style={{ letterSpacing: '-0.04em' }}>{v}</div>
-                    <div className="mt-2 md:mt-2.5 text-white/55 font-body font-light text-[11px] md:text-sm leading-tight">{l}</div>
+                    <div className="text-2xl md:text-4xl lg:text-5xl font-heading text-white leading-none" style={{ letterSpacing: '-0.04em' }}>
+                      {it.kind === 'ratio' ? (
+                        <>
+                          <CountUp to={it.a} duration={1800} delay={150} />
+                          <span className="text-white/35"> / </span>
+                          <CountUp to={it.b} duration={2200} delay={150} />
+                        </>
+                      ) : (
+                        <CountUp to={it.n} suffix={it.suffix} duration={1800} delay={150 + i * 120} />
+                      )}
+                    </div>
+                    <div className="mt-2 md:mt-2.5 text-white/55 font-body font-light text-[11px] md:text-sm leading-tight">{it.label}</div>
                   </Mot.div>
                 ))}
               </div>
@@ -1975,7 +2165,7 @@
               style={{ letterSpacing: '-0.04em' }}
               delay={80} />
             <p className="mt-6 max-w-xl text-white/65 font-body font-light text-sm md:text-base leading-relaxed">
-              The wave is coming. The next billion-dollar company won't have 1,000 employees — just 1.
+              The wave is coming. The next billion-dollar company won't have 1,000 employees — only 1.
             </p>
             <button className="mt-10 liquid-glass-strong rounded-full px-6 py-3 text-sm font-medium flex items-center gap-2">
               Mulai hari ini <ArrowUpRight size={14} stroke={2.2} />
@@ -2919,6 +3109,90 @@
       );
     }
 
+    function PricingCard({ tier, index }) {
+      const [alwaysOn, setAlwaysOn] = useState(false);
+      const monthlyTotal = 99 + (alwaysOn ? 49 : 0);
+      const checkoutHref = `checkout.html?plan=${tier.name.toLowerCase()}${alwaysOn ? '&alwaysOn=1' : ''}`;
+
+      return (
+        <Mot.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.2 }}
+          transition={{ duration: 0.7, ease: EASE, delay: 0.1 * index }}
+          className={`liquid-glass${tier.featured ? '-strong' : ''} rounded-2xl p-6 md:p-8 flex flex-col`}
+          style={{
+            boxShadow: tier.featured ? '0 0 60px rgba(229, 50, 45, 0.18), inset 0 0 0 1px rgba(229, 50, 45, 0.45)' : 'none',
+            position: 'relative',
+            overflow: 'visible',
+          }}
+        >
+          {tier.featured && (
+            <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 text-[10px] font-mono uppercase tracking-[0.18em] rounded-full whitespace-nowrap" style={{ background: '#E5322D', color: '#fff' }}>
+              Paling diminati
+            </div>
+          )}
+          <h3 className="text-xl md:text-2xl font-heading text-white" style={{ letterSpacing: '-0.02em' }}>{tier.name}</h3>
+
+          <div className="mt-4 flex items-center gap-2.5">
+            <span className="price-old">{tier.oldPrice}</span>
+            <span className="price-discount-badge">−{tier.discount}%</span>
+          </div>
+
+          <div className="mt-1.5 flex items-baseline gap-2">
+            <span className="text-4xl md:text-5xl font-heading text-white leading-none" style={{ letterSpacing: '-0.04em' }}>{tier.price}</span>
+          </div>
+          <div className="pc-setup-sub">Biaya setup sekali bayar</div>
+
+          <p className="mt-4 text-sm text-white/65 font-body font-light leading-relaxed">{tier.tagline}</p>
+
+          <div className="my-5 md:my-6 h-px" style={{ background: 'rgba(255,255,255,0.10)' }} />
+
+          <div className="pc-hosting">
+            <div className="pch-line"><span className="plus">+</span> Rp 99k/bulan hosting</div>
+            <div className="pch-sub">Auto-pause kalau nggak aktif 30 hari · stop kapan saja</div>
+          </div>
+
+          <label className={`pc-toggle ${alwaysOn ? 'is-on' : ''}`}>
+            <input type="checkbox" checked={alwaysOn} onChange={(e) => setAlwaysOn(e.target.checked)} />
+            <div className="pc-checkbox" aria-hidden="true" />
+            <div>
+              <div className="pct-title">Always-On <span className="pct-add">+ Rp 49k/bulan</span></div>
+              <div className="pct-sub">VPS 24/7, skip auto-suspend · untuk yang pakai agent setiap hari</div>
+            </div>
+          </label>
+
+          <div className="pc-monthly-preview">
+            Total bulanan: <b>Rp {monthlyTotal}k/bulan</b>
+            <span className="block opacity-60 mt-1" style={{ fontSize: '10px' }}>{alwaysOn ? 'Hosting Rp 99k + Always-On Rp 49k' : 'Hosting Rp 99k · Always-On nonaktif'}</span>
+          </div>
+
+          <div className="my-5 md:my-6 h-px" style={{ background: 'rgba(255,255,255,0.10)' }} />
+
+          <ul className="flex flex-col gap-3 flex-1">
+            {tier.features.map((f, fi) => (
+              <li key={fi} className="flex items-start gap-3 text-sm text-white/80 font-body font-light leading-snug">
+                <span className="mt-[7px] block w-1 h-1 flex-shrink-0" style={{ background: tier.featured ? '#E5322D' : 'rgba(255,255,255,0.4)' }} />
+                {f}
+              </li>
+            ))}
+          </ul>
+
+          <a
+            href={checkoutHref}
+            className="mt-7 md:mt-8 rounded-full px-5 py-3 text-sm font-medium flex items-center justify-center gap-2 no-underline"
+            style={
+              tier.featured
+                ? { background: '#E5322D', color: '#fff', border: '1px solid #E5322D' }
+                : { background: 'transparent', color: '#fff', border: '1px solid rgba(255,255,255,0.28)' }
+            }
+          >
+            {tier.cta} <ArrowUpRight size={14} stroke={2.2} />
+          </a>
+        </Mot.div>
+      );
+    }
+
     function Pricing() {
       const tiers = [
         {
@@ -2926,13 +3200,12 @@
           price: 'Rp 299k',
           oldPrice: 'Rp 588k',
           discount: 49,
-          sub: 'biaya setup sekali bayar',
           tagline: 'Setup dasar untuk satu agent personal kamu.',
           features: [
-            'Agent dedicated di VPS $5 (kami yang tanggung)',
+            'Agent dedicated di VPS terkonfigurasi',
             'Akses Telegram + Discord',
             '40+ tools bawaan',
-            '50 task GPT-4o / bulan',
+            'BYOK LLM (kami kasih $3 starter credits via DeepSeek)',
             'Database memori lokal',
           ],
           cta: 'Mulai Starter',
@@ -2943,14 +3216,13 @@
           price: 'Rp 1,2jt',
           oldPrice: 'Rp 3,5jt',
           discount: 66,
-          sub: 'biaya setup sekali bayar',
           tagline: '1 agent yang di-fine-tune untuk suara dan workflow kamu.',
           features: [
             'Semua di Starter',
             '1 agent di-fine-tune khusus untuk kamu',
             '200+ model, ganti dengan satu klik',
             'Skill file otomatis tiap 15 task',
-            '500 task GPT-4o / bulan',
+            'BYOK LLM (kami kasih $5 starter credits via DeepSeek)',
             'Voice tuning — terdengar seperti kamu',
             'Prioritas respon',
           ],
@@ -2962,12 +3234,12 @@
           price: 'Rp 4,9jt',
           oldPrice: 'Rp 9,9jt',
           discount: 50,
-          sub: 'biaya setup sekali bayar',
           tagline: '1 agent fine-tuned + 10 platform tersambung untuk monitor seluruh hidupmu.',
           features: [
             'Semua di Pro',
             '1 agent fine-tuned untuk kamu',
             '10 platform tersambung: kesehatan, keuangan, coding, task, kalender, email, notes, dst.',
+            'BYOK LLM unlimited setup, kami bantu integrate',
             'Dashboard hidup yang melacak semuanya',
             'Memori bersama multi-device',
             'Library skill custom',
@@ -2987,78 +3259,94 @@
               </div>
               <BlurText
                 as="h2"
-                text="Bayar sekali. Pakai selamanya."
+                text="Bayar setup. Hosting Rp 99k/bulan, stop kapan saja."
                 className="mt-5 md:mt-6 text-3xl md:text-5xl lg:text-6xl font-heading text-white tracking-tight leading-[1.0] md:leading-[0.95] max-w-3xl"
                 style={{ letterSpacing: '-0.04em' }}
                 delay={70}
               />
               <p className="mt-6 max-w-xl text-white/55 font-body font-light text-base leading-relaxed">
-                Biaya setup sekali bayar. Kami siapkan VPS, konfigurasi semua tools, dan tune agent kamu — lalu kamu pakai sepuasnya. Tanpa biaya bulanan yang menumpuk.
+                Biaya setup sekali bayar. Kami siapkan VPS, konfigurasi semua tools, dan tune agent kamu. Hosting transparent — kayak bayar listrik, bukan subscription tersembunyi.
               </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
               {tiers.map((t, i) => (
-                <Mot.div key={t.name}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, amount: 0.2 }}
-                  transition={{ duration: 0.7, ease: EASE, delay: 0.1 * i }}
-                  className={`liquid-glass${t.featured ? '-strong' : ''} rounded-2xl p-6 md:p-8 flex flex-col`}
-                  style={{
-                    boxShadow: t.featured ? '0 0 60px rgba(229, 50, 45, 0.18), inset 0 0 0 1px rgba(229, 50, 45, 0.45)' : 'none',
-                    position: 'relative',
-                    overflow: 'visible',
-                  }}
-                >
-                  {t.featured && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 text-[10px] font-mono uppercase tracking-[0.18em] rounded-full whitespace-nowrap" style={{ background: '#E5322D', color: '#fff' }}>
-                      Paling diminati
-                    </div>
-                  )}
-                  <h3 className="text-xl md:text-2xl font-heading text-white" style={{ letterSpacing: '-0.02em' }}>{t.name}</h3>
-
-                  <div className="mt-4 flex items-center gap-2.5">
-                    <span className="price-old">{t.oldPrice}</span>
-                    <span className="price-discount-badge">−{t.discount}%</span>
-                  </div>
-
-                  <div className="mt-1.5 flex items-baseline gap-2">
-                    <span className="text-4xl md:text-5xl font-heading text-white leading-none" style={{ letterSpacing: '-0.04em' }}>{t.price}</span>
-                    <span className="text-[11px] md:text-xs font-mono uppercase tracking-[0.14em] text-white/50">{t.sub}</span>
-                  </div>
-                  <p className="mt-4 text-sm text-white/65 font-body font-light leading-relaxed">{t.tagline}</p>
-
-                  <div className="my-5 md:my-7 h-px" style={{ background: 'rgba(255,255,255,0.10)' }} />
-
-                  <ul className="flex flex-col gap-3 flex-1">
-                    {t.features.map((f, fi) => (
-                      <li key={fi} className="flex items-start gap-3 text-sm text-white/80 font-body font-light leading-snug">
-                        <span className="mt-[7px] block w-1 h-1 flex-shrink-0" style={{ background: t.featured ? '#E5322D' : 'rgba(255,255,255,0.4)' }} />
-                        {f}
-                      </li>
-                    ))}
-                  </ul>
-
-                  <button
-                    className="mt-7 md:mt-8 rounded-full px-5 py-3 text-sm font-medium flex items-center justify-center gap-2"
-                    style={
-                      t.featured
-                        ? { background: '#E5322D', color: '#fff', border: '1px solid #E5322D' }
-                        : { background: 'transparent', color: '#fff', border: '1px solid rgba(255,255,255,0.28)' }
-                    }
-                  >
-                    {t.cta} <ArrowUpRight size={14} stroke={2.2} />
-                  </button>
-                </Mot.div>
+                <PricingCard key={t.name} tier={t} index={i} />
               ))}
             </div>
 
             <LimitedSeats />
 
             <p className="mt-8 md:mt-10 text-center text-[10px] md:text-xs font-mono uppercase tracking-[0.14em] text-white/40 leading-relaxed px-4">
-              24/7 support access · model usage di luar paket dibayar at-cost
+              24/7 support access · LLM cost ditanggung pelanggan via API key sendiri
             </p>
+          </div>
+        </section>
+      );
+    }
+
+    // ─────────────────────── FAQ ───────────────────────
+    function FAQ() {
+      const items = [
+        {
+          q: 'Apa beda dengan subscription biasa?',
+          a: 'Setup-nya beneran sekali bayar — kamu beli engineering work yang udah kami lakukan. Hosting Rp 99k/bulan transparent: itu cost VPS yang real, kayak bayar listrik. Stop kapan saja, agent kamu auto-pause. Tagihan berhenti, setup tetap kamu punya.',
+        },
+        {
+          q: 'Kenapa harus bayar hosting kalau setup-nya sudah bayar?',
+          a: 'Setup itu kerja kami sekali (konfigurasi VPS, install agent, tune ke voice kamu). Hosting itu cost VPS yang jalan terus 24/7. Server butuh listrik dan resource yang real. Kami nggak mau pretend itu gratis — lebih jujur kalau transparent.',
+        },
+        {
+          q: 'Kalau nggak pakai sebentar, masih ditagih?',
+          a: 'Nggak. Kalau kamu nggak chat agent >30 hari, VPS auto-pause dan billing hosting pause juga. Wake up kapan saja dari dashboard, ~30 detik agent hidup lagi. Setup kamu nggak hilang.',
+        },
+      ];
+      const [openIdx, setOpenIdx] = useState(0);
+
+      return (
+        <section id="faq" className="relative py-20 md:py-28 px-5 md:px-6 lg:px-16 bg-black">
+          <div className="max-w-3xl mx-auto">
+            <div className="flex flex-col items-center text-center mb-10 md:mb-14">
+              <div className="liquid-glass rounded-full px-3.5 py-1 text-xs font-medium font-body text-white/90">
+                FAQ
+              </div>
+              <BlurText
+                as="h2"
+                text="Pertanyaan yang sering muncul."
+                className="mt-5 md:mt-6 text-3xl md:text-5xl lg:text-6xl font-heading text-white tracking-tight leading-[1.0] md:leading-[0.95]"
+                style={{ letterSpacing: '-0.04em' }}
+                delay={70}
+              />
+              <p className="mt-5 max-w-xl text-white/55 font-body font-light text-sm md:text-base leading-relaxed">
+                Tiga hal yang biasanya bikin orang ragu sebelum mulai. Jawab dulu sebelum kamu klik bayar.
+              </p>
+            </div>
+
+            <Mot.div
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.2 }}
+              transition={{ duration: 0.7, ease: EASE }}
+            >
+              {items.map((it, i) => (
+                <div key={i} className={`faq-item ${openIdx === i ? 'is-open' : ''}`}>
+                  <button
+                    type="button"
+                    className="faq-trigger"
+                    aria-expanded={openIdx === i}
+                    onClick={() => setOpenIdx(openIdx === i ? -1 : i)}
+                  >
+                    <span>{it.q}</span>
+                    <span className="faq-icon" aria-hidden="true">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    </span>
+                  </button>
+                  <div className="faq-body">
+                    <div className="faq-body-inner">{it.a}</div>
+                  </div>
+                </div>
+              ))}
+            </Mot.div>
           </div>
         </section>
       );
@@ -3067,25 +3355,38 @@
     // ─────────────────────── STATS ───────────────────────
     function Stats() {
       const items = [
-        ['200+', 'Model AI didukung'],
-        ['40+', 'Tools bawaan'],
-        ['12+', 'Agent fine-tuned'],
-        ['79.456', 'Kata ditulis otomatis'],
+        { kind: 'ratio', a: 10, b: 332, label: 'Recommended for Agentic Use' },
+        { kind: 'plain', n: 40,  suffix: '+', label: 'Growing Specialized Skills' },
+        { kind: 'plain', n: 12,  suffix: '+', label: 'Agent fine-tuned' },
+        { kind: 'plain', n: 12,  suffix: '+', label: 'Dedicated Handcrafted App' },
       ];
       return (
         <section className="relative overflow-hidden py-20 md:py-28 px-5 md:px-6 lg:px-16" style={{ minHeight: 420 }}>
-          <HlsVideo src={HLS_STATS} filter="saturate(0)" />
-          <FadeTop /> <FadeBottom />
+          <HlsVideo src={HLS_STATS} filter="saturate(0.35) brightness(0.32) contrast(1.06) blur(16px)" />
+          <div className="absolute inset-0 z-[1] pointer-events-none" style={{
+            background: 'radial-gradient(ellipse at center, rgba(0,0,0,0.30) 0%, rgba(0,0,0,0.65) 55%, rgba(0,0,0,0.88) 100%)'
+          }} />
+          <FadeTop h={260} /> <FadeBottom h={260} />
           <div className="relative z-10 max-w-5xl mx-auto">
             <div className="liquid-glass rounded-2xl md:rounded-3xl p-8 md:p-16 grid grid-cols-2 md:grid-cols-4 gap-7 md:gap-10 text-center">
-              {items.map(([v, l], i) => (
-                <Mot.div key={l}
+              {items.map((it, i) => (
+                <Mot.div key={it.label}
                   initial={{ opacity: 0, y: 24 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, amount: 0.4 }}
-                  transition={{ duration: 0.7, ease: EASE, delay: 0.1 * i }}>
-                  <div className="text-3xl md:text-5xl lg:text-6xl font-heading leading-none" style={{ letterSpacing: '-0.04em' }}>{v}</div>
-                  <div className="mt-2 md:mt-3 text-white/60 font-body font-light text-[11px] md:text-sm leading-tight">{l}</div>
+                  transition={{ duration: 0.7, ease: EASE, delay: 0.08 * i }}>
+                  <div className="text-3xl md:text-5xl lg:text-6xl font-heading leading-none" style={{ letterSpacing: '-0.04em' }}>
+                    {it.kind === 'ratio' ? (
+                      <>
+                        <CountUp to={it.a} duration={1800} delay={120} />
+                        <span className="text-white/35"> / </span>
+                        <CountUp to={it.b} duration={2200} delay={120} />
+                      </>
+                    ) : (
+                      <CountUp to={it.n} suffix={it.suffix} duration={1800} delay={120 + i * 120} />
+                    )}
+                  </div>
+                  <div className="mt-2 md:mt-3 text-white/60 font-body font-light text-[11px] md:text-sm leading-tight">{it.label}</div>
                 </Mot.div>
               ))}
             </div>
@@ -3187,6 +3488,7 @@
               <VelvetSection />
               <FeaturesGrid />
               <Pricing />
+              <FAQ />
               <Stats />
               <Testimonials />
               <CtaFooter />
