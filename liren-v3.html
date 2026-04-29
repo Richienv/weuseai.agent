@@ -235,7 +235,7 @@
       max-height: 0; overflow: hidden;
       transition: max-height 0.45s cubic-bezier(0.16, 1, 0.3, 1);
     }
-    .faq-item.is-open .faq-body { max-height: 400px; }
+    .faq-item.is-open .faq-body { max-height: 720px; }
     .faq-body-inner {
       padding: 0 4px 24px;
       font-family: 'Inter', sans-serif; font-weight: 300;
@@ -3300,6 +3300,42 @@
           q: 'Kalau nggak pakai sebentar, masih ditagih?',
           a: 'Nggak. Kalau kamu nggak chat agent >30 hari, VPS auto-pause dan billing hosting pause juga. Wake up kapan saja dari dashboard, ~30 detik agent hidup lagi. Setup kamu nggak hilang.',
         },
+        {
+          q: 'Berapa lama proses setup sampai agent saya jalan?',
+          a: '7–10 hari kerja. Tiga hari pertama discovery — kami ngobrol soal voice kamu, workflow harian, dan tools yang sering dipakai. Sisa hari kami tune model, sambungkan tools, dan tes end-to-end. Begitu beres, kami onboard kamu lewat video call 30 menit dan kamu langsung pakai.',
+        },
+        {
+          q: 'BYOK LLM itu maksudnya apa? Berapa biaya LLM-nya?',
+          a: 'BYOK = Bring Your Own Key. Kamu daftar sendiri di OpenAI, Anthropic, OpenRouter, atau DeepSeek lalu masukkan API key kamu ke dashboard agent. Biaya LLM bayar langsung ke provider, bukan ke kami — typical Rp 50–300k per bulan tergantung intensitas. Lebih murah daripada subscription bundle karena kamu cuma bayar yang dipakai. Plan Starter dan Pro dapat starter credits ($3–5) via DeepSeek untuk onboarding pertama.',
+        },
+        {
+          q: 'Apa beda dengan ChatGPT atau Claude biasa?',
+          a: 'ChatGPT dan Claude itu tools generic — kamu kasih prompt, mereka jawab. Agent kami stateful: dia tahu workflow kamu, ingat percakapan terakhir, dan eksekusi action di 40+ tools (kirim email, schedule meeting, post di Discord, scrape web, dst). ChatGPT bantu kamu mikir. Agent kami bantu kamu kerja.',
+        },
+        {
+          q: 'Kalau saya cancel di tengah jalan, uang setup balik?',
+          a: 'Setup nggak refundable karena itu engineering work yang udah kami selesaikan untuk kamu. Tapi 14 hari pertama setelah onboarding — kalau ada masalah teknis dari sisi kami yang bikin agent nggak bisa dipakai, kami tanggung: fix gratis atau full refund setup. Hosting bulanan tinggal stop kapan saja, no commitment.',
+        },
+        {
+          q: 'Saya nggak punya background tech, apakah bisa pakai?',
+          a: 'Bisa. Setup-nya kami yang ngerjain — kamu cuma kasih konteks (preferensi, workflow, tools yang sering dipakai) lewat form atau video call. Setelah live, agent diakses lewat Telegram atau Discord — sama persis kayak chat ke teman. Nggak perlu nulis prompt panjang, nggak perlu ngerti API, nggak perlu setting server.',
+        },
+        {
+          q: 'Data dan percakapan saya disimpan di mana? Aman dari kebocoran?',
+          a: 'VPS di Singapore atau Jakarta (kamu pilih) lewat DigitalOcean atau Biznet. Data percakapan disimpan di database lokal di VPS kamu sendiri — bukan di shared server kami. API key LLM enkripsi at-rest dengan AES-256. Kami nggak akses isi percakapan kamu kecuali kamu yang request support dan kasih izin eksplisit.',
+        },
+        {
+          q: 'Always-On vs hosting biasa, kapan saya butuh yang Always-On?',
+          a: 'Hosting default auto-pause kalau kamu nggak chat agent lebih dari 30 hari. Wake up dari pause cuma butuh sekitar 30 detik. Always-On bikin VPS jalan 24/7 — relevan kalau kamu butuh agent reaktif ke event eksternal (terima webhook, jalan cron schedule, listen incoming email). Untuk pemakaian harian conversational, hosting default cukup.',
+        },
+        {
+          q: 'Bisa lihat demo atau ngobrol dulu sebelum bayar?',
+          a: 'Bisa. Booking 30 menit lewat tombol "Jadwalkan panggilan" di footer — kami tunjukkan agent live, jawab pertanyaan teknis, dan kamu bisa lihat workflow yang sebenarnya. Tanpa hard sell. Kalau nggak cocok, kami nggak follow up.',
+        },
+        {
+          q: 'Kalau ada masalah teknis, gimana cara dapat support?',
+          a: '24/7 support lewat Telegram langsung ke tim engineering kami. Median response time 12 menit untuk Pro dan Studio, 4 jam untuk Starter. Setiap pelanggan dapat dedicated channel — bukan chatbot, bukan ticketing yang antri panjang.',
+        },
       ];
       const [openIdx, setOpenIdx] = useState(0);
 
@@ -3318,7 +3354,7 @@
                 delay={70}
               />
               <p className="mt-5 max-w-xl text-white/55 font-body font-light text-sm md:text-base leading-relaxed">
-                Tiga hal yang biasanya bikin orang ragu sebelum mulai. Jawab dulu sebelum kamu klik bayar.
+                Hal-hal yang biasanya bikin orang ragu sebelum mulai. Reassurance dulu sebelum kamu klik bayar.
               </p>
             </div>
 
