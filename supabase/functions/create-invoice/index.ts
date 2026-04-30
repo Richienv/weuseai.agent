@@ -10,6 +10,7 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 
 import { handleCreateInvoice } from '../_shared/create-invoice-handler.ts'
+import { handleCors, withCors } from '../_shared/cors.ts'
 import type {
   IInvoiceStore,
   IXenditClient,
@@ -138,11 +139,15 @@ const xendit: IXenditClient = {
   },
 }
 
-Deno.serve((req) =>
-  handleCreateInvoice(req, {
+Deno.serve(async (req) => {
+  const preflight = handleCors(req)
+  if (preflight) return preflight
+
+  const res = await handleCreateInvoice(req, {
     db,
     xendit,
     successRedirectBase: `${PUBLIC_BASE}/welcome`,
     failureRedirectBase: `${PUBLIC_BASE}/checkout.html`,
-  }),
-)
+  })
+  return withCors(res)
+})

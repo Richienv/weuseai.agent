@@ -9,6 +9,7 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 
 import { handleXenditWebhook } from '../_shared/xendit-webhook-handler.ts'
+import { handleCors, withCors, webhookCorsHeaders } from '../_shared/cors.ts'
 import type {
   IInvoiceStore,
   IProvisioningClient,
@@ -140,12 +141,16 @@ async function alertSend(chatId: string, text: string): Promise<void> {
   })
 }
 
-Deno.serve((req) =>
-  handleXenditWebhook(req, {
+Deno.serve(async (req) => {
+  const preflight = handleCors(req, webhookCorsHeaders)
+  if (preflight) return preflight
+
+  const res = await handleXenditWebhook(req, {
     db,
     provisioning,
     webhookToken: WEBHOOK_TOKEN,
     alertChatId: ALERT_CHAT_ID,
     alertSend,
-  }),
-)
+  })
+  return withCors(res, webhookCorsHeaders)
+})
