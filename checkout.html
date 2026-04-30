@@ -738,11 +738,10 @@
         input.focus();
       });
 
-      // Edge Function endpoint — set at deploy via injected SUPABASE_FUNCTIONS_URL
-      // and SUPABASE_ANON_KEY. Public anon key is safe to expose; the Edge Function
-      // verifies + recomputes amounts server-side.
-      const SUPABASE_FUNCTIONS_URL = window.SUPABASE_FUNCTIONS_URL || 'https://YOUR-PROJECT.supabase.co/functions/v1';
-      const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || '';
+      // Edge Function endpoint. Anon key is public-by-design — the function
+      // recomputes amounts server-side and verifies subscription state.
+      const SUPABASE_FUNCTIONS_URL = 'https://gtjgsligllbjcisiyrah.supabase.co/functions/v1';
+      const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd0amdzbGlnbGxiamNpc2l5cmFoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0Njc2NjUsImV4cCI6MjA5MzA0MzY2NX0.krPAvB3kyxcqsBS5dyDahFMqCB_4MZKaz6FEB0RfjtY';
 
       document.getElementById('payForm').addEventListener('submit', async (e) => {
         e.preventDefault();
