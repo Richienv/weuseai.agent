@@ -79,6 +79,16 @@ create table if not exists credit_topups (
   created_at timestamptz default now()
 );
 
+create table if not exists audit_log (
+  id bigserial primary key,
+  customer_id uuid references customers(id) on delete cascade,
+  action text not null,
+  target text,
+  result text check (result in ('ok', 'error')),
+  meta jsonb,
+  created_at timestamptz default now()
+);
+
 create index if not exists idx_usage_log_customer_time on usage_log(customer_id, created_at desc);
 create index if not exists idx_subscriptions_customer on subscriptions(customer_id);
 create index if not exists idx_vps_instances_customer on vps_instances(customer_id);
@@ -86,6 +96,8 @@ create index if not exists idx_subscription_invoices_subscription
   on subscription_invoices(subscription_id, created_at desc);
 create index if not exists idx_subscription_invoices_xendit
   on subscription_invoices(xendit_invoice_id);
+create index if not exists idx_audit_log_customer_time
+  on audit_log(customer_id, created_at desc);
 
 -- ──────────────────────────────────────────────────────────
 -- RPC: atomic credit decrement
@@ -120,6 +132,7 @@ alter table vps_instances enable row level security;
 alter table credits enable row level security;
 alter table usage_log enable row level security;
 alter table credit_topups enable row level security;
+alter table audit_log enable row level security;
 
 -- Service role bypasses RLS (used by Edge Functions, provisioning service, proxy)
 -- Customer-facing dashboard policies go here later when /dashboard is built.
