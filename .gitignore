@@ -30,3 +30,7 @@ coverage/
 # Per-service lockfiles (use root lockfile from workspaces)
 services/*/package-lock.json
 packages/*/package-lock.json
+
+# Supabase CLI local state (link cache, version probes, etc.)
+supabase/.temp/
+supabase/.branches/
