@@ -1,0 +1,19 @@
+{
+  "name": "@liren/test-idcloudhost",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "tsx src/test.ts",
+    "test:auth": "tsx src/test-auth.ts",
+    "test:cleanup": "tsx src/cleanup.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.7.0",
+    "typescript": "^5.4.0",
+    "@types/node": "^20.11.0"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.0"
+  }
+}

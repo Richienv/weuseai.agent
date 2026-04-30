@@ -1,0 +1,24 @@
+name = "liren-proxy"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+
+# Routes — uncomment dan ganti waktu kamu beli/connect domain
+# routes = [
+#   { pattern = "proxy.lirenlabs.ai/*", custom_domain = true }
+# ]
+
+# Secrets — set via: wrangler secret put NAME
+# - PROXY_JWT_SECRET (sama dengan provisioning service)
+# - SUPABASE_URL
+# - SUPABASE_SERVICE_ROLE_KEY
+# - ZHIPU_API_KEY
+# - DEEPSEEK_API_KEY
+# - ANTHROPIC_API_KEY (opsional)
+
+[vars]
+ZHIPU_BASE = "https://open.bigmodel.cn/api/paas/v4"
+DEEPSEEK_BASE = "https://api.deepseek.com/v1"
+ANTHROPIC_BASE = "https://api.anthropic.com/v1"
+
+[observability]
+enabled = true

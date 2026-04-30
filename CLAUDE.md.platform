@@ -1,0 +1,158 @@
+# CLAUDE.md — Working brief untuk Claude Code
+
+**Project:** Liren Stand — managed Hermes agent hosting untuk pelanggan Indonesia. MyClaw clone, IDR pricing, Telegram delivery, 5-menit setup.
+
+**Status saat ini:** Scaffold ada (`packages/test-idcloudhost`, `packages/provisioning`, `packages/proxy`). Belum end-to-end tested. Agent runtime pakai upstream NousResearch/hermes-agent — bukan custom build.
+
+**Prioritas urut:** Lihat `NEXT.md`. Kerjain dari atas, jangan skip. Stop kalau task gagal — lapor + tunggu input founder.
+
+---
+
+## Tech stack (LOCKED — jangan tambah/ganti tanpa confirm founder)
+
+| Layer | Pilihan | Catatan |
+|-------|---------|---------|
+| Bahasa | TypeScript | Semua package |
+| VPS | IDCloudHost API | Region jakarta atau cyc01 |
+| Agent runtime | NousResearch/hermes-agent (MIT OSS) | Install via upstream `scripts/install.sh`, manage via systemd. Kita nggak fork, nggak build. |
+| LLM (Starter) | DeepSeek V3 via LiteLLM proxy | Pelanggan tier Starter pakai proxy kita, default model `deepseek-chat` |
+| LLM (Pro BYOK) | DeepSeek / OpenRouter / OpenAI / Z.ai (GLM) | Pelanggan paste API key sendiri |
+| Payment | Xendit | QRIS primary, e-wallet supported |
+| Database | Supabase | Schema sudah ada di `supabase-schema.sql` |
+| Channel | Telegram | Phase 1 only. WhatsApp ditunda. |
+
+---
+
+## Agent runtime context
+
+Kita pakai NousResearch/hermes-agent (https://github.com/NousResearch/hermes-agent, MIT) sebagai agent runtime. **Kita nggak nulis kode agent.**
+
+**Yang kita kerjain:**
+- Provision VPS pelanggan (IDCloudHost API)
+- Cloud-init: jalanin upstream `install.sh` sebagai user `weuseai`, tulis `/home/weuseai/.hermes/.env` dengan kredensial pelanggan
+- systemd unit `hermes-agent.service` (`ExecStart=/home/weuseai/.local/bin/hermes gateway start`, `Restart=always`)
+- LLM routing: tier Starter → proxy kita → DeepSeek; tier Pro → BYOK key langsung ke provider
+- Telegram bot per pelanggan (pelanggan kasih bot token sendiri saat onboarding)
+- Payment, dashboard, marketplace skill metadata
+
+**Yang kita NGGAK kerjain:**
+- Tool calling, prompt engineering, agent loop logic — itu Hermes core
+- Fork, patch, atau modifikasi kode upstream
+- Custom Docker image (sebelumnya ada `packages/hermes/`, sudah dihapus)
+
+**Implikasi:**
+- Bug di agent core → upstream issue, bukan kita fix
+- Update Hermes = re-install di VPS pelanggan, bukan rebuild image
+- Pin ke release tag mereka kalau ada breaking change (Phase 3 task)
+
+---
+
+## Skip di Phase 1 (jangan dibangun dulu)
+
+- Mastra refactor — Hermes existing works as-is
+- LiteLLM proxy self-host — call Zhipu langsung dari Hermes
+- Infisical secrets management — env file cukup
+- WhatsApp Web automation — Telegram primary, WA Phase 2
+- Marketplace UI — skill hardcoded di Hermes image
+- Auto-update / audit log / daily backup — Phase 3
+- Multi-region / migration plan — single region cukup
+- UU PDP compliance detail — basic privacy policy cukup
+
+Bring back kalau ada signal dari 10+ paying customer minta fitur tertentu.
+
+---
+
+## Brand voice rules (untuk semua customer-facing copy)
+
+- **Bahasa Indonesia** primary. English untuk technical/dev terms (npm, Docker, API).
+- Pakai `kamu`, bukan `Anda` atau `lo/gue`.
+- One idea per sentence. Two-sentence paragraph preferred.
+- **Zero exclamation marks** di body copy. Max 1 per caption.
+- **BANNED words** (jangan pakai sama sekali): `basically`, `just`, `literally`, `honestly`, `kind of`, `pretty much`, `revolutionary`, `disrupt`, `10x`, `game-changer`, `next-level`.
+- Calm-premium register. Bukan Duolingo, bukan tech-bro neon, bukan hustle culture.
+
+Filter pertanyaan sebelum publish copy: *"Would someone I respect in Jakarta save this, or scroll past?"*
+
+Detail lengkap di `../04-Liren-Stand-Strategy.md` atau `01-Brand-Kit.pdf` (di SSD).
+
+---
+
+## Reference docs
+
+Baca kalau perlu context lebih dalam (semua di `docs/` folder):
+
+1. `docs/04-Liren-Stand-Strategy.md` — apa + kenapa (pricing, marketplace, tier)
+2. `docs/05-One-Click-Build-Plan.md` — gimana, detail (architecture, code skeleton, day-by-day)
+3. `docs/06-Research-Preview.md` — context tech decision (build vs buy, alternatif considered)
+
+Order rekomen: kalau task butuh context strategis baca 04. Kalau butuh detail implementasi baca 05. Kalau bingung kenapa pilihan tech tertentu, baca 06.
+
+---
+
+## Working conventions
+
+**Commits:**
+- Subject line English, imperative mood, ≤72 char
+- Body BI atau EN, sesuai kontens
+- Tag prefix: `[test]`, `[hermes]`, `[provisioning]`, `[proxy]`, `[infra]`, `[docs]`
+
+**Type checking:**
+- Run `npx tsc --noEmit` di package yang diubah sebelum commit
+- Fix all errors, don't ignore
+
+**Per-package workflow:**
+- `cd packages/<name>`
+- `npm install` (kalau belum)
+- `npm run dev` atau `npm run test`
+
+**Don't add new packages** without confirming with founder.
+
+**Don't run npm install -g** without explicit founder ask.
+
+---
+
+## When to STOP and ask founder
+
+- Need API keys, credentials, or paid signup
+- Architectural decision beyond locked stack
+- Brand-facing copy or marketing claims
+- Pricing / revenue logic changes
+- Spending money (paid services, paid LLM tokens beyond free tier)
+- Stuck >30 minutes on same problem
+
+## When to JUST PROCEED
+
+- Bug fixes within existing logic
+- Adding tests
+- Following existing patterns
+- Documentation updates within `docs/` or package READMEs
+- Type errors and code cleanup
+- Refactoring for clarity (not architecture)
+
+---
+
+## Verification checklist before claiming task done
+
+- [ ] `npx tsc --noEmit` passes in modified package
+- [ ] README updated kalau API/usage berubah
+- [ ] No banned brand words in customer-facing strings
+- [ ] No exclamation marks in customer-facing copy
+- [ ] Commit message follows convention
+- [ ] Manually tested happy path (atau noted "needs API key" if can't)
+
+---
+
+## Founder context
+
+- Solo founder, Hangzhou + Jakarta
+- Indonesia-focused, average Joe target
+- Bahasa-first product, English internal
+- Hard constraint: no paid ads, no hiring, no enterprise custom in Phase 1
+- Mac Mini sebagai control plane (existing Hermes runs there)
+
+---
+
+## Critical contact for blockers
+
+Founder Telegram: [SET BY FOUNDER]
+Founder email: kidnovell.richie@gmail.com

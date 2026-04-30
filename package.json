@@ -1,0 +1,20 @@
+{
+  "name": "weuseai-agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "services/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "test": "tsx --test tests/end-to-end-mock.spec.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "typecheck:all": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p services/provisioning/tsconfig.json && tsc --noEmit -p services/proxy/tsconfig.json && tsc --noEmit -p services/hermes/tsconfig.json && tsc --noEmit -p services/payment/tsconfig.json && tsc --noEmit -p services/test-idcloudhost/tsconfig.json"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.4.0"
+  }
+}

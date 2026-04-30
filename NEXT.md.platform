@@ -1,0 +1,176 @@
+# NEXT.md — Task queue (kerjain urut)
+
+**Updated:** 2026-04-27
+**Target launch:** 2 minggu dari hari Day 1 IDCloudHost test pass
+
+---
+
+## Phase 0: Founder setup (ONE-TIME, sebelum Claude Code mulai)
+
+Founder kerjain manual:
+
+- [ ] Daftar IDCloudHost developer account → ambil API key + billing_account_id
+- [ ] Daftar Zhipu (open.bigmodel.cn) → ambil GLM-4-Flash API key
+- [ ] Daftar Xendit sandbox → ambil secret key
+- [ ] Daftar Supabase project → ambil URL + anon key + service role key
+- [ ] Buat Telegram bot via @BotFather → ambil token
+- [ ] Apply `supabase-schema.sql` di Supabase SQL editor
+- [ ] Isi `.env` di tiap package dari `.env.example`
+
+Stop di sini sampai semua di atas done. Tanpa keys, tidak bisa lanjut.
+
+---
+
+## Day 1 — IDCloudHost API validation (CRITICAL GATE)
+
+**Owner:** Claude Code
+
+**Task:**
+```bash
+cd packages/test-idcloudhost
+npm install
+npm run test
+```
+
+**Expected:** Verdict `✓ PASS` dengan total time create+running ≤ 180 detik.
+
+**If PASS:** lanjut Day 2.
+**If FAIL:**
+- Total time 180-300s: PASS marginal, tapi lanjut dengan warning ke founder
+- Total time >300s: STOP. Lapor ke founder. Diskusi: ganti ke Vultr Jakarta atau Hetzner Singapore.
+- Auth error: STOP. Lapor founder (kemungkinan keys salah).
+- Other error: STOP. Lapor full error log.
+
+**Verify with founder before proceeding past this.**
+
+---
+
+## Day 2-3 — Pricing page (minimum viable)
+
+**Owner:** Claude Code
+
+**Task:** buat `apps/web/` (Next.js 15 app router) dengan:
+
+- Halaman `/` — landing page sederhana, hero + value prop + CTA "Lihat tier"
+- Halaman `/pricing` — 2 tier card (Starter Rp 299.000, Pro Rp 399.000), tombol "Subscribe"
+- Tombol Subscribe → POST `/api/checkout` → bikin Xendit invoice → redirect ke invoice URL
+- Halaman `/welcome?cid=...` — landing setelah bayar, "agent kamu sedang dipersiapkan"
+- Aesthetic: chrome-on-canvas (bg #FAF9F5, ink #141413, accent Liren Blue #0047FF), Inter font, no exclamation marks, max 1 emoji per section.
+
+**Reference:** MyClaw pricing page screenshot (di parent folder). Jangan tiru visual MyClaw — pakai Liren aesthetic.
+
+**Verify:**
+- `npx tsc --noEmit` clean
+- Pricing page render correctly mobile + desktop
+- Subscribe button creates real Xendit sandbox invoice
+- Brand voice rules passed (no banned words, no `!`)
+
+---
+
+## Day 4-5 — Wire end-to-end provisioning
+
+**Owner:** Claude Code
+
+**Task:**
+
+1. Deploy `packages/provisioning/` server di Mac Mini (atau sementara di Railway/Fly free tier)
+2. Bikin Supabase Edge Function `xendit-webhook` yang:
+   - Verify Xendit signature
+   - Parse paid invoice
+   - Insert subscription record
+   - POST ke provisioning service `/spin-up` dengan customerId + tier
+3. Provisioning service spawn VPS via IDCloudHost API (kode sudah ada di `customer-flow.ts`)
+4. Cloud-init install Docker + pull Hermes image
+5. Hermes container start, listen Telegram
+
+**Verify:**
+- Self-test: bayar via Xendit sandbox, VPS spawn, Hermes Telegram message dalam ≤5 menit
+- Time setiap step di log
+- Cleanup VPS setelah test (jangan ada VM ketinggal)
+
+---
+
+## Day 6 — Verify Hermes Agent install pattern di VPS test
+
+**Owner:** Claude Code
+
+**Task:**
+
+1. Spin up satu VPS via provisioning service (Starter tier, dummy customerId + Telegram bot token punya kamu)
+2. SSH ke VPS, switch ke user `weuseai`
+3. Verify install:
+   - `which hermes` → harus return `/home/weuseai/.local/bin/hermes`
+   - `systemctl status hermes-agent.service` → harus `active (running)`
+   - `cat /home/weuseai/.hermes/.env` (sebagai weuseai) → cek `TELEGRAM_BOT_TOKEN`, `TELEGRAM_ALLOWED_USERS`, `TELEGRAM_REACTIONS=true`, plus LLM env block sesuai tier
+   - `journalctl -u hermes-agent -n 100` → log "started" / Telegram connected, no crash loop
+   - `stat -c '%a %U:%G' /home/weuseai/.hermes/.env` → harus `600 weuseai:weuseai`
+4. Test Telegram: kirim `/start` ke bot pelanggan → bot harus reply
+5. Restart test: `sudo systemctl restart hermes-agent` → bot reconnect dalam ≤30 detik
+6. Cleanup VPS
+
+**Verify:** Bot respond ≤30 detik setelah systemd start, no crash di journalctl, restart handled correctly.
+
+**Kalau gagal:** debug systemd unit, env permissions, atau cek upstream `install.sh` dari NousResearch (mungkin API berubah). Tag founder kalau install path / binary location berubah.
+
+---
+
+## Day 7 — Internal end-to-end test
+
+**Owner:** Claude Code + Founder
+
+**Task:** Founder self-onboard (pakai akun email pribadi). Measure:
+
+- Waktu dari klik "Subscribe" sampai Telegram welcome message
+- UX friction (mana yang confusing)
+- Error rate (apakah pertama kali sukses, atau perlu retry)
+
+**Target:** ≤5 menit, zero retry.
+
+**If fails:** debug + iterate. Jangan lanjut ke Beta sampai ini pass.
+
+**Verify with founder before proceeding to beta.**
+
+---
+
+## Day 8-14 — Beta onboard 5 pelanggan gratis
+
+**Owner:** Founder primary, Claude Code support
+
+**Task:**
+
+- Founder DM 5 teman / target persona, undang free beta
+- Onboard satu-satu, observe friction
+- Claude Code: monitor, fix bugs yang muncul, improve error messages
+- Collect feedback after 1 week of usage
+
+**Goal:** 5 working agents, retention check at Day 7.
+
+---
+
+## Setelah Beta pass (Phase 2)
+
+Kalau ke-5 pelanggan beta retention >70%, lanjut ke Layer 2:
+
+- Top-up credits flow (Xendit IDR → balance update)
+- Customer dashboard (status agent, balance, manage subscription)
+- Marketplace v1 (5 free skill, 3 premium skill)
+- Public soft-launch (existing IG audience)
+
+Detail di `../05-One-Click-Build-Plan.md` Layer 2 section.
+
+---
+
+## Decision points yang harus founder confirm
+
+Tagged `[NEED-FOUNDER-INPUT]` di code/docs. Claude Code STOP dan ask founder.
+
+- [ ] Final pricing — 199k atau 299k atau 399k untuk Starter?
+- [ ] Domain — `lirenlabs.ai/stand` atau subdomain `stand.lirenlabs.ai`?
+- [ ] Docker registry — Docker Hub atau GHCR?
+- [ ] Mac Mini IP/access untuk provisioning service deploy
+- [ ] Refund policy text (founder write, Claude Code paste)
+- [ ] ToS + Privacy Policy text (basic version cukup Phase 1)
+
+---
+
+*Last updated: 2026-04-27 by Claude (handoff prep)*
