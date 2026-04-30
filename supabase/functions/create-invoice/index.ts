@@ -3,7 +3,7 @@
 // tests can import and exercise it without Deno.
 //
 // Deploy: supabase functions deploy create-invoice
-// Required env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, XENDIT_SECRET_KEY,
+// Required env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, XENDIT_API_KEY,
 //   PUBLIC_BASE_URL (e.g. https://weuseai-agent.vercel.app)
 
 // @ts-ignore — Deno-only import; not resolved during Node typecheck.
@@ -24,7 +24,7 @@ declare const Deno: {
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-const XENDIT_SECRET = Deno.env.get('XENDIT_SECRET_KEY')!
+const XENDIT_SECRET = Deno.env.get('XENDIT_API_KEY')!
 const PUBLIC_BASE = Deno.env.get('PUBLIC_BASE_URL') ?? 'https://weuseai-agent.vercel.app'
 
 const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
