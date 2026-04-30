@@ -85,7 +85,8 @@ test('happy path: pay → spawn → Hermes alive → telegram message', async ()
   // ── 4. telegram message sent ──────────────────────────────
   assert.equal(broker.sentMessages.length, 1)
   assert.equal(broker.sentMessages[0].chatId, '987654321')
-  assert.match(broker.sentMessages[0].text, /Agent kamu hidup/)
+  assert.match(broker.sentMessages[0].text, /agent kamu hidup/i)
+  assert.match(broker.sentMessages[0].text, /BotFather/)
 
   // ── 5. LLM mock callable ──────────────────────────────────
   const reply = await llm.chatCompletion({

@@ -12,17 +12,17 @@
  * 5. Tulis marker /opt/weuseai/ready
  */
 
-export type Tier = 'starter' | 'pro'
+export type Tier = 'starter' | 'pro' | 'studio'
 
 export type CloudInitParams = {
   customerId: string
-  telegramBotToken: string
-  telegramAllowedUserIds: string  // comma-separated
+  telegramBotToken?: string
+  telegramAllowedUserIds?: string  // comma-separated
   tier: Tier
   llmProxyToken?: string      // Starter only
   llmProxyUrl?: string        // Starter only
-  customerLlmApiKey?: string  // Pro BYOK only
-  customerLlmProvider?: 'deepseek' | 'openrouter' | 'openai' | 'glm'  // Pro BYOK only
+  customerLlmApiKey?: string  // Pro/Studio BYOK only
+  customerLlmProvider?: 'deepseek' | 'openrouter' | 'openai' | 'glm'  // Pro/Studio BYOK only
 }
 
 function llmEnvLines(p: CloudInitParams): string[] {
@@ -48,12 +48,16 @@ function llmEnvLines(p: CloudInitParams): string[] {
 }
 
 export function buildCloudInit(params: CloudInitParams): string {
-  const envLines = [
-    `TELEGRAM_BOT_TOKEN=${params.telegramBotToken}`,
-    `TELEGRAM_ALLOWED_USERS=${params.telegramAllowedUserIds}`,
-    `TELEGRAM_REACTIONS=true`,
-    ...llmEnvLines(params),
-  ]
+  // Telegram block omitted when bot token not yet provided — Hermes will start
+  // without a Telegram channel until customer pastes the token via dashboard.
+  const telegramLines = params.telegramBotToken
+    ? [
+        `TELEGRAM_BOT_TOKEN=${params.telegramBotToken}`,
+        `TELEGRAM_ALLOWED_USERS=${params.telegramAllowedUserIds ?? ''}`,
+        `TELEGRAM_REACTIONS=true`,
+      ]
+    : []
+  const envLines = [...telegramLines, ...llmEnvLines(params)]
   const indentedEnv = envLines.map((l) => `      ${l}`).join('\n')
 
   return `#cloud-config

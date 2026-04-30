@@ -1,0 +1,148 @@
+// Deno Edge Function entry — wires real deps and serves over HTTP.
+// Pure handler logic lives in ../_shared/create-invoice-handler.ts so Node
+// tests can import and exercise it without Deno.
+//
+// Deploy: supabase functions deploy create-invoice
+// Required env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, XENDIT_SECRET_KEY,
+//   PUBLIC_BASE_URL (e.g. https://weuseai-agent.vercel.app)
+
+// @ts-ignore — Deno-only import; not resolved during Node typecheck.
+import { createClient } from 'jsr:@supabase/supabase-js@2'
+
+import { handleCreateInvoice } from '../_shared/create-invoice-handler.ts'
+import type {
+  IInvoiceStore,
+  IXenditClient,
+  SubscriptionRow,
+} from '../_shared/types.ts'
+
+// @ts-ignore — Deno global
+declare const Deno: {
+  env: { get(key: string): string | undefined }
+  serve(handler: (req: Request) => Response | Promise<Response>): void
+}
+
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
+const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+const XENDIT_SECRET = Deno.env.get('XENDIT_SECRET_KEY')!
+const PUBLIC_BASE = Deno.env.get('PUBLIC_BASE_URL') ?? 'https://weuseai-agent.vercel.app'
+
+const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
+
+const db: IInvoiceStore = {
+  async findCustomerByEmail(email) {
+    const { data } = await supabase
+      .from('customers')
+      .select('id, email')
+      .eq('email', email)
+      .maybeSingle()
+    return data ?? null
+  },
+  async insertCustomer(input) {
+    const { data, error } = await supabase
+      .from('customers')
+      .insert(input)
+      .select('id, email')
+      .single()
+    if (error) throw error
+    return data
+  },
+  async findSubscriptionByXenditInvoiceId(xenditInvoiceId) {
+    const { data } = await supabase
+      .from('subscriptions')
+      .select('*')
+      .eq('xendit_invoice_id', xenditInvoiceId)
+      .maybeSingle()
+    return (data as SubscriptionRow | null) ?? null
+  },
+  async insertSubscription(input) {
+    const { data, error } = await supabase
+      .from('subscriptions')
+      .insert({ ...input, hosting_active: false })
+      .select('*')
+      .single()
+    if (error) throw error
+    return data as SubscriptionRow
+  },
+  async updateSubscription(id, patch) {
+    const { data, error } = await supabase
+      .from('subscriptions')
+      .update(patch)
+      .eq('id', id)
+      .select('*')
+      .single()
+    if (error) throw error
+    return data as SubscriptionRow
+  },
+  async insertSubscriptionInvoice(input) {
+    const { data, error } = await supabase
+      .from('subscription_invoices')
+      .insert(input)
+      .select('id')
+      .single()
+    if (error) throw error
+    return data
+  },
+  async markSubscriptionInvoicePaid(xenditInvoiceId) {
+    const { error } = await supabase
+      .from('subscription_invoices')
+      .update({ status: 'paid', paid_at: new Date().toISOString() })
+      .eq('xendit_invoice_id', xenditInvoiceId)
+    if (error) throw error
+  },
+  async markSubscriptionInvoiceFailed(xenditInvoiceId, status) {
+    const { error } = await supabase
+      .from('subscription_invoices')
+      .update({ status })
+      .eq('xendit_invoice_id', xenditInvoiceId)
+    if (error) throw error
+  },
+  async addStarterCredits(customerId, cents) {
+    // Upsert credits row
+    await supabase.from('credits').upsert({
+      customer_id: customerId,
+      balance_usd_cents: cents,
+      updated_at: new Date().toISOString(),
+    })
+  },
+}
+
+const xendit: IXenditClient = {
+  async createInvoice(input) {
+    const auth = btoa(`${XENDIT_SECRET}:`)
+    const r = await fetch('https://api.xendit.co/v2/invoices', {
+      method: 'POST',
+      headers: {
+        authorization: `Basic ${auth}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        external_id: input.externalId,
+        amount: input.amount,
+        payer_email: input.payerEmail,
+        description: input.description,
+        payment_methods: input.paymentMethods,
+        fees: input.fees,
+        success_redirect_url: input.successRedirectUrl,
+        failure_redirect_url: input.failureRedirectUrl,
+        metadata: input.metadata,
+        currency: 'IDR',
+      }),
+    })
+    if (!r.ok) {
+      const text = await r.text()
+      throw new Error(`Xendit create invoice failed: ${r.status} ${text}`)
+    }
+    const data = (await r.json()) as { id: string; invoice_url: string }
+    return { invoiceId: data.id, invoiceUrl: data.invoice_url }
+  },
+}
+
+Deno.serve((req) =>
+  handleCreateInvoice(req, {
+    db,
+    xendit,
+    successRedirectBase: `${PUBLIC_BASE}/welcome`,
+    failureRedirectBase: `${PUBLIC_BASE}/checkout.html`,
+  }),
+)

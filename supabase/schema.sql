@@ -1,25 +1,45 @@
 -- ──────────────────────────────────────────────────────────
--- Liren Stand — Supabase schema
--- Apply via Supabase SQL editor
+-- weuseai.agent — Supabase schema (v1.1)
+-- Apply via Supabase SQL editor for a fresh project.
+-- For an existing project applied at v1.0, run the migration in
+-- supabase/migrations/0001_v1.1_pricing.sql instead.
 -- ──────────────────────────────────────────────────────────
 
 create table if not exists customers (
   id uuid primary key default gen_random_uuid(),
   email text unique not null,
-  telegram_chat_id text,
-  whatsapp_number text,
   display_name text,
+  telegram_chat_id text,
+  telegram_bot_token text,
+  telegram_allowed_user_ids text,
+  whatsapp_number text,
   created_at timestamptz default now()
 );
 
 create table if not exists subscriptions (
   id uuid primary key default gen_random_uuid(),
   customer_id uuid references customers(id) on delete cascade,
-  tier text check (tier in ('starter', 'pro')),
-  xendit_subscription_id text,
-  status text check (status in ('active', 'paused', 'canceled')),
+  tier text check (tier in ('starter', 'pro', 'studio')),
+  status text check (status in ('pending', 'active', 'paused', 'canceled', 'failed')),
+  xendit_invoice_id text unique,
+  always_on_enabled boolean default false,
+  hosting_active boolean default false,
   started_at timestamptz default now(),
   next_billing_at timestamptz
+);
+
+create table if not exists subscription_invoices (
+  id uuid primary key default gen_random_uuid(),
+  subscription_id uuid references subscriptions(id) on delete cascade,
+  customer_id uuid references customers(id) on delete cascade,
+  xendit_invoice_id text unique,
+  kind text check (kind in ('setup_first_month', 'monthly_hosting', 'monthly_always_on')),
+  amount_idr integer not null,
+  period_start timestamptz,
+  period_end timestamptz,
+  status text check (status in ('pending', 'paid', 'expired', 'failed')),
+  created_at timestamptz default now(),
+  paid_at timestamptz
 );
 
 create table if not exists vps_instances (
@@ -62,6 +82,10 @@ create table if not exists credit_topups (
 create index if not exists idx_usage_log_customer_time on usage_log(customer_id, created_at desc);
 create index if not exists idx_subscriptions_customer on subscriptions(customer_id);
 create index if not exists idx_vps_instances_customer on vps_instances(customer_id);
+create index if not exists idx_subscription_invoices_subscription
+  on subscription_invoices(subscription_id, created_at desc);
+create index if not exists idx_subscription_invoices_xendit
+  on subscription_invoices(xendit_invoice_id);
 
 -- ──────────────────────────────────────────────────────────
 -- RPC: atomic credit decrement
@@ -91,10 +115,11 @@ $$;
 
 alter table customers enable row level security;
 alter table subscriptions enable row level security;
+alter table subscription_invoices enable row level security;
 alter table vps_instances enable row level security;
 alter table credits enable row level security;
 alter table usage_log enable row level security;
 alter table credit_topups enable row level security;
 
--- Service role bypasses RLS (used by provisioning service + proxy)
--- Customer-facing dashboard policies go here later when /stand/dashboard is built.
+-- Service role bypasses RLS (used by Edge Functions, provisioning service, proxy)
+-- Customer-facing dashboard policies go here later when /dashboard is built.

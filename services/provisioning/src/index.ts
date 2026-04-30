@@ -52,27 +52,28 @@ app.post('/spin-up', async (req, res) => {
     customerTelegramAllowedUserIds,
     customerLlmApiKey,
     customerLlmProvider,
+    alwaysOnEnabled,
+    useStarterCredits,
   } = req.body as {
     customerId: string
     tier: Tier
     telegramChatId?: string
-    customerTelegramBotToken: string
-    customerTelegramAllowedUserIds: string
+    customerTelegramBotToken?: string
+    customerTelegramAllowedUserIds?: string
     customerLlmApiKey?: string
     customerLlmProvider?: 'deepseek' | 'openrouter' | 'openai' | 'glm'
+    alwaysOnEnabled?: boolean
+    useStarterCredits?: boolean
   }
 
   if (!customerId || !tier) {
     return res.status(400).json({ error: 'missing customerId or tier' })
   }
-  if (tier !== 'starter' && tier !== 'pro') {
+  if (tier !== 'starter' && tier !== 'pro' && tier !== 'studio') {
     return res.status(400).json({ error: 'invalid tier' })
   }
-  if (!customerTelegramBotToken || !customerTelegramAllowedUserIds) {
-    return res.status(400).json({
-      error: 'missing customerTelegramBotToken or customerTelegramAllowedUserIds',
-    })
-  }
+  // Bot token / allowed users are now optional — customer pastes via dashboard
+  // post-spawn. VPS still provisions; Telegram channel comes online once token set.
 
   try {
     const result = await spinUpCustomer(
@@ -84,6 +85,8 @@ app.post('/spin-up', async (req, res) => {
         customerTelegramAllowedUserIds,
         customerLlmApiKey,
         customerLlmProvider,
+        alwaysOnEnabled,
+        useStarterCredits,
       },
       sharedDeps,
     )

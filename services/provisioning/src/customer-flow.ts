@@ -16,19 +16,34 @@ import { mintProxyToken } from './proxy-token.js'
 
 export type { Tier }
 
+export const WELCOME_MESSAGE = [
+  'Halo, agent kamu hidup.',
+  '',
+  'Untuk mulai pakai, paste Telegram bot token kamu di dashboard: https://weuseai-agent.vercel.app/dashboard',
+  '',
+  'Belum punya bot? Buat di @BotFather, copy token, paste di dashboard.',
+  '',
+  'Pertanyaan? Reply pesan ini.',
+].join('\n')
+
 const TIER_SPEC: Record<Tier, VPSSpec> = {
   starter: { vcpu: 1, ram: 4096, disk: 50 },
   pro: { vcpu: 2, ram: 8192, disk: 100 },
+  studio: { vcpu: 4, ram: 16384, disk: 200 },
 }
 
 export type SpinUpOpts = {
   customerId: string
   tier: Tier
   telegramChatId?: string
-  customerTelegramBotToken: string
-  customerTelegramAllowedUserIds: string
+  // Optional Phase 1 — customer pastes bot token via dashboard later;
+  // VPS spawns and Hermes starts, Telegram channel comes online when token set.
+  customerTelegramBotToken?: string
+  customerTelegramAllowedUserIds?: string
   customerLlmApiKey?: string
   customerLlmProvider?: 'deepseek' | 'openrouter' | 'openai' | 'glm'
+  alwaysOnEnabled?: boolean
+  useStarterCredits?: boolean
 }
 
 export type SpinUpDeps = {
@@ -154,11 +169,16 @@ export async function spinUpCustomer(
         ip_address: running.public_ipv4 ?? null,
       })
 
+      // Welcome message — broker decides delivery. In Phase 1 the customer
+      // bot token may not yet be set; in that case the broker queues / no-ops
+      // and the dashboard surfaces the same copy when they paste a token.
       if (opts.telegramChatId) {
         await deps.broker.sendMessage({
           chatId: opts.telegramChatId,
-          text: 'Agent kamu hidup. Coba ketik /halo buat sapa dia.',
+          text: WELCOME_MESSAGE,
         })
+      } else {
+        log('Welcome deferred — no telegramChatId. Dashboard will surface instructions when customer signs in.')
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)

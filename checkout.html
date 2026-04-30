@@ -425,10 +425,6 @@
             <span class="lbl">Payment method fee <span class="pm-tag" id="feeTag">QRIS</span></span>
             <span class="val fee" id="paymentFee">+Rp 9.100</span>
           </div>
-          <div class="totals-row">
-            <span class="lbl">Tax</span>
-            <span class="val">Rp 0</span>
-          </div>
           <div class="totals-grand">
             <span>Total hari ini</span>
             <span id="grandTotal">Rp 1.308.100</span>
@@ -476,32 +472,9 @@
 
           <div id="methodDetails"><!-- swapped per method --></div>
 
-          <div class="field-group" id="cardFields" style="display:none;">
-            <label class="field-label">Card information</label>
-            <div class="card-group">
-              <div class="card-row">
-                <div class="with-icon">
-                  <input type="text" inputmode="numeric" id="cardNumber" placeholder="1234 1234 1234 1234" autocomplete="cc-number" maxlength="23">
-                  <div class="brands" aria-hidden="true">
-                    <span class="brand visa">VISA</span>
-                    <span class="brand mc"></span>
-                    <span class="brand amex">AMEX</span>
-                    <span class="brand jcb">JCB</span>
-                  </div>
-                </div>
-              </div>
-              <div class="card-row">
-                <div class="col">
-                  <input type="text" inputmode="numeric" id="exp" placeholder="MM / YY" autocomplete="cc-exp" maxlength="7">
-                </div>
-                <div class="col">
-                  <input type="text" inputmode="numeric" id="cvc" placeholder="CVC" autocomplete="cc-csc" maxlength="4">
-                </div>
-              </div>
-            </div>
-            <div style="margin-top:10px;">
-              <input class="field-input" type="text" id="cardName" placeholder="Full name on card" autocomplete="cc-name">
-            </div>
+          <div class="field-group">
+            <label class="field-label" for="name">Nama lengkap</label>
+            <input class="field-input" type="text" id="name" name="name" placeholder="Nama yang muncul di invoice" autocomplete="name" required>
           </div>
 
           <div class="field-group">
@@ -518,7 +491,12 @@
             <input class="field-input" type="text" id="postal" placeholder="Postal code" autocomplete="postal-code" style="margin-top:10px;">
           </div>
 
-          <button class="pay-btn" type="submit" id="payBtn">Pay <span id="payBtnAmount">Rp 1.208.400</span></button>
+          <button class="pay-btn" type="submit" id="payBtn">Bayar Sekarang · <span id="payBtnAmount">Rp 1.208.400</span></button>
+
+          <p style="font-size: 12px; color: var(--text-muted); margin: 10px 0 0; text-align: center; line-height: 1.5;">
+            Bayar via QRIS, GoPay, OVO, DANA, atau transfer di halaman Xendit.
+          </p>
+          <p id="payError" style="font-size: 12px; color: #dc2626; margin: 10px 0 0; text-align: center; display: none;"></p>
 
           <div class="lock-line">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
@@ -723,25 +701,12 @@
       const m = METHODS.find((x) => x.id === state.methodId) || METHODS[0];
       const wrap = document.getElementById('methodDetails');
       wrap.innerHTML = `<div class="method-details">${m.details}</div>`;
-      const cardFields = document.getElementById('cardFields');
-      cardFields.style.display = m.requiresCard ? 'block' : 'none';
     }
 
     function renderAll() {
       renderMethods();
       renderTotals();
       renderMethodDetails();
-    }
-
-    // Card formatting helpers (visual only; real validation happens on the gateway side).
-    function formatCardNumber(raw) {
-      const digits = raw.replace(/\D/g, '').slice(0, 19);
-      return digits.replace(/(\d{4})(?=\d)/g, '$1 ');
-    }
-    function formatExp(raw) {
-      const digits = raw.replace(/\D/g, '').slice(0, 4);
-      if (digits.length < 3) return digits;
-      return digits.slice(0, 2) + ' / ' + digits.slice(2);
     }
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -755,15 +720,6 @@
         writeAlwaysOnToURL(state.alwaysOn);
         renderAll();
       });
-
-      // Card-input formatters (handlers attached once; the inputs live inside the swap-in card block,
-      // but they're created up-front in the HTML so the listeners stay valid across method changes).
-      const cn = document.getElementById('cardNumber');
-      cn && cn.addEventListener('input', (e) => { e.target.value = formatCardNumber(e.target.value); });
-      const exp = document.getElementById('exp');
-      exp && exp.addEventListener('input', (e) => { e.target.value = formatExp(e.target.value); });
-      const cvc = document.getElementById('cvc');
-      cvc && cvc.addEventListener('input', (e) => { e.target.value = e.target.value.replace(/\D/g, '').slice(0, 4); });
 
       document.getElementById('promoToggle').addEventListener('click', () => {
         const wrap = document.getElementById('promoToggle');
@@ -782,25 +738,51 @@
         input.focus();
       });
 
-      // TODO: wire up to Xendit Invoice API.
-      //   POST /api/create-invoice with { plan: state.planKey, method: state.methodId, email, name, country, postal }
-      //   The server creates a Xendit invoice, sets `payment_methods` to map our methodId -> Xendit's
-      //   payment_channels (e.g. 'qris' -> ['QRIS'], 'va' -> ['BCA','MANDIRI','BNI','BRI','PERMATA']),
-      //   and returns { invoice_url }. Then: window.location.href = invoice_url.
-      //   The fee that is added to the customer total here must also be passed to Xendit
-      //   `fees: [{ type: 'ADMIN', value: fee }]` so the Xendit hosted page shows the same total.
-      document.getElementById('payForm').addEventListener('submit', (e) => {
+      // Edge Function endpoint — set at deploy via injected SUPABASE_FUNCTIONS_URL
+      // and SUPABASE_ANON_KEY. Public anon key is safe to expose; the Edge Function
+      // verifies + recomputes amounts server-side.
+      const SUPABASE_FUNCTIONS_URL = window.SUPABASE_FUNCTIONS_URL || 'https://YOUR-PROJECT.supabase.co/functions/v1';
+      const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || '';
+
+      document.getElementById('payForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = document.getElementById('payBtn');
+        const errEl = document.getElementById('payError');
+        const origLabel = btn.innerHTML;
         btn.disabled = true;
-        btn.textContent = 'Processing…';
-        setTimeout(() => {
-          btn.textContent = 'Payment gateway not connected yet';
-          setTimeout(() => {
-            btn.disabled = false;
-            renderTotals();
-          }, 1800);
-        }, 900);
+        btn.textContent = 'Mempersiapkan pembayaran...';
+        errEl.style.display = 'none';
+        errEl.textContent = '';
+
+        try {
+          const res = await fetch(`${SUPABASE_FUNCTIONS_URL}/create-invoice`, {
+            method: 'POST',
+            headers: {
+              'content-type': 'application/json',
+              'authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            },
+            body: JSON.stringify({
+              email: document.getElementById('email').value.trim(),
+              displayName: document.getElementById('name').value.trim(),
+              plan: state.planKey,
+              alwaysOn: state.alwaysOn,
+              methodId: state.methodId,
+              country: document.getElementById('country').value,
+              postal: document.getElementById('postal').value.trim(),
+            }),
+          });
+          const data = await res.json();
+          if (!res.ok || !data.invoice_url) {
+            throw new Error(data.error || `Gagal menyiapkan pembayaran (${res.status})`);
+          }
+          window.location.href = data.invoice_url;
+        } catch (err) {
+          errEl.textContent = `Gagal: ${err.message}. Coba lagi atau pilih method lain.`;
+          errEl.style.display = 'block';
+          btn.disabled = false;
+          btn.innerHTML = origLabel;
+          renderTotals();
+        }
       });
     });
   </script>

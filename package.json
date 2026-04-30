@@ -8,9 +8,9 @@
     "packages/*"
   ],
   "scripts": {
-    "test": "tsx --test tests/end-to-end-mock.spec.ts",
+    "test": "tsx --test tests/end-to-end-mock.spec.ts tests/post-payment-flow.spec.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "typecheck:all": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p services/provisioning/tsconfig.json && tsc --noEmit -p services/proxy/tsconfig.json && tsc --noEmit -p services/hermes/tsconfig.json && tsc --noEmit -p services/payment/tsconfig.json && tsc --noEmit -p services/test-idcloudhost/tsconfig.json"
+    "typecheck:all": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p services/provisioning/tsconfig.json && tsc --noEmit -p services/proxy/tsconfig.json && tsc --noEmit -p services/hermes/tsconfig.json && tsc --noEmit -p services/payment/tsconfig.json && tsc --noEmit -p services/test-idcloudhost/tsconfig.json && tsc --noEmit -p supabase/tsconfig.json"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
