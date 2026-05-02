@@ -34,3 +34,6 @@ packages/*/package-lock.json
 # Supabase CLI local state (link cache, version probes, etc.)
 supabase/.temp/
 supabase/.branches/
+
+# Local git worktrees for parallel feature work
+.worktrees/
