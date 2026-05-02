@@ -1,0 +1,25 @@
+# Supabase project config — read by `supabase functions deploy` to set per-
+# function flags. Without this file, deploys default to `verify_jwt = true`,
+# which gates the function behind a Supabase JWT and returns 401
+# UNAUTHORIZED_NO_AUTH_HEADER for callers that don't send one.
+#
+# Both Edge Functions here are called by parties that CANNOT send a Supabase
+# JWT and must remain unauthenticated at the gateway:
+#
+#   - xendit-webhook  → called server-to-server by Xendit; auth is the
+#                       shared `x-callback-token` secret, verified inside
+#                       the function.
+#   - create-invoice  → called pre-auth from checkout.html in the browser
+#                       (customer hasn't signed in yet); the function
+#                       recomputes amounts server-side and trusts no input.
+#
+# Regression history: 2026-05-02 deploy of xendit-webhook without this file
+# flipped verify_jwt back on, breaking the Xendit callback path entirely.
+
+project_id = "gtjgsligllbjcisiyrah"
+
+[functions.xendit-webhook]
+verify_jwt = false
+
+[functions.create-invoice]
+verify_jwt = false
