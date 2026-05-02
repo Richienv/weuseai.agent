@@ -86,24 +86,43 @@ async function handlePaid(
     await deps.db.addStarterCredits(subscription.customer_id, STARTER_CREDITS_USD_CENTS)
   }
 
-  const result = await deps.provisioning.spinUp({
-    customerId: subscription.customer_id,
-    tier: subscription.tier,
-    alwaysOnEnabled: subscription.always_on_enabled,
-    useStarterCredits: subscription.tier === 'starter',
-  })
+  // Provisioning is best-effort at this point. Payment is confirmed and the
+  // invoice is paid — we MUST return 200 so Xendit doesn't retry-storm the
+  // webhook (every retry would re-alert and waste resources). If spin-up
+  // fails for any reason — HTTP error from the service OR a thrown network
+  // error reaching it (DNS / connection refused / TLS) — we park the
+  // subscription in 'pending_provision' for a retry worker to pick up and
+  // alert the founder. `hosting_active` is set false so the dashboard
+  // doesn't lie about service state. `next_billing_at` is intentionally
+  // left in place — billing cycle correctly starts from payment date.
+  let provisionFailureReason: string | null = null
+  try {
+    const result = await deps.provisioning.spinUp({
+      customerId: subscription.customer_id,
+      tier: subscription.tier,
+      alwaysOnEnabled: subscription.always_on_enabled,
+      useStarterCredits: subscription.tier === 'starter',
+    })
+    if (!result.ok) {
+      provisionFailureReason = `HTTP ${result.status} ${result.body}`
+    }
+  } catch (err) {
+    provisionFailureReason = `threw: ${err instanceof Error ? err.message : String(err)}`
+  }
 
-  if (!result.ok) {
-    // Mark subscription failed so customer can retry; alert founder.
-    await deps.db.updateSubscription(subscription.id, { status: 'failed' })
+  if (provisionFailureReason) {
+    await deps.db.updateSubscription(subscription.id, {
+      status: 'pending_provision',
+      hosting_active: false,
+    })
     if (deps.alertChatId && deps.alertSend) {
       await deps.alertSend(
         deps.alertChatId,
-        `[provisioning alert]\nspin-up failed for ${subscription.customer_id}: HTTP ${result.status} ${result.body}`,
+        `[provisioning alert]\nspin-up failed for ${subscription.customer_id} (sub ${subscription.id}): ${provisionFailureReason}\nSubscription marked pending_provision — retry worker should pick up.`,
       )
     }
-    // 500 → Xendit retries the webhook, which is what we want.
-    return json({ error: 'provisioning_failed', detail: result }, 500)
+    // 200, NOT 500 — payment is real, don't have Xendit retry-storm us.
+    return json({ ok: true, provision_deferred: true })
   }
 
   return json({ ok: true })

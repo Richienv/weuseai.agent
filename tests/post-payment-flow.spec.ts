@@ -278,10 +278,11 @@ test('idempotency: same PAID webhook delivered twice → side-effects fire once'
 })
 
 // ──────────────────────────────────────────────────────────
-// Scenario 3: provisioning fails → subscription marked failed + alert + 500
+// Scenario 3: provisioning HTTP fail → subscription pending_provision +
+// alert + 200 (no Xendit retry-storm; payment is real)
 // ──────────────────────────────────────────────────────────
 
-test('provisioning fail: alert sent, subscription failed, webhook 500 (Xendit retries)', async () => {
+test('provisioning HTTP fail: alert sent, subscription pending_provision, webhook 200 (no retry)', async () => {
   const db = makeFakeInvoiceStore({ subscriptions: [pendingSubscription()] })
   const prov = makeProvisioningWiredToSpinUp({ shouldFail: true })
 
@@ -297,21 +298,62 @@ test('provisioning fail: alert sent, subscription failed, webhook 500 (Xendit re
     },
   })
 
-  // Webhook returns 500 so Xendit will retry
-  assert.equal(res.status, 500)
+  // Webhook returns 200 — payment is real, don't have Xendit retry-storm us.
+  assert.equal(res.status, 200)
+  const body = (await res.json()) as { ok: boolean; provision_deferred?: boolean }
+  assert.equal(body.ok, true)
+  assert.equal(body.provision_deferred, true)
 
-  // Subscription was first set 'active' (handlePaid), then rolled back to 'failed'
+  // Subscription parked for retry worker; payment side persists as paid.
   const sub = db.state.subscriptions[0]
-  assert.equal(sub.status, 'failed')
+  assert.equal(sub.status, 'pending_provision')
+  assert.equal(sub.hosting_active, false, 'hosting_active rolled back — no VPS exists')
+  assert.equal(db.state.invoiceMarks[0].status, 'paid')
 
   // Founder alerted
   assert.equal(alerts.length, 1)
   assert.equal(alerts[0].chatId, 'richie-chat')
   assert.match(alerts[0].text, /provisioning alert/)
   assert.match(alerts[0].text, /cust_pelanggan@example.id/)
+  assert.match(alerts[0].text, /pending_provision/)
 
   // The downstream broker also got the spinUp's own alert about VPS create failure
   assert.ok(prov.broker.sentMessages.some((m) => /provisioning alert/.test(m.text)))
+})
+
+// ──────────────────────────────────────────────────────────
+// Scenario 3b: provisioning THROWS (network error) — was the actual
+// production failure mode on 2026-05-02 (PROVISIONING_URL unreachable).
+// Previously crashed the function with EDGE_FUNCTION_ERROR / 500.
+// ──────────────────────────────────────────────────────────
+
+test('provisioning throws (network error): subscription pending_provision, alert sent, webhook 200', async () => {
+  const db = makeFakeInvoiceStore({ subscriptions: [pendingSubscription()] })
+  const throwingProv: IProvisioningClient = {
+    async spinUp() {
+      throw new TypeError('fetch failed')
+    },
+  }
+  const alerts: { chatId: string; text: string }[] = []
+
+  const res = await handleXenditWebhook(paidWebhookRequest('xnd_inv_123'), {
+    db,
+    provisioning: throwingProv,
+    webhookToken: WEBHOOK_TOKEN,
+    alertChatId: 'richie-chat',
+    alertSend: async (chatId, text) => {
+      alerts.push({ chatId, text })
+    },
+  })
+
+  assert.equal(res.status, 200)
+  const sub = db.state.subscriptions[0]
+  assert.equal(sub.status, 'pending_provision')
+  assert.equal(sub.hosting_active, false, 'hosting_active rolled back — no VPS exists')
+  assert.equal(db.state.invoiceMarks[0].status, 'paid')
+  assert.equal(alerts.length, 1)
+  assert.match(alerts[0].text, /threw: fetch failed/)
+  assert.match(alerts[0].text, /pending_provision/)
 })
 
 // ──────────────────────────────────────────────────────────

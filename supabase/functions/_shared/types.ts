@@ -80,7 +80,7 @@ export type SubscriptionRow = {
   id: string
   customer_id: string
   tier: Tier
-  status: 'pending' | 'active' | 'paused' | 'canceled' | 'failed'
+  status: 'pending' | 'active' | 'pending_provision' | 'paused' | 'canceled' | 'failed'
   xendit_invoice_id: string | null
   always_on_enabled: boolean
   hosting_active: boolean
