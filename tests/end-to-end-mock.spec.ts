@@ -80,7 +80,7 @@ test('happy path: pay → spawn → Hermes alive → telegram message', async ()
 
   const stored = await store.findActiveVPSByCustomer('cust-1')
   assert.equal(stored?.status, 'running', 'data store updated to running')
-  assert.equal(stored?.idcloudhost_vps_id, result.vpsId)
+  assert.equal(stored?.vps_id, result.vpsId)
 
   // ── 4. telegram message sent ──────────────────────────────
   assert.equal(broker.sentMessages.length, 1)

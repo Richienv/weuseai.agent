@@ -23,10 +23,21 @@ export type Subscription = {
   status: 'active' | 'paused' | 'canceled'
 }
 
+export type VPSProvider = 'idcloudhost' | 'mock'
+
 export type VPSInstanceRecord = {
   id: string
   customer_id: string
-  idcloudhost_vps_id: string
+  /** Provider-agnostic VPS identifier (use this in new code). */
+  vps_id: string
+  /** Which provider issued vps_id. */
+  provider: VPSProvider
+  /**
+   * @deprecated 2026-05-02 — kept for back-compat with historical rows
+   * inserted before the provider-agnostic migration. New code populates
+   * `vps_id` + `provider` instead. Will be dropped in Phase 3.
+   */
+  idcloudhost_vps_id?: string | null
   ip_address?: string | null
   region?: string | null
   status: 'provisioning' | 'running' | 'stopped' | 'failed'
@@ -41,7 +52,8 @@ export interface IDataStore {
 
   findActiveVPSByCustomer(customerId: string): Promise<VPSInstanceRecord | null>
   createVPSInstance(rec: CreateVPSInstanceInput): Promise<VPSInstanceRecord>
-  updateVPSInstance(idcloudhostVpsId: string, patch: Partial<VPSInstanceRecord>): Promise<void>
+  /** Look up by the provider-agnostic vps_id. */
+  updateVPSInstance(vpsId: string, patch: Partial<VPSInstanceRecord>): Promise<void>
 
   getBalance(customerId: string): Promise<number>
   decrementCredits(customerId: string, cents: number): Promise<number>

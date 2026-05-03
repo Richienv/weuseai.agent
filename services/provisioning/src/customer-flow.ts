@@ -50,6 +50,8 @@ export type SpinUpDeps = {
   vps: IVPSProvider
   store: IDataStore
   broker: IMessageBroker
+  /** Provider name to record alongside vps_id in the DB row. */
+  providerName?: 'idcloudhost' | 'mock'
   proxyUrl?: string
   billingAccountId?: string
   region?: string | null
@@ -87,9 +89,9 @@ export async function spinUpCustomer(
 
   const existing = await deps.store.findActiveVPSByCustomer(opts.customerId)
   if (existing) {
-    log(`Already exists: ${existing.idcloudhost_vps_id} (status: ${existing.status})`)
+    log(`Already exists: ${existing.vps_id} (status: ${existing.status})`)
     return {
-      vpsId: existing.idcloudhost_vps_id,
+      vpsId: existing.vps_id,
       ip: existing.ip_address ?? null,
       status: existing.status === 'running' ? 'running' : 'provisioning',
       done: Promise.resolve(),
@@ -145,7 +147,8 @@ export async function spinUpCustomer(
 
   await deps.store.createVPSInstance({
     customer_id: opts.customerId,
-    idcloudhost_vps_id: vps.uuid,
+    vps_id: vps.uuid,
+    provider: deps.providerName ?? 'idcloudhost',
     ip_address: vps.public_ipv4 ?? null,
     region,
     status: 'provisioning',
@@ -221,8 +224,8 @@ export async function tearDownCustomer(
   const existing = await deps.store.findActiveVPSByCustomer(customerId)
   if (!existing) return { ok: false, reason: 'no_vps_found' }
 
-  await deps.vps.delete(existing.idcloudhost_vps_id)
-  await deps.store.updateVPSInstance(existing.idcloudhost_vps_id, { status: 'stopped' })
+  await deps.vps.delete(existing.vps_id)
+  await deps.store.updateVPSInstance(existing.vps_id, { status: 'stopped' })
 
   return { ok: true }
 }

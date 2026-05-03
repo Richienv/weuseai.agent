@@ -7,10 +7,11 @@
 
 import 'dotenv/config'
 import express from 'express'
-import { spinUpCustomer, tearDownCustomer, type Tier, type SpinUpDeps } from './customer-flow.js'
+import { spinUpCustomer, tearDownCustomer, type SpinUpDeps } from './customer-flow.js'
 import { createVPSProvider } from './providers/index.js'
 import { createDataStore } from './stores/index.js'
 import { createMessageBroker } from '../../hermes/src/adapters/index.js'
+import { parseSpinUpRequest, formatSpinUpResponse } from './spin-up-helpers.js'
 
 const PORT = Number(process.env.PORT ?? 8080)
 const AUTH_TOKEN = process.env.PROVISIONING_AUTH_TOKEN
@@ -20,10 +21,16 @@ if (!AUTH_TOKEN) {
   process.exit(1)
 }
 
+const isDryRun = process.env.ENABLE_REAL_PROVISIONING === 'false'
+if (isDryRun) {
+  console.log('[provisioning] DRY-RUN mode (ENABLE_REAL_PROVISIONING=false) — using MockVPSProvider')
+}
+
 const sharedDeps: SpinUpDeps = {
   vps: createVPSProvider(),
   store: createDataStore(),
   broker: createMessageBroker(),
+  providerName: isDryRun ? 'mock' : 'idcloudhost',
   alertChatId: process.env.RICHIE_CHAT_ID,
 }
 
@@ -44,57 +51,21 @@ app.get('/health', (_req, res) => {
 })
 
 app.post('/spin-up', async (req, res) => {
-  const {
-    customerId,
-    tier,
-    telegramChatId,
-    customerTelegramBotToken,
-    customerTelegramAllowedUserIds,
-    customerLlmApiKey,
-    customerLlmProvider,
-    alwaysOnEnabled,
-    useStarterCredits,
-  } = req.body as {
-    customerId: string
-    tier: Tier
-    telegramChatId?: string
-    customerTelegramBotToken?: string
-    customerTelegramAllowedUserIds?: string
-    customerLlmApiKey?: string
-    customerLlmProvider?: 'deepseek' | 'openrouter' | 'openai' | 'glm'
-    alwaysOnEnabled?: boolean
-    useStarterCredits?: boolean
+  const parsed = parseSpinUpRequest(req.body as Record<string, unknown>, {
+    TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
+    DEFAULT_TELEGRAM_CHAT_ID: process.env.DEFAULT_TELEGRAM_CHAT_ID,
+  })
+  if (!parsed.ok) {
+    return res.status(400).json({ ok: false, error: parsed.error })
   }
-
-  if (!customerId || !tier) {
-    return res.status(400).json({ error: 'missing customerId or tier' })
-  }
-  if (tier !== 'starter' && tier !== 'pro' && tier !== 'studio') {
-    return res.status(400).json({ error: 'invalid tier' })
-  }
-  // Bot token / allowed users are now optional — customer pastes via dashboard
-  // post-spawn. VPS still provisions; Telegram channel comes online once token set.
 
   try {
-    const result = await spinUpCustomer(
-      {
-        customerId,
-        tier,
-        telegramChatId,
-        customerTelegramBotToken,
-        customerTelegramAllowedUserIds,
-        customerLlmApiKey,
-        customerLlmProvider,
-        alwaysOnEnabled,
-        useStarterCredits,
-      },
-      sharedDeps,
-    )
-    res.json({ vpsId: result.vpsId, ip: result.ip, status: result.status })
+    const result = await spinUpCustomer(parsed.opts, sharedDeps)
+    res.json(formatSpinUpResponse(result))
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
     console.error('spin-up failed:', msg)
-    res.status(500).json({ error: msg })
+    res.status(500).json({ ok: false, error: msg })
   }
 })
 
