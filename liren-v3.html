@@ -3193,6 +3193,170 @@
       );
     }
 
+    // ─────────────────────── CHAT vs AGENT ───────────────────────
+    function ChatVsAgentSection() {
+      // Each row = one bullet. `have: true` shows ✓ in red; false shows ✗
+      // muted. Mobile order puts the highlighted (us) card first; desktop
+      // grid restores the natural left/center/right read order.
+      const cards = [
+        {
+          name: 'ChatGPT Plus',
+          subtitle: '$20/bulan',
+          subtitleAside: '≈ Rp 320rb',
+          orderMobile: 'order-2',
+          orderDesktop: 'md:order-1',
+          rows: [
+            { have: true,  text: 'Menjawab pertanyaan dengan baik' },
+            { have: false, text: 'Hanya aktif saat kamu sedang chat' },
+            { have: false, text: 'Tidak terhubung ke Notion, Gmail, kalender kamu' },
+            { have: false, text: 'Custom GPTs perlu paket Pro $200/bulan' },
+            { have: false, text: 'Berhenti bayar, hilang aksesnya' },
+          ],
+          ariaLabel: 'Perbandingan ChatGPT Plus',
+        },
+        {
+          name: 'weuseai.agent Pro',
+          subtitle: 'Rp 1,2jt setup',
+          subtitleAside: '+ Rp 99rb/bulan',
+          featured: true,
+          orderMobile: 'order-1',
+          orderDesktop: 'md:order-2',
+          rows: [
+            { have: true, text: 'Menjawab — dan mengerjakan' },
+            { have: true, text: 'Terhubung ke 40+ aplikasi kamu' },
+            { have: true, text: 'Aktif 24/7 — kerja sambil kamu tidur' },
+            { have: true, text: 'Memori permanen lintas sesi' },
+            { have: true, text: 'Sekali setup, agent ini milik kamu' },
+          ],
+          ariaLabel: 'Perbandingan weuseai.agent Pro (paket kami)',
+        },
+        {
+          name: 'Claude Pro',
+          subtitle: '$20/bulan',
+          subtitleAside: '≈ Rp 320rb',
+          orderMobile: 'order-3',
+          orderDesktop: 'md:order-3',
+          rows: [
+            { have: true,  text: 'Reasoning yang baik untuk percakapan' },
+            { have: false, text: 'Memori percakapan terbatas dalam satu sesi' },
+            { have: false, text: 'Skill dan automation perlu paket Max $100–200/bulan' },
+            { have: false, text: 'Tidak persistent — tidak kerja sambil kamu tidur' },
+            { have: false, text: 'Berhenti bayar, hilang aksesnya' },
+          ],
+          ariaLabel: 'Perbandingan Claude Pro',
+        },
+      ];
+
+      return (
+        <section id="vs-chat" className="relative py-20 md:py-32 px-5 md:px-6 lg:px-16 bg-black">
+          <div className="max-w-6xl mx-auto">
+            <div className="flex flex-col items-center text-center mb-14 md:mb-20">
+              <div
+                className="liquid-glass rounded-full px-3.5 py-1 text-xs font-medium font-body text-white/90"
+                style={{ borderColor: 'rgba(229, 50, 45, 0.45)' }}
+              >
+                Chat vs Agent
+              </div>
+              <BlurText
+                as="h2"
+                text="Chat menjawab. Agent mengerjakan."
+                className="mt-5 md:mt-6 text-3xl md:text-5xl lg:text-6xl font-heading text-white tracking-tight leading-[1.0] md:leading-[0.95] max-w-3xl"
+                style={{ letterSpacing: '-0.04em' }}
+                delay={70}
+              />
+              <p className="mt-5 md:mt-6 max-w-xl text-white/55 font-body font-light text-sm md:text-base leading-relaxed">
+                ChatGPT dan Claude pintar untuk menjawab. Tapi mereka tidak booking tiket kamu, tidak posting ke Notion kamu, tidak pantau inbox sambil kamu tidur.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-6 items-stretch">
+              {cards.map((c, i) => {
+                const isFeatured = !!c.featured;
+                return (
+                  <Mot.div
+                    key={c.name}
+                    role="group"
+                    aria-label={c.ariaLabel}
+                    initial={{ opacity: 0, y: 16 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, amount: 0.3 }}
+                    transition={{ duration: 0.6, ease: EASE, delay: 0.05 * i }}
+                    className={`liquid-glass rounded-2xl p-6 md:p-7 flex flex-col ${c.orderMobile} ${c.orderDesktop}`}
+                    style={
+                      isFeatured
+                        ? {
+                            borderColor: 'rgba(229, 50, 45, 0.65)',
+                            boxShadow:
+                              '0 0 0 1px rgba(229,50,45,0.45), 0 18px 60px -25px rgba(229,50,45,0.55), 0 0 80px -30px rgba(229,50,45,0.35)',
+                          }
+                        : { opacity: 0.92 }
+                    }
+                  >
+                    <div className="flex items-baseline gap-2">
+                      <h3
+                        className="text-lg md:text-xl font-heading text-white leading-[1.15]"
+                        style={{ letterSpacing: '-0.02em' }}
+                      >
+                        {c.name}
+                      </h3>
+                      {isFeatured && (
+                        <span
+                          className="text-[10px] font-mono uppercase tracking-[0.18em]"
+                          style={{ color: '#E5322D' }}
+                        >
+                          Pilih kami
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-1 text-sm font-body font-light text-white/65">
+                      <span className="text-white/85">{c.subtitle}</span>
+                      <span className="text-white/45"> {c.subtitleAside}</span>
+                    </div>
+
+                    <ul className="mt-5 md:mt-6 space-y-3 flex-1">
+                      {c.rows.map((r, ri) => (
+                        <li key={ri} className="flex items-start gap-2.5 text-sm font-body font-light leading-relaxed">
+                          <span
+                            aria-hidden="true"
+                            className="mt-[3px] inline-flex items-center justify-center w-4 h-4 rounded-full flex-shrink-0 text-[10px] font-bold"
+                            style={
+                              r.have
+                                ? { background: 'rgba(229,50,45,0.18)', color: '#E5322D' }
+                                : { background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.35)' }
+                            }
+                          >
+                            {r.have ? '✓' : '✗'}
+                          </span>
+                          <span className={r.have ? 'text-white/85' : 'text-white/55'}>
+                            <span className="sr-only">{r.have ? 'Ya: ' : 'Tidak: '}</span>
+                            {r.text}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </Mot.div>
+                );
+              })}
+            </div>
+
+            <p className="mt-10 md:mt-14 text-center text-xs md:text-sm italic text-white/45 font-body font-light max-w-2xl mx-auto leading-relaxed">
+              Tahun pertama: weuseai.agent Pro ≈ Rp 2,4jt. ChatGPT Plus ≈ Rp 3,8jt. Tanpa akses ke aplikasi kamu, tanpa automation nyata, tanpa kepemilikan.
+            </p>
+
+            <div className="mt-7 md:mt-9 flex justify-center">
+              <a
+                href="#pricing"
+                className="rounded-full px-5 py-3 text-sm font-medium flex items-center gap-2 no-underline text-white"
+                style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.28)' }}
+              >
+                Lihat semua paket <ArrowUpRight size={14} stroke={2.2} />
+              </a>
+            </div>
+          </div>
+        </section>
+      );
+    }
+
     function Pricing() {
       const tiers = [
         {
@@ -3523,6 +3687,7 @@
               <FeaturesChess />
               <VelvetSection />
               <FeaturesGrid />
+              <ChatVsAgentSection />
               <Pricing />
               <FAQ />
               <Stats />
