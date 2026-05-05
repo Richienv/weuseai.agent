@@ -1906,7 +1906,6 @@
     const Mot = M.motion;
 
     const HERO_VIDEO = "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260307_083826_e938b29f-a43a-41ec-a153-3d4730578ab8.mp4";
-    const HLS_START = "https://stream.mux.com/9JXDljEVWYwWu01PUkAemafDugK89o01BR6zqJ3aS9u00A.m3u8";
     const HLS_STATS = "https://stream.mux.com/NcU3HlHeF7CUL86azTTzpy3Tlb00d6iF3BmCdFslMJYM.m3u8";
     const HLS_CTA   = "https://stream.mux.com/8wrHPCX2dC3msyYU9ObwqNdm00u3ViXvOSHUMRYSEe5Q.m3u8";
 
@@ -2152,8 +2151,16 @@
     // ─────────────────────── START SECTION ───────────────────────
     function StartSection() {
       return (
-        <section id="proses" className="relative overflow-hidden" style={{ minHeight: 640 }}>
-          <HlsVideo src={HLS_START} />
+        <section id="proses" className="relative overflow-hidden bg-black" style={{ minHeight: 640 }}>
+          <iframe
+            src="/ascii-scene.html"
+            title="ASCII scene background"
+            aria-hidden="true"
+            tabIndex={-1}
+            scrolling="no"
+            className="absolute inset-0 w-full h-full pointer-events-none"
+            style={{ border: 0, zIndex: 1 }}
+          />
           <FadeTop /> <FadeBottom />
           <div className="relative z-10 flex flex-col items-center text-center px-6 py-40" style={{ minHeight: 500 }}>
             <div className="liquid-glass rounded-full px-3.5 py-1 text-xs font-medium font-body text-white/90">
@@ -3299,7 +3306,7 @@
 
           {/* 2. Price */}
           <div className="mt-5">
-            <div className="serif text-4xl md:text-5xl text-white" style={{ letterSpacing: '-0.02em', lineHeight: 1 }}>
+            <div className="font-heading text-4xl md:text-5xl text-white" style={{ letterSpacing: '-0.04em', lineHeight: 1 }}>
               {tier.priceLabel}
             </div>
             <div className="mt-1.5 text-xs text-white/50 font-body font-light">
@@ -3623,8 +3630,6 @@
               </p>
             </div>
 
-            <LimitedSeats />
-
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-6 items-stretch">
               {tiers.map((t, i) => (
                 <PricingCard
@@ -3634,6 +3639,10 @@
                   onShowBreakdown={() => setBreakdownTier(t)}
                 />
               ))}
+            </div>
+
+            <div className="mt-16 md:mt-24">
+              <LimitedSeats />
             </div>
           </div>
 
