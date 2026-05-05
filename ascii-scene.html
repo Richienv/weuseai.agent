@@ -27090,6 +27090,7 @@ function createAsciiScene(container) {
   renderer.setSize(container.clientWidth, container.clientHeight);
   renderer.setPixelRatio(window.devicePixelRatio);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.setClearColor(0x000000, 1);
   container.appendChild(renderer.domElement);
 
   const textMeshes = [];
