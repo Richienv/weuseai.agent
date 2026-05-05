@@ -411,6 +411,7 @@
       0%, 100% { box-shadow: 0 0 8px rgba(229,50,45,0.45); }
       50% { box-shadow: 0 0 14px rgba(229,50,45,0.70); }
     }
+    @keyframes modalFadeIn { from { opacity: 0; } to { opacity: 1; } }
     .db-user {
       margin-top: auto;
       display: flex; align-items: center; gap: 10px;
@@ -3109,86 +3110,263 @@
       );
     }
 
-    function PricingCard({ tier, index }) {
-      const [alwaysOn, setAlwaysOn] = useState(false);
-      const monthlyTotal = 99 + (alwaysOn ? 49 : 0);
-      const checkoutHref = `checkout.html?plan=${tier.name.toLowerCase()}${alwaysOn ? '&alwaysOn=1' : ''}`;
+    // ─────────────────────── PRICE BREAKDOWN MODAL ───────────────────────
+    function PriceBreakdownModal({ open, onClose, tier }) {
+      const dialogRef = React.useRef(null);
+      const titleId = React.useId();
+
+      React.useEffect(() => {
+        if (!open) return;
+        const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+        document.addEventListener('keydown', onKey);
+        const prev = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        requestAnimationFrame(() => {
+          const closeBtn = dialogRef.current?.querySelector('[data-close]');
+          closeBtn?.focus();
+        });
+        return () => {
+          document.removeEventListener('keydown', onKey);
+          document.body.style.overflow = prev;
+        };
+      }, [open, onClose]);
+
+      if (!open || !tier) return null;
+
+      const setupRupiah = tier.setupIdr;
+      const fmt = (n) => 'Rp ' + n.toLocaleString('id-ID');
+      const yearWithout = setupRupiah + 99000 * 12;
+      const yearWith    = setupRupiah + (99000 + 49000) * 12;
 
       return (
-        <Mot.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.2 }}
-          transition={{ duration: 0.7, ease: EASE, delay: 0.1 * index }}
-          className={`liquid-glass${tier.featured ? '-strong' : ''} rounded-2xl p-6 md:p-8 flex flex-col`}
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={titleId}
+          onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+          className="fixed inset-0 z-[100] flex items-center justify-center px-4"
           style={{
-            boxShadow: tier.featured ? '0 0 60px rgba(229, 50, 45, 0.18), inset 0 0 0 1px rgba(229, 50, 45, 0.45)' : 'none',
-            position: 'relative',
-            overflow: 'visible',
+            background: 'rgba(0,0,0,0.65)',
+            backdropFilter: 'blur(4px)',
+            animation: 'modalFadeIn 200ms ease',
           }}
         >
-          {tier.featured && (
-            <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 text-[10px] font-mono uppercase tracking-[0.18em] rounded-full whitespace-nowrap" style={{ background: '#E5322D', color: '#fff' }}>
+          <div
+            ref={dialogRef}
+            className="liquid-glass-strong rounded-2xl p-6 md:p-7 w-full max-w-[480px] max-h-[90vh] overflow-y-auto"
+            style={{ background: '#0a0a0a', borderColor: 'rgba(229,50,45,0.35)' }}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <h3 id={titleId} className="text-lg md:text-xl font-heading text-white" style={{ letterSpacing: '-0.02em' }}>
+                {tier.name} — Rincian Biaya
+              </h3>
+              <button
+                data-close
+                onClick={onClose}
+                aria-label="Tutup rincian biaya"
+                className="w-7 h-7 rounded-full flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 text-lg leading-none"
+                style={{ border: '1px solid rgba(255,255,255,0.18)' }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="mt-6 space-y-5 font-body text-sm text-white/85">
+              {/* Setup */}
+              <div className="flex items-baseline justify-between gap-4">
+                <div>
+                  <div className="text-white/85">Biaya setup</div>
+                  <div className="text-xs text-white/45 mt-0.5">sekali bayar</div>
+                </div>
+                <div className="text-white font-medium whitespace-nowrap">{fmt(setupRupiah)}</div>
+              </div>
+
+              <div className="border-t border-white/[0.08]" />
+
+              {/* Hosting */}
+              <div>
+                <div className="flex items-baseline justify-between gap-4">
+                  <div className="text-white/85">Hosting bulanan</div>
+                  <div className="text-white font-medium whitespace-nowrap">+{fmt(99000)}/bulan</div>
+                </div>
+                <ul className="mt-2 text-xs text-white/55 space-y-1 list-none">
+                  <li>· Auto-pause kalau tidak aktif 30 hari</li>
+                  <li>· Stop kapan saja, tanpa penalti</li>
+                </ul>
+              </div>
+
+              {/* Always-On */}
+              <div>
+                <div className="flex items-baseline justify-between gap-4">
+                  <div className="text-white/85">Always-On <span className="text-white/45 text-xs">(opsional)</span></div>
+                  <div className="text-white font-medium whitespace-nowrap">+{fmt(49000)}/bulan</div>
+                </div>
+                <ul className="mt-2 text-xs text-white/55 space-y-1 list-none">
+                  <li>· VPS aktif 24/7, skip auto-suspend</li>
+                  <li>· Untuk yang pakai agent setiap hari</li>
+                </ul>
+              </div>
+
+              <div className="border-t border-white/[0.08]" />
+
+              {/* Year-1 totals */}
+              <div className="space-y-1.5">
+                <div className="text-xs text-white/55 uppercase tracking-wider mb-2">Estimasi tahun pertama</div>
+                <div className="flex items-baseline justify-between gap-4">
+                  <div className="text-white/75">Tanpa Always-On</div>
+                  <div className="text-white whitespace-nowrap">{fmt(yearWithout)}</div>
+                </div>
+                <div className="flex items-baseline justify-between gap-4">
+                  <div className="text-white/75">Dengan Always-On</div>
+                  <div className="text-white whitespace-nowrap">{fmt(yearWith)}</div>
+                </div>
+              </div>
+
+              <p className="mt-4 text-xs italic text-white/40 leading-relaxed">
+                Tidak ada biaya tersembunyi. Pause dan stop kapan saja.
+              </p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ─────────────────────── CONNECTED APPS PREVIEW ───────────────────────
+    function ConnectedAppsPreview({ apps, totalCount }) {
+      const visible = apps.slice(0, 5);
+      const hidden = Math.max(0, totalCount - visible.length);
+      return (
+        <div className="flex items-center flex-wrap gap-1.5">
+          {visible.map((name) => (
+            <span
+              key={name}
+              aria-label={`Terhubung ke ${name}`}
+              className="inline-flex items-center px-2 py-1 rounded-md text-[10px] font-mono uppercase tracking-[0.06em] text-white/65"
+              style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
+            >
+              {name}
+            </span>
+          ))}
+          {hidden > 0 && (
+            <span
+              aria-label={`Plus ${hidden} aplikasi lain`}
+              className="inline-flex items-center px-2 py-1 rounded-md text-[10px] font-mono"
+              style={{ background: 'rgba(229,50,45,0.10)', border: '1px solid rgba(229,50,45,0.25)', color: '#E5322D' }}
+            >
+              +{hidden}
+            </span>
+          )}
+        </div>
+      );
+    }
+
+    function PricingCard({ tier, index, onShowBreakdown }) {
+      const isFeatured = !!tier.featured;
+      return (
+        <Mot.div
+          initial={{ opacity: 0, y: 16 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.25 }}
+          transition={{ duration: 0.6, ease: EASE, delay: 0.05 * index }}
+          className="liquid-glass rounded-2xl p-6 md:p-7 flex flex-col relative"
+          style={
+            isFeatured
+              ? {
+                  borderColor: 'rgba(229, 50, 45, 0.65)',
+                  boxShadow: '0 0 0 1px rgba(229,50,45,0.45), 0 18px 60px -25px rgba(229,50,45,0.55), 0 0 80px -30px rgba(229,50,45,0.35)',
+                }
+              : undefined
+          }
+        >
+          {isFeatured && (
+            <div
+              className="absolute top-0 right-5 -translate-y-1/2 px-2.5 py-0.5 rounded-full text-[9.5px] font-mono uppercase tracking-[0.18em] text-white"
+              style={{ background: '#E5322D' }}
+            >
               Paling diminati
             </div>
           )}
-          <h3 className="text-xl md:text-2xl font-heading text-white" style={{ letterSpacing: '-0.02em' }}>{tier.name}</h3>
 
-          <div className="mt-4 flex items-center gap-2.5">
-            <span className="price-old">{tier.oldPrice}</span>
-            <span className="price-discount-badge">−{tier.discount}%</span>
+          {/* 1. Tier name + tagline */}
+          <div>
+            <h3 className="text-lg md:text-xl font-heading text-white" style={{ letterSpacing: '-0.02em' }}>
+              {tier.name}
+            </h3>
+            <p className="mt-1 text-sm italic text-white/65 font-body font-light leading-snug">
+              {tier.tagline}
+            </p>
           </div>
 
-          <div className="mt-1.5 flex items-baseline gap-2">
-            <span className="text-4xl md:text-5xl font-heading text-white leading-none" style={{ letterSpacing: '-0.04em' }}>{tier.price}</span>
-          </div>
-          <div className="pc-setup-sub">Biaya setup sekali bayar</div>
-
-          <p className="mt-4 text-sm text-white/65 font-body font-light leading-relaxed">{tier.tagline}</p>
-
-          <div className="my-5 md:my-6 h-px" style={{ background: 'rgba(255,255,255,0.10)' }} />
-
-          <div className="pc-hosting">
-            <div className="pch-line"><span className="plus">+</span> Rp 99k/bulan hosting</div>
-            <div className="pch-sub">Auto-pause kalau nggak aktif 30 hari · stop kapan saja</div>
-          </div>
-
-          <label className={`pc-toggle ${alwaysOn ? 'is-on' : ''}`}>
-            <input type="checkbox" checked={alwaysOn} onChange={(e) => setAlwaysOn(e.target.checked)} />
-            <div className="pc-checkbox" aria-hidden="true" />
-            <div>
-              <div className="pct-title">Always-On <span className="pct-add">+ Rp 49k/bulan</span></div>
-              <div className="pct-sub">VPS 24/7, skip auto-suspend · untuk yang pakai agent setiap hari</div>
+          {/* 2. Price */}
+          <div className="mt-5">
+            <div className="serif text-4xl md:text-5xl text-white" style={{ letterSpacing: '-0.02em', lineHeight: 1 }}>
+              {tier.priceLabel}
             </div>
-          </label>
-
-          <div className="pc-monthly-preview">
-            Total bulanan: <b>Rp {monthlyTotal}k/bulan</b>
-            <span className="block opacity-60 mt-1" style={{ fontSize: '10px' }}>{alwaysOn ? 'Hosting Rp 99k + Always-On Rp 49k' : 'Hosting Rp 99k · Always-On nonaktif'}</span>
+            <div className="mt-1.5 text-xs text-white/50 font-body font-light">
+              {tier.setupAside}
+            </div>
           </div>
 
-          <div className="my-5 md:my-6 h-px" style={{ background: 'rgba(255,255,255,0.10)' }} />
+          {/* 3. Untuk siapa */}
+          <div className="mt-6">
+            <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-white/45 mb-2">
+              Untuk siapa
+            </div>
+            <p className="text-sm text-white/75 font-body font-light leading-relaxed">
+              {tier.persona}
+            </p>
+          </div>
 
-          <ul className="flex flex-col gap-3 flex-1">
-            {tier.features.map((f, fi) => (
-              <li key={fi} className="flex items-start gap-3 text-sm text-white/80 font-body font-light leading-snug">
-                <span className="mt-[7px] block w-1 h-1 flex-shrink-0" style={{ background: tier.featured ? '#E5322D' : 'rgba(255,255,255,0.4)' }} />
-                {f}
-              </li>
-            ))}
-          </ul>
+          {/* 4. Yang kamu dapat (outcomes) */}
+          <div className="mt-6">
+            <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-white/45 mb-2">
+              Yang kamu dapat
+            </div>
+            <ul className="space-y-2.5 list-none">
+              {tier.outcomes.map((o, oi) => (
+                <li key={oi} className="flex items-start gap-2.5 text-sm font-body font-light leading-relaxed">
+                  <span
+                    aria-hidden="true"
+                    className="mt-[7px] block w-1 h-1 flex-shrink-0 rounded-full"
+                    style={{ background: isFeatured ? '#E5322D' : 'rgba(255,255,255,0.4)' }}
+                  />
+                  <span className="text-white/85">{o}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
 
+          {/* 5. Connected apps preview */}
+          <div className="mt-6">
+            <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-white/45 mb-2">
+              Terhubung ke
+            </div>
+            <ConnectedAppsPreview apps={tier.apps} totalCount={tier.appsTotal} />
+          </div>
+
+          <div className="flex-1" />
+
+          {/* 6. CTA + 7. breakdown link */}
           <a
-            href={checkoutHref}
+            href={tier.ctaHref}
             className="mt-7 md:mt-8 rounded-full px-5 py-3 text-sm font-medium flex items-center justify-center gap-2 no-underline"
             style={
-              tier.featured
+              isFeatured
                 ? { background: '#E5322D', color: '#fff', border: '1px solid #E5322D' }
                 : { background: 'transparent', color: '#fff', border: '1px solid rgba(255,255,255,0.28)' }
             }
           >
             {tier.cta} <ArrowUpRight size={14} stroke={2.2} />
           </a>
+
+          <button
+            type="button"
+            onClick={onShowBreakdown}
+            aria-haspopup="dialog"
+            className="mt-3 text-xs font-body text-white/55 hover:text-white/85 underline-offset-4 hover:underline self-center bg-transparent border-0 cursor-pointer"
+          >
+            Lihat rincian biaya →
+          </button>
         </Mot.div>
       );
     }
@@ -3358,58 +3536,67 @@
     }
 
     function Pricing() {
+      const [breakdownTier, setBreakdownTier] = React.useState(null);
+
       const tiers = [
         {
           name: 'Starter',
-          price: 'Rp 299k',
-          oldPrice: 'Rp 588k',
-          discount: 49,
-          tagline: 'Setup dasar untuk satu agent personal kamu.',
-          features: [
-            'Agent dedicated di VPS terkonfigurasi',
-            'Akses Telegram + Discord',
-            '40+ tools bawaan',
-            'BYOK LLM (kami kasih $3 starter credits via DeepSeek)',
-            'Database memori lokal',
+          tagline: 'Pendamping pertama kamu.',
+          priceLabel: 'Rp 299rb',
+          setupIdr: 299_000,
+          setupAside: 'biaya setup sekali bayar',
+          persona: 'Untuk kamu yang baru ingin merasakan rasanya didampingi agent — tanpa komitmen besar.',
+          outcomes: [
+            'Briefing pagi setiap hari, tepat jam 7 WIB',
+            'Agent yang mengingat semua percakapan',
+            'Akses Telegram, Discord, dan 40+ kemampuan bawaan',
+            '50–100 pesan AI sudah termasuk',
           ],
+          apps: ['Telegram', 'Discord', 'Web'],
+          appsTotal: 41,
           cta: 'Mulai Starter',
+          ctaHref: '/checkout.html?plan=starter',
           featured: false,
         },
         {
           name: 'Pro',
-          price: 'Rp 1,2jt',
-          oldPrice: 'Rp 3,5jt',
-          discount: 66,
-          tagline: '1 agent yang di-fine-tune untuk suara dan workflow kamu.',
-          features: [
-            'Semua di Starter',
-            '1 agent di-fine-tune khusus untuk kamu',
-            '200+ model, ganti dengan satu klik',
-            'Skill file otomatis tiap 15 task',
-            'BYOK LLM (kami kasih $5 starter credits via DeepSeek)',
-            'Voice tuning — terdengar seperti kamu',
-            'Prioritas respon',
+          tagline: 'Agent yang berpikir seperti kamu.',
+          priceLabel: 'Rp 1,2jt',
+          setupIdr: 1_200_000,
+          setupAside: 'biaya setup sekali bayar',
+          persona: 'Untuk freelancer, founder, dan content creator yang butuh agent yang tetap kerja saat kamu tidur.',
+          outcomes: [
+            'Fine-tune ke gaya kamu — agen menulis seperti kamu menulis',
+            'Terhubung ke Notion, Gmail, Drive, kalender, dan 36 aplikasi lain',
+            'Otomasi apa pun yang berulang dalam hidup kamu',
+            'Tim kami bantu setup WhatsApp pribadi',
+            'Prioritas respon — antrean kamu paling depan',
           ],
+          apps: ['Notion', 'Gmail', 'Drive', 'Kalender', 'Slack'],
+          appsTotal: 40,
           cta: 'Ambil Pro',
+          ctaHref: '/checkout.html?plan=pro',
           featured: true,
         },
         {
           name: 'Studio',
-          price: 'Rp 4,9jt',
-          oldPrice: 'Rp 9,9jt',
-          discount: 50,
-          tagline: '1 agent fine-tuned + 10 platform tersambung untuk monitor seluruh hidupmu.',
-          features: [
-            'Semua di Pro',
-            '1 agent fine-tuned untuk kamu',
-            '10 platform tersambung: kesehatan, keuangan, coding, task, kalender, email, notes, dst.',
-            'BYOK LLM unlimited setup, kami bantu integrate',
-            'Dashboard hidup yang melacak semuanya',
-            'Memori bersama multi-device',
-            'Library skill custom',
-            'Onboarding white-glove',
+          tagline: 'Komando hidup digital kamu.',
+          priceLabel: 'Rp 4,9jt',
+          setupIdr: 4_900_000,
+          setupAside: 'biaya setup sekali bayar',
+          persona: 'Untuk eksekutif, founder, dan profesional yang menjalankan hidup di banyak platform sekaligus.',
+          outcomes: [
+            '10 platform terhubung: kesehatan, keuangan, kalender, email, code, task',
+            'Pesan unlimited 30 hari pertama',
+            'Onboarding privat dengan tim kami — kami yang setup',
+            'Dashboard real-time pantau semua aktivitas',
+            'Memori bersama lintas device kamu',
+            'Custom integration sesuai kebutuhan',
           ],
-          cta: 'Hubungi sales',
+          apps: ['Apple Health', 'Stripe', 'GitHub', 'Notion', 'Linear'],
+          appsTotal: 55,
+          cta: 'Hubungi tim',
+          ctaHref: '/checkout.html?plan=studio',
           featured: false,
         },
       ];
@@ -3418,33 +3605,43 @@
         <section id="pricing" className="relative py-20 md:py-32 px-5 md:px-6 lg:px-16 bg-black">
           <div className="max-w-6xl mx-auto">
             <div className="flex flex-col items-center text-center mb-14 md:mb-20">
-              <div className="liquid-glass rounded-full px-3.5 py-1 text-xs font-medium font-body text-white/90">
+              <div
+                className="liquid-glass rounded-full px-3.5 py-1 text-xs font-medium font-body text-white/90"
+                style={{ borderColor: 'rgba(229, 50, 45, 0.45)' }}
+              >
                 Harga
               </div>
               <BlurText
                 as="h2"
-                text="Bayar setup. Hosting Rp 99k/bulan, stop kapan saja."
+                text="Pilih ukuran agent yang cocok dengan hidup kamu."
                 className="mt-5 md:mt-6 text-3xl md:text-5xl lg:text-6xl font-heading text-white tracking-tight leading-[1.0] md:leading-[0.95] max-w-3xl"
                 style={{ letterSpacing: '-0.04em' }}
                 delay={70}
               />
-              <p className="mt-6 max-w-xl text-white/55 font-body font-light text-base leading-relaxed">
-                Biaya setup sekali bayar. Kami siapkan VPS, konfigurasi semua tools, dan tune agent kamu. Hosting transparent — kayak bayar listrik, bukan subscription tersembunyi.
+              <p className="mt-5 md:mt-6 max-w-xl text-white/55 font-body font-light text-sm md:text-base leading-relaxed">
+                Bayar setup sekali. Hosting transparan, bisa pause kapan saja.
               </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
-              {tiers.map((t, i) => (
-                <PricingCard key={t.name} tier={t} index={i} />
-              ))}
             </div>
 
             <LimitedSeats />
 
-            <p className="mt-8 md:mt-10 text-center text-[10px] md:text-xs font-mono uppercase tracking-[0.14em] text-white/40 leading-relaxed px-4">
-              24/7 support access · LLM cost ditanggung pelanggan via API key sendiri
-            </p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-6 items-stretch">
+              {tiers.map((t, i) => (
+                <PricingCard
+                  key={t.name}
+                  tier={t}
+                  index={i}
+                  onShowBreakdown={() => setBreakdownTier(t)}
+                />
+              ))}
+            </div>
           </div>
+
+          <PriceBreakdownModal
+            open={!!breakdownTier}
+            onClose={() => setBreakdownTier(null)}
+            tier={breakdownTier}
+          />
         </section>
       );
     }
