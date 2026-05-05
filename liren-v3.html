@@ -2152,9 +2152,12 @@
     function StartSection() {
       return (
         <section id="proses" className="relative overflow-hidden bg-black" style={{ minHeight: 640 }}>
-          <img
-            src="/assets/ascii-art.gif"
-            alt=""
+          <video
+            src="/assets/ascii-wave.mp4"
+            autoPlay
+            loop
+            muted
+            playsInline
             aria-hidden="true"
             className="absolute inset-0 w-full h-full pointer-events-none object-cover"
             style={{ zIndex: 1, background: '#000' }}
