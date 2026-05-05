@@ -3434,8 +3434,19 @@
       ];
 
       return (
-        <section id="vs-chat" className="relative py-20 md:py-32 px-5 md:px-6 lg:px-16 bg-black">
-          <div className="max-w-6xl mx-auto">
+        <section id="vs-chat" className="relative overflow-hidden py-20 md:py-32 px-5 md:px-6 lg:px-16 bg-black">
+          <video
+            src="/assets/chat-vs-agent-automations.mp4"
+            autoPlay
+            loop
+            muted
+            playsInline
+            aria-hidden="true"
+            className="absolute inset-0 w-full h-full pointer-events-none object-cover"
+            style={{ zIndex: 1, opacity: 0.4, background: '#000' }}
+          />
+          <FadeTop /> <FadeBottom />
+          <div className="relative z-10 max-w-6xl mx-auto">
             <div className="flex flex-col items-center text-center mb-14 md:mb-20">
               <div
                 className="liquid-glass rounded-full px-3.5 py-1 text-xs font-medium font-body text-white/90"
@@ -3610,8 +3621,19 @@
       ];
 
       return (
-        <section id="pricing" className="relative py-20 md:py-32 px-5 md:px-6 lg:px-16 bg-black">
-          <div className="max-w-6xl mx-auto">
+        <section id="pricing" className="relative overflow-hidden py-20 md:py-32 px-5 md:px-6 lg:px-16 bg-black">
+          <video
+            src="/assets/pricing-furnace.mp4"
+            autoPlay
+            loop
+            muted
+            playsInline
+            aria-hidden="true"
+            className="absolute inset-0 w-full h-full pointer-events-none object-cover"
+            style={{ zIndex: 1, opacity: 0.4, background: '#000' }}
+          />
+          <FadeTop /> <FadeBottom />
+          <div className="relative z-10 max-w-6xl mx-auto">
             <div className="flex flex-col items-center text-center mb-14 md:mb-20">
               <div
                 className="liquid-glass rounded-full px-3.5 py-1 text-xs font-medium font-body text-white/90"
