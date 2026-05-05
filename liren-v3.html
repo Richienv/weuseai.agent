@@ -2152,14 +2152,12 @@
     function StartSection() {
       return (
         <section id="proses" className="relative overflow-hidden bg-black" style={{ minHeight: 640 }}>
-          <iframe
-            src="/ascii-scene.html"
-            title="ASCII scene background"
+          <img
+            src="/assets/ascii-art.gif"
+            alt=""
             aria-hidden="true"
-            tabIndex={-1}
-            scrolling="no"
-            className="absolute inset-0 w-full h-full pointer-events-none"
-            style={{ border: 0, zIndex: 1, background: '#000' }}
+            className="absolute inset-0 w-full h-full pointer-events-none object-cover"
+            style={{ zIndex: 1, background: '#000' }}
           />
           <FadeTop /> <FadeBottom />
           <div className="relative z-10 flex flex-col items-center text-center px-6 py-40" style={{ minHeight: 500 }}>
