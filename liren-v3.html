@@ -3449,6 +3449,194 @@
       );
     }
 
+    // ─────────────────────── COMMUNITY ───────────────────────
+    function CommunitySection() {
+      // Two panels:
+      //   A — sample skills we ship; agent voice (no personal pronouns)
+      //   B — real public posts from the agent runtime ecosystem
+      // Cards locked from docs/plans/2026-05-05-community-section-design.md.
+      const skillCards = [
+        {
+          handle: '@weuseaibot',
+          tagline: 'agen lo',
+          timestamp: 'jam 7:00 WIB',
+          body: [
+            'Selamat pagi.',
+            '5 berita teratas dari detik, kompas, cnbcindonesia',
+            'sudah diringkas. Top brief masuk chat ini sekarang.',
+          ],
+          footer: 'skill: daily-news-briefing-bahasa',
+          shipped: true,
+        },
+        {
+          handle: '@weuseaibot',
+          tagline: 'agen lo',
+          timestamp: 'jam 23:14 WIB',
+          body: [
+            'Semalam: 50 lowongan dari Glints, LinkedIn, Kalibrr dipantau.',
+            '8 fit kriteria gaji + remote + WFA.',
+            'Daftar sudah masuk Notion, siap sortir ulang besok pagi.',
+          ],
+          footer: 'skill: lowongan-scout · roadmap',
+          shipped: false,
+        },
+        {
+          handle: '@weuseaibot',
+          tagline: 'agen lo',
+          timestamp: 'jam 4 sore',
+          body: [
+            'Topik "cara mulai bisnis F&B" diolah dari 12 sumber.',
+            '3 draft caption Instagram + 1 thread X siap di-review.',
+            'Tone otomatis mengikuti persona di SOUL.md.',
+          ],
+          footer: 'skill: content-drafter · roadmap',
+          shipped: false,
+        },
+        {
+          handle: '@weuseaibot',
+          tagline: 'agen lo',
+          timestamp: 'semalam',
+          body: [
+            '50 hotel di Bali dipantau. 12 dengan rating 4.5+ tapi foto listing buruk.',
+            'Foto interior diambil dari Maps, redraft jadi IG post matched ke brand hotel masing-masing.',
+            'Postcard dengan QR preview siap dikirim.',
+          ],
+          footer: 'skill: outreach-postcard · roadmap',
+          shipped: false,
+        },
+      ];
+
+      const communityCards = [
+        {
+          handle: '@hermes_agent',
+          timestamp: '3d ago',
+          body: [
+            '"Hermes Agent now has multi-agent via the Kanban, new in v0.12.0. Agents claim tasks from a board, work in parallel, and hand off when blocked. You watch progress and unblock from one easy view instead of juggling terminals."',
+          ],
+          sourceLabel: 'github.com/NousResearch/hermes-agent',
+          sourceUrl: 'https://github.com/NousResearch/hermes-agent',
+        },
+        {
+          handle: '@Tiny_Fish',
+          timestamp: '16h ago',
+          body: [
+            '"Starting today, TinyFish Web Search and Fetch are free. For every dev and agent. Across the galaxy. No credit card. Generous rate limits."',
+          ],
+          sourceLabel: 'x.com/Tiny_Fish',
+          sourceUrl: 'https://x.com/Tiny_Fish',
+        },
+        {
+          handle: '@everestchris6',
+          timestamp: '10h ago',
+          body: [
+            '"This OpenClaw bot finds hotels with ugly listing photos, redrafts them as IG posts, and mails the owner a postcard — on autopilot. Scrapes every hotel in a city in real time."',
+          ],
+          sourceLabel: 'x.com/everestchris6',
+          sourceUrl: 'https://x.com/everestchris6',
+        },
+      ];
+
+      const Avatar = ({ handle }) => {
+        const letter = (handle.replace(/^@/, '')[0] || 'a').toUpperCase();
+        return (
+          <span
+            aria-hidden="true"
+            className="inline-flex items-center justify-center w-5 h-5 rounded-md flex-shrink-0 text-[10px] font-mono font-semibold"
+            style={{ background: 'rgba(229,50,45,0.18)', color: '#E5322D' }}
+          >
+            {letter}
+          </span>
+        );
+      };
+
+      const Card = ({ card, isCommunity }) => (
+        <Mot.div
+          role="article"
+          aria-label={`${card.handle} — ${isCommunity ? card.sourceLabel : card.footer}`}
+          initial={{ opacity: 0, y: 14 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.3 }}
+          transition={{ duration: 0.55, ease: EASE }}
+          className="liquid-glass rounded-2xl p-5 md:p-6 flex flex-col"
+        >
+          <div className="flex items-center gap-2 text-[12px] font-mono text-white/65">
+            <Avatar handle={card.handle} />
+            <span className="text-white/85">{card.handle}</span>
+            {card.tagline && <span className="text-white/40">· {card.tagline}</span>}
+            <span className="text-white/40">· {card.timestamp}</span>
+          </div>
+          <div className="mt-3 text-sm text-white/85 font-body font-light leading-relaxed space-y-1">
+            {card.body.map((line, li) => (
+              <p key={li}>{line}</p>
+            ))}
+          </div>
+          <div className="mt-4 pt-3 border-t border-white/[0.07] text-[10px] font-mono uppercase tracking-[0.18em] text-white/40">
+            {isCommunity ? (
+              <a
+                href={card.sourceUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="no-underline hover:underline text-white/55"
+              >
+                source: {card.sourceLabel}
+              </a>
+            ) : (
+              card.footer
+            )}
+          </div>
+        </Mot.div>
+      );
+
+      return (
+        <section id="community" className="relative py-20 md:py-32 px-5 md:px-6 lg:px-16 bg-black">
+          <div className="max-w-6xl mx-auto">
+            <div className="flex flex-col items-center text-center mb-14 md:mb-20">
+              <div
+                className="liquid-glass rounded-full px-3.5 py-1 text-xs font-medium font-body text-white/90"
+                style={{ borderColor: 'rgba(229, 50, 45, 0.45)' }}
+              >
+                Dari komunitas
+              </div>
+              <BlurText
+                as="h2"
+                text="Yang sudah jalan, di luar sana."
+                className="mt-5 md:mt-6 text-3xl md:text-5xl lg:text-6xl font-heading text-white tracking-tight leading-[1.0] md:leading-[0.95] max-w-3xl"
+                style={{ letterSpacing: '-0.04em' }}
+                delay={70}
+              />
+              <p className="mt-5 md:mt-6 max-w-xl text-white/55 font-body font-light text-sm md:text-base leading-relaxed">
+                Skill bawaan yang sudah hidup di agent kamu hari pertama. Plus apa yang lagi dikerjain agent lain di komunitas.
+              </p>
+            </div>
+
+            {/* Panel A — sample skills we ship */}
+            <div className="mb-12 md:mb-16">
+              <div className="text-[11px] font-mono uppercase tracking-[0.18em] text-white/45 mb-4 md:mb-6">
+                Skill bawaan
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
+                {skillCards.map((c, i) => (
+                  <Card key={`s${i}`} card={c} isCommunity={false} />
+                ))}
+              </div>
+            </div>
+
+            {/* Panel B — real community quotes */}
+            <div>
+              <div className="text-[11px] font-mono uppercase tracking-[0.18em] text-white/45 mb-4 md:mb-6">
+                Dari komunitas agent
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5">
+                {communityCards.map((c, i) => (
+                  <Card key={`c${i}`} card={c} isCommunity={true} />
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+      );
+    }
+
     // ─────────────────────── FAQ ───────────────────────
     function FAQ() {
       const items = [
@@ -3689,6 +3877,7 @@
               <FeaturesGrid />
               <ChatVsAgentSection />
               <Pricing />
+              <CommunitySection />
               <FAQ />
               <Stats />
               <Testimonials />
