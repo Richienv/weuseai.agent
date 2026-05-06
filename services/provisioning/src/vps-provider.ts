@@ -43,4 +43,13 @@ export interface IVPSProvider {
   stop(uuid: string): Promise<void>
   start(uuid: string): Promise<void>
   delete(uuid: string): Promise<void>
+  /**
+   * Look up the currently-attached public IPv4 for a VM. Returns null if
+   * no IP is attached yet (e.g. just-created VMs sometimes take a few
+   * seconds for IDCloudHost to allocate).
+   *
+   * Required because `get(uuid)` doesn't return public IPs on IDCH —
+   * they live in a separate /network/ip_addresses listing.
+   */
+  getPublicIp(uuid: string): Promise<string | null>
 }

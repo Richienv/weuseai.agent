@@ -61,6 +61,14 @@ export class MockVPSProvider implements IVPSProvider {
     this.vms.delete(uuid)
   }
 
+  async getPublicIp(uuid: string): Promise<string | null> {
+    // Mock: return the IP we already stored on create. Real IDCH delays
+    // IP allocation by a few seconds; tests that need that delay should
+    // override this method on the instance.
+    const v = this.vms.get(uuid)
+    return v?.public_ipv4 ?? null
+  }
+
   /** Test helper — list all current VMs. */
   listAll(): VPSInfo[] {
     return Array.from(this.vms.values()).map((v) => ({ ...v }))

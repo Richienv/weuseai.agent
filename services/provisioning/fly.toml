@@ -1,0 +1,62 @@
+# Fly.io config — weuseai-provisioning
+#
+# Sized to spec (2026-05-02 founder review):
+#   - Region sin (Singapore) — closest Fly POP to IDCloudHost jkt01
+#   - shared-cpu-1x / 256MB → ~$1.94/mo if always-on
+#   - auto_stop_machines + min=0/max=1 → effectively $0/mo at MVP traffic
+#     and hard-capped at one machine if traffic spikes
+#
+# Secrets set separately via `fly secrets set` (NOT in this file):
+#   IDCLOUDHOST_API_KEY, IDCLOUDHOST_BILLING_ACCOUNT_ID, IDCLOUDHOST_REGION,
+#   TELEGRAM_BOT_TOKEN, DEFAULT_TELEGRAM_CHAT_ID, PROVISIONING_AUTH_TOKEN,
+#   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, RICHIE_CHAT_ID
+
+app = "weuseai-provisioning"
+primary_region = "sin"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "8081"
+  NODE_ENV = "production"
+  # Real provisioning ON in production. Set to "false" for staging dry-runs.
+  ENABLE_REAL_PROVISIONING = "true"
+
+[http_service]
+  internal_port = 8081
+  force_https = true
+  # Keep 1 machine always running. Cold-start delays cause Edge Function
+  # fetch timeouts to spinUp (verified 2026-05-03 — webhook returned in 4s
+  # with provision_deferred while machines were stopped). At ~$2/mo this
+  # is a worthwhile fix for Phase 1.
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["app"]
+
+  [http_service.concurrency]
+    type = "requests"
+    soft_limit = 50
+    hard_limit = 100
+
+  # Long timeout: cloud-init renders and IDCH API call can take ~30s on a
+  # cold start. The HTTP route waits for both.
+  [[http_service.checks]]
+    grace_period = "30s"
+    interval = "30s"
+    method = "GET"
+    timeout = "10s"
+    path = "/health"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"
+  cpu_kind = "shared"
+  cpus = 1
+
+# Spec: max_machines_running = 1 — cap blast radius if anything misbehaves.
+# Fly enforces this via the [deploy] strategy + scale.
+[deploy]
+  strategy = "immediate"
+  max_unavailable = 1

@@ -4,6 +4,7 @@ import type {
   Subscription,
   VPSInstanceRecord,
   CreateVPSInstanceInput,
+  OpenRouterKeyRecord,
 } from '../data-store.js'
 
 /** In-memory IDataStore. State exposed for assertions in tests. */
@@ -12,6 +13,7 @@ export class MockDataStore implements IDataStore {
   subscriptions = new Map<string, Subscription>()
   vpsInstances = new Map<string, VPSInstanceRecord>()
   credits = new Map<string, number>()
+  openRouterKeys = new Map<string, OpenRouterKeyRecord>()
 
   private idCounter = 0
   private nextId(prefix: string): string {
@@ -42,17 +44,17 @@ export class MockDataStore implements IDataStore {
 
   async createVPSInstance(rec: CreateVPSInstanceInput): Promise<VPSInstanceRecord> {
     const full: VPSInstanceRecord = { ...rec, id: this.nextId('vps') }
-    this.vpsInstances.set(full.idcloudhost_vps_id, full)
+    this.vpsInstances.set(full.vps_id, full)
     return { ...full }
   }
 
   async updateVPSInstance(
-    idcloudhostVpsId: string,
+    vpsId: string,
     patch: Partial<VPSInstanceRecord>,
   ): Promise<void> {
-    const cur = this.vpsInstances.get(idcloudhostVpsId)
-    if (!cur) throw new Error(`mock store: vps not found ${idcloudhostVpsId}`)
-    this.vpsInstances.set(idcloudhostVpsId, { ...cur, ...patch })
+    const cur = this.vpsInstances.get(vpsId)
+    if (!cur) throw new Error(`mock store: vps not found ${vpsId}`)
+    this.vpsInstances.set(vpsId, { ...cur, ...patch })
   }
 
   async getBalance(customerId: string): Promise<number> {
@@ -64,6 +66,17 @@ export class MockDataStore implements IDataStore {
     const next = Math.max(0, cur - cents)
     this.credits.set(customerId, next)
     return next
+  }
+
+  async upsertOpenRouterKey(rec: OpenRouterKeyRecord): Promise<void> {
+    this.openRouterKeys.set(rec.customer_id, {
+      ...rec,
+      created_at: rec.created_at ?? new Date().toISOString(),
+    })
+  }
+
+  async getOpenRouterKey(customerId: string): Promise<OpenRouterKeyRecord | null> {
+    return this.openRouterKeys.get(customerId) ?? null
   }
 
   /** Test helper. */

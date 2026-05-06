@@ -1,0 +1,27 @@
+# Build context is the monorepo root; this trims cruft from the upload.
+
+node_modules
+**/node_modules
+.worktrees
+.git
+.vercel
+.next
+dist
+**/dist
+*.log
+.env
+.env.local
+coverage
+# macOS resource fork sidecars — exFAT/FAT32 volumes (Extreme SSD) generate
+# these and Docker's build sender errors out on xattr ops. Excluded recursively.
+.DS_Store
+**/.DS_Store
+._*
+**/._*
+tests
+**/*.spec.ts
+**/*.test.ts
+supabase/.temp
+supabase/.branches
+.fly
+fly.toml.bak

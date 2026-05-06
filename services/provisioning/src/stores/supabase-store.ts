@@ -5,6 +5,7 @@ import type {
   Subscription,
   VPSInstanceRecord,
   CreateVPSInstanceInput,
+  OpenRouterKeyRecord,
 } from '../data-store.js'
 
 /** Supabase adapter. Reads creds from env unless explicitly passed. */
@@ -56,9 +57,15 @@ export class SupabaseDataStore implements IDataStore {
   }
 
   async createVPSInstance(rec: CreateVPSInstanceInput): Promise<VPSInstanceRecord> {
+    // Dual-write idcloudhost_vps_id during the deprecation window so any
+    // legacy reader (dashboard, ad-hoc SQL) sees the same value.
+    const insertable =
+      rec.provider === 'idcloudhost'
+        ? { ...rec, idcloudhost_vps_id: rec.vps_id }
+        : rec
     const { data, error } = await this.client
       .from('vps_instances')
-      .insert(rec)
+      .insert(insertable)
       .select()
       .single()
     if (error) throw error
@@ -66,13 +73,13 @@ export class SupabaseDataStore implements IDataStore {
   }
 
   async updateVPSInstance(
-    idcloudhostVpsId: string,
+    vpsId: string,
     patch: Partial<VPSInstanceRecord>,
   ): Promise<void> {
     const { error } = await this.client
       .from('vps_instances')
       .update(patch)
-      .eq('idcloudhost_vps_id', idcloudhostVpsId)
+      .eq('vps_id', vpsId)
     if (error) throw error
   }
 
@@ -93,5 +100,27 @@ export class SupabaseDataStore implements IDataStore {
     })
     if (error) throw error
     return (data as number | null) ?? 0
+  }
+
+  async upsertOpenRouterKey(rec: OpenRouterKeyRecord): Promise<void> {
+    const { error } = await this.client
+      .from('customer_openrouter_keys')
+      .upsert({
+        customer_id: rec.customer_id,
+        openrouter_key_hash: rec.openrouter_key_hash,
+        credit_limit_usd_cents: rec.credit_limit_usd_cents,
+        last_topped_up_at: rec.last_topped_up_at ?? null,
+      })
+    if (error) throw error
+  }
+
+  async getOpenRouterKey(customerId: string): Promise<OpenRouterKeyRecord | null> {
+    const { data, error } = await this.client
+      .from('customer_openrouter_keys')
+      .select('*')
+      .eq('customer_id', customerId)
+      .maybeSingle()
+    if (error) throw error
+    return (data as OpenRouterKeyRecord | null) ?? null
   }
 }

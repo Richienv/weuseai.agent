@@ -1,46 +1,62 @@
 /**
- * The "one-click" provisioning flow per pelanggan baru.
+ * One-click provisioning per customer (post-payment).
  *
- * Pure dependency injection — semua external service masuk via SpinUpDeps.
- * Idempotent: dipanggil dua kali untuk customer yang sama → return existing VPS.
+ * Architecture v2 (2026-05-04 — pivoted from cloud-init delivery after
+ * IDCloudHost was confirmed to drop cloud_init payloads):
  *
- * Result `done` resolves setelah background work selesai (waitForRunning + healthcheck +
- * notify). Production code boleh ignore; tests should `await result.done`.
+ *   1. vps.create() — fresh Ubuntu, NO cloud_init, password set via API
+ *   2. Poll vps.getPublicIp(uuid) until non-null (IDCloudHost takes ~30s)
+ *   3. Wait for SSH port 22 reachable on the public IP
+ *   4. ssh.runSetup() — run buildSetupScript() output remotely
+ *      (script's first action: send halo Telegram ping for proof-of-life)
+ *   5. Mark vps_instances.ip_address with the discovered IP
+ *   6. Return — customer's halo Telegram message has already landed
+ *
+ * Idempotent: a second call for the same customerId returns the existing
+ * vps_instances row without re-creating.
  */
 
 import type { IVPSProvider, VPSInfo, VPSSpec } from './vps-provider.js'
 import type { IDataStore } from './data-store.js'
 import type { IMessageBroker } from '../../hermes/src/adapters/message-broker.js'
-import { buildCloudInit, type Tier, type CloudInitParams } from './cloud-init.js'
-import { mintProxyToken } from './proxy-token.js'
+import type { ISshProvisioner } from './ssh-provisioner.js'
+import type { ILlmKeyMinter } from './llm-key-minter.js'
+import { buildSetupScript, type Tier } from './setup-script.js'
 
 export type { Tier }
 
-export const WELCOME_MESSAGE = [
-  'Halo, agent kamu hidup.',
-  '',
-  'Untuk mulai pakai, paste Telegram bot token kamu di dashboard: https://weuseai-agent.vercel.app/dashboard',
-  '',
-  'Belum punya bot? Buat di @BotFather, copy token, paste di dashboard.',
-  '',
-  'Pertanyaan? Reply pesan ini.',
-].join('\n')
-
+// IDCloudHost jkt01 enforces vcpu >= 2 ("CPU count must be between 2 and 32").
 const TIER_SPEC: Record<Tier, VPSSpec> = {
-  starter: { vcpu: 1, ram: 4096, disk: 50 },
+  starter: { vcpu: 2, ram: 4096, disk: 50 },
   pro: { vcpu: 2, ram: 8192, disk: 100 },
   studio: { vcpu: 4, ram: 16384, disk: 200 },
+}
+
+/**
+ * Phase 2A: per-tier OpenRouter spend cap (USD cents). Customer can top up
+ * via Phase 2C flow; initial allocation lasts ~600-2500 messages on
+ * deepseek/deepseek-chat depending on length.
+ */
+const TIER_LLM_LIMIT_CENTS: Record<Tier, number> = {
+  starter: 300,    // $3
+  pro: 500,        // $5
+  studio: 3000,    // $30
 }
 
 export type SpinUpOpts = {
   customerId: string
   tier: Tier
+  /** Where the welcome / liveness message lands. Optional. */
   telegramChatId?: string
-  // Optional Phase 1 — customer pastes bot token via dashboard later;
-  // VPS spawns and Hermes starts, Telegram channel comes online when token set.
   customerTelegramBotToken?: string
   customerTelegramAllowedUserIds?: string
+  /**
+   * @deprecated Phase 2A — LLM key is now minted via OpenRouter inside
+   * spinUpCustomer (no BYOK at customer-flow level). Kept on the type for
+   * webhook back-compat; ignored.
+   */
   customerLlmApiKey?: string
+  /** @deprecated as customerLlmApiKey above. */
   customerLlmProvider?: 'deepseek' | 'openrouter' | 'openai' | 'glm'
   alwaysOnEnabled?: boolean
   useStarterCredits?: boolean
@@ -50,14 +66,20 @@ export type SpinUpDeps = {
   vps: IVPSProvider
   store: IDataStore
   broker: IMessageBroker
-  proxyUrl?: string
+  /** SSH executor — runs buildSetupScript() output on the fresh VM. */
+  ssh: ISshProvisioner
+  /** Phase 2A: mints per-customer OpenRouter key with tier-based spend cap. */
+  llmMinter: ILlmKeyMinter
+  /** Custom polling/timeout hooks (tests override; prod uses defaults). */
+  waitForSshOpen?: (host: string, opts: { timeoutMs: number; pollIntervalMs: number }) => Promise<void>
+  providerName?: 'idcloudhost' | 'mock'
   billingAccountId?: string
   region?: string | null
   alertChatId?: string
-  mintToken?: (customerId: string) => Promise<string>
-  healthCheck?: (ip: string) => Promise<void>
-  pollIntervalMs?: number
-  vpsRunningTimeoutMs?: number
+  ipPollIntervalMs?: number
+  ipPollTimeoutMs?: number
+  sshPollIntervalMs?: number
+  sshReadyTimeoutMs?: number
   log?: (msg: string, ...rest: unknown[]) => void
 }
 
@@ -76,55 +98,82 @@ export async function spinUpCustomer(
     deps.log ??
     ((msg: string, ...rest: unknown[]) =>
       console.log(`[provision:${opts.customerId}] ${msg}`, ...rest))
-  const mintToken = deps.mintToken ?? mintProxyToken
-  const healthCheck = deps.healthCheck ?? defaultHealthCheck
-  const pollIntervalMs = deps.pollIntervalMs ?? 3000
-  const vpsRunningTimeoutMs = deps.vpsRunningTimeoutMs ?? 5 * 60 * 1000
-  const proxyUrl = deps.proxyUrl ?? process.env.PROXY_URL ?? ''
+  const ipPollIntervalMs = deps.ipPollIntervalMs ?? 3000
+  const ipPollTimeoutMs = deps.ipPollTimeoutMs ?? 5 * 60 * 1000
+  const sshPollIntervalMs = deps.sshPollIntervalMs ?? 3000
+  const sshReadyTimeoutMs = deps.sshReadyTimeoutMs ?? 5 * 60 * 1000
   const billingAccountId =
     deps.billingAccountId ?? process.env.IDCLOUDHOST_BILLING_ACCOUNT_ID ?? ''
   const region = deps.region ?? process.env.IDCLOUDHOST_REGION ?? null
+  const waitForSshOpen = deps.waitForSshOpen ?? defaultWaitForSshOpen
 
+  // ── Idempotency ──
   const existing = await deps.store.findActiveVPSByCustomer(opts.customerId)
   if (existing) {
-    log(`Already exists: ${existing.idcloudhost_vps_id} (status: ${existing.status})`)
+    log(`Already exists: ${existing.vps_id} (status: ${existing.status})`)
     return {
-      vpsId: existing.idcloudhost_vps_id,
+      vpsId: existing.vps_id,
       ip: existing.ip_address ?? null,
       status: existing.status === 'running' ? 'running' : 'provisioning',
       done: Promise.resolve(),
     }
   }
 
-  const cloudInitParams: CloudInitParams =
-    opts.tier === 'starter'
-      ? {
-          customerId: opts.customerId,
-          tier: opts.tier,
-          telegramBotToken: opts.customerTelegramBotToken,
-          telegramAllowedUserIds: opts.customerTelegramAllowedUserIds,
-          llmProxyUrl: proxyUrl,
-          llmProxyToken: await mintToken(opts.customerId),
-        }
-      : {
-          customerId: opts.customerId,
-          tier: opts.tier,
-          telegramBotToken: opts.customerTelegramBotToken,
-          telegramAllowedUserIds: opts.customerTelegramAllowedUserIds,
-          customerLlmApiKey: opts.customerLlmApiKey,
-          customerLlmProvider: opts.customerLlmProvider,
-        }
-  const cloudInit = buildCloudInit(cloudInitParams)
+  // ── Mint per-customer OpenRouter key (Phase 2A — replaces proxy + BYOK) ──
+  // Done BEFORE VM creation so a minter failure costs us nothing in IDCH IPs.
+  log(`Minting OpenRouter key (limit: $${TIER_LLM_LIMIT_CENTS[opts.tier] / 100})...`)
+  let openRouterKey: string
+  let openRouterHash: string
+  try {
+    const minted = await deps.llmMinter.mint({
+      name: `weuseai-customer-${opts.customerId}`,
+      limitUsdCents: TIER_LLM_LIMIT_CENTS[opts.tier],
+    })
+    openRouterKey = minted.key
+    openRouterHash = minted.hash
+    log(`✓ OpenRouter key minted (hash=${openRouterHash.slice(0, 8)}…)`)
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    log(`✗ Mint failed: ${msg}`)
+    if (deps.alertChatId) {
+      try {
+        await deps.broker.sendMessage({
+          chatId: deps.alertChatId,
+          text: `[provisioning alert]\nOpenRouter mint failed for ${opts.customerId}: ${msg}`,
+        })
+      } catch {/* best effort */}
+    }
+    // Wrap in done so caller's `await result.done` rejects (matches contract).
+    return {
+      vpsId: '',
+      ip: null,
+      status: 'provisioning',
+      done: Promise.reject(e instanceof Error ? e : new Error(msg)),
+    }
+  }
 
+  // Persist hash + cap (NOT the secret key — that lives only on the VM).
+  await deps.store.upsertOpenRouterKey({
+    customer_id: opts.customerId,
+    openrouter_key_hash: openRouterHash,
+    credit_limit_usd_cents: TIER_LLM_LIMIT_CENTS[opts.tier],
+  })
+
+  // ── Build setup script (the customer's persona, skill, halo, install) ──
+  const sshPassword = cryptoRandomPassword()
+  const setupScript = buildScriptFor(opts, openRouterKey)
+
+  // ── Create VM (NO cloud_init — we're going SSH route) ──
   log(`Creating VPS for tier=${opts.tier}...`)
   let vps: VPSInfo
   try {
     vps = await deps.vps.create({
       name: `liren-${opts.customerId.slice(0, 8)}-${Date.now().toString().slice(-6)}`,
       spec: TIER_SPEC[opts.tier],
-      password: cryptoRandomPassword(),
-      cloudInit,
+      password: sshPassword,
+      // cloudInit intentionally omitted — IDCH drops it silently
       billingAccountId,
+      username: 'liren',
     })
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
@@ -133,82 +182,81 @@ export async function spinUpCustomer(
       try {
         await deps.broker.sendMessage({
           chatId: deps.alertChatId,
-          text: `[provisioning alert]\nFailed for ${opts.customerId}: ${msg}`,
+          text: `[provisioning alert]\nCreate failed for ${opts.customerId}: ${msg}`,
         })
-      } catch {
-        // best effort
-      }
+      } catch {/* best effort */}
     }
     throw e
   }
   log(`✓ VPS created: ${vps.uuid}`)
 
+  // ── DB row (status=provisioning, no IP yet) ──
   await deps.store.createVPSInstance({
     customer_id: opts.customerId,
-    idcloudhost_vps_id: vps.uuid,
-    ip_address: vps.public_ipv4 ?? null,
+    vps_id: vps.uuid,
+    provider: deps.providerName ?? 'idcloudhost',
+    ip_address: null,
     region,
     status: 'provisioning',
   })
 
+  // ── Background: discover IP, wait for SSH, run setup ──
   const done = (async () => {
     try {
-      log('Waiting for VPS running...')
-      const running = await waitForRunning(deps.vps, vps.uuid, {
-        timeoutMs: vpsRunningTimeoutMs,
-        pollIntervalMs,
+      log('Polling for public IP allocation...')
+      const publicIp = await waitForPublicIp(deps.vps, vps.uuid, {
+        timeoutMs: ipPollTimeoutMs,
+        pollIntervalMs: ipPollIntervalMs,
       })
-      log(`✓ VPS running. IP: ${running.public_ipv4}`)
+      log(`✓ Public IP allocated: ${publicIp}`)
+      await deps.store.updateVPSInstance(vps.uuid, { ip_address: publicIp })
 
-      log('Waiting for Hermes /health...')
-      await healthCheck(running.public_ipv4 ?? '')
-      log('✓ Hermes alive')
-
-      await deps.store.updateVPSInstance(vps.uuid, {
-        status: 'running',
-        ip_address: running.public_ipv4 ?? null,
+      log('Waiting for SSH port 22 to open...')
+      await waitForSshOpen(publicIp, {
+        timeoutMs: sshReadyTimeoutMs,
+        pollIntervalMs: sshPollIntervalMs,
       })
+      log('✓ SSH port open')
 
-      // Welcome message — broker decides delivery. In Phase 1 the customer
-      // bot token may not yet be set; in that case the broker queues / no-ops
-      // and the dashboard surfaces the same copy when they paste a token.
-      if (opts.telegramChatId) {
-        await deps.broker.sendMessage({
-          chatId: opts.telegramChatId,
-          text: WELCOME_MESSAGE,
-        })
-      } else {
-        log('Welcome deferred — no telegramChatId. Dashboard will surface instructions when customer signs in.')
+      log('Running setup script over SSH (sends halo first, then installs Hermes)...')
+      const sshResult = await deps.ssh.runSetup({
+        host: publicIp,
+        user: 'liren',
+        password: sshPassword,
+        script: setupScript,
+        timeoutMs: 12 * 60 * 1000, // Hermes install can take 5+ min
+      })
+      if (!sshResult.ok) {
+        throw new Error(
+          `SSH setup failed (exit ${sshResult.exitCode}): ${sshResult.stderr.slice(0, 500)}`,
+        )
       }
+      log('✓ Setup script complete')
+
+      await deps.store.updateVPSInstance(vps.uuid, { status: 'running' })
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)
       log(`✗ Background provision failed: ${msg}`)
       try {
         await deps.store.updateVPSInstance(vps.uuid, { status: 'failed' })
-      } catch {
-        // best effort
-      }
+      } catch {/* best effort */}
       if (deps.alertChatId) {
         try {
           await deps.broker.sendMessage({
             chatId: deps.alertChatId,
             text: `[provisioning alert]\nBackground failed for ${opts.customerId}: ${msg}`,
           })
-        } catch {
-          // best effort
-        }
+        } catch {/* best effort */}
       }
       throw e
     }
   })()
 
-  done.catch(() => {
-    // swallow unhandled rejection if caller ignores `done`
-  })
+  done.catch(() => {/* swallow if caller ignores */})
 
   return {
     vpsId: vps.uuid,
-    ip: vps.public_ipv4 ?? null,
+    ip: null,
     status: 'provisioning',
     done,
   }
@@ -220,53 +268,73 @@ export async function tearDownCustomer(
 ): Promise<{ ok: boolean; reason?: string }> {
   const existing = await deps.store.findActiveVPSByCustomer(customerId)
   if (!existing) return { ok: false, reason: 'no_vps_found' }
-
-  await deps.vps.delete(existing.idcloudhost_vps_id)
-  await deps.store.updateVPSInstance(existing.idcloudhost_vps_id, { status: 'stopped' })
-
+  await deps.vps.delete(existing.vps_id)
+  await deps.store.updateVPSInstance(existing.vps_id, { status: 'stopped' })
   return { ok: true }
 }
 
 // ──────── helpers ────────
 
-async function waitForRunning(
+function buildScriptFor(opts: SpinUpOpts, openRouterKey: string): string {
+  // Phase 2A: every tier uses the same script shape — single OpenRouter key
+  // routed via OpenAI-compatible env vars. No more starter/proxy split.
+  return buildSetupScript({
+    customerId: opts.customerId,
+    tier: opts.tier,
+    telegramBotToken: opts.customerTelegramBotToken,
+    telegramAllowedUserIds: opts.customerTelegramAllowedUserIds,
+    openRouterKey,
+  })
+}
+
+async function waitForPublicIp(
   vps: IVPSProvider,
   uuid: string,
   opts: { timeoutMs: number; pollIntervalMs: number },
-): Promise<VPSInfo> {
+): Promise<string> {
   const deadline = Date.now() + opts.timeoutMs
   while (Date.now() < deadline) {
-    const info = await vps.get(uuid)
-    if (info.status === 'running') return info
-    if (info.status === 'failed' || info.status === 'error') {
-      throw new Error(`VM ${uuid} entered ${info.status} state`)
-    }
+    const ip = await vps.getPublicIp(uuid)
+    if (ip) return ip
     await new Promise((r) => setTimeout(r, opts.pollIntervalMs))
   }
-  throw new Error(`Timeout waiting for VM ${uuid} to reach running state`)
+  throw new Error(`Timeout waiting for public IP allocation on VM ${uuid}`)
 }
 
-async function defaultHealthCheck(ip: string): Promise<void> {
-  const timeoutMs = 5 * 60 * 1000
-  const deadline = Date.now() + timeoutMs
+async function defaultWaitForSshOpen(
+  host: string,
+  opts: { timeoutMs: number; pollIntervalMs: number },
+): Promise<void> {
+  // Default impl uses Node's net.connect — no external deps. Tests inject
+  // their own mock waiter; production gets this real one.
+  const net = await import('node:net')
+  const deadline = Date.now() + opts.timeoutMs
   while (Date.now() < deadline) {
-    try {
-      const r = await fetch(`http://${ip}:3000/health`, {
-        signal: AbortSignal.timeout(5000),
+    const open = await new Promise<boolean>((resolve) => {
+      const sock = net.createConnection({ host, port: 22, timeout: 5000 }, () => {
+        sock.end()
+        resolve(true)
       })
-      if (r.ok) return
-    } catch {
-      // not ready yet
-    }
-    await new Promise((r) => setTimeout(r, 5000))
+      sock.on('error', () => resolve(false))
+      sock.on('timeout', () => {
+        sock.destroy()
+        resolve(false)
+      })
+    })
+    if (open) return
+    await new Promise((r) => setTimeout(r, opts.pollIntervalMs))
   }
-  throw new Error(`Hermes /health did not respond at ${ip} within timeout`)
+  throw new Error(`Timeout waiting for SSH port 22 on ${host}`)
 }
 
 function cryptoRandomPassword(): string {
+  // IDCloudHost requires upper+lower+digit, 8+ chars.
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789'
   return (
-    Array.from({ length: 20 }, () => chars[Math.floor(Math.random() * chars.length)]).join('') +
-    '!1Aa'
+    'Aa1' +
+    Array.from(
+      { length: 21 },
+      () => chars[Math.floor(Math.random() * chars.length)],
+    ).join('')
   )
 }
