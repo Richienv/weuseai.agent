@@ -13,6 +13,15 @@
 
 FROM node:20-alpine
 
+# System deps required by ExecSshProvisioner.runSetup():
+#   openssh-client  → `ssh` binary
+#   sshpass         → password-based auth used for IDCloudHost VMs
+#                     (their default flow is root + password; SSH-key
+#                     bootstrap is Phase 3 work)
+# Without these the provisioning service spawns sshpass and gets ENOENT,
+# fails the SSH step, and the customer's VM is created but never set up.
+RUN apk add --no-cache openssh-client sshpass
+
 WORKDIR /app
 
 ENV NODE_ENV=production
