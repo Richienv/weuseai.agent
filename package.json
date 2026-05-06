@@ -8,7 +8,8 @@
     "packages/*"
   ],
   "scripts": {
-    "test": "tsx --test tests/end-to-end-mock.spec.ts tests/post-payment-flow.spec.ts",
+    "test": "tsx --test tests/end-to-end-mock.spec.ts tests/post-payment-flow.spec.ts tests/soul-md-template.spec.ts tests/pairing-code.spec.ts tests/mock-llm-key-minter.spec.ts tests/complete-onboarding-handler.spec.ts tests/telegram-bot-webhook-handler.spec.ts",
+    "test:onboarding": "tsx --test tests/soul-md-template.spec.ts tests/pairing-code.spec.ts tests/mock-llm-key-minter.spec.ts tests/complete-onboarding-handler.spec.ts tests/telegram-bot-webhook-handler.spec.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "typecheck:all": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p services/provisioning/tsconfig.json && tsc --noEmit -p services/proxy/tsconfig.json && tsc --noEmit -p services/hermes/tsconfig.json && tsc --noEmit -p services/payment/tsconfig.json && tsc --noEmit -p services/test-idcloudhost/tsconfig.json && tsc --noEmit -p supabase/tsconfig.json"
   },
