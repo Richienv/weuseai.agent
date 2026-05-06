@@ -275,11 +275,12 @@
     .db-section .db-headline {
       font-family: 'Instrument Serif', serif;
       color: #fff;
-      font-size: 28px; line-height: 1.05; letter-spacing: -0.03em;
-      max-width: 28ch;
+      font-size: 38px; line-height: 1.0; letter-spacing: -0.04em;
+      max-width: 24ch;
       margin: 0 auto;
     }
-    @media (min-width: 768px) { .db-section .db-headline { font-size: 40px; } }
+    @media (min-width: 768px) { .db-section .db-headline { font-size: 56px; } }
+    @media (min-width: 1024px) { .db-section .db-headline { font-size: 64px; } }
     .db-section .db-sub {
       margin-top: 8px;
       font-family: 'Inter', sans-serif; font-weight: 300;
@@ -1953,7 +1954,6 @@
       const wrapRef = useRef(null);
       const videoRef = useRef(null);
       const canvasRef = useRef(null);
-      const sampleRef = useRef(null);
 
       useEffect(() => {
         const wrap = wrapRef.current;
@@ -1961,13 +1961,16 @@
         const canvas = canvasRef.current;
         if (!wrap || !video || !canvas) return;
         const sample = document.createElement('canvas');
-        sampleRef.current = sample;
         const sampleCtx = sample.getContext('2d', { willReadFrequently: true });
         const ctx = canvas.getContext('2d');
 
-        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        // Internal render at logical pixels (dpr=1) — halftone is decorative,
+        // dpr 2 doubles getImageData cost for no visible gain.
+        const dpr = 1;
         let mounted = true;
         let raf = 0;
+        let inView = false;
+        let frame = 0;
 
         const resize = () => {
           const r = wrap.getBoundingClientRect();
@@ -1981,6 +1984,9 @@
         const tick = () => {
           if (!mounted) return;
           raf = requestAnimationFrame(tick);
+          if (!inView) return;
+          // Render every other frame (~30fps) — visually smooth, half the cost.
+          if ((frame++ & 1) === 1) return;
           if (video.readyState < 2) return;
 
           const w = canvas.width, h = canvas.height;
@@ -1990,7 +1996,6 @@
           if (sample.width !== cols) sample.width = cols;
           if (sample.height !== rows) sample.height = rows;
 
-          // Cover-fit: draw video filling sample canvas, cropping overflow.
           const vw = video.videoWidth, vh = video.videoHeight;
           if (!vw || !vh) return;
           const scale = Math.max(cols / vw, rows / vh);
@@ -2016,16 +2021,31 @@
           }
         };
 
-        const start = () => { if (!raf) raf = requestAnimationFrame(tick); };
-        if (video.readyState >= 2) start();
-        else video.addEventListener('loadeddata', start, { once: true });
-        // Some browsers need an explicit play call after autoplay attribute on dynamic mounts.
-        const playPromise = video.play();
-        if (playPromise && playPromise.catch) playPromise.catch(() => {});
+        // Visibility-gated rAF. Browsers don't pause rAF for offscreen
+        // elements, so without this an offscreen DottedVideo keeps doing
+        // getImageData on every frame and tanks scroll perf.
+        const io = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((e) => {
+              inView = e.isIntersecting;
+              if (inView) {
+                const p = video.play();
+                if (p && p.catch) p.catch(() => {});
+              } else {
+                video.pause();
+              }
+            });
+          },
+          { rootMargin: '200px' }
+        );
+        io.observe(wrap);
+
+        if (!raf) raf = requestAnimationFrame(tick);
 
         return () => {
           mounted = false;
           ro.disconnect();
+          io.disconnect();
           cancelAnimationFrame(raf);
         };
       }, [src, color, cellSize, threshold]);
@@ -2035,7 +2055,7 @@
           <video
             ref={videoRef}
             src={src}
-            autoPlay loop muted playsInline
+            loop muted playsInline
             preload="auto"
             crossOrigin="anonymous"
             aria-hidden="true"
@@ -2091,9 +2111,11 @@
         const sample = document.createElement('canvas');
         const sampleCtx = sample.getContext('2d', { willReadFrequently: true });
         const ctx = canvas.getContext('2d');
-        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const dpr = 1;
         let mounted = true;
         let raf = 0;
+        let inView = false;
+        let frame = 0;
 
         const resize = () => {
           const r = wrap.getBoundingClientRect();
@@ -2107,6 +2129,8 @@
         const tick = () => {
           if (!mounted) return;
           raf = requestAnimationFrame(tick);
+          if (!inView) return;
+          if ((frame++ & 1) === 1) return;
           const usCanvas = sourceWrap.querySelector('canvas');
           if (!usCanvas || !usCanvas.width || !usCanvas.height) return;
 
@@ -2143,10 +2167,17 @@
           }
         };
 
+        const io = new IntersectionObserver(
+          (entries) => entries.forEach((e) => { inView = e.isIntersecting; }),
+          { rootMargin: '200px' }
+        );
+        io.observe(wrap);
+
         raf = requestAnimationFrame(tick);
         return () => {
           mounted = false;
           ro.disconnect();
+          io.disconnect();
           cancelAnimationFrame(raf);
         };
       }, [projectId, color, cellSize, threshold]);
@@ -2279,11 +2310,13 @@
     function Hero() {
       return (
         <section id="beranda" className="relative overflow-hidden min-h-[760px] md:min-h-[920px]" style={{ height: 'auto', background: '#000' }}>
-          <video autoPlay muted loop playsInline preload="auto"
-            className="absolute inset-0 w-full h-full object-cover z-0"
-            style={{ filter: 'brightness(0.5) saturate(1.08) contrast(1.08)' }}>
-            <source src="assets/new-hero.mp4" type="video/mp4" />
-          </video>
+          <DottedVideo
+            src="assets/new-hero.mp4"
+            color="#E5322D"
+            cellSize={6}
+            className="absolute inset-0 w-full h-full pointer-events-none"
+            style={{ zIndex: 0, background: '#000' }}
+          />
           <div className="hero-grain" />
           <div className="absolute inset-0 z-[1] pointer-events-none" style={{
             background: 'linear-gradient(180deg, rgba(0,0,0,0.28) 0%, rgba(0,0,0,0.18) 45%, rgba(0,0,0,0.55) 100%)'
@@ -3088,13 +3121,15 @@
 
       return (
         <section id="filosofi" className="relative overflow-hidden" style={{ minHeight: 940 }}>
-          <video autoPlay muted loop playsInline
-            className="absolute inset-0 w-full h-full object-cover z-0"
-            style={{ filter: 'brightness(0.5) saturate(0.85)' }}>
-            <source src="assets/new-mid-sec.mp4" type="video/mp4" />
-          </video>
+          <DottedVideo
+            src="assets/new-mid-sec.mp4"
+            color="#E5322D"
+            cellSize={6}
+            className="absolute inset-0 w-full h-full pointer-events-none"
+            style={{ zIndex: 0, background: '#000' }}
+          />
 
-          <div className="absolute inset-0 z-[1] pointer-events-none" style={{ background: 'radial-gradient(ellipse at 30% 40%, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.55) 60%, rgba(0,0,0,0.75) 100%)' }} />
+          <div className="absolute inset-0 z-[1] pointer-events-none" style={{ background: 'radial-gradient(ellipse at 30% 40%, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.40) 60%, rgba(0,0,0,0.55) 100%)' }} />
           <div className="absolute top-0 left-0 right-0 z-[2] pointer-events-none" style={{ height: 220, background: 'linear-gradient(to bottom, #000, transparent)' }} />
           <div className="absolute bottom-0 left-0 right-0 z-[2] pointer-events-none" style={{ height: 220, background: 'linear-gradient(to top, #000, transparent)' }} />
 
@@ -3646,18 +3681,15 @@
           orderMobile: 'order-1',
           orderDesktop: 'md:order-2',
           rows: [
-            { have: true, text: 'Multi-agent paralel: planner susun strategi, builder eksekusi banyak action sekaligus, reviewer cek semua hasil sebelum nyampe ke kamu' },
-            { have: true, text: 'Riset pasar 50+ sumber sekali jalan — ringkasan, sitasi, dan rekomendasi siap pakai' },
-            { have: true, text: 'Scrape situs apapun tanpa kena bot detection, lewat Cloudflare tanpa drama' },
-            { have: true, text: 'Bikin slide deck lengkap dari satu prompt — judul, konten, speaker notes, layout' },
-            { have: true, text: 'Triage 300+ email pasca-cuti jadi 1 halaman ringkasan dalam hitungan menit' },
-            { have: true, text: 'Auto-publish konten ke 5+ platform (IG, X, LinkedIn, TikTok, FB) dengan caption yang dioptimalkan per kanal' },
-            { have: true, text: 'Browser automation — login, isi form, klik tombol, screenshot, semua tanpa kamu sentuh mouse' },
-            { have: true, text: 'Workspace persistent — file, database, cron, semua hidup terus tanpa kamu jaga' },
-            { have: true, text: 'Jalan 24/7 di VPS sendiri — kerja sambil kamu tidur, hasilnya nungguin pagi hari' },
-            { have: true, text: 'Sekali ajarin satu skill, agent inget selamanya — nggak perlu jelasin ulang' },
-            { have: true, text: 'Voice tuning — nulis caption, email, draft sesuai gaya kamu, bukan output AI generic' },
-            { have: true, text: 'Trade analysis, macro simulation, market timing — semua dijalankan otomatis tiap hari' },
+            { have: true, text: 'Multi-agent paralel: planner, builder, reviewer kerja barengan' },
+            { have: true, text: 'Riset 50+ sumber sekali jalan' },
+            { have: true, text: 'Scrape situs apapun tanpa bot-detection' },
+            { have: true, text: 'Bikin slide deck dari satu prompt' },
+            { have: true, text: 'Triage 300+ email jadi 1 halaman ringkasan' },
+            { have: true, text: 'Auto-publish ke IG, X, LinkedIn, TikTok' },
+            { have: true, text: 'Browser automation — login, form, klik, screenshot' },
+            { have: true, text: 'Jalan 24/7 di VPS sendiri' },
+            { have: true, text: 'Voice tuning — nulis dengan gaya kamu' },
           ],
           ariaLabel: 'Perbandingan weuseai.agent Pro (paket kami)',
         },
@@ -3733,22 +3765,22 @@
                     }
                   >
                     <h3
-                      className={`font-heading text-white leading-[1.1] ${isWide ? 'text-2xl md:text-3xl' : 'text-lg md:text-xl'}`}
+                      className={`font-heading text-white leading-[1.1] ${isWide ? 'text-xl md:text-2xl' : 'text-lg md:text-xl'}`}
                       style={{ letterSpacing: '-0.02em' }}
                     >
                       {c.name}
                     </h3>
-                    <div className={`mt-1 font-body font-light text-white/65 ${isWide ? 'text-base md:text-lg' : 'text-sm'}`}>
+                    <div className="mt-1 font-body font-light text-white/65 text-sm">
                       <span className="text-white/85">{c.subtitle}</span>
                       <span className="text-white/45"> {c.subtitleAside}</span>
                     </div>
 
-                    <ul className={`${isWide ? 'mt-6 md:mt-8 space-y-4' : 'mt-5 md:mt-6 space-y-3'} flex-1`}>
+                    <ul className={`${isWide ? 'mt-5 md:mt-6 space-y-2.5' : 'mt-5 md:mt-6 space-y-3'} flex-1`}>
                       {c.rows.map((r, ri) => (
-                        <li key={ri} className={`flex items-start ${isWide ? 'gap-3 text-base md:text-lg' : 'gap-2.5 text-sm'} font-body font-light leading-relaxed`}>
+                        <li key={ri} className="flex items-start gap-2.5 text-sm font-body font-light leading-relaxed">
                           <span
                             aria-hidden="true"
-                            className={`mt-[3px] inline-flex items-center justify-center rounded-full flex-shrink-0 font-bold ${isWide ? 'w-5 h-5 text-[12px]' : 'w-4 h-4 text-[10px]'}`}
+                            className="mt-[3px] inline-flex items-center justify-center rounded-full flex-shrink-0 font-bold w-4 h-4 text-[10px]"
                             style={
                               r.have
                                 ? { background: 'rgba(229,50,45,0.18)', color: '#E5322D' }
@@ -3798,13 +3830,12 @@
           priceStrike: 'Rp 699rb',
           setupIdr: 399_000,
           setupAside: 'biaya setup sekali bayar · diskon launch',
-          persona: 'Untuk kamu yang baru ingin merasakan rasanya didampingi agent — tanpa komitmen besar.',
+          persona: 'Buat kamu yang mau coba rasanya didampingi agent.',
           outcomes: [
-            '1 fine-tuned agent: Pro Agent (general-purpose, gaya kamu)',
-            'VPS dedicated kamu sendiri — bukan shared',
-            '10.000 iteration agent training termasuk',
-            'Akses Telegram, Discord, dan 40+ kemampuan bawaan',
-            '200–400 interaction per bulan',
+            '1 agent: Pro Agent',
+            'VPS dedicated, bukan shared',
+            '10.000 training iteration',
+            '200–400 interaction/bulan',
             'Community support',
           ],
           apps: ['Telegram', 'Discord', 'Web'],
@@ -3820,15 +3851,14 @@
           priceStrike: 'Rp 2,5jt',
           setupIdr: 1_290_000,
           setupAside: 'biaya setup sekali bayar · diskon launch',
-          persona: 'Untuk freelancer, founder, dan content creator yang butuh agent yang tetap kerja saat kamu tidur.',
+          persona: 'Buat freelancer, founder, creator yang butuh agent kerja 24/7.',
           outcomes: [
-            '5 fine-tuned agent: Researcher · Web Automation · Doc Expert · Slide Designer · Pro Agent',
-            '4 web app pribadi: Workout & Diet, Finance Tracking, Task Review, Project Manager — semua dikontrol via chat ke agent',
-            'VPS dedicated 24/7 + Always-On hosting termasuk',
-            '10.000 iteration agent training per bulan',
-            '200–400 interaction per bulan',
-            '24/7 support team — antrean kamu paling depan',
-            'Voice tuning ke gaya kamu — caption, email, draft persis seperti kamu nulis',
+            '5 agent: Researcher, Web Auto, Doc, Slide, Pro',
+            '4 web app: Workout, Finance, Task, Project',
+            'VPS dedicated 24/7',
+            '200–400 interaction/bulan',
+            '24/7 support — antrean paling depan',
+            'Voice tuning ke gaya kamu',
           ],
           apps: ['Notion', 'Gmail', 'Drive', 'Kalender', 'Slack'],
           appsTotal: 40,
@@ -3843,15 +3873,13 @@
           priceStrike: 'Rp 10,9jt',
           setupIdr: 5_900_000,
           setupAside: 'biaya setup sekali bayar · diskon launch',
-          persona: 'Untuk eksekutif, founder, dan profesional yang menjalankan hidup di banyak platform sekaligus.',
+          persona: 'Buat eksekutif yang ngatur hidup di banyak platform.',
           outcomes: [
-            '10 fine-tuned agent: 5 Pro agents + Trade Pro · Macro Simulation · Business Enabler · Video Creator · Social Expert',
-            '4 web app pribadi (Workout & Diet, Finance Tracking, Task Review, Project Manager) — dikontrol via chat',
-            'VPS dedicated 24/7 + Always-On hosting termasuk',
-            '10.000 iteration agent training per bulan',
-            '1.000–1.500 interaction per bulan',
-            '24/7 dedicated support team + onboarding privat',
-            'Custom integration sesuai kebutuhan kamu',
+            '10 agent: Pro 5 + Trade, Macro, Business, Video, Social',
+            '4 web app + custom integration',
+            'VPS dedicated 24/7',
+            '1.000–1.500 interaction/bulan',
+            '24/7 dedicated support + onboarding privat',
           ],
           apps: ['Apple Health', 'Stripe', 'GitHub', 'Notion', 'Linear'],
           appsTotal: 55,
