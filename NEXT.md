@@ -1,7 +1,19 @@
 # NEXT.md — Task queue (kerjain urut)
 
-**Updated:** 2026-04-30 (post-merge liren-stand → weuseai.agent monorepo)
+**Updated:** 2026-05-06 (onboarding spec approved, Day 1 in flight)
 **Target launch:** 2 minggu setelah Day 4-5 end-to-end provisioning verified
+
+## Phase 2C revisit list (don't build now)
+
+- **Onboarding page polling cadence (3s).** Approved per founder
+  2026-05-06 in `docs/plans/2026-05-06-onboarding-page-spec.md`.
+  Revisit if Supabase REST quota or per-customer minute-spend gets
+  noisy at scale. At 3s × ~30 min worst-case wait that's ~600 reads
+  per customer who pairs slowly. Switch to a websocket / realtime
+  subscription on `customers` for the same UX at near-zero cost
+  if/when it bites.
+- **Pairing code lifetime (30 min).** If expiry-out rate climbs,
+  bump to 60 min in Phase 2B.
 
 ---
 
