@@ -41,3 +41,11 @@ verify_jwt = false
 
 [functions.telegram-bot-webhook]
 verify_jwt = false
+
+# rotate-pairing-code → called from onboarding.html in the browser before
+# any server-side state has been confirmed (no Supabase Auth JWT at this
+# point in the flow). Authz is "knowledge of cid + paid subscription
+# verified server-side". Replaces the unsafe anon column-grant approach
+# from 20260506140000 (see 20260506150000_revoke_pairing_anon_update.sql).
+[functions.rotate-pairing-code]
+verify_jwt = false

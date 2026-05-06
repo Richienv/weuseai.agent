@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Lengkapi profil agent — weuseai.agent</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <meta name="theme-color" content="#000000" />
+
+  <!-- Same font load as welcome.html / landing for visual continuity -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Instrument+Serif&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    :root {
+      --signal-red: #E5322D;
+      --signal-red-soft: rgba(229, 50, 45, 0.18);
+      --signal-red-glow: rgba(229, 50, 45, 0.45);
+      --signal-red-line: rgba(229, 50, 45, 0.6);
+      --bg: #000;
+      --ink: #fff;
+      --muted: rgba(255,255,255,0.55);
+      --line: rgba(255,255,255,0.12);
+      --card-line: rgba(255,255,255,0.10);
+      --card-bg: rgba(255,255,255,0.02);
+      --field-bg: rgba(255,255,255,0.03);
+      --field-bg-readonly: rgba(255,255,255,0.015);
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      background: var(--bg);
+      color: var(--ink);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      margin: 0;
+      min-height: 100vh;
+    }
+    .serif { font-family: 'Instrument Serif', serif; font-weight: 400; }
+    .mono  { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace; }
+
+    .liquid-glass {
+      background: var(--card-bg);
+      border: 1px solid var(--card-line);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+
+    /* Subtle red halftone strip at top of each step card —
+       same brand cue as checkout.html, restrained so the form
+       still reads professional. */
+    .halftone-strip {
+      position: absolute; top: 0; left: 0; right: 0; height: 90px;
+      pointer-events: none;
+      background-image: radial-gradient(rgba(229,50,45,0.55) 1px, transparent 1.6px);
+      background-size: 8px 8px;
+      mask-image: linear-gradient(to bottom, #000 0%, transparent 100%);
+      -webkit-mask-image: linear-gradient(to bottom, #000 0%, transparent 100%);
+      opacity: 0.45;
+    }
+
+    /* Step indicator dots */
+    .step-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: rgba(255,255,255,0.18);
+      transition: background 220ms ease, transform 220ms ease;
+      display: inline-block;
+    }
+    .step-dot.is-current { background: var(--signal-red); transform: scale(1.4); }
+    .step-dot.is-done { background: rgba(255,255,255,0.55); }
+
+    /* Form fields */
+    .field-input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      font-size: 14px;
+      color: var(--ink);
+      background: var(--field-bg);
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+      font-family: inherit;
+      outline: none;
+    }
+    .field-input::placeholder { color: rgba(255,255,255,0.32); }
+    .field-input:focus {
+      border-color: var(--signal-red);
+      box-shadow: 0 0 0 1px var(--signal-red), 0 1px 3px rgba(229,50,45,0.20);
+    }
+    .field-input.readonly {
+      background: var(--field-bg-readonly);
+      color: rgba(255,255,255,0.65);
+      cursor: default;
+    }
+    .field-input.readonly:focus {
+      border-color: var(--line);
+      box-shadow: none;
+    }
+    .field-error {
+      color: var(--signal-red);
+      font-size: 12px;
+      margin-top: 6px;
+      min-height: 16px;
+    }
+
+    /* Primary CTA (red, glowing) */
+    .btn-primary {
+      width: 100%;
+      padding: 12px 16px;
+      border-radius: 999px;
+      background: var(--signal-red);
+      color: #fff;
+      font-weight: 500;
+      font-size: 14px;
+      border: 1px solid var(--signal-red);
+      cursor: pointer;
+      transition: background 0.15s ease, transform 0.05s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+      box-shadow: 0 8px 24px -8px rgba(229,50,45,0.55), 0 0 0 1px rgba(229,50,45,0.4);
+    }
+    .btn-primary:hover { background: #c92723; box-shadow: 0 12px 32px -8px rgba(229,50,45,0.7), 0 0 0 1px rgba(229,50,45,0.55); }
+    .btn-primary:active { transform: translateY(1px); }
+    .btn-primary:disabled, .btn-primary[aria-disabled="true"] {
+      background: rgba(255,255,255,0.06);
+      color: rgba(255,255,255,0.45);
+      border-color: rgba(255,255,255,0.10);
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    /* Secondary CTA (glass, outlined) */
+    .btn-secondary {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 16px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.04);
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 500;
+      border: 1px solid rgba(255,255,255,0.18);
+      text-decoration: none;
+      transition: background 0.15s ease, border-color 0.15s ease;
+      cursor: pointer;
+    }
+    .btn-secondary:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.30); }
+
+    /* Pairing code display — six oversized serif numerals */
+    .pair-code {
+      display: flex; gap: 6px; justify-content: center;
+      margin: 8px 0 4px;
+    }
+    .pair-code-cell {
+      font-family: 'Instrument Serif', serif;
+      font-size: 44px; line-height: 1; letter-spacing: -0.02em;
+      width: 44px; height: 56px;
+      display: grid; place-items: center;
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 8px;
+      background: rgba(255,255,255,0.025);
+      color: var(--ink);
+    }
+    @media (min-width: 480px) {
+      .pair-code-cell { font-size: 56px; width: 54px; height: 70px; }
+      .pair-code { gap: 8px; }
+    }
+
+    /* Pulsing dot for "Menunggu pasangan..." */
+    @keyframes pulseDot {
+      0%, 100% { opacity: 0.35; transform: scale(0.85); }
+      50%      { opacity: 1;    transform: scale(1); }
+    }
+    .pulse-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--signal-red);
+      animation: pulseDot 1.4s ease-in-out infinite;
+      display: inline-block;
+    }
+
+    /* Preset chip row for Step 3 */
+    .chip {
+      display: inline-flex; align-items: center;
+      padding: 6px 11px; border-radius: 999px;
+      font-size: 12px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.10);
+      color: rgba(255,255,255,0.75);
+      cursor: pointer;
+      transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+      user-select: none;
+    }
+    .chip:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.18); color: var(--ink); }
+    .chip:active { transform: translateY(1px); }
+
+    /* Step transitions */
+    @keyframes stepFadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+    .step-panel { animation: stepFadeIn 280ms ease both; }
+    .step-panel[hidden] { display: none; }
+
+    .focus-ring:focus-visible {
+      outline: 2px solid var(--signal-red);
+      outline-offset: 3px;
+    }
+
+    /* Submit overlay */
+    .submit-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.72);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      display: grid; place-items: center;
+      z-index: 100;
+    }
+    .submit-overlay[hidden] { display: none; }
+
+    /* Spinner */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      width: 36px; height: 36px;
+      border: 2px solid rgba(255,255,255,0.18);
+      border-top-color: var(--signal-red);
+      border-radius: 50%;
+      animation: spin 800ms linear infinite;
+    }
+  </style>
+</head>
+<body>
+  <main class="max-w-xl mx-auto px-5 md:px-6 py-10 md:py-16">
+
+    <!-- ─── Header: step indicator ─── -->
+    <header class="flex items-center justify-between mb-6 md:mb-8">
+      <div class="flex items-center gap-2" aria-hidden="true">
+        <span class="step-dot" data-step-dot="1"></span>
+        <span class="step-dot" data-step-dot="2"></span>
+        <span class="step-dot" data-step-dot="3"></span>
+      </div>
+      <span id="step-label" class="text-xs text-white/55 mono">Step 1 dari 3</span>
+    </header>
+
+    <!-- ─── STEP 1: Konfirmasi data ─── -->
+    <section
+      class="step-panel liquid-glass rounded-2xl p-6 md:p-8 relative overflow-hidden"
+      data-step="1"
+      aria-labelledby="step1-title"
+    >
+      <div class="halftone-strip"></div>
+      <div class="relative">
+        <h1 id="step1-title" class="serif text-3xl md:text-4xl text-white leading-[1.05]" style="letter-spacing: -0.04em;">
+          Konfirmasi data kamu.
+        </h1>
+        <p class="mt-3 text-sm md:text-[15px] text-white/55 leading-relaxed">
+          Data ini dipakai buat tagihan + kontak support kalau setup butuh bantuan.
+        </p>
+
+        <form id="step1-form" class="mt-7 space-y-4" novalidate>
+          <div>
+            <label class="block text-xs text-white/65 mb-1.5" for="f-name">Nama</label>
+            <input id="f-name" class="field-input readonly" readonly aria-readonly="true" value="" />
+          </div>
+          <div>
+            <label class="block text-xs text-white/65 mb-1.5" for="f-email">Email</label>
+            <input id="f-email" class="field-input readonly" readonly aria-readonly="true" value="" type="email" />
+          </div>
+          <div>
+            <label class="block text-xs text-white/65 mb-1.5" for="f-whatsapp">Nomor WhatsApp</label>
+            <input
+              id="f-whatsapp"
+              class="field-input focus-ring"
+              type="tel"
+              inputmode="tel"
+              autocomplete="tel"
+              placeholder="0812 3456 7890"
+              required
+            />
+            <p id="f-whatsapp-help" class="text-xs text-white/45 mt-1.5 leading-relaxed">
+              Dipakai untuk concierge support, bukan promo. Format: 08xxx atau +62xxx.
+            </p>
+            <p id="f-whatsapp-error" class="field-error" aria-live="polite"></p>
+          </div>
+          <button id="step1-cta" type="submit" class="btn-primary focus-ring mt-2">
+            Lanjut →
+          </button>
+        </form>
+
+        <p class="text-xs italic text-white/40 mt-5 leading-relaxed">
+          Butuh ganti nama atau email?
+          <a
+            href="https://wa.me/6282154902561?text=Halo%20tim%2C%20saya%20mau%20ganti%20data%20di%20checkout."
+            target="_blank"
+            rel="noopener noreferrer"
+            class="text-white/65 hover:text-white underline-offset-2 hover:underline focus-ring"
+          >WhatsApp tim kami: +62 821-5490-2561</a>
+        </p>
+      </div>
+    </section>
+
+    <!-- ─── STEP 2: Pasangkan Telegram ─── -->
+    <section
+      class="step-panel liquid-glass rounded-2xl p-6 md:p-8 relative overflow-hidden"
+      data-step="2"
+      hidden
+      aria-labelledby="step2-title"
+    >
+      <div class="halftone-strip"></div>
+      <div class="relative">
+        <h1 id="step2-title" class="serif text-3xl md:text-4xl text-white leading-[1.05]" style="letter-spacing: -0.04em;">
+          Pasangkan Telegram kamu.
+        </h1>
+        <p class="mt-3 text-sm md:text-[15px] text-white/55 leading-relaxed">
+          Agent kamu kirim notifikasi lewat <span class="mono text-white/85">@weuseaibot</span>.
+          Tiga langkah, kira-kira 30 detik.
+        </p>
+
+        <div class="mt-7 rounded-xl border border-white/[0.08] bg-white/[0.02] p-5 text-center">
+          <div class="text-[11px] mono uppercase tracking-[0.18em] text-white/55 mb-2">
+            Kode pasangan kamu
+          </div>
+          <div id="pair-code" class="pair-code" aria-label="Kode pasangan 6 digit" role="img"></div>
+          <div id="pair-expiry" class="text-xs mono text-white/45 mt-3">
+            Kode kadaluarsa dalam: <span data-mmss>—:—</span>
+          </div>
+        </div>
+
+        <ol class="mt-6 space-y-4 list-none p-0 m-0">
+          <li class="flex items-start gap-3">
+            <span class="mono text-xs text-white/40 mt-0.5 w-6">01</span>
+            <div class="flex-1">
+              <div class="text-sm text-white/85">Buka Telegram, cari <span class="mono">@weuseaibot</span></div>
+              <a
+                href="https://t.me/weuseaibot"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="btn-secondary focus-ring mt-2.5"
+                data-tg-deeplink
+              >
+                Buka Telegram
+                <span aria-hidden="true">→</span>
+              </a>
+            </div>
+          </li>
+          <li class="flex items-start gap-3">
+            <span class="mono text-xs text-white/40 mt-0.5 w-6">02</span>
+            <div class="flex-1">
+              <div class="text-sm text-white/85">
+                Kirim pesan: <span class="mono text-white">/pair <span data-pair-inline>—</span></span>
+              </div>
+            </div>
+          </li>
+          <li class="flex items-start gap-3">
+            <span class="mono text-xs text-white/40 mt-0.5 w-6">03</span>
+            <div class="flex-1">
+              <div class="text-sm text-white/85">Tunggu konfirmasi di sini (max 30 detik)</div>
+            </div>
+          </li>
+        </ol>
+
+        <div
+          id="pair-status"
+          class="mt-6 rounded-xl border border-white/[0.08] bg-white/[0.02] p-4 flex items-center gap-3"
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          <span class="pulse-dot" aria-hidden="true"></span>
+          <span class="text-sm text-white/85">Menunggu pasangan...</span>
+        </div>
+
+        <p class="text-xs italic text-white/40 mt-5 leading-relaxed">
+          Belum punya Telegram?
+          <a
+            href="https://telegram.org/"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="text-white/65 hover:text-white underline-offset-2 hover:underline focus-ring"
+          >Download di telegram.org →</a>
+        </p>
+      </div>
+    </section>
+
+    <!-- ─── STEP 3: Cara kamu pakai agent ─── -->
+    <section
+      class="step-panel liquid-glass rounded-2xl p-6 md:p-8 relative overflow-hidden"
+      data-step="3"
+      hidden
+      aria-labelledby="step3-title"
+    >
+      <div class="halftone-strip"></div>
+      <div class="relative">
+        <h1 id="step3-title" class="serif text-3xl md:text-4xl text-white leading-[1.05]" style="letter-spacing: -0.04em;">
+          Cara kamu pakai agent.
+        </h1>
+        <p class="mt-3 text-sm md:text-[15px] text-white/55 leading-relaxed">
+          Tulis bebas. Yang kamu tulis di sini jadi "kontrak kepribadian" agent kamu.
+        </p>
+
+        <form id="step3-form" class="mt-7" novalidate>
+          <label class="block text-xs text-white/65 mb-1.5" for="f-expectations">
+            Apa yang paling kamu butuhin dari agent kamu?
+          </label>
+          <textarea
+            id="f-expectations"
+            class="field-input focus-ring leading-relaxed"
+            rows="6"
+            maxlength="600"
+            placeholder="Contoh: Bantu briefing pagi, ringkas berita, follow up klien via WhatsApp."
+          ></textarea>
+          <div class="flex items-center justify-between mt-1.5">
+            <p id="f-expectations-error" class="field-error" aria-live="polite"></p>
+            <p id="char-counter" class="text-xs mono text-white/45 whitespace-nowrap">
+              <span data-char-count>0</span> / 600 karakter
+            </p>
+          </div>
+
+          <div class="mt-5">
+            <div class="text-[11px] mono uppercase tracking-[0.18em] text-white/55 mb-2">
+              Atau pilih dari preset
+            </div>
+            <div class="flex flex-wrap gap-2" role="group" aria-label="Preset cara pakai agent">
+              <button type="button" class="chip focus-ring" data-preset="Briefing pagi">Briefing pagi</button>
+              <button type="button" class="chip focus-ring" data-preset="Email triage">Email triage</button>
+              <button type="button" class="chip focus-ring" data-preset="Content drafting">Content drafting</button>
+              <button type="button" class="chip focus-ring" data-preset="Riset & dokumen">Riset &amp; dokumen</button>
+              <button type="button" class="chip focus-ring" data-preset="Trading analysis">Trading analysis</button>
+              <button type="button" class="chip focus-ring" data-preset="Bantuan tugas">Bantuan tugas</button>
+            </div>
+          </div>
+
+          <button id="step3-cta" type="submit" class="btn-primary focus-ring mt-7" aria-disabled="true" disabled>
+            Lengkapi cara pakai agent
+          </button>
+          <p class="text-xs italic text-white/40 mt-3 leading-relaxed text-center">
+            Setelah klik, agent kamu mulai dibangun. Proses biasanya 5–7 menit.
+          </p>
+        </form>
+      </div>
+    </section>
+
+    <!-- ─── STEP E: Invalid cid ─── -->
+    <section
+      class="step-panel liquid-glass rounded-2xl p-6 md:p-8 relative overflow-hidden"
+      data-step="E"
+      hidden
+      aria-labelledby="stepE-title"
+    >
+      <div class="halftone-strip"></div>
+      <div class="relative">
+        <h1 id="stepE-title" class="serif text-3xl md:text-4xl text-white leading-[1.05]" style="letter-spacing: -0.04em;">
+          Halaman ini hanya untuk pelanggan yang sudah bayar.
+        </h1>
+        <p class="mt-3 text-sm md:text-[15px] text-white/55 leading-relaxed">
+          Mungkin kamu salah link?
+        </p>
+        <a href="/" class="btn-secondary focus-ring mt-5">
+          Kembali ke beranda
+          <span aria-hidden="true">→</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- ─── Footer ─── -->
+    <footer class="mt-10 md:mt-14 pt-6 border-t border-white/[0.08] text-xs text-white/45 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+      <div>
+        Butuh bantuan?
+        <a
+          id="wa-link"
+          href="https://wa.me/6282154902561?text=Halo%20tim%20weuseai%2C%20saya%20butuh%20bantuan%20dengan%20onboarding%20agent."
+          target="_blank"
+          rel="noopener noreferrer"
+          class="text-white/75 hover:text-white underline-offset-2 hover:underline focus-ring"
+        >WhatsApp tim kami: +62 821-5490-2561</a>
+      </div>
+      <div class="flex items-center gap-4">
+        <a href="/#faq" class="text-white/55 hover:text-white no-underline focus-ring">FAQ</a>
+        <a href="/" class="text-white/55 hover:text-white no-underline focus-ring">weuseai.agent</a>
+      </div>
+    </footer>
+  </main>
+
+  <!-- ─── Submit overlay (Step 3 → server) ─── -->
+  <div id="submit-overlay" class="submit-overlay" hidden>
+    <div class="text-center">
+      <div class="spinner mx-auto" aria-hidden="true"></div>
+      <p id="submit-text" class="mt-4 text-sm text-white/85">Menyiapkan agent kamu...</p>
+      <p id="submit-error" class="mt-3 text-xs text-white/55" hidden></p>
+      <a
+        id="submit-error-cta"
+        href="https://wa.me/6282154902561?text=Halo%20tim%2C%20onboarding%20saya%20gagal."
+        target="_blank"
+        rel="noopener noreferrer"
+        class="btn-secondary focus-ring mt-4"
+        hidden
+      >
+        Hubungi tim
+        <span aria-hidden="true">→</span>
+      </a>
+    </div>
+  </div>
+
+  <script>
+    // ═════════════════════════════════════════════════════════════
+    // onboarding.html — vanilla JS, no framework, no build step.
+    // Spec: docs/plans/2026-05-06-onboarding-page-spec.md
+    // ═════════════════════════════════════════════════════════════
+
+    // Public-by-design Supabase anon key + URL. Same as welcome.html.
+    // Polling reads gated by RLS policy
+    // "anon can read own customer onboarding state" (migration 20260506000000).
+    // Pairing-code rotation goes through the rotate-pairing-code Edge
+    // Function (service-role) — anon cannot UPDATE customers directly.
+    const SUPABASE_URL = 'https://gtjgsligllbjcisiyrah.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd0amdzbGlnbGxiamNpc2l5cmFoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0Njc2NjUsImV4cCI6MjA5MzA0MzY2NX0.krPAvB3kyxcqsBS5dyDahFMqCB_4MZKaz6FEB0RfjtY';
+
+    const PAIR_POLL_MS  = 3_000;       // founder-locked: 3s
+    const CODE_LIFETIME = 30 * 60_000; // founder-locked: 30 min
+
+    // ─── URL ────────────────────────────────────────────────────
+    const params = new URLSearchParams(location.search);
+    const cid    = params.get('cid');
+
+    // ─── Element refs ───────────────────────────────────────────
+    const $stepLabel  = document.getElementById('step-label');
+    const $stepDots   = document.querySelectorAll('[data-step-dot]');
+    const $stepPanels = document.querySelectorAll('.step-panel');
+
+    const $name      = document.getElementById('f-name');
+    const $email     = document.getElementById('f-email');
+    const $whatsapp  = document.getElementById('f-whatsapp');
+    const $whatsappErr = document.getElementById('f-whatsapp-error');
+    const $step1Form = document.getElementById('step1-form');
+
+    const $pairCode    = document.getElementById('pair-code');
+    const $pairInline  = document.querySelector('[data-pair-inline]');
+    const $pairExpiry  = document.getElementById('pair-expiry');
+    const $pairStatus  = document.getElementById('pair-status');
+
+    const $expectations    = document.getElementById('f-expectations');
+    const $expectationsErr = document.getElementById('f-expectations-error');
+    const $charCount       = document.querySelector('[data-char-count]');
+    const $step3Form       = document.getElementById('step3-form');
+    const $step3Cta        = document.getElementById('step3-cta');
+    const $chips           = document.querySelectorAll('.chip');
+
+    const $overlay        = document.getElementById('submit-overlay');
+    const $submitText     = document.getElementById('submit-text');
+    const $submitError    = document.getElementById('submit-error');
+    const $submitErrorCta = document.getElementById('submit-error-cta');
+
+    const $waLink = document.getElementById('wa-link');
+
+    // ─── State ──────────────────────────────────────────────────
+    let currentStep   = '1';
+    let customer      = null;          // CustomerRow from Supabase
+    let pairingCode   = null;
+    let pairingExpiry = null;          // Date
+    let expiryTimer   = null;
+    let pollTimer     = null;
+
+    // ─── Helpers ────────────────────────────────────────────────
+
+    function fetchCustomer() {
+      const url = `${SUPABASE_URL}/rest/v1/customers?id=eq.${encodeURIComponent(cid)}` +
+        `&select=id,email,display_name,whatsapp_number,telegram_chat_id,pairing_code,pairing_code_expires_at,soul_md_text`;
+      return fetch(url, {
+        headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+      }).then((r) => {
+        if (!r.ok) throw new Error(`fetchCustomer: ${r.status}`);
+        return r.json();
+      }).then((rows) => rows[0] ?? null);
+    }
+
+    /**
+     * Rotate or reuse the pairing code via the rotate-pairing-code Edge
+     * Function. Returns { code, expires_at, reused? }.
+     * Replaces direct PATCH (anon UPDATE was unsafe, see migration
+     * 20260506150000_revoke_pairing_anon_update.sql).
+     */
+    async function rotatePairingCode() {
+      const r = await fetch(`${SUPABASE_URL}/functions/v1/rotate-pairing-code`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ customer_id: cid }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        throw new Error(`rotatePairingCode: ${r.status} ${JSON.stringify(data)}`);
+      }
+      return data;
+    }
+
+    function isExpired(iso) {
+      if (!iso) return true;
+      const t = Date.parse(iso);
+      return Number.isNaN(t) || t <= Date.now();
+    }
+
+    function fmtMmss(ms) {
+      if (ms <= 0) return '0:00';
+      const total = Math.floor(ms / 1000);
+      const m = Math.floor(total / 60);
+      const s = total % 60;
+      return `${m}:${String(s).padStart(2, '0')}`;
+    }
+
+    // Indonesian numbers: 08xxx (10–13 digits) or +62xxx / 62xxx.
+    // Liberal on spaces / dashes / parens.
+    function validWhatsappFormat(s) {
+      const digits = String(s).replace(/[\s\-().]/g, '');
+      return /^(?:\+?62|0)\d{8,13}$/.test(digits);
+    }
+
+    function setStep(step) {
+      currentStep = step;
+
+      // Step indicator (only relevant for 1/2/3; on E we just hide)
+      const stepIdx = ({ '1': 1, '2': 2, '3': 3 }[step]) ?? null;
+      $stepDots.forEach((dot, i) => {
+        dot.classList.remove('is-current', 'is-done');
+        if (stepIdx == null) return;
+        if (i + 1 === stepIdx) dot.classList.add('is-current');
+        else if (i + 1 < stepIdx) dot.classList.add('is-done');
+      });
+      if (stepIdx != null) {
+        $stepLabel.textContent = `Step ${stepIdx} dari 3`;
+        $stepLabel.style.display = '';
+      } else {
+        $stepLabel.style.display = 'none';
+      }
+
+      // Show only the matching panel
+      $stepPanels.forEach((panel) => {
+        const matches = panel.dataset.step === step;
+        panel.hidden = !matches;
+      });
+
+      // Step-specific focus + behaviors
+      if (step === '1') {
+        // Defer to next tick so the panel is visible before focusing.
+        setTimeout(() => $whatsapp.focus({ preventScroll: false }), 0);
+      } else if (step === '2') {
+        startPairing();
+      } else if (step === '3') {
+        stopPolling();
+        clearInterval(expiryTimer);
+        setTimeout(() => $expectations.focus({ preventScroll: false }), 0);
+      }
+    }
+
+    // ─── STEP 1: Konfirmasi data ────────────────────────────────
+
+    function renderStep1() {
+      $name.value = customer.display_name ?? '';
+      $email.value = customer.email ?? '';
+      if (customer.whatsapp_number) $whatsapp.value = customer.whatsapp_number;
+    }
+
+    $step1Form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const wa = $whatsapp.value;
+      if (!validWhatsappFormat(wa)) {
+        $whatsappErr.textContent = 'Format nomor belum benar. Mulai dengan 08 atau +62.';
+        $whatsapp.focus();
+        return;
+      }
+      $whatsappErr.textContent = '';
+      // Persist WA in-memory + localStorage so a tab refresh after Step 1
+      // doesn't lose it (we only PATCH it server-side at final submit).
+      customer.whatsapp_number = wa.trim();
+      try { localStorage.setItem(`onboarding_wa_${cid}`, customer.whatsapp_number); } catch {}
+      // If pairing is already complete (resume case), skip straight to Step 3.
+      if (customer.telegram_chat_id) setStep('3');
+      else setStep('2');
+    });
+
+    // Clear error as soon as user starts editing
+    $whatsapp.addEventListener('input', () => {
+      if ($whatsappErr.textContent) $whatsappErr.textContent = '';
+    });
+
+    // ─── STEP 2: Pasangkan Telegram ─────────────────────────────
+
+    async function startPairing() {
+      try {
+        // Resume check: if pairing already complete, jump to Step 3.
+        const fresh = await fetchCustomer();
+        customer = { ...customer, ...fresh, whatsapp_number: customer.whatsapp_number };
+        if (customer.telegram_chat_id) {
+          setStep('3');
+          return;
+        }
+
+        // Server-side: returns existing non-expired code or rotates.
+        const data = await rotatePairingCode();
+        pairingCode = data.code;
+        pairingExpiry = new Date(data.expires_at);
+
+        renderPairingCode(pairingCode);
+        startExpiryTicker();
+        startPairingPoll();
+      } catch (err) {
+        // Friendly retry — most likely cause is a transient network blip.
+        $pairStatus.innerHTML = `
+          <span class="text-sm text-white/85">Gagal menyiapkan kode. </span>
+          <button type="button" class="btn-secondary ml-2 focus-ring" id="retry-pair">Coba lagi</button>
+        `;
+        document.getElementById('retry-pair')?.addEventListener('click', () => {
+          $pairStatus.innerHTML = `
+            <span class="pulse-dot" aria-hidden="true"></span>
+            <span class="text-sm text-white/85">Menunggu pasangan...</span>
+          `;
+          startPairing();
+        });
+      }
+    }
+
+    function renderPairingCode(code) {
+      $pairCode.innerHTML = code
+        .split('')
+        .map((d) => `<span class="pair-code-cell" aria-hidden="true">${d}</span>`)
+        .join('');
+      $pairCode.setAttribute('aria-label', `Kode pasangan ${code.split('').join(' ')}`);
+      if ($pairInline) $pairInline.textContent = code;
+    }
+
+    function startExpiryTicker() {
+      const $mmss = $pairExpiry.querySelector('[data-mmss]');
+      const tick = () => {
+        const remaining = pairingExpiry.getTime() - Date.now();
+        $mmss.textContent = fmtMmss(remaining);
+        // Soft urgency cue when ≤ 60s remain
+        if (remaining <= 60_000 && remaining > 0) {
+          $pairExpiry.style.color = 'rgba(229,50,45,0.85)';
+        } else {
+          $pairExpiry.style.color = '';
+        }
+        if (remaining <= 0) {
+          clearInterval(expiryTimer);
+          stopPolling();
+          renderExpired();
+        }
+      };
+      tick();
+      expiryTimer = setInterval(tick, 1000);
+    }
+
+    function renderExpired() {
+      $pairStatus.innerHTML = `
+        <div class="flex items-center gap-3 flex-wrap">
+          <span class="text-sm text-white/85">Kode kadaluarsa.</span>
+          <button type="button" class="btn-secondary focus-ring" id="rotate-now">Mulai ulang →</button>
+        </div>
+      `;
+      document.getElementById('rotate-now')?.addEventListener('click', () => {
+        $pairStatus.innerHTML = `
+          <span class="pulse-dot" aria-hidden="true"></span>
+          <span class="text-sm text-white/85">Menunggu pasangan...</span>
+        `;
+        startPairing();
+      });
+    }
+
+    function startPairingPoll() {
+      stopPolling();
+      const tick = async () => {
+        try {
+          const c = await fetchCustomer();
+          if (c?.telegram_chat_id) {
+            // Success!
+            customer.telegram_chat_id = c.telegram_chat_id;
+            renderPairingSuccess();
+            // Auto-advance after 600ms so the success message reads.
+            setTimeout(() => setStep('3'), 600);
+            return;
+          }
+        } catch {
+          // Network blip — keep polling silently.
+        }
+        if (currentStep === '2') pollTimer = setTimeout(tick, PAIR_POLL_MS);
+      };
+      pollTimer = setTimeout(tick, PAIR_POLL_MS);
+    }
+
+    function stopPolling() {
+      if (pollTimer) {
+        clearTimeout(pollTimer);
+        pollTimer = null;
+      }
+    }
+
+    function renderPairingSuccess() {
+      stopPolling();
+      $pairStatus.innerHTML = `
+        <span aria-hidden="true" style="color: var(--signal-red); font-size: 16px;">✓</span>
+        <span class="text-sm text-white/90">Pairing berhasil. Lanjut otomatis...</span>
+      `;
+    }
+
+    // ─── STEP 3: Cara kamu pakai agent ──────────────────────────
+
+    function updateCharCounter() {
+      const len = $expectations.value.length;
+      $charCount.textContent = String(len);
+      const enabled = $expectations.value.trim().length >= 10;
+      $step3Cta.disabled = !enabled;
+      $step3Cta.setAttribute('aria-disabled', String(!enabled));
+      $step3Cta.textContent = enabled ? 'Buat agent saya →' : 'Lengkapi cara pakai agent';
+    }
+
+    $expectations.addEventListener('input', () => {
+      if ($expectationsErr.textContent) $expectationsErr.textContent = '';
+      updateCharCounter();
+    });
+
+    $chips.forEach((chip) => {
+      chip.addEventListener('click', () => {
+        const value = chip.dataset.preset || '';
+        // Append with comma if textarea isn't empty
+        const cur = $expectations.value.trim();
+        $expectations.value = cur ? `${cur}, ${value.toLowerCase()}` : value;
+        $expectations.dispatchEvent(new Event('input'));
+        $expectations.focus();
+      });
+    });
+
+    $step3Form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const text = $expectations.value.trim();
+      if (text.length < 10) {
+        $expectationsErr.textContent = 'Tulis minimal 1 kalimat biar agent ngerti karakter kamu.';
+        return;
+      }
+      await submitOnboarding(text);
+    });
+
+    // ─── Submit handler ─────────────────────────────────────────
+
+    async function submitOnboarding(expectations_text) {
+      $overlay.hidden = false;
+      $submitError.hidden = true;
+      $submitErrorCta.hidden = true;
+      $submitText.textContent = 'Menyiapkan agent kamu...';
+
+      let r;
+      try {
+        r = await fetch(`${SUPABASE_URL}/functions/v1/complete-onboarding`, {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+          },
+          body: JSON.stringify({
+            customer_id: cid,
+            whatsapp: customer.whatsapp_number,
+            expectations_text,
+          }),
+        });
+      } catch (err) {
+        return showSubmitError('Ada kendala teknis. Coba lagi dalam 1 menit, atau hubungi tim via WhatsApp.', true);
+      }
+
+      let data = null;
+      try { data = await r.json(); } catch { /* keep null */ }
+
+      if (r.ok && data?.redirect_url) {
+        // Success → welcome.html?cid=...&job=...
+        window.location.replace(data.redirect_url);
+        return;
+      }
+
+      // Error mapping
+      if (r.status === 409 && data?.error === 'already_onboarded' && data?.redirect) {
+        // Idempotency: already onboarded — follow the redirect silently.
+        window.location.replace(data.redirect);
+        return;
+      }
+      if (r.status === 409 && data?.error === 'telegram_not_paired') {
+        // Customer somehow got here without pairing — kick back to Step 2.
+        $overlay.hidden = true;
+        setStep('2');
+        return;
+      }
+      if (r.status === 422 && data?.error === 'expectations_too_short') {
+        $overlay.hidden = true;
+        $expectationsErr.textContent = 'Tulis minimal 1 kalimat biar agent ngerti karakter kamu.';
+        return;
+      }
+      if (r.status === 422 && data?.error === 'expectations_too_long') {
+        $overlay.hidden = true;
+        $expectationsErr.textContent = 'Maksimum 600 karakter.';
+        return;
+      }
+      if (r.status === 400 && data?.error === 'invalid_input') {
+        $overlay.hidden = true;
+        $expectationsErr.textContent = 'Ada karakter yang ditolak. Tulis ulang tanpa tag/kode.';
+        return;
+      }
+      // 502 / 503 / 500 / unknown
+      showSubmitError('Ada kendala teknis. Coba lagi dalam 1 menit, atau hubungi tim via WhatsApp.', true);
+    }
+
+    function showSubmitError(msg, withCta) {
+      $submitText.textContent = 'Belum jadi.';
+      $submitError.hidden = false;
+      $submitError.textContent = msg;
+      if (withCta) $submitErrorCta.hidden = false;
+      // Reuse the spinner spot for an error state — replace spinner with a
+      // close affordance via tap outside.
+      $overlay.addEventListener('click', dismissOverlay, { once: true });
+    }
+
+    function dismissOverlay() {
+      $overlay.hidden = true;
+    }
+
+    // ─── Boot ───────────────────────────────────────────────────
+
+    async function boot() {
+      if (!cid) {
+        setStep('E');
+        return;
+      }
+      // Pre-fill WA support deep-link with cid
+      if ($waLink) {
+        $waLink.href = `https://wa.me/6282154902561?text=${encodeURIComponent(
+          `Halo tim weuseai, saya butuh bantuan dengan onboarding agent. Customer ID: ${cid}`,
+        )}`;
+      }
+
+      try {
+        customer = await fetchCustomer();
+      } catch {
+        setStep('E');
+        return;
+      }
+      if (!customer) {
+        setStep('E');
+        return;
+      }
+
+      // Restore in-flight WA from localStorage (only relevant when the
+      // server-side row doesn't have whatsapp_number yet — Step 3 submit
+      // is the moment we PATCH it). Keyed by cid so multiple checkouts
+      // on the same device don't cross-pollinate.
+      try {
+        const cached = localStorage.getItem(`onboarding_wa_${cid}`);
+        if (cached && !customer.whatsapp_number) customer.whatsapp_number = cached;
+      } catch {}
+
+      renderStep1();
+
+      // Resume rules:
+      //   - telegram_chat_id set + whatsapp known → jump to Step 3
+      //   - telegram_chat_id set + whatsapp missing → jump to Step 1
+      //     (need WA before submit; Step 1 submit will skip Step 2)
+      //   - whatsapp_number set + chat_id null → jump to Step 2
+      //   - otherwise Step 1
+      if (customer.telegram_chat_id && customer.whatsapp_number) {
+        setStep('3');
+      } else if (customer.telegram_chat_id) {
+        setStep('1');
+      } else if (customer.whatsapp_number) {
+        setStep('2');
+      } else {
+        setStep('1');
+      }
+
+      updateCharCounter();
+    }
+
+    // Stop polling if the tab is hidden; resume on visible.
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') stopPolling();
+      else if (currentStep === '2' && !pollTimer) startPairingPoll();
+    });
+
+    boot();
+  </script>
+</body>
+</html>
