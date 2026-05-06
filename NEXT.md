@@ -19,7 +19,7 @@
 
 ## Current state
 
-- Landing live di `weuseai-agent.vercel.app` (root HTML files: `liren-v3.html`, `checkout.html`, `use-cases.html`)
+- Landing live di `weuseai-agent.vercel.app` (root HTML files: `index.html`, `checkout.html`, `use-cases.html`)
 - `services/*` punya 5 ports: provisioning, proxy, hermes, payment, test-idcloudhost
 - `tests/end-to-end-mock.spec.ts` = 3 integration tests passing dengan mock adapters
 - Supabase project created, schema apply pending

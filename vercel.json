@@ -1,5 +1,5 @@
 {
-  "rewrites": [
-    { "source": "/", "destination": "/liren-v3.html" }
+  "redirects": [
+    { "source": "/liren-v3.html", "destination": "/", "permanent": true }
   ]
 }

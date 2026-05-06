@@ -12,9 +12,9 @@ export type PlanCatalog = Record<
 // Business Model v1.1. Front-end PLANS object must mirror these numbers
 // (display only; charge amount is recomputed here per request).
 export const PLANS: PlanCatalog = {
-  starter: { setupIdr: 299_000, setupOldIdr: 588_000, displayName: 'Starter' },
-  pro: { setupIdr: 1_200_000, setupOldIdr: 3_500_000, displayName: 'Pro' },
-  studio: { setupIdr: 4_900_000, setupOldIdr: 9_900_000, displayName: 'Studio' },
+  starter: { setupIdr: 399_000, setupOldIdr: 699_000, displayName: 'Starter' },
+  pro: { setupIdr: 1_290_000, setupOldIdr: 2_500_000, displayName: 'Pro' },
+  studio: { setupIdr: 5_900_000, setupOldIdr: 10_900_000, displayName: 'Studio' },
 }
 
 export const HOSTING_MONTHLY_IDR = 99_000
