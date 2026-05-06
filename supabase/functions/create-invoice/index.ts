@@ -149,5 +149,5 @@ Deno.serve(async (req) => {
     successRedirectBase: `${PUBLIC_BASE}/welcome`,
     failureRedirectBase: `${PUBLIC_BASE}/checkout.html`,
   })
-  return withCors(res)
+  return withCors(res, req)
 })

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Checkout — weuseai.agent</title>
   <meta name="description" content="Secure checkout for weuseai.agent. One-time setup, lifetime use.">
-  <meta name="theme-color" content="#ffffff">
+  <meta name="theme-color" content="#0a0a0a">
   <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
   <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
   <link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png">
@@ -18,24 +18,40 @@
 
   <style>
     :root {
-      --bg-page: #ffffff;
-      --bg-summary: #f6f9fc;
-      --border: #e6e6e6;
-      --text: #1a1f36;
-      --text-muted: #6b7c93;
-      --text-subtle: #8898aa;
-      --accent: #635bff;
-      --accent-hover: #5347f5;
-      --field-bg: #ffffff;
-      --field-border: #e0e0e0;
-      --field-border-focus: #635bff;
-      --field-shadow: 0 1px 1px rgba(0,0,0,0.03);
-      --field-shadow-focus: 0 0 0 1px #635bff, 0 1px 3px rgba(99,91,255,0.18);
-      --discount: #16a34a;
+      --bg-page: #0a0a0a;
+      --bg-summary: #0e0e0e;
+      --bg-elevated: #141414;
+      --border: rgba(255,255,255,0.08);
+      --border-strong: rgba(255,255,255,0.14);
+      --text: #f5f5f5;
+      --text-muted: rgba(255,255,255,0.62);
+      --text-subtle: rgba(255,255,255,0.40);
+      --accent: #E5322D;
+      --accent-hover: #c92723;
+      --accent-soft: rgba(229,50,45,0.10);
+      --field-bg: rgba(255,255,255,0.03);
+      --field-border: rgba(255,255,255,0.10);
+      --field-border-focus: #E5322D;
+      --field-shadow: 0 1px 1px rgba(0,0,0,0.20);
+      --field-shadow-focus: 0 0 0 1px #E5322D, 0 1px 3px rgba(229,50,45,0.25);
+      --discount: #4ade80;
     }
     html, body { background: var(--bg-page); color: var(--text); font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; -webkit-font-smoothing: antialiased; }
     body { margin: 0; }
     .serif { font-family: 'Instrument Serif', serif; }
+
+    /* Subtle red halftone accent at top of summary pane — brand cue, but
+       restrained so checkout still feels trustworthy/professional. */
+    .summary-pane::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 120px;
+      pointer-events: none;
+      background-image: radial-gradient(rgba(229,50,45,0.55) 1px, transparent 1.6px);
+      background-size: 8px 8px;
+      mask-image: linear-gradient(to bottom, #000 0%, transparent 100%);
+      -webkit-mask-image: linear-gradient(to bottom, #000 0%, transparent 100%);
+      opacity: 0.55;
+    }
 
     /* Page split */
     .checkout-shell { display: grid; grid-template-columns: 1fr; min-height: 100vh; }
@@ -46,6 +62,7 @@
       background: var(--bg-summary);
       padding: 32px 24px 56px;
       position: relative;
+      overflow: hidden;
     }
     @media (min-width: 900px) {
       .summary-pane {
@@ -76,8 +93,9 @@
     .brand-row { display: flex; align-items: center; gap: 10px; }
     .brand-logo {
       width: 32px; height: 32px; border-radius: 8px;
-      background: #0a0a0a; color: #fff; display: grid; place-items: center;
+      background: #E5322D; color: #fff; display: grid; place-items: center;
       font-family: 'Instrument Serif', serif; font-size: 18px; line-height: 1;
+      box-shadow: 0 0 0 1px rgba(229,50,45,0.4), 0 6px 18px -8px rgba(229,50,45,0.6);
     }
     .brand-name { font-weight: 600; font-size: 14px; color: var(--text); letter-spacing: -0.01em; }
 
@@ -93,10 +111,11 @@
     .line-item:first-of-type { border-top: 1px solid var(--border); }
     .li-thumb {
       width: 44px; height: 44px; border-radius: 10px;
-      background: linear-gradient(135deg, #1a1f36 0%, #2c3450 100%);
+      background: linear-gradient(135deg, #2a0808 0%, #4a1414 100%);
       color: #fff; display: grid; place-items: center;
       font-family: 'Instrument Serif', serif; font-size: 22px;
       flex-shrink: 0;
+      border: 1px solid rgba(229,50,45,0.25);
     }
     .li-body { flex: 1; min-width: 0; }
     .li-title { font-weight: 500; font-size: 14px; color: var(--text); }
@@ -117,8 +136,8 @@
       font-size: 13px; color: var(--text-muted); cursor: pointer;
       transition: background 0.15s ease, border-color 0.15s ease;
     }
-    .promo:hover { background: #fff; border-color: #c8c8c8; color: var(--text); }
-    .promo .plus { width: 18px; height: 18px; border-radius: 4px; background: #e6e6e6; display: grid; place-items: center; color: var(--text-muted); font-size: 14px; line-height: 1; }
+    .promo:hover { background: var(--bg-elevated); border-color: var(--border-strong); color: var(--text); }
+    .promo .plus { width: 18px; height: 18px; border-radius: 4px; background: rgba(255,255,255,0.08); display: grid; place-items: center; color: var(--text-muted); font-size: 14px; line-height: 1; }
 
     /* Form */
     .form-title { font-size: 13px; font-weight: 600; color: var(--text); letter-spacing: 0.02em; margin-bottom: 10px; text-transform: uppercase; }
@@ -146,7 +165,7 @@
     .card-group {
       border: 1px solid var(--field-border);
       border-radius: 6px;
-      background: #fff;
+      background: var(--field-bg);
       box-shadow: var(--field-shadow);
       transition: border-color 0.15s ease, box-shadow 0.15s ease;
     }
@@ -191,10 +210,11 @@
       font-size: 15px;
       border: none;
       cursor: pointer;
-      transition: background 0.15s ease, transform 0.05s ease;
+      transition: background 0.15s ease, transform 0.05s ease, box-shadow 0.15s ease;
       letter-spacing: -0.005em;
+      box-shadow: 0 8px 24px -8px rgba(229,50,45,0.65), 0 0 0 1px rgba(229,50,45,0.5);
     }
-    .pay-btn:hover { background: var(--accent-hover); }
+    .pay-btn:hover { background: var(--accent-hover); box-shadow: 0 12px 32px -8px rgba(229,50,45,0.75), 0 0 0 1px rgba(229,50,45,0.6); }
     .pay-btn:active { transform: translateY(1px); }
     .pay-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
@@ -209,7 +229,7 @@
     /* Mobile order summary collapse */
     .mobile-summary-toggle {
       display: flex; align-items: center; justify-content: space-between;
-      padding: 14px 16px; background: #fff; border: 1px solid var(--border); border-radius: 8px;
+      padding: 14px 16px; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 8px;
       font-size: 14px; cursor: pointer;
     }
     @media (min-width: 900px) {
@@ -226,19 +246,19 @@
       padding: 12px 14px;
       border: 1px solid var(--field-border);
       border-radius: 8px;
-      background: #fff;
+      background: var(--field-bg);
       cursor: pointer;
       transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
       position: relative;
     }
-    .method:hover { border-color: #c8c8c8; }
+    .method:hover { border-color: var(--border-strong); }
     .method input[type="radio"] {
       position: absolute; opacity: 0; pointer-events: none;
     }
     .method.is-selected {
       border-color: var(--accent);
-      box-shadow: 0 0 0 1px var(--accent), 0 1px 3px rgba(99,91,255,0.12);
-      background: #fbfaff;
+      box-shadow: 0 0 0 1px var(--accent), 0 1px 3px rgba(229,50,45,0.20);
+      background: rgba(229,50,45,0.06);
     }
     .method-icon {
       width: 36px; height: 24px; border-radius: 4px;
@@ -264,15 +284,15 @@
       display: inline-block; margin-left: 6px;
       font-size: 9.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
       color: var(--discount); padding: 2px 5px; border-radius: 3px;
-      background: rgba(22,163,74,0.10);
+      background: rgba(74,222,128,0.10);
     }
 
     .method-details {
       margin-top: 14px;
       padding: 14px;
-      border: 1px dashed #e0e0e0;
+      border: 1px dashed var(--field-border);
       border-radius: 8px;
-      background: #fafbfc;
+      background: var(--bg-elevated);
       font-size: 13px;
       color: var(--text-muted);
       line-height: 1.5;
@@ -284,7 +304,7 @@
       display: inline-block;
       margin-left: 4px;
       padding: 1px 5px; border-radius: 3px;
-      background: #eef0f3; color: var(--text-muted);
+      background: rgba(255,255,255,0.06); color: var(--text-muted);
       font-size: 10.5px; letter-spacing: 0.02em;
     }
     .fee-explainer {
@@ -300,20 +320,20 @@
       padding: 12px 14px;
       border: 1px solid var(--field-border);
       border-radius: 8px;
-      background: #fff;
+      background: var(--field-bg);
       cursor: pointer;
       transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
     }
-    .ao-toggle:hover { border-color: #c8c8c8; }
+    .ao-toggle:hover { border-color: var(--border-strong); }
     .ao-toggle.is-on {
       border-color: var(--accent);
-      background: #fbfaff;
-      box-shadow: 0 0 0 1px var(--accent), 0 1px 3px rgba(99,91,255,0.12);
+      background: rgba(229,50,45,0.06);
+      box-shadow: 0 0 0 1px var(--accent), 0 1px 3px rgba(229,50,45,0.20);
     }
     .ao-toggle input { position: absolute; opacity: 0; pointer-events: none; }
     .ao-checkbox {
       width: 18px; height: 18px; border-radius: 5px;
-      border: 1.5px solid #c8c8c8;
+      border: 1.5px solid var(--border-strong);
       display: grid; place-items: center;
       transition: border-color 0.18s ease, background 0.18s ease;
     }
@@ -331,7 +351,8 @@
       margin-top: 12px;
       padding: 10px 12px;
       border-radius: 6px;
-      background: #f0f4f8;
+      background: var(--bg-elevated);
+      border: 1px solid var(--field-border);
       font-size: 12px; line-height: 1.5;
       color: var(--text-muted);
       display: flex; flex-direction: column; gap: 2px;
@@ -349,7 +370,7 @@
     <aside class="summary-pane">
       <div class="summary-inner">
         <div class="brand-row">
-          <a href="liren-v3.html" class="pay-back" aria-label="Back">
+          <a href="/" class="pay-back" aria-label="Back">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
           </a>
           <span class="brand-logo">w</span>
@@ -357,7 +378,7 @@
         </div>
 
         <div class="pay-label" id="payLabel">Bayar ke weuseai.agent</div>
-        <div class="pay-amount" id="payAmount">Rp 1.308.093</div>
+        <div class="pay-amount" id="payAmount">Rp 1.398.723</div>
         <div class="pay-subline" id="paySub">Setup + bulan pertama hosting · Pro</div>
 
         <div class="line-item">
@@ -367,8 +388,8 @@
             <div class="li-sub" id="planSub">Setup sekali bayar — engineering work yang udah kami lakukan untuk kamu.</div>
           </div>
           <div class="li-price">
-            <span class="li-old" id="planOld">Rp 3.500.000</span>
-            <span id="planPrice">Rp 1.200.000</span>
+            <span class="li-old" id="planOld">Rp 2.500.000</span>
+            <span id="planPrice">Rp 1.290.000</span>
           </div>
         </div>
 
@@ -491,7 +512,7 @@
             <input class="field-input" type="text" id="postal" placeholder="Postal code" autocomplete="postal-code" style="margin-top:10px;">
           </div>
 
-          <button class="pay-btn" type="submit" id="payBtn">Bayar Sekarang · <span id="payBtnAmount">Rp 1.208.400</span></button>
+          <button class="pay-btn" type="submit" id="payBtn">Bayar Sekarang · <span id="payBtnAmount">Rp 1.398.723</span></button>
 
           <p style="font-size: 12px; color: var(--text-muted); margin: 10px 0 0; text-align: center; line-height: 1.5;">
             Bayar via QRIS, GoPay, OVO, DANA, atau transfer di halaman Xendit.
@@ -523,24 +544,24 @@
         thumb: 'S',
         title: 'Starter · setup',
         sub: 'Setup dasar untuk satu agent personal kamu.',
-        old: 588000,
-        price: 299000,
+        old: 699000,
+        price: 399000,
       },
       pro: {
         name: 'Pro',
         thumb: 'P',
         title: 'Pro · setup',
         sub: '1 agent yang di-fine-tune untuk suara dan workflow kamu.',
-        old: 3500000,
-        price: 1200000,
+        old: 2500000,
+        price: 1290000,
       },
       studio: {
         name: 'Studio',
         thumb: 'X',
         title: 'Studio · setup',
         sub: '1 fine-tuned agent + 10 platform tersambung untuk monitor seluruh hidupmu.',
-        old: 9900000,
-        price: 4900000,
+        old: 10900000,
+        price: 5900000,
       },
     };
 

@@ -275,11 +275,12 @@
     .db-section .db-headline {
       font-family: 'Instrument Serif', serif;
       color: #fff;
-      font-size: 28px; line-height: 1.05; letter-spacing: -0.03em;
-      max-width: 28ch;
+      font-size: 38px; line-height: 1.0; letter-spacing: -0.04em;
+      max-width: 24ch;
       margin: 0 auto;
     }
-    @media (min-width: 768px) { .db-section .db-headline { font-size: 40px; } }
+    @media (min-width: 768px) { .db-section .db-headline { font-size: 56px; } }
+    @media (min-width: 1024px) { .db-section .db-headline { font-size: 64px; } }
     .db-section .db-sub {
       margin-top: 8px;
       font-family: 'Inter', sans-serif; font-weight: 300;
@@ -411,6 +412,7 @@
       0%, 100% { box-shadow: 0 0 8px rgba(229,50,45,0.45); }
       50% { box-shadow: 0 0 14px rgba(229,50,45,0.70); }
     }
+    @keyframes modalFadeIn { from { opacity: 0; } to { opacity: 1; } }
     .db-user {
       margin-top: auto;
       display: flex; align-items: center; gap: 10px;
@@ -1905,9 +1907,7 @@
     const Mot = M.motion;
 
     const HERO_VIDEO = "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260307_083826_e938b29f-a43a-41ec-a153-3d4730578ab8.mp4";
-    const HLS_START = "https://stream.mux.com/9JXDljEVWYwWu01PUkAemafDugK89o01BR6zqJ3aS9u00A.m3u8";
     const HLS_STATS = "https://stream.mux.com/NcU3HlHeF7CUL86azTTzpy3Tlb00d6iF3BmCdFslMJYM.m3u8";
-    const HLS_CTA   = "https://stream.mux.com/8wrHPCX2dC3msyYU9ObwqNdm00u3ViXvOSHUMRYSEe5Q.m3u8";
 
     const EASE = [0.16, 1, 0.3, 1];
 
@@ -1944,6 +1944,274 @@
 
     const FadeTop = ({ h = 200 }) => <div className="absolute top-0 left-0 right-0 pointer-events-none z-[2]" style={{ height: h, background: 'linear-gradient(to bottom, #000, transparent)' }} />;
     const FadeBottom = ({ h = 200 }) => <div className="absolute bottom-0 left-0 right-0 pointer-events-none z-[2]" style={{ height: h, background: 'linear-gradient(to top, #000, transparent)' }} />;
+
+    // ─────────────────────── DOTTED VIDEO (Grainrad-style halftone) ───────────────────────
+    // Samples a video frame-by-frame and renders each cell as a colored dot
+    // whose radius scales with luminance. Pure Canvas 2D, runs at video FPS.
+    // Source video must be same-origin (it is — /assets/).
+    function DottedVideo({ src, color = '#E5322D', cellSize = 6, threshold = 0.06, className = '', style = {} }) {
+      const wrapRef = useRef(null);
+      const videoRef = useRef(null);
+      const canvasRef = useRef(null);
+
+      useEffect(() => {
+        const wrap = wrapRef.current;
+        const video = videoRef.current;
+        const canvas = canvasRef.current;
+        if (!wrap || !video || !canvas) return;
+        const sample = document.createElement('canvas');
+        const sampleCtx = sample.getContext('2d', { willReadFrequently: true });
+        const ctx = canvas.getContext('2d');
+
+        // Mobile / data-saver tier — bigger cells (fewer dots), slower refresh.
+        const isMobile = window.matchMedia('(max-width: 767px)').matches;
+        const saveData = !!(navigator.connection && navigator.connection.saveData);
+        const effectiveCell = isMobile || saveData ? Math.max(cellSize, 9) : cellSize;
+        const frameModulo = isMobile || saveData ? 3 : 2; // ~20fps on mobile, ~30fps desktop
+
+        const dpr = 1;
+        let mounted = true;
+        let raf = 0;
+        let inView = false;
+        let frame = 0;
+
+        const resize = () => {
+          const r = wrap.getBoundingClientRect();
+          canvas.width = Math.max(1, Math.floor(r.width * dpr));
+          canvas.height = Math.max(1, Math.floor(r.height * dpr));
+        };
+        resize();
+        const ro = new ResizeObserver(resize);
+        ro.observe(wrap);
+
+        const tick = () => {
+          if (!mounted) return;
+          raf = requestAnimationFrame(tick);
+          if (!inView) return;
+          // Frame modulo controls effective FPS — 1 of every N rAF ticks
+          // actually re-samples + redraws.
+          if ((frame++ % frameModulo) !== 0) return;
+          if (video.readyState < 2) return;
+
+          const w = canvas.width, h = canvas.height;
+          const cell = Math.max(2, effectiveCell * dpr);
+          const cols = Math.ceil(w / cell);
+          const rows = Math.ceil(h / cell);
+          if (sample.width !== cols) sample.width = cols;
+          if (sample.height !== rows) sample.height = rows;
+
+          const vw = video.videoWidth, vh = video.videoHeight;
+          if (!vw || !vh) return;
+          const scale = Math.max(cols / vw, rows / vh);
+          const dw = vw * scale, dh = vh * scale;
+          const dx = (cols - dw) / 2, dy = (rows - dh) / 2;
+          sampleCtx.drawImage(video, dx, dy, dw, dh);
+          const data = sampleCtx.getImageData(0, 0, cols, rows).data;
+
+          ctx.clearRect(0, 0, w, h);
+          ctx.fillStyle = color;
+          const half = cell / 2;
+          const maxR = half * 0.95;
+          for (let y = 0; y < rows; y++) {
+            for (let x = 0; x < cols; x++) {
+              const i = (y * cols + x) * 4;
+              const lum = (0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]) / 255;
+              if (lum < threshold) continue;
+              const r = lum * maxR;
+              ctx.beginPath();
+              ctx.arc(x * cell + half, y * cell + half, r, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          }
+        };
+
+        // Visibility-gated rAF. Browsers don't pause rAF for offscreen
+        // elements, so without this an offscreen DottedVideo keeps doing
+        // getImageData on every frame and tanks scroll perf.
+        const io = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((e) => {
+              inView = e.isIntersecting;
+              if (inView) {
+                const p = video.play();
+                if (p && p.catch) p.catch(() => {});
+              } else {
+                video.pause();
+              }
+            });
+          },
+          { rootMargin: '200px' }
+        );
+        io.observe(wrap);
+
+        if (!raf) raf = requestAnimationFrame(tick);
+
+        return () => {
+          mounted = false;
+          ro.disconnect();
+          io.disconnect();
+          cancelAnimationFrame(raf);
+        };
+      }, [src, color, cellSize, threshold]);
+
+      return (
+        <div ref={wrapRef} className={className} style={style}>
+          <video
+            ref={videoRef}
+            src={src}
+            loop muted playsInline
+            preload="metadata"
+            crossOrigin="anonymous"
+            aria-hidden="true"
+            style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none' }}
+          />
+          <canvas ref={canvasRef} aria-hidden="true" style={{ width: '100%', height: '100%', display: 'block' }} />
+        </div>
+      );
+    }
+
+    // ─────────────────────── UNICORN STUDIO EMBED ───────────────────────
+    // Lazy-loads the unicornStudio.js lib once per page; (re-)initializes
+    // any [data-us-project] divs on mount.
+    function UnicornEmbed({ projectId, className = '', style = {} }) {
+      useEffect(() => {
+        const init = () => window.UnicornStudio?.init?.();
+        if (window.UnicornStudio && window.UnicornStudio.init) {
+          init();
+          return;
+        }
+        if (window.__usLoading) {
+          window.addEventListener('us-loaded', init, { once: true });
+          return () => window.removeEventListener('us-loaded', init);
+        }
+        window.__usLoading = true;
+        window.UnicornStudio = { isInitialized: false };
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/gh/hiunicornstudio/unicornstudio.js@v2.1.12/dist/unicornStudio.umd.js';
+        s.onload = () => {
+          init();
+          window.dispatchEvent(new Event('us-loaded'));
+        };
+        document.head.appendChild(s);
+      }, [projectId]);
+      return <div data-us-project={projectId} className={className} style={style} />;
+    }
+
+    // ─────────────────────── DOTTED UNICORN STUDIO ───────────────────────
+    // Wraps UnicornEmbed in an offscreen layer, samples its WebGL canvas
+    // each frame into a halftone overlay (red dots, luminance-modulated —
+    // same Grainrad-style renderer as DottedVideo).
+    function DottedUnicorn({ projectId, color = '#E5322D', cellSize = 6, threshold = 0.06, className = '', style = {} }) {
+      const wrapRef = useRef(null);
+      const sourceWrapRef = useRef(null);
+      const canvasRef = useRef(null);
+
+      useEffect(() => {
+        const wrap = wrapRef.current;
+        const sourceWrap = sourceWrapRef.current;
+        const canvas = canvasRef.current;
+        if (!wrap || !sourceWrap || !canvas) return;
+
+        const sample = document.createElement('canvas');
+        const sampleCtx = sample.getContext('2d', { willReadFrequently: true });
+        const ctx = canvas.getContext('2d');
+
+        const isMobile = window.matchMedia('(max-width: 767px)').matches;
+        const saveData = !!(navigator.connection && navigator.connection.saveData);
+        const effectiveCell = isMobile || saveData ? Math.max(cellSize, 9) : cellSize;
+        const frameModulo = isMobile || saveData ? 3 : 2;
+
+        const dpr = 1;
+        let mounted = true;
+        let raf = 0;
+        let inView = false;
+        let frame = 0;
+
+        const resize = () => {
+          const r = wrap.getBoundingClientRect();
+          canvas.width = Math.max(1, Math.floor(r.width * dpr));
+          canvas.height = Math.max(1, Math.floor(r.height * dpr));
+        };
+        resize();
+        const ro = new ResizeObserver(resize);
+        ro.observe(wrap);
+
+        const tick = () => {
+          if (!mounted) return;
+          raf = requestAnimationFrame(tick);
+          if (!inView) return;
+          if ((frame++ % frameModulo) !== 0) return;
+          const usCanvas = sourceWrap.querySelector('canvas');
+          if (!usCanvas || !usCanvas.width || !usCanvas.height) return;
+
+          const w = canvas.width, h = canvas.height;
+          const cell = Math.max(2, effectiveCell * dpr);
+          const cols = Math.ceil(w / cell);
+          const rows = Math.ceil(h / cell);
+          if (sample.width !== cols) sample.width = cols;
+          if (sample.height !== rows) sample.height = rows;
+
+          const sw = usCanvas.width, sh = usCanvas.height;
+          const scale = Math.max(cols / sw, rows / sh);
+          const dw = sw * scale, dh = sh * scale;
+          const dx = (cols - dw) / 2, dy = (rows - dh) / 2;
+          try {
+            sampleCtx.drawImage(usCanvas, dx, dy, dw, dh);
+          } catch (e) { return; }
+          const data = sampleCtx.getImageData(0, 0, cols, rows).data;
+
+          ctx.clearRect(0, 0, w, h);
+          ctx.fillStyle = color;
+          const half = cell / 2;
+          const maxR = half * 0.95;
+          for (let y = 0; y < rows; y++) {
+            for (let x = 0; x < cols; x++) {
+              const i = (y * cols + x) * 4;
+              const lum = (0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]) / 255;
+              if (lum < threshold) continue;
+              const r = lum * maxR;
+              ctx.beginPath();
+              ctx.arc(x * cell + half, y * cell + half, r, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          }
+        };
+
+        const io = new IntersectionObserver(
+          (entries) => entries.forEach((e) => { inView = e.isIntersecting; }),
+          { rootMargin: '200px' }
+        );
+        io.observe(wrap);
+
+        raf = requestAnimationFrame(tick);
+        return () => {
+          mounted = false;
+          ro.disconnect();
+          io.disconnect();
+          cancelAnimationFrame(raf);
+        };
+      }, [projectId, color, cellSize, threshold]);
+
+      return (
+        <div ref={wrapRef} className={className} style={{ ...style, position: style.position || 'absolute' }}>
+          {/* Source rendering — kept in-flow at opacity 0 so UnicornStudio's
+              rAF loop keeps drawing every frame. Pointer-events none so it
+              doesn't trap interactions. */}
+          <div
+            ref={sourceWrapRef}
+            aria-hidden="true"
+            style={{ position: 'absolute', inset: 0, opacity: 0, pointerEvents: 'none' }}
+          >
+            <UnicornEmbed projectId={projectId} className="w-full h-full" style={{ width: '100%', height: '100%' }} />
+          </div>
+          <canvas
+            ref={canvasRef}
+            aria-hidden="true"
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', display: 'block' }}
+          />
+        </div>
+      );
+    }
 
     // ─────────────────────── COUNT UP ───────────────────────
     function CountUp({ to, suffix = '', duration = 1800, delay = 0, locale = 'id-ID', className = '', style = {} }) {
@@ -2052,11 +2320,13 @@
     function Hero() {
       return (
         <section id="beranda" className="relative overflow-hidden min-h-[760px] md:min-h-[920px]" style={{ height: 'auto', background: '#000' }}>
-          <video autoPlay muted loop playsInline preload="auto"
-            className="absolute inset-0 w-full h-full object-cover z-0"
-            style={{ filter: 'brightness(0.5) saturate(1.08) contrast(1.08)' }}>
-            <source src="assets/new-hero.mp4" type="video/mp4" />
-          </video>
+          <DottedVideo
+            src="assets/new-hero.mp4"
+            color="#E5322D"
+            cellSize={6}
+            className="absolute inset-0 w-full h-full pointer-events-none"
+            style={{ zIndex: 0, background: '#000' }}
+          />
           <div className="hero-grain" />
           <div className="absolute inset-0 z-[1] pointer-events-none" style={{
             background: 'linear-gradient(180deg, rgba(0,0,0,0.28) 0%, rgba(0,0,0,0.18) 45%, rgba(0,0,0,0.55) 100%)'
@@ -2151,8 +2421,14 @@
     // ─────────────────────── START SECTION ───────────────────────
     function StartSection() {
       return (
-        <section id="proses" className="relative overflow-hidden" style={{ minHeight: 640 }}>
-          <HlsVideo src={HLS_START} />
+        <section id="proses" className="relative overflow-hidden bg-black min-h-[760px] md:min-h-[920px]">
+          <DottedVideo
+            src="/assets/ascii-wave.mp4"
+            color="#E5322D"
+            cellSize={6}
+            className="absolute inset-0 w-full h-full pointer-events-none"
+            style={{ zIndex: 1, background: '#000' }}
+          />
           <FadeTop /> <FadeBottom />
           <div className="relative z-10 flex flex-col items-center text-center px-6 py-40" style={{ minHeight: 500 }}>
             <div className="liquid-glass rounded-full px-3.5 py-1 text-xs font-medium font-body text-white/90">
@@ -2294,8 +2570,8 @@
               <span className="live-dot" />
               <span>Agent in action</span>
             </div>
-            <h2 className="db-headline">A single agent. Twelve capabilities. Zero context-switching.</h2>
-            <p className="db-sub">Lihat agent kamu kerja — bukan demo dummy, ini contoh nyata dari 12 cara dia membantu kamu setiap hari.</p>
+            <h2 className="db-headline">A single agent. Unlimited capabilities. Zero context-switching.</h2>
+            <p className="db-sub">Lihat agent kamu kerja — contoh nyata dari cara dia membantu kamu setiap hari.</p>
           </div>
 
           <div className="db-frame">
@@ -2370,12 +2646,12 @@
     // ─────────────────────── DIY PAIN ───────────────────────
     function FeaturesChess() {
       const pains = [
-        { n: '01', viz: 'vps',   title: 'Beli & konfigurasi VPS',       body: 'Pilih provider. Bandingkan spec. Setup SSH key. Buka port yang benar. Berdoa kamu nggak ninggal port 22 terbuka.' },
-        { n: '02', viz: 'py',    title: 'Bergulat dengan Python env',   body: 'Conda atau venv? Versi CUDA salah. Library X butuh Python 3.9, library Y butuh 3.11. Akhir pekan kamu hilang.' },
-        { n: '03', viz: 'tools', title: 'Sambungkan 40+ tool',          body: 'API key untuk search, browser automation, TTS, vision. Tiap satu dashboard sendiri, billing sendiri, auth sendiri.' },
-        { n: '04', viz: 'debug', title: 'Debug jam 2 pagi',             body: 'Stack trace di Docker log. SSL cert expired. Bot Telegram berhenti merespon. Kamu jadi sysadmin yang nggak pernah kamu mau.' },
-        { n: '05', viz: 'mem',   title: 'Menjaga supaya tetap jalan',   body: 'Restart. Update. Memory leak. Model di-deprecate. Tiap minggu ada kebakaran baru.' },
-        { n: '06', viz: 'tune',  title: 'Tuning supaya terasa kamu',    body: 'Agent default itu generic. Bikin yang benar-benar terdengar seperti kamu butuh berbulan-bulan prompt engineering yang kamu nggak punya waktunya.' },
+        { n: '01', viz: 'vps',   title: 'Beli & konfigurasi VPS',           body: 'Pilih provider. Bandingkan spec. Setup SSH key. Buka port yang benar. Berdoa kamu nggak ninggal port 22 terbuka.' },
+        { n: '02', viz: 'py',    title: 'Installation Compatibility Issue', body: 'Conda atau venv? Versi CUDA salah. Library X butuh Python 3.9, library Y butuh 3.11. Akhir pekan kamu hilang.' },
+        { n: '03', viz: 'tools', title: 'Pre-Configured Technical Tool',    body: 'API key untuk search, browser automation, TTS, vision. Tiap satu dashboard sendiri, billing sendiri, auth sendiri.' },
+        { n: '04', viz: 'debug', title: 'Debugging Installation Error',     body: 'Stack trace di Docker log. SSL cert expired. Bot Telegram berhenti merespon. Kamu jadi sysadmin yang nggak pernah kamu mau.' },
+        { n: '05', viz: 'mem',   title: 'Configure a Running System',       body: 'Restart. Update. Memory leak. Model di-deprecate. Tiap minggu ada kebakaran baru.' },
+        { n: '06', viz: 'tune',  title: 'Burn token just to tune and introduce your flow', body: 'Tiap kali ngajarin agent kenal cara kerja kamu, kamu bakar token. Hasil akhirnya generic, dan tagihan API kamu naik tanpa progress yang kelihatan.' },
       ];
 
       const PainViz = ({ kind }) => {
@@ -2462,15 +2738,23 @@
       };
 
       return (
-        <section className="relative py-20 md:py-32 px-5 md:px-6 lg:px-16 bg-black">
-          <div className="max-w-6xl mx-auto">
+        <section className="relative overflow-hidden py-20 md:py-32 px-5 md:px-6 lg:px-16 bg-black">
+          <DottedUnicorn
+            projectId="k6zzxblRW6JEuhAczFHj"
+            color="#E5322D"
+            cellSize={6}
+            className="absolute inset-0 w-full h-full pointer-events-none"
+            style={{ zIndex: 1, background: '#000' }}
+          />
+          <FadeTop /> <FadeBottom />
+          <div className="relative z-10 max-w-6xl mx-auto">
             <div className="flex flex-col items-center text-center mb-14 md:mb-20">
               <div className="liquid-glass rounded-full px-3.5 py-1 text-xs font-medium font-body text-white/90" style={{ borderColor: 'rgba(229, 50, 45, 0.45)' }}>
                 Pajak DIY
               </div>
               <BlurText
                 as="h2"
-                text="Bikin sendiri itu kerja paruh waktu."
+                text="Forget all this complicated nonsense."
                 className="mt-5 md:mt-6 text-3xl md:text-5xl lg:text-6xl font-heading text-white tracking-tight leading-[1.0] md:leading-[0.95] max-w-3xl"
                 style={{ letterSpacing: '-0.04em' }}
                 delay={70}
@@ -2846,14 +3130,8 @@
       };
 
       return (
-        <section id="filosofi" className="relative overflow-hidden" style={{ minHeight: 940 }}>
-          <video autoPlay muted loop playsInline
-            className="absolute inset-0 w-full h-full object-cover z-0"
-            style={{ filter: 'brightness(0.5) saturate(0.85)' }}>
-            <source src="assets/new-mid-sec.mp4" type="video/mp4" />
-          </video>
-
-          <div className="absolute inset-0 z-[1] pointer-events-none" style={{ background: 'radial-gradient(ellipse at 30% 40%, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.55) 60%, rgba(0,0,0,0.75) 100%)' }} />
+        <section id="filosofi" className="relative overflow-hidden bg-black" style={{ minHeight: 940 }}>
+          <div className="absolute inset-0 z-[1] pointer-events-none" style={{ background: 'radial-gradient(ellipse at 30% 40%, rgba(229,50,45,0.05) 0%, rgba(0,0,0,0.55) 60%, rgba(0,0,0,0.85) 100%)' }} />
           <div className="absolute top-0 left-0 right-0 z-[2] pointer-events-none" style={{ height: 220, background: 'linear-gradient(to bottom, #000, transparent)' }} />
           <div className="absolute bottom-0 left-0 right-0 z-[2] pointer-events-none" style={{ height: 220, background: 'linear-gradient(to top, #000, transparent)' }} />
 
@@ -2991,8 +3269,16 @@
       };
 
       return (
-        <section className="relative py-20 md:py-32 px-5 md:px-6 lg:px-16 bg-black">
-          <div className="max-w-6xl mx-auto">
+        <section className="relative overflow-hidden py-20 md:py-32 px-5 md:px-6 lg:px-16 bg-black">
+          <DottedVideo
+            src="assets/empat-langkah-bg.mp4"
+            color="#E5322D"
+            cellSize={6}
+            className="absolute inset-0 w-full h-full pointer-events-none"
+            style={{ zIndex: 0, background: '#000', opacity: 0.55 }}
+          />
+          <FadeTop /> <FadeBottom />
+          <div className="relative z-10 max-w-6xl mx-auto">
             <div className="flex flex-col items-center text-center mb-14 md:mb-20">
               <div className="liquid-glass rounded-full px-3.5 py-1 text-xs font-medium font-body text-white/90">
                 Cara kerjanya
@@ -3109,177 +3395,892 @@
       );
     }
 
-    function PricingCard({ tier, index }) {
-      const [alwaysOn, setAlwaysOn] = useState(false);
-      const monthlyTotal = 99 + (alwaysOn ? 49 : 0);
-      const checkoutHref = `checkout.html?plan=${tier.name.toLowerCase()}${alwaysOn ? '&alwaysOn=1' : ''}`;
+    // ─────────────────────── PRICE BREAKDOWN MODAL ───────────────────────
+    function PriceBreakdownModal({ open, onClose, tier }) {
+      const dialogRef = React.useRef(null);
+      const titleId = React.useId();
+
+      React.useEffect(() => {
+        if (!open) return;
+        const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+        document.addEventListener('keydown', onKey);
+        const prev = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        requestAnimationFrame(() => {
+          const closeBtn = dialogRef.current?.querySelector('[data-close]');
+          closeBtn?.focus();
+        });
+        return () => {
+          document.removeEventListener('keydown', onKey);
+          document.body.style.overflow = prev;
+        };
+      }, [open, onClose]);
+
+      if (!open || !tier) return null;
+
+      const setupRupiah = tier.setupIdr;
+      const fmt = (n) => 'Rp ' + n.toLocaleString('id-ID');
+      const yearWithout = setupRupiah + 99000 * 12;
+      const yearWith    = setupRupiah + (99000 + 49000) * 12;
 
       return (
-        <Mot.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.2 }}
-          transition={{ duration: 0.7, ease: EASE, delay: 0.1 * index }}
-          className={`liquid-glass${tier.featured ? '-strong' : ''} rounded-2xl p-6 md:p-8 flex flex-col`}
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={titleId}
+          onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+          className="fixed inset-0 z-[100] flex items-center justify-center px-4"
           style={{
-            boxShadow: tier.featured ? '0 0 60px rgba(229, 50, 45, 0.18), inset 0 0 0 1px rgba(229, 50, 45, 0.45)' : 'none',
-            position: 'relative',
-            overflow: 'visible',
+            background: 'rgba(0,0,0,0.65)',
+            backdropFilter: 'blur(4px)',
+            animation: 'modalFadeIn 200ms ease',
           }}
         >
-          {tier.featured && (
-            <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 text-[10px] font-mono uppercase tracking-[0.18em] rounded-full whitespace-nowrap" style={{ background: '#E5322D', color: '#fff' }}>
+          <div
+            ref={dialogRef}
+            className="liquid-glass-strong rounded-2xl p-6 md:p-7 w-full max-w-[480px] max-h-[90vh] overflow-y-auto"
+            style={{ background: '#0a0a0a', borderColor: 'rgba(229,50,45,0.35)' }}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <h3 id={titleId} className="text-lg md:text-xl font-heading text-white" style={{ letterSpacing: '-0.02em' }}>
+                {tier.name} — Rincian Biaya
+              </h3>
+              <button
+                data-close
+                onClick={onClose}
+                aria-label="Tutup rincian biaya"
+                className="w-7 h-7 rounded-full flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 text-lg leading-none"
+                style={{ border: '1px solid rgba(255,255,255,0.18)' }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="mt-6 space-y-5 font-body text-sm text-white/85">
+              {/* Setup */}
+              <div className="flex items-baseline justify-between gap-4">
+                <div>
+                  <div className="text-white/85">Biaya setup</div>
+                  <div className="text-xs text-white/45 mt-0.5">sekali bayar</div>
+                </div>
+                <div className="text-white font-medium whitespace-nowrap">{fmt(setupRupiah)}</div>
+              </div>
+
+              <div className="border-t border-white/[0.08]" />
+
+              {/* Hosting */}
+              <div>
+                <div className="flex items-baseline justify-between gap-4">
+                  <div className="text-white/85">Hosting bulanan</div>
+                  <div className="text-white font-medium whitespace-nowrap">+{fmt(99000)}/bulan</div>
+                </div>
+                <ul className="mt-2 text-xs text-white/55 space-y-1 list-none">
+                  <li>· Auto-pause kalau tidak aktif 30 hari</li>
+                  <li>· Stop kapan saja, tanpa penalti</li>
+                </ul>
+              </div>
+
+              {/* Always-On */}
+              <div>
+                <div className="flex items-baseline justify-between gap-4">
+                  <div className="text-white/85">Always-On <span className="text-white/45 text-xs">(opsional)</span></div>
+                  <div className="text-white font-medium whitespace-nowrap">+{fmt(49000)}/bulan</div>
+                </div>
+                <ul className="mt-2 text-xs text-white/55 space-y-1 list-none">
+                  <li>· VPS aktif 24/7, skip auto-suspend</li>
+                  <li>· Untuk yang pakai agent setiap hari</li>
+                </ul>
+              </div>
+
+              <div className="border-t border-white/[0.08]" />
+
+              {/* Year-1 totals */}
+              <div className="space-y-1.5">
+                <div className="text-xs text-white/55 uppercase tracking-wider mb-2">Estimasi tahun pertama</div>
+                <div className="flex items-baseline justify-between gap-4">
+                  <div className="text-white/75">Tanpa Always-On</div>
+                  <div className="text-white whitespace-nowrap">{fmt(yearWithout)}</div>
+                </div>
+                <div className="flex items-baseline justify-between gap-4">
+                  <div className="text-white/75">Dengan Always-On</div>
+                  <div className="text-white whitespace-nowrap">{fmt(yearWith)}</div>
+                </div>
+              </div>
+
+              <p className="mt-4 text-xs italic text-white/40 leading-relaxed">
+                Tidak ada biaya tersembunyi. Pause dan stop kapan saja.
+              </p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ─────────────────────── CONNECTED APPS PREVIEW ───────────────────────
+    function ConnectedAppsPreview({ apps, totalCount }) {
+      const visible = apps.slice(0, 5);
+      const hidden = Math.max(0, totalCount - visible.length);
+      return (
+        <div className="flex items-center flex-wrap gap-1.5">
+          {visible.map((name) => (
+            <span
+              key={name}
+              aria-label={`Terhubung ke ${name}`}
+              className="inline-flex items-center px-2 py-1 rounded-md text-[10px] font-mono uppercase tracking-[0.06em] text-white/65"
+              style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
+            >
+              {name}
+            </span>
+          ))}
+          {hidden > 0 && (
+            <span
+              aria-label={`Plus ${hidden} aplikasi lain`}
+              className="inline-flex items-center px-2 py-1 rounded-md text-[10px] font-mono"
+              style={{ background: 'rgba(229,50,45,0.10)', border: '1px solid rgba(229,50,45,0.25)', color: '#E5322D' }}
+            >
+              +{hidden}
+            </span>
+          )}
+        </div>
+      );
+    }
+
+    function PricingCard({ tier, index, onShowBreakdown }) {
+      const isFeatured = !!tier.featured;
+      return (
+        <Mot.div
+          initial={{ opacity: 0, y: 16 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.25 }}
+          transition={{ duration: 0.6, ease: EASE, delay: 0.05 * index }}
+          className="liquid-glass rounded-2xl p-6 md:p-7 flex flex-col relative"
+          style={
+            isFeatured
+              ? {
+                  borderColor: 'rgba(229, 50, 45, 0.65)',
+                  boxShadow: '0 0 0 1px rgba(229,50,45,0.45), 0 18px 60px -25px rgba(229,50,45,0.55), 0 0 80px -30px rgba(229,50,45,0.35)',
+                  overflow: 'visible',
+                }
+              : undefined
+          }
+        >
+          {isFeatured && (
+            <div
+              className="absolute -top-3 right-5 px-3 py-1 rounded-full text-[10px] font-mono uppercase tracking-[0.18em] text-white whitespace-nowrap"
+              style={{
+                background: '#E5322D',
+                zIndex: 5,
+                boxShadow: '0 6px 20px -4px rgba(229,50,45,0.7), 0 0 0 1px rgba(229,50,45,0.5)',
+              }}
+            >
               Paling diminati
             </div>
           )}
-          <h3 className="text-xl md:text-2xl font-heading text-white" style={{ letterSpacing: '-0.02em' }}>{tier.name}</h3>
 
-          <div className="mt-4 flex items-center gap-2.5">
-            <span className="price-old">{tier.oldPrice}</span>
-            <span className="price-discount-badge">−{tier.discount}%</span>
+          {/* 1. Tier name + tagline */}
+          <div>
+            <h3 className="text-lg md:text-xl font-heading text-white" style={{ letterSpacing: '-0.02em' }}>
+              {tier.name}
+            </h3>
+            <p className="mt-1 text-sm italic text-white/65 font-body font-light leading-snug">
+              {tier.tagline}
+            </p>
           </div>
 
-          <div className="mt-1.5 flex items-baseline gap-2">
-            <span className="text-4xl md:text-5xl font-heading text-white leading-none" style={{ letterSpacing: '-0.04em' }}>{tier.price}</span>
-          </div>
-          <div className="pc-setup-sub">Biaya setup sekali bayar</div>
-
-          <p className="mt-4 text-sm text-white/65 font-body font-light leading-relaxed">{tier.tagline}</p>
-
-          <div className="my-5 md:my-6 h-px" style={{ background: 'rgba(255,255,255,0.10)' }} />
-
-          <div className="pc-hosting">
-            <div className="pch-line"><span className="plus">+</span> Rp 99k/bulan hosting</div>
-            <div className="pch-sub">Auto-pause kalau nggak aktif 30 hari · stop kapan saja</div>
-          </div>
-
-          <label className={`pc-toggle ${alwaysOn ? 'is-on' : ''}`}>
-            <input type="checkbox" checked={alwaysOn} onChange={(e) => setAlwaysOn(e.target.checked)} />
-            <div className="pc-checkbox" aria-hidden="true" />
-            <div>
-              <div className="pct-title">Always-On <span className="pct-add">+ Rp 49k/bulan</span></div>
-              <div className="pct-sub">VPS 24/7, skip auto-suspend · untuk yang pakai agent setiap hari</div>
+          {/* 2. Price */}
+          <div className="mt-5">
+            {tier.priceStrike && (
+              <div className="text-sm font-body font-light text-white/40 line-through" style={{ textDecorationColor: 'rgba(229,50,45,0.85)', textDecorationThickness: '1.5px' }}>
+                {tier.priceStrike}
+              </div>
+            )}
+            <div className="font-heading text-4xl md:text-5xl text-white" style={{ letterSpacing: '-0.04em', lineHeight: 1 }}>
+              {tier.priceLabel}
             </div>
-          </label>
-
-          <div className="pc-monthly-preview">
-            Total bulanan: <b>Rp {monthlyTotal}k/bulan</b>
-            <span className="block opacity-60 mt-1" style={{ fontSize: '10px' }}>{alwaysOn ? 'Hosting Rp 99k + Always-On Rp 49k' : 'Hosting Rp 99k · Always-On nonaktif'}</span>
+            <div className="mt-1.5 text-xs text-white/50 font-body font-light">
+              {tier.setupAside}
+            </div>
           </div>
 
-          <div className="my-5 md:my-6 h-px" style={{ background: 'rgba(255,255,255,0.10)' }} />
+          {/* 3. Untuk siapa */}
+          <div className="mt-6">
+            <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-white/45 mb-2">
+              Untuk siapa
+            </div>
+            <p className="text-sm text-white/75 font-body font-light leading-relaxed">
+              {tier.persona}
+            </p>
+          </div>
 
-          <ul className="flex flex-col gap-3 flex-1">
-            {tier.features.map((f, fi) => (
-              <li key={fi} className="flex items-start gap-3 text-sm text-white/80 font-body font-light leading-snug">
-                <span className="mt-[7px] block w-1 h-1 flex-shrink-0" style={{ background: tier.featured ? '#E5322D' : 'rgba(255,255,255,0.4)' }} />
-                {f}
-              </li>
-            ))}
-          </ul>
+          {/* 4. Yang kamu dapat (outcomes) */}
+          <div className="mt-6">
+            <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-white/45 mb-2">
+              Yang kamu dapat
+            </div>
+            {tier.inheritFrom && (
+              <p className="text-xs font-body font-medium text-white/75 mb-3 italic">
+                Semua yang ada di {tier.inheritFrom}, plus:
+              </p>
+            )}
+            <ul className="space-y-2.5 list-none">
+              {tier.outcomes.map((o, oi) => (
+                <li key={oi} className="flex items-start gap-2.5 text-sm font-body font-light leading-relaxed">
+                  <span
+                    aria-hidden="true"
+                    className="mt-[7px] block w-1 h-1 flex-shrink-0 rounded-full"
+                    style={{ background: isFeatured ? '#E5322D' : 'rgba(255,255,255,0.4)' }}
+                  />
+                  <span className="text-white/85">{o}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
 
+          {/* 5. Connected apps preview */}
+          <div className="mt-6">
+            <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-white/45 mb-2">
+              Terhubung ke
+            </div>
+            <ConnectedAppsPreview apps={tier.apps} totalCount={tier.appsTotal} />
+          </div>
+
+          <div className="flex-1" />
+
+          {/* 6. CTA + 7. breakdown link */}
           <a
-            href={checkoutHref}
+            href={tier.ctaHref}
             className="mt-7 md:mt-8 rounded-full px-5 py-3 text-sm font-medium flex items-center justify-center gap-2 no-underline"
             style={
-              tier.featured
+              isFeatured
                 ? { background: '#E5322D', color: '#fff', border: '1px solid #E5322D' }
                 : { background: 'transparent', color: '#fff', border: '1px solid rgba(255,255,255,0.28)' }
             }
           >
             {tier.cta} <ArrowUpRight size={14} stroke={2.2} />
           </a>
+
+          <button
+            type="button"
+            onClick={onShowBreakdown}
+            aria-haspopup="dialog"
+            className="mt-3 text-xs font-body text-white/55 hover:text-white/85 underline-offset-4 hover:underline self-center bg-transparent border-0 cursor-pointer"
+          >
+            Lihat rincian biaya →
+          </button>
         </Mot.div>
       );
     }
 
+    // ─────────────────────── CHAT vs AGENT ───────────────────────
+    function ChatVsAgentSection() {
+      // Each row = one bullet. `have: true` shows ✓ in red; false shows ✗
+      // muted. Mobile order puts the highlighted (us) card first; desktop
+      // grid restores the natural left/center/right read order.
+      const cards = [
+        {
+          name: 'ChatGPT Plus',
+          subtitle: 'Chat AI',
+          subtitleAside: 'satu bot, satu giliran',
+          orderMobile: 'order-2',
+          orderDesktop: 'md:order-1',
+          rows: [
+            { have: true,  text: 'Cepat menjawab pertanyaan dengan teks' },
+            { have: false, text: 'Satu agent, satu giliran — tidak ada planner, builder, atau reviewer yang kerja paralel' },
+            { have: false, text: 'Tidak bisa scrape web, kontrol browser, atau jalankan cron' },
+            { have: false, text: 'Berhenti kerja saat kamu tutup tab' },
+            { have: false, text: 'Tiap percakapan mulai dari nol — tidak ingat workflow kamu' },
+          ],
+          ariaLabel: 'Perbandingan ChatGPT Plus',
+        },
+        {
+          name: 'weuseai.agent Pro',
+          subtitle: 'Agent AI',
+          subtitleAside: 'multi-agent paralel, milik kamu',
+          featured: true,
+          spanWide: true,
+          orderMobile: 'order-1',
+          orderDesktop: 'md:order-2',
+          rows: [
+            { have: true, text: 'Multi-agent paralel: planner, builder, reviewer kerja barengan' },
+            { have: true, text: 'Riset 50+ sumber sekali jalan' },
+            { have: true, text: 'Scrape situs apapun tanpa bot-detection' },
+            { have: true, text: 'Bikin slide deck dari satu prompt' },
+            { have: true, text: 'Triage 300+ email jadi 1 halaman ringkasan' },
+            { have: true, text: 'Auto-publish ke IG, X, LinkedIn, TikTok' },
+            { have: true, text: 'Browser automation — login, form, klik, screenshot' },
+            { have: true, text: 'Jalan 24/7 di VPS sendiri' },
+            { have: true, text: 'Voice tuning — nulis dengan gaya kamu' },
+          ],
+          ariaLabel: 'Perbandingan weuseai.agent Pro (paket kami)',
+        },
+        {
+          name: 'Claude Pro',
+          subtitle: 'Chat AI',
+          subtitleAside: 'satu bot, satu giliran',
+          orderMobile: 'order-3',
+          orderDesktop: 'md:order-3',
+          rows: [
+            { have: true,  text: 'Reasoning baik untuk percakapan satu sesi' },
+            { have: false, text: 'Bukan multi-agent — tanpa planner, worker, reviewer paralel' },
+            { have: false, text: 'Tidak akses browser, file system, atau scheduler' },
+            { have: false, text: 'Memori reset antar sesi' },
+            { have: false, text: 'Projects bantu sedikit, bukan kerja autonomous' },
+          ],
+          ariaLabel: 'Perbandingan Claude Pro',
+        },
+      ];
+
+      return (
+        <section id="vs-chat" className="relative overflow-hidden py-20 md:py-32 px-5 md:px-6 lg:px-16 bg-black">
+          <DottedVideo
+            src="/assets/chat-vs-agent-automations.mp4"
+            color="#E5322D"
+            cellSize={6}
+            className="absolute inset-0 w-full h-full pointer-events-none"
+            style={{ zIndex: 1, background: '#000' }}
+          />
+          <FadeTop /> <FadeBottom />
+          <div className="relative z-10 max-w-6xl mx-auto">
+            <div className="flex flex-col items-center text-center mb-14 md:mb-20">
+              <div
+                className="liquid-glass rounded-full px-3.5 py-1 text-xs font-medium font-body text-white/90"
+                style={{ borderColor: 'rgba(229, 50, 45, 0.45)' }}
+              >
+                Chat vs Agent
+              </div>
+              <BlurText
+                as="h2"
+                text="Chat menjawab. Agent mengerjakan."
+                className="mt-5 md:mt-6 text-3xl md:text-5xl lg:text-6xl font-heading text-white tracking-tight leading-[1.0] md:leading-[0.95] max-w-3xl"
+                style={{ letterSpacing: '-0.04em' }}
+                delay={70}
+              />
+              <p className="mt-5 md:mt-6 max-w-xl text-white/55 font-body font-light text-sm md:text-base leading-relaxed">
+                ChatGPT dan Claude jago menjawab. Tapi mereka satu bot di satu giliran — tidak punya tim agent yang scrape, schedule, deploy, sambil kamu tidur.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-5 md:gap-6 items-stretch">
+              {cards.map((c, i) => {
+                const isFeatured = !!c.featured;
+                const isWide = !!c.spanWide;
+                return (
+                  <Mot.div
+                    key={c.name}
+                    role="group"
+                    aria-label={c.ariaLabel}
+                    initial={{ opacity: 0, y: 16 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, amount: 0.3 }}
+                    transition={{ duration: 0.6, ease: EASE, delay: 0.05 * i }}
+                    className={`liquid-glass rounded-2xl ${isWide ? 'p-7 md:p-9 md:col-span-2' : 'p-6 md:p-7'} flex flex-col ${c.orderMobile} ${c.orderDesktop}`}
+                    style={
+                      isFeatured
+                        ? {
+                            borderColor: 'rgba(229, 50, 45, 0.65)',
+                            boxShadow:
+                              '0 0 0 1px rgba(229,50,45,0.45), 0 18px 60px -25px rgba(229,50,45,0.55), 0 0 80px -30px rgba(229,50,45,0.35)',
+                          }
+                        : { opacity: 0.92 }
+                    }
+                  >
+                    <h3
+                      className={`font-heading text-white leading-[1.1] ${isWide ? 'text-xl md:text-2xl' : 'text-lg md:text-xl'}`}
+                      style={{ letterSpacing: '-0.02em' }}
+                    >
+                      {c.name}
+                    </h3>
+                    <div className="mt-1 font-body font-light text-white/65 text-sm">
+                      <span className="text-white/85">{c.subtitle}</span>
+                      <span className="text-white/45"> {c.subtitleAside}</span>
+                    </div>
+
+                    <ul className={`${isWide ? 'mt-5 md:mt-6 space-y-2.5' : 'mt-5 md:mt-6 space-y-3'} flex-1`}>
+                      {c.rows.map((r, ri) => (
+                        <li key={ri} className="flex items-start gap-2.5 text-sm font-body font-light leading-relaxed">
+                          <span
+                            aria-hidden="true"
+                            className="mt-[3px] inline-flex items-center justify-center rounded-full flex-shrink-0 font-bold w-4 h-4 text-[10px]"
+                            style={
+                              r.have
+                                ? { background: 'rgba(229,50,45,0.18)', color: '#E5322D' }
+                                : { background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.35)' }
+                            }
+                          >
+                            {r.have ? '✓' : '✗'}
+                          </span>
+                          <span className={r.have ? 'text-white/85' : 'text-white/55'}>
+                            <span className="sr-only">{r.have ? 'Ya: ' : 'Tidak: '}</span>
+                            {r.text}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </Mot.div>
+                );
+              })}
+            </div>
+
+            <p className="mt-10 md:mt-14 text-center text-xs md:text-sm italic text-white/45 font-body font-light max-w-2xl mx-auto leading-relaxed">
+              Chat AI berhenti kerja saat kamu berhenti ngetik. Agent AI baru mulai — multi-agent paralel, scrape, schedule, deploy, sambil kamu tidur.
+            </p>
+
+            <div className="mt-7 md:mt-9 flex justify-center">
+              <a
+                href="#pricing"
+                className="rounded-full px-5 py-3 text-sm font-medium flex items-center gap-2 no-underline text-white"
+                style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.28)' }}
+              >
+                Lihat semua paket <ArrowUpRight size={14} stroke={2.2} />
+              </a>
+            </div>
+          </div>
+        </section>
+      );
+    }
+
     function Pricing() {
+      const [breakdownTier, setBreakdownTier] = React.useState(null);
+
       const tiers = [
         {
           name: 'Starter',
-          price: 'Rp 299k',
-          oldPrice: 'Rp 588k',
-          discount: 49,
-          tagline: 'Setup dasar untuk satu agent personal kamu.',
-          features: [
-            'Agent dedicated di VPS terkonfigurasi',
-            'Akses Telegram + Discord',
-            '40+ tools bawaan',
-            'BYOK LLM (kami kasih $3 starter credits via DeepSeek)',
-            'Database memori lokal',
+          tagline: 'Pendamping pertama kamu.',
+          priceLabel: 'Rp 399rb',
+          priceStrike: 'Rp 699rb',
+          setupIdr: 399_000,
+          setupAside: 'biaya setup sekali bayar · diskon launch',
+          persona: 'Buat kamu yang mau coba rasanya didampingi agent.',
+          outcomes: [
+            '1 agent: Pro Agent',
+            'VPS dedicated, bukan shared',
+            '10.000 training iteration',
+            '200–400 interaction/bulan',
+            'Community support',
           ],
+          apps: ['Telegram', 'Discord', 'Web'],
+          appsTotal: 41,
           cta: 'Mulai Starter',
+          ctaHref: '/checkout.html?plan=starter',
           featured: false,
         },
         {
           name: 'Pro',
-          price: 'Rp 1,2jt',
-          oldPrice: 'Rp 3,5jt',
-          discount: 66,
-          tagline: '1 agent yang di-fine-tune untuk suara dan workflow kamu.',
-          features: [
-            'Semua di Starter',
-            '1 agent di-fine-tune khusus untuk kamu',
-            '200+ model, ganti dengan satu klik',
-            'Skill file otomatis tiap 15 task',
-            'BYOK LLM (kami kasih $5 starter credits via DeepSeek)',
-            'Voice tuning — terdengar seperti kamu',
-            'Prioritas respon',
+          tagline: 'Agent yang berpikir seperti kamu.',
+          priceLabel: 'Rp 1,29jt',
+          priceStrike: 'Rp 2,5jt',
+          setupIdr: 1_290_000,
+          setupAside: 'biaya setup sekali bayar · diskon launch',
+          persona: 'Buat freelancer, founder, creator yang butuh agent kerja 24/7.',
+          inheritFrom: 'Starter',
+          outcomes: [
+            '5 agent: Researcher, Web Auto, Doc, Slide, Pro',
+            '4 web app: Workout, Finance, Task, Project',
+            'VPS dedicated 24/7',
+            '500–800 interaction/bulan',
+            '24/7 support — antrean paling depan',
+            'Voice tuning ke gaya kamu',
           ],
+          apps: ['Notion', 'Gmail', 'Drive', 'Kalender', 'Slack'],
+          appsTotal: 40,
           cta: 'Ambil Pro',
+          ctaHref: '/checkout.html?plan=pro',
           featured: true,
         },
         {
           name: 'Studio',
-          price: 'Rp 4,9jt',
-          oldPrice: 'Rp 9,9jt',
-          discount: 50,
-          tagline: '1 agent fine-tuned + 10 platform tersambung untuk monitor seluruh hidupmu.',
-          features: [
-            'Semua di Pro',
-            '1 agent fine-tuned untuk kamu',
-            '10 platform tersambung: kesehatan, keuangan, coding, task, kalender, email, notes, dst.',
-            'BYOK LLM unlimited setup, kami bantu integrate',
-            'Dashboard hidup yang melacak semuanya',
-            'Memori bersama multi-device',
-            'Library skill custom',
-            'Onboarding white-glove',
+          tagline: 'Komando hidup digital kamu.',
+          priceLabel: 'Rp 5,9jt',
+          priceStrike: 'Rp 10,9jt',
+          setupIdr: 5_900_000,
+          setupAside: 'biaya setup sekali bayar · diskon launch',
+          persona: 'Buat eksekutif yang ngatur hidup di banyak platform.',
+          inheritFrom: 'Pro',
+          outcomes: [
+            '10 agent: Pro 5 + Trade, Macro, Business, Video, Social',
+            '8 web app: 4 Pro + Agent Monitoring Dashboard, Business Eagle View, Market Trend Update, Web Creator',
+            '1.000–1.500 interaction/bulan',
+            'Custom integration sesuai kebutuhan',
+            '24/7 dedicated support + onboarding privat',
           ],
-          cta: 'Hubungi sales',
+          apps: ['Apple Health', 'Stripe', 'GitHub', 'Notion', 'Linear'],
+          appsTotal: 55,
+          cta: 'Hubungi tim',
+          ctaHref: '/checkout.html?plan=studio',
           featured: false,
         },
       ];
 
       return (
-        <section id="pricing" className="relative py-20 md:py-32 px-5 md:px-6 lg:px-16 bg-black">
-          <div className="max-w-6xl mx-auto">
+        <section id="pricing" className="relative overflow-hidden py-20 md:py-32 px-5 md:px-6 lg:px-16 bg-black">
+          <DottedVideo
+            src="/assets/pricing-furnace.mp4"
+            color="#E5322D"
+            cellSize={6}
+            className="absolute inset-0 w-full h-full pointer-events-none"
+            style={{ zIndex: 1, background: '#000' }}
+          />
+          <FadeTop /> <FadeBottom />
+          <div className="relative z-10 max-w-6xl mx-auto">
             <div className="flex flex-col items-center text-center mb-14 md:mb-20">
-              <div className="liquid-glass rounded-full px-3.5 py-1 text-xs font-medium font-body text-white/90">
+              <div
+                className="liquid-glass rounded-full px-3.5 py-1 text-xs font-medium font-body text-white/90"
+                style={{ borderColor: 'rgba(229, 50, 45, 0.45)' }}
+              >
                 Harga
               </div>
               <BlurText
                 as="h2"
-                text="Bayar setup. Hosting Rp 99k/bulan, stop kapan saja."
+                text="Pilih ukuran agent yang cocok dengan hidup kamu."
                 className="mt-5 md:mt-6 text-3xl md:text-5xl lg:text-6xl font-heading text-white tracking-tight leading-[1.0] md:leading-[0.95] max-w-3xl"
                 style={{ letterSpacing: '-0.04em' }}
                 delay={70}
               />
-              <p className="mt-6 max-w-xl text-white/55 font-body font-light text-base leading-relaxed">
-                Biaya setup sekali bayar. Kami siapkan VPS, konfigurasi semua tools, dan tune agent kamu. Hosting transparent — kayak bayar listrik, bukan subscription tersembunyi.
+              <p className="mt-5 md:mt-6 max-w-xl text-white/55 font-body font-light text-sm md:text-base leading-relaxed">
+                Bayar setup sekali. Hosting transparan, bisa pause kapan saja.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-6 items-stretch">
               {tiers.map((t, i) => (
-                <PricingCard key={t.name} tier={t} index={i} />
+                <PricingCard
+                  key={t.name}
+                  tier={t}
+                  index={i}
+                  onShowBreakdown={() => setBreakdownTier(t)}
+                />
               ))}
             </div>
 
-            <LimitedSeats />
+            <div className="mt-16 md:mt-24">
+              <LimitedSeats />
+            </div>
+          </div>
 
-            <p className="mt-8 md:mt-10 text-center text-[10px] md:text-xs font-mono uppercase tracking-[0.14em] text-white/40 leading-relaxed px-4">
-              24/7 support access · LLM cost ditanggung pelanggan via API key sendiri
-            </p>
+          <PriceBreakdownModal
+            open={!!breakdownTier}
+            onClose={() => setBreakdownTier(null)}
+            tier={breakdownTier}
+          />
+        </section>
+      );
+    }
+
+    // ─────────────────────── COMMUNITY ───────────────────────
+    function CommunitySection() {
+      // Two panels:
+      //   A — sample skills we ship; agent voice (no personal pronouns)
+      //   B — real public posts from the agent runtime ecosystem
+      // Cards locked from docs/plans/2026-05-05-community-section-design.md.
+      const skillCards = [
+        {
+          handle: '@weuseaibot',
+          tagline: 'agen lo',
+          timestamp: 'jam 7:00 WIB',
+          body: [
+            'Selamat pagi.',
+            '5 berita teratas dari detik, kompas, cnbcindonesia',
+            'sudah diringkas. Top brief masuk chat ini sekarang.',
+          ],
+          footer: 'skill: daily-news-briefing-bahasa',
+          shipped: true,
+        },
+        {
+          handle: '@weuseaibot',
+          tagline: 'agen lo',
+          timestamp: 'jam 6:45 WIB',
+          body: [
+            'Cuaca Jakarta 27° cerah, sore mulai mendung.',
+            'Macet di Sudirman 14 menit, Tol Cawang merah.',
+            'Saran berangkat: 7:10 lewat Casablanca.',
+          ],
+          footer: 'skill: cuaca-macet-pagi · roadmap',
+          shipped: false,
+        },
+        {
+          handle: '@weuseaibot',
+          tagline: 'agen lo',
+          timestamp: 'jam 23:14 WIB',
+          body: [
+            'Semalam: 50 lowongan dari Glints, LinkedIn, Kalibrr dipantau.',
+            '8 fit kriteria gaji + remote + WFA.',
+            'Daftar sudah masuk Notion, siap sortir ulang besok pagi.',
+          ],
+          footer: 'skill: lowongan-scout · roadmap',
+          shipped: false,
+        },
+        {
+          handle: '@weuseaibot',
+          tagline: 'agen lo',
+          timestamp: 'jam 4 sore',
+          body: [
+            'Topik "cara mulai bisnis F&B" diolah dari 12 sumber.',
+            '3 draft caption Instagram + 1 thread X siap di-review.',
+            'Tone otomatis mengikuti persona di SOUL.md.',
+          ],
+          footer: 'skill: content-drafter · roadmap',
+          shipped: false,
+        },
+        {
+          handle: '@weuseaibot',
+          tagline: 'agen lo',
+          timestamp: 'jam 8:30 WIB',
+          body: [
+            '247 email pasca-cuti diurutkan.',
+            '3 urgent · 12 important · 232 difile.',
+            'Draft balasan untuk 3 urgent siap di-review.',
+          ],
+          footer: 'skill: inbox-triage · roadmap',
+          shipped: false,
+        },
+        {
+          handle: '@weuseaibot',
+          tagline: 'agen lo',
+          timestamp: 'jam 10:00 WIB',
+          body: [
+            '5 invoice telat bayar di-check ulang.',
+            'Reminder ramah dikirim ke 4 klien lewat email.',
+            '1 di-eskalasi karena overdue >30 hari.',
+          ],
+          footer: 'skill: invoice-reminder · roadmap',
+          shipped: false,
+        },
+        {
+          handle: '@weuseaibot',
+          tagline: 'agen lo',
+          timestamp: 'jam 14:00 WIB',
+          body: [
+            '12 kompetitor harga + listing dipantau hari ini.',
+            '3 kompetitor turun harga rata-rata 15%.',
+            'Rekomendasi adjust harga sudah masuk dashboard.',
+          ],
+          footer: 'skill: competitor-watch · roadmap',
+          shipped: false,
+        },
+        {
+          handle: '@weuseaibot',
+          tagline: 'agen lo',
+          timestamp: 'jam 12:30 WIB',
+          body: [
+            '23 DM Instagram masuk semalam.',
+            '18 dijawab otomatis dengan tone brand kamu.',
+            '5 di-eskalasi (pertanyaan custom + komplain).',
+          ],
+          footer: 'skill: ig-auto-reply · roadmap',
+          shipped: false,
+        },
+        {
+          handle: '@weuseaibot',
+          tagline: 'agen lo',
+          timestamp: 'jam 9:00 WIB',
+          body: [
+            'Watchlist crypto + saham di-scan tiap 5 menit.',
+            'BTC breakout 92.4k, BBCA volume +18%.',
+            'Alert sudah masuk chat, chart screenshot ter-attach.',
+          ],
+          footer: 'skill: trading-watchlist · roadmap',
+          shipped: false,
+        },
+        {
+          handle: '@weuseaibot',
+          tagline: 'agen lo',
+          timestamp: 'semalam',
+          body: [
+            '50 hotel di Bali dipantau. 12 dengan rating 4.5+ tapi foto listing buruk.',
+            'Foto interior diambil dari Maps, redraft jadi IG post matched ke brand hotel masing-masing.',
+            'Postcard dengan QR preview siap dikirim.',
+          ],
+          footer: 'skill: outreach-postcard · roadmap',
+          shipped: false,
+        },
+        {
+          handle: '@weuseaibot',
+          tagline: 'agen lo',
+          timestamp: 'jam 19:00 WIB',
+          body: [
+            'Foto 12 struk hari ini diproses.',
+            'Total Rp 847k — kategori: F&B 42%, transport 28%, lainnya 30%.',
+            'Sudah masuk Notion + Google Sheets, siap untuk laporan akhir bulan.',
+          ],
+          footer: 'skill: expense-snap · roadmap',
+          shipped: false,
+        },
+        {
+          handle: '@weuseaibot',
+          tagline: 'agen lo',
+          timestamp: 'jam 11:30 WIB',
+          body: [
+            'Recording meeting product strategy 47 menit selesai diolah.',
+            '7 action item terdeteksi, 3 paling kritis sudah masuk Asana.',
+            'Ringkasan + next-step dikirim ke 4 peserta meeting.',
+          ],
+          footer: 'skill: meeting-recap · roadmap',
+          shipped: false,
+        },
+        {
+          handle: '@weuseaibot',
+          tagline: 'agen lo',
+          timestamp: 'jam 17:30 WIB',
+          body: [
+            'Bahan kulkas: 3 telur, ayam fillet, brokoli, bawang putih, nasi.',
+            '3 resep cocok: chicken stir-fry, telur dadar veggie, nasi goreng cepat.',
+            'Estimasi masak 20 menit, kalori per porsi sudah dihitung.',
+          ],
+          footer: 'skill: resep-stock · roadmap',
+          shipped: false,
+        },
+        {
+          handle: '@weuseaibot',
+          tagline: 'agen lo',
+          timestamp: 'jam 6:00 WIB',
+          body: [
+            '4 emiten watchlist dianalisa: BBCA, BBRI, ASII, TLKM.',
+            'BBCA fundamental kuat, P/E rasional, dividend yield 3.2%.',
+            'ASII flagged: utang naik 18% YoY, perlu monitoring.',
+          ],
+          footer: 'skill: saham-fundamental · roadmap',
+          shipped: false,
+        },
+        {
+          handle: '@weuseaibot',
+          tagline: 'agen lo',
+          timestamp: 'jam 21:00 WIB',
+          body: [
+            '3 destinasi wishlist dipantau: Tokyo, Seoul, Bangkok.',
+            'Tiket Tokyo turun 22% (Garuda, 6 Jul, Rp 4,2jt PP).',
+            'Hotel Shibuya rate terbaik Rp 1,1jt/malam — booking window 14 hari.',
+          ],
+          footer: 'skill: travel-deal-watcher · roadmap',
+          shipped: false,
+        },
+      ];
+
+      const communityCards = [
+        {
+          handle: '@hermes_agent',
+          timestamp: '3 hari lalu',
+          body: [
+            '"Hermes Agent sekarang punya multi-agent via Kanban, baru di v0.12.0. Beberapa agent ngambil task dari papan, kerja paralel, dan hand-off saat ada yang stuck. Kamu pantau progress dan unblock dari satu view, bukan juggling banyak terminal."',
+          ],
+          sourceLabel: 'github.com/NousResearch/hermes-agent',
+          sourceUrl: 'https://github.com/NousResearch/hermes-agent',
+        },
+        {
+          handle: '@Tiny_Fish',
+          timestamp: '16 jam lalu',
+          body: [
+            '"Mulai hari ini, TinyFish Web Search dan Fetch gratis. Untuk semua dev dan agent. Tanpa kartu kredit. Rate limit-nya generous."',
+          ],
+          sourceLabel: 'x.com/Tiny_Fish',
+          sourceUrl: 'https://x.com/Tiny_Fish',
+        },
+        {
+          handle: '@everestchris6',
+          timestamp: '10 jam lalu',
+          body: [
+            '"Bot OpenClaw ini cari hotel dengan foto listing jelek, redraft jadi IG post, terus kirim postcard ke owner-nya — semua otomatis. Scrape semua hotel di kota target real-time."',
+          ],
+          sourceLabel: 'x.com/everestchris6',
+          sourceUrl: 'https://x.com/everestchris6',
+        },
+      ];
+
+      const Avatar = ({ handle }) => {
+        const letter = (handle.replace(/^@/, '')[0] || 'a').toUpperCase();
+        return (
+          <span
+            aria-hidden="true"
+            className="inline-flex items-center justify-center w-5 h-5 rounded-md flex-shrink-0 text-[10px] font-mono font-semibold"
+            style={{ background: 'rgba(229,50,45,0.18)', color: '#E5322D' }}
+          >
+            {letter}
+          </span>
+        );
+      };
+
+      const Card = ({ card, isCommunity }) => (
+        <Mot.div
+          role="article"
+          aria-label={`${card.handle} — ${isCommunity ? card.sourceLabel : card.footer}`}
+          initial={{ opacity: 0, y: 14 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.3 }}
+          transition={{ duration: 0.55, ease: EASE }}
+          className="liquid-glass rounded-2xl p-5 md:p-6 flex flex-col"
+        >
+          <div className="flex items-center gap-2 text-[12px] font-mono text-white/65">
+            <Avatar handle={card.handle} />
+            <span className="text-white/85">{card.handle}</span>
+            {card.tagline && <span className="text-white/40">· {card.tagline}</span>}
+            <span className="text-white/40">· {card.timestamp}</span>
+          </div>
+          <div className="mt-3 text-sm text-white/85 font-body font-light leading-relaxed space-y-1">
+            {card.body.map((line, li) => (
+              <p key={li}>{line}</p>
+            ))}
+          </div>
+          <div className="mt-4 pt-3 border-t border-white/[0.07] text-[10px] font-mono uppercase tracking-[0.18em] text-white/40">
+            {isCommunity ? (
+              <a
+                href={card.sourceUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="no-underline hover:underline text-white/55"
+              >
+                source: {card.sourceLabel}
+              </a>
+            ) : (
+              card.footer
+            )}
+          </div>
+        </Mot.div>
+      );
+
+      return (
+        <section id="community" className="relative py-20 md:py-32 px-5 md:px-6 lg:px-16 bg-black">
+          <div className="max-w-6xl mx-auto">
+            <div className="flex flex-col items-center text-center mb-14 md:mb-20">
+              <div
+                className="liquid-glass rounded-full px-3.5 py-1 text-xs font-medium font-body text-white/90"
+                style={{ borderColor: 'rgba(229, 50, 45, 0.45)' }}
+              >
+                Dari komunitas
+              </div>
+              <BlurText
+                as="h2"
+                text="Yang sudah jalan, di luar sana."
+                className="mt-5 md:mt-6 text-3xl md:text-5xl lg:text-6xl font-heading text-white tracking-tight leading-[1.0] md:leading-[0.95] max-w-3xl"
+                style={{ letterSpacing: '-0.04em' }}
+                delay={70}
+              />
+              <p className="mt-5 md:mt-6 max-w-xl text-white/55 font-body font-light text-sm md:text-base leading-relaxed">
+                Skill bawaan yang sudah hidup di agent kamu hari pertama. Plus apa yang lagi dikerjain agent lain di komunitas.
+              </p>
+            </div>
+
+            {/* Panel A — sample skills we ship */}
+            <div className="mb-12 md:mb-16">
+              <div className="text-[11px] font-mono uppercase tracking-[0.18em] text-white/45 mb-4 md:mb-6">
+                Skill bawaan
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
+                {skillCards.map((c, i) => (
+                  <Card key={`s${i}`} card={c} isCommunity={false} />
+                ))}
+              </div>
+            </div>
+
+            {/* Panel B — real community quotes */}
+            <div>
+              <div className="text-[11px] font-mono uppercase tracking-[0.18em] text-white/45 mb-4 md:mb-6">
+                Dari komunitas agent
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5">
+                {communityCards.map((c, i) => (
+                  <Card key={`c${i}`} card={c} isCommunity={true} />
+                ))}
+              </div>
+            </div>
           </div>
         </section>
       );
@@ -3476,8 +4477,14 @@
     // ─────────────────────── CTA + FOOTER ───────────────────────
     function CtaFooter() {
       return (
-        <section className="relative overflow-hidden" style={{ minHeight: 620 }}>
-          <HlsVideo src={HLS_CTA} />
+        <section className="relative overflow-hidden bg-black" style={{ minHeight: 620 }}>
+          <DottedVideo
+            src="/assets/ascii-wave.mp4"
+            color="#E5322D"
+            cellSize={6}
+            className="absolute inset-0 w-full h-full pointer-events-none"
+            style={{ zIndex: 0, background: '#000' }}
+          />
           <FadeTop /> <FadeBottom />
           <div className="relative z-10 flex flex-col items-center text-center px-5 md:px-6 pt-28 md:pt-40 pb-10 max-w-5xl mx-auto">
             <BlurText
@@ -3523,7 +4530,9 @@
               <FeaturesChess />
               <VelvetSection />
               <FeaturesGrid />
+              <ChatVsAgentSection />
               <Pricing />
+              <CommunitySection />
               <FAQ />
               <Stats />
               <Testimonials />

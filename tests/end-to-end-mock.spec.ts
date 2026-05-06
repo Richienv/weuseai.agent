@@ -36,7 +36,7 @@ test('happy path: pay → spawn → SSH setup → halo + ready marker', async ()
   // ── 1. pay ────────────────────────────────────────────────
   const invoice = await payment.createInvoice({
     customerId: 'cust-1',
-    amountIdr: 299_000,
+    amountIdr: 399_000,
     description: 'Liren Starter — bulan 1',
   })
   assert.equal(invoice.status, 'PENDING')

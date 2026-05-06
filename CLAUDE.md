@@ -12,7 +12,7 @@
 
 ```
 weuseai.agent/velorah/
-├── liren-v3.html / checkout.html / use-cases.html  # landing live di Vercel
+├── index.html / checkout.html / use-cases.html  # landing live di Vercel
 ├── assets/                                          # landing images, fonts, og-image
 ├── vercel.json                                      # vercel routing for landing
 ├── services/                                        # platform backend
@@ -90,7 +90,7 @@ Reframe hosting sebagai utility (kayak bayar listrik), bukan subscription tradis
 | Layer | Pilihan | Catatan |
 |-------|---------|---------|
 | Bahasa | TypeScript | Semua services/* + packages/* |
-| Landing | Static HTML + React-via-CDN | `liren-v3.html`, `checkout.html`, `use-cases.html` di root, deploy Vercel |
+| Landing | Static HTML + React-via-CDN | `index.html`, `checkout.html`, `use-cases.html` di root, deploy Vercel |
 | VPS | IDCloudHost API | Region jakarta atau cyc01 |
 | Agent runtime | NousResearch/hermes-agent (MIT OSS) | Install via upstream `scripts/install.sh`, manage via systemd. Kita nggak fork, nggak build. |
 | LLM (Starter) | DeepSeek V3 via LiteLLM proxy | Pelanggan tier Starter pakai proxy kita, default model `deepseek-chat` |
@@ -215,7 +215,7 @@ Order rekomen: kalau task butuh context strategis baca 04. Kalau butuh detail im
 - Brand-facing copy or marketing claims
 - Pricing / revenue logic changes
 - Spending money (paid services, paid LLM tokens beyond free tier)
-- Touching `liren-v3.html` / `checkout.html` substantively (landing is shipped, regression risk)
+- Touching `index.html` / `checkout.html` substantively (landing is shipped, regression risk)
 - Stuck >30 minutes on same problem
 
 ## When to JUST PROCEED

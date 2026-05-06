@@ -1,7 +1,32 @@
 # NEXT.md — Task queue (kerjain urut)
 
-**Updated:** 2026-05-06 (Day 4b — Hermes binding model documented)
-**Target launch:** 2 minggu setelah Day 4-5 end-to-end provisioning verified
+**Updated:** 2026-05-07 (production live — dark/red landing + onboarding backend merged)
+
+---
+
+## Status: PRODUCTION LIVE
+
+**As of 2026-05-07** — `feat/onboarding-flow` merged into `main`. The
+launch bundle is live on `weuseai-agent.vercel.app`:
+
+- Dark/red halftone landing (DottedVideo Canvas-2D, ChatVsAgent
+  comparison, community skill grid, Pajak DIY UnicornStudio)
+- Pricing v1.1 LOCKED: Starter Rp 399rb, Pro Rp 1,29jt, Studio Rp 5,9jt
+  (strike-through Rp 699rb / 2,5jt / 10,9jt)
+- Onboarding backend: welcome.html + onboarding.html, Edge Functions
+  (create-invoice, xendit-webhook, complete-onboarding,
+  telegram-bot-webhook, rotate-pairing-code), pairing-code pattern
+- Provisioning: services/provisioning on Fly.io, IDCloudHost VPS spawn,
+  SSH-pivot setup script, OpenRouter per-customer key minting, Hermes
+  Agent install via upstream `install.sh` + systemd unit
+- Live verification: Xendit staging Pro tier returns invoice for
+  Rp 1.398.723 (1.290.000 setup + 99.000 hosting + 9.723 QRIS 0.7%)
+
+**Test coverage:** 87/87 passing across handlers, renderer, sanitizer,
+pairing-code, end-to-end mock.
+
+**Deferred (Jakarta trip):** Halo end-to-end verification with real
+Telegram from a second account.
 
 ---
 
@@ -50,163 +75,88 @@ Test coverage: `tests/setup-script.spec.ts` has three regression guards
 
 ---
 
-## Current state
+## Phase 2C — post-launch optimizations (do these next)
 
-- Landing live di `weuseai-agent.vercel.app` (root HTML files: `liren-v3.html`, `checkout.html`, `use-cases.html`)
-- `services/*` punya 5 ports: provisioning, proxy, hermes, payment, test-idcloudhost
-- `tests/end-to-end-mock.spec.ts` = 3 integration tests passing dengan mock adapters
-- Supabase project created, schema apply pending
-- Xendit sandbox active, secret key di `.env`
-- IDCloudHost auth validated, top-up pending
+**Owner:** Claude Code
+**Trigger:** real customer signal (perf complaint, drop-off in
+analytics, support tickets) — don't pre-optimize.
 
-Reference history sebelum merge: `NEXT.md.platform` (archived).
-
----
-
-## Phase 2B revisit list (don't build now)
-
-- **Welcome page polling auth (signed JWT).** Phase 1 ships welcome.html
-  with `?cid=<uuid>` polling against `subscriptions` via the anon key
-  + RLS `anon_read_own_subscription_status` (added in migration
-  `20260506130000_anon_read_subscription_status.sql`). UUIDs are
-  unguessable + status text is non-sensitive, so MVP is acceptable. **In
-  Phase 2B, swap to:**
-  - `create-invoice` mints a short-lived JWT encoding the customer_id
-    (e.g. 24h expiry) and returns it as `?token=<jwt>` in the redirect
-    URL instead of `?cid=<uuid>`
+- **Video asset re-encode for FCP.** `/assets/new-hero.mp4` (2.6 MB) and
+  `/assets/ascii-wave.mp4` (1.3 MB) eat ~3.9 MB of mobile bandwidth on
+  first paint. Re-encode at lower bitrate / shorter duration / poster-
+  frame fallback. Target: mobile FCP <1.8s, Lighthouse perf ≥80.
+- **DOM trim on #filosofi.** Section has 761 nodes (24 use-case cards ×
+  ~30 internal nodes). Total page DOM = 1905 nodes (Lighthouse warns
+  above 1500). Either lazy-render off-viewport cards via
+  IntersectionObserver, or simplify card markup.
+- **Retry worker for failed provisioning jobs.** When IDCloudHost spawn
+  or Hermes install fails mid-flight, the customer's payment is taken
+  but no VM exists. Currently: founder gets paged via Supabase logs.
+  Build: cron-driven retry queue scanning `customers` for
+  `provisioning_status='failed'` rows and re-running setup.
+- **Onboarding polling cadence (3s → realtime).** Approved at 3s for
+  launch (~600 reads/customer over 30-min wait). Switch to Supabase
+  realtime subscription on `customers` if quota or per-customer
+  minute-spend gets noisy at scale.
+- **Pairing code lifetime (30 min → 60 min).** Bump if expiry-out rate
+  >5% in support tickets.
+- **Welcome page polling auth (anon UUID → signed JWT).** Phase 1 ships
+  with `?cid=<uuid>` polling against `subscriptions` via anon key + RLS
+  `anon_read_own_subscription_status`. UUIDs unguessable + status
+  non-sensitive, MVP acceptable. Phase 2C swap:
+  - `create-invoice` mints short-lived JWT encoding customer_id
   - New Edge Function `GET /functions/v1/welcome-status?token=<jwt>`
-    verifies the JWT and does the subscription read on the user's
-    behalf (service role)
-  - RLS policy on `subscriptions` flips to `USING (false)` for the anon
-    role, locking out direct browser reads
-  - Spec lives in `docs/plans/2026-05-06-welcome-page-spec.md` ("Open
-    questions" section)
-- **Onboarding pairing-code expiry.** If customers report `pairing_code_expired`
-  more than 5% of the time, bump the expiry from 30 min → 60 min in
-  `services/.../onboarding-store-supabase.ts`.
+    verifies JWT, does subscription read on user's behalf
+  - RLS on `subscriptions` flips to `USING (false)` for anon role
+  - Spec lives in `docs/plans/2026-05-06-welcome-page-spec.md`
+    ("Open questions" section)
+- **React `key` prop warning in Hero.** framer-motion list child without
+  unique key — non-fatal but flagged in console. Fix when touching
+  Hero anyway.
 
 ---
 
-## Phase 0: Founder setup (status check)
+## Phase 3 — roadmap (when 10+ paying customers ask)
 
-Per founder report:
-
-- [x] IDCloudHost developer account + API key (auth validated)
-- [x] Xendit sandbox secret key
-- [x] Supabase project + URL + service role key
-- [ ] IDCloudHost top-up (pending — perlu untuk Day 4-5 spawn test)
-- [ ] Apply `supabase/schema.sql` di Supabase SQL editor
-- [ ] Telegram bot via @BotFather (founder personal bot untuk Day 6 test)
-- [ ] Isi `.env` per service dari `.env.example` di root
-
----
-
-## Day 1 — Audit checkout.html (Xendit integration map)
-
-**Owner:** Claude Code
-**Goal:** understand cara `checkout.html` saat ini integrate ke Xendit, identify gaps untuk wire ke provisioning service.
-
-**Task:**
-1. Baca `checkout.html` end-to-end
-2. Map: bagaimana customer click "Subscribe" → Xendit invoice dibikin?
-3. Cek: ada server endpoint di balik checkout, atau call Xendit langsung dari frontend?
-4. Cek: webhook handler ada belum? Di mana tujuannya?
-5. List integration gaps: apa yang missing untuk wire payment-success → spawn VPS → run Hermes
-
-**Verify:** Tulis report singkat (`docs/checkout-audit.md` atau inline reply) covering: current Xendit flow, missing pieces, recommendation untuk Supabase Edge Function design.
-
-**Stop dan lapor founder sebelum lanjut Day 2.**
+- **WhatsApp Business API channel.** Phase 1 is Telegram-only. Add WA
+  via Twilio / 360dialog when customers ask. Hermes already has channel
+  abstraction; new bot wrapper + provisioning flag.
+- **BYOK LLM at scale.** Customers paste own OpenRouter / OpenAI /
+  Anthropic / DeepSeek key in dashboard, replace per-customer mint.
+  Currently Pro/Studio require this; Starter uses provisioned $5 cap.
+- **Customer dashboard.** Self-serve UI for: pause/resume agent, swap
+  LLM key, view usage, change Telegram bot, download skill metadata.
+  Currently all manual via Telegram + founder.
+- **Multi-region.** Single jakarta region for now. Add cyc01 + global
+  failover when latency complaints surface.
+- **Skill marketplace UI.** Phase 1 hardcodes skills in the Hermes
+  install. Phase 3 lets customers browse / install / publish.
+- **Audit log + daily backup + auto-update.** Skipped in Phase 1.
 
 ---
 
-## Day 2 — Build Supabase Edge Function `xendit-webhook`
+## Decision points — locked
 
-**Owner:** Claude Code
-**Prereq:** Day 1 audit done + founder approves design.
-
-**Task:** buat `supabase/functions/xendit-webhook/index.ts` yang:
-- Verify Xendit signature (X-CALLBACK-TOKEN)
-- Parse paid invoice payload
-- Insert subscription record di Supabase (`subscriptions` table per `schema.sql`)
-- POST ke `services/provisioning` `/spin-up` endpoint dengan `customerId` + `tier`
-- Return 200 OK
-
-**Verify:**
-- Local test pakai `supabase functions serve` + Xendit sandbox webhook
-- `npx tsc --noEmit` clean
-- Mock test passing (extend `tests/end-to-end-mock.spec.ts` kalau perlu)
-
-**Stop dan lapor founder sebelum lanjut Day 3.**
-
----
-
-## Day 3 — IDCloudHost top-up + provision spin test
-
-**Prereq:** Founder top-up IDCloudHost. Kalau belum, STOP.
-
-**Task:**
-```bash
-cd services/test-idcloudhost
-npm install
-npm run test
-```
-
-**Expected:** Verdict `✓ PASS` dengan total time create+running ≤ 180 detik.
-
-**If PASS:** lanjut Day 4.
-**If FAIL:** lihat decision tree di `NEXT.md.platform` (180-300s warning, >300s STOP, auth error STOP).
-
----
-
-## Day 4-5 — Wire end-to-end: payment → spawn → Hermes alive
-
-**Owner:** Claude Code
-**Prereq:** Day 1-3 done.
-
-**Task:**
-1. Deploy `services/provisioning/` server (Mac Mini atau Railway free tier)
-2. Wire Edge Function `xendit-webhook` → provisioning `/spin-up`
-3. Provisioning spawn VPS via IDCloudHost (kode existing di `customer-flow.ts`)
-4. Cloud-init: install upstream Hermes via `install.sh`, write `.env`, enable systemd unit
-5. Hermes start, listen Telegram, kirim welcome message
-
-**Verify:**
-- Self-test: bayar via Xendit sandbox, VPS spawn, Hermes Telegram message dalam ≤5 menit
-- Time setiap step di log
-- Cleanup VPS setelah test (jangan ada VM ketinggal)
-
-**Stop dan lapor founder sebelum lanjut Day 6.**
-
----
-
-## Day 6 — Verify Hermes install pattern di VPS test
-
-(Detail di `NEXT.md.platform` Day 6 — copy-paste task list ke sini kalau Day 4-5 pass.)
-
----
-
-## Day 7 — Internal end-to-end test (founder self-onboard)
-
-(Detail di `NEXT.md.platform` Day 7.)
-
-**Target:** ≤5 menit Subscribe → Telegram welcome, zero retry.
-
----
-
-## Day 8-14 — Beta onboard 5 pelanggan gratis
-
-(Detail di `NEXT.md.platform` Day 8-14.)
-
----
-
-## Decision points yang harus founder confirm
-
-- [ ] Final pricing — Starter Rp 299k confirmed, Pro Rp 1.2jt confirmed, Studio Rp 4.9jt confirmed (per CLAUDE.md Business Model v1.1)
-- [ ] Domain — `weuseai.agent` confirmed (live di `weuseai-agent.vercel.app`)
-- [ ] Mac Mini IP/access untuk provisioning service deploy
+- [x] Final pricing — Starter Rp 399rb, Pro Rp 1,29jt, Studio Rp 5,9jt
+  (Business Model v1.1, locked 2026-04-28)
+- [x] Domain — `weuseai-agent.vercel.app` (live, production deploy)
+- [x] Provisioning service host — Fly.io
 - [ ] Refund policy text (founder write, Claude Code paste)
 - [ ] ToS + Privacy Policy text (basic Phase 1)
 
 ---
 
-*Last updated: 2026-04-30 by Claude (post-merge handoff)*
+## When to pick this back up
+
+- A real customer signal lands (support ticket, payment failure,
+  perf complaint, churn) → fix root cause, write a test.
+- Founder back from Hangzhou trip → run Halo end-to-end verification
+  with second Telegram account.
+- 5+ paying customers → revisit Phase 2C in priority order above.
+- 10+ paying customers → consider Phase 3.
+
+Reference history: `NEXT.md.platform` (archived pre-merge plan).
+
+---
+
+*Last updated: 2026-05-07 by Claude (production launch).*
