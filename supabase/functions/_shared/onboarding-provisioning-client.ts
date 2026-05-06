@@ -63,14 +63,26 @@ export class OnboardingProvisioningClient implements IOnboardingProvisioningClie
         body: (await r.text().catch(() => '')).slice(0, 1000),
       }
     }
-    const json = (await r.json()) as { jobId?: string }
-    if (!json.jobId) {
+    // Provisioning service response shape (services/provisioning/src/spin-up-helpers.ts):
+    //   { ok: true, vps_instance_id, vps_ip }
+    // We treat vps_instance_id as the natural job identifier — welcome.html
+    // polls subscription.status to track completion, the job param is just
+    // for display + retry-resume bookkeeping.
+    const json = (await r.json()) as {
+      ok?: boolean
+      vps_instance_id?: string
+      vps_ip?: string | null
+      // Back-compat: accept jobId if a future provisioning version emits it.
+      jobId?: string
+    }
+    const jobId = json.jobId ?? json.vps_instance_id
+    if (!jobId) {
       return {
         ok: false,
         status: 502,
-        body: 'provisioning service did not return jobId',
+        body: 'provisioning service returned no vps_instance_id/jobId',
       }
     }
-    return { ok: true, jobId: json.jobId }
+    return { ok: true, jobId }
   }
 }
