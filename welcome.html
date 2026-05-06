@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Pembayaran berhasil — weuseai.agent</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <meta name="theme-color" content="#000000" />
+
+  <!-- Same font load as landing — kept on the page for visual continuity -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Instrument+Serif&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    :root {
+      --signal-red: #E5322D;
+      --signal-red-soft: rgba(229, 50, 45, 0.18);
+      --signal-red-glow: rgba(229, 50, 45, 0.45);
+      --bg: #000;
+      --ink: #fff;
+      --muted: rgba(255,255,255,0.55);
+      --line: rgba(255,255,255,0.12);
+      --card-line: rgba(255,255,255,0.10);
+      --card-bg: rgba(255,255,255,0.02);
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      background: var(--bg);
+      color: var(--ink);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      margin: 0;
+      min-height: 100vh;
+    }
+    .serif { font-family: 'Instrument Serif', serif; font-weight: 400; }
+    .liquid-glass {
+      background: var(--card-bg);
+      border: 1px solid var(--card-line);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+    /* Tiny pulsing dot for LOADING + POLL_ERROR states */
+    @keyframes pulseDot {
+      0%, 100% { opacity: 0.35; transform: scale(0.85); }
+      50%      { opacity: 1;    transform: scale(1); }
+    }
+    .pulse-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--signal-red);
+      animation: pulseDot 1.4s ease-in-out infinite;
+      display: inline-block;
+    }
+    /* Indeterminate progress bar for state B */
+    @keyframes indeterminate {
+      0%   { left: -40%; right: 100%; }
+      60%  { left: 100%; right: -40%; }
+      100% { left: 100%; right: -40%; }
+    }
+    .progress-track {
+      position: relative;
+      height: 4px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      position: absolute;
+      top: 0; bottom: 0;
+      background: var(--signal-red);
+      border-radius: 2px;
+      animation: indeterminate 1.6s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    /* Smooth fade-in for status box content swaps */
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+    .fade-in { animation: fadeIn 240ms ease both; }
+
+    /* Reusable focus ring for keyboard navigation */
+    .focus-ring:focus-visible {
+      outline: 2px solid var(--signal-red);
+      outline-offset: 3px;
+    }
+  </style>
+</head>
+<body>
+  <main class="max-w-2xl mx-auto px-5 md:px-6 py-12 md:py-20">
+
+    <!-- ─── HERO ─── -->
+    <section class="text-center">
+      <span
+        class="liquid-glass inline-block rounded-full px-3.5 py-1 text-xs font-medium text-white/90"
+        style="border-color: var(--signal-red-glow);"
+      >
+        Pembayaran berhasil
+      </span>
+      <h1
+        class="serif mt-5 md:mt-6 text-3xl md:text-5xl text-white leading-[1.05]"
+        style="letter-spacing: -0.04em;"
+      >
+        Selamat datang.<br/>
+        Agent kamu sedang dibangun.
+      </h1>
+      <p class="mt-5 md:mt-6 max-w-xl mx-auto text-white/55 font-light text-sm md:text-base leading-relaxed">
+        Dalam 5–7 menit, satu pesan akan masuk ke Telegram kamu — tanda agent siap bekerja.
+      </p>
+    </section>
+
+    <!-- ─── STATUS BOX ─── -->
+    <section
+      id="status-box"
+      class="liquid-glass rounded-2xl p-5 md:p-6 mt-10 md:mt-14 min-h-[140px]"
+      aria-live="polite"
+      aria-atomic="true"
+    >
+      <!-- Filled by JS: see renderState() -->
+    </section>
+
+    <!-- ─── STEPS ─── -->
+    <section class="mt-10 md:mt-14">
+      <div class="text-[11px] font-mono uppercase tracking-[0.18em] text-white/45 mb-4">
+        Yang akan terjadi
+      </div>
+      <ol class="space-y-4 list-none p-0 m-0">
+        <li class="flex items-start gap-3">
+          <span class="font-mono text-xs text-white/40 mt-0.5 w-6">01</span>
+          <div class="flex-1">
+            <div class="text-sm text-white/85">Buka Telegram, cari <span class="font-mono">@weuseaibot</span></div>
+            <a
+              href="https://t.me/weuseaibot"
+              data-tg-deeplink
+              class="inline-flex items-center gap-2 mt-2 rounded-full px-4 py-2 text-xs font-medium no-underline focus-ring"
+              style="border: 1px solid rgba(255,255,255,0.28); color: #fff;"
+            >
+              Buka Telegram
+              <span aria-hidden="true">→</span>
+            </a>
+          </div>
+        </li>
+        <li class="flex items-start gap-3">
+          <span class="font-mono text-xs text-white/40 mt-0.5 w-6">02</span>
+          <div class="flex-1">
+            <div class="text-sm text-white/85">Klik <span class="font-mono">/start</span> untuk memperkenalkan diri</div>
+          </div>
+        </li>
+        <li class="flex items-start gap-3">
+          <span class="font-mono text-xs text-white/40 mt-0.5 w-6">03</span>
+          <div class="flex-1">
+            <div class="text-sm text-white/85">Tunggu pesan halo dari agent kamu</div>
+          </div>
+        </li>
+      </ol>
+
+      <p class="mt-6 text-xs italic text-white/45 leading-relaxed">
+        Pertama kali pakai? Tim kami akan menghubungi kamu via email kalau butuh bantuan setup.
+      </p>
+    </section>
+
+    <!-- ─── FOOTER ─── -->
+    <footer class="mt-14 md:mt-20 pt-6 border-t border-white/[0.08] text-xs text-white/45 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+      <div>
+        Butuh bantuan?
+        <a
+          id="wa-link"
+          href="https://wa.me/6282154902561?text=Halo%20tim%20weuseai%2C%20saya%20butuh%20bantuan%20dengan%20agent%20saya."
+          target="_blank"
+          rel="noopener noreferrer"
+          class="text-white/75 hover:text-white underline-offset-2 hover:underline focus-ring"
+        >WhatsApp tim kami: +62 821-5490-2561</a>
+      </div>
+      <div class="flex items-center gap-4">
+        <a href="/#faq" class="text-white/55 hover:text-white no-underline focus-ring">FAQ</a>
+        <a href="/" class="text-white/55 hover:text-white no-underline focus-ring">weuseai.agent</a>
+      </div>
+    </footer>
+  </main>
+
+  <script>
+    // ─────────────────────────────────────────────────────────
+    // welcome.html — vanilla JS, no framework, no build step.
+    // Spec: docs/plans/2026-05-06-welcome-page-spec.md
+    // ─────────────────────────────────────────────────────────
+
+    // Public-by-design Supabase anon key + URL. Polling is gated by
+    // RLS policy `anon can read own subscription status`
+    // (migration 20260506130000_anon_read_subscription_status.sql).
+    const SUPABASE_URL = 'https://gtjgsligllbjcisiyrah.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd0amdzbGlnbGxiamNpc2l5cmFoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0Njc2NjUsImV4cCI6MjA5MzA0MzY2NX0.krPAvB3kyxcqsBS5dyDahFMqCB_4MZKaz6FEB0RfjtY';
+
+    const POLL_INTERVAL_MS = 10_000;     // founder-locked: 10s
+    const TIMEOUT_MS       = 15 * 60_000; // founder-locked: 15 min
+
+    const params = new URLSearchParams(location.search);
+    const cid    = params.get('cid');
+    const job    = params.get('job');
+    const fixtureState = params.get('state'); // review-only fixture
+
+    let currentState = null;
+    let pollTimer = null;
+    let startedAt = Date.now();
+
+    // Pre-fill WhatsApp message with cid when present
+    (function injectCidIntoWhatsApp() {
+      const link = document.getElementById('wa-link');
+      if (!link) return;
+      const idStr = cid ? ` Customer ID: ${cid}` : '';
+      const text  = `Halo tim weuseai, saya butuh bantuan dengan agent saya.${idStr}`;
+      link.href = `https://wa.me/6282154902561?text=${encodeURIComponent(text)}`;
+    })();
+
+    // Telegram deep-link: try tg:// then fall back to https://t.me/weuseaibot.
+    // The default <a href> is the HTTPS fallback. On mobile we attempt the
+    // native scheme first (it'll silently fail on desktop, then HTTPS opens).
+    document.querySelectorAll('[data-tg-deeplink]').forEach((el) => {
+      el.addEventListener('click', (e) => {
+        // Only attempt deep-link on mobile UA — desktop browsers tend to
+        // show a "scheme not supported" prompt that's worse than the default.
+        const ua = navigator.userAgent || '';
+        const isMobile = /Android|iPhone|iPad/i.test(ua);
+        if (isMobile) {
+          // Best-effort hop: attempt tg:// silently; if app installed it
+          // intercepts; otherwise the HTTPS href takes over after a moment.
+          const w = window.open('tg://resolve?domain=weuseaibot', '_self');
+          if (w) {
+            // Don't preventDefault — let the HTTPS fallback also fire as
+            // a safety net via a brief setTimeout.
+            setTimeout(() => { /* HTTPS already follows */ }, 250);
+          }
+        }
+        // Otherwise let the <a href="https://t.me/weuseaibot"> open normally
+      });
+    });
+
+    // ─── State renderers ──────────────────────────────────────
+
+    const StatusBox = document.getElementById('status-box');
+
+    function renderState(state, opts = {}) {
+      currentState = state;
+      let html = '';
+
+      switch (state) {
+        case 'A': // LOADING — initial poll in flight
+          html = `
+            <div class="fade-in flex items-center gap-3 text-white/85">
+              <span class="pulse-dot" aria-hidden="true"></span>
+              <span class="text-sm">Memeriksa status...</span>
+            </div>
+          `;
+          break;
+
+        case 'B': // pending / pending_provision
+          html = `
+            <div class="fade-in">
+              <div class="flex items-center gap-3 mb-3">
+                <span class="pulse-dot" aria-hidden="true"></span>
+                <span id="b-label" class="text-sm text-white/85">VPS sedang disiapkan...</span>
+              </div>
+              <div class="progress-track" role="progressbar" aria-label="Progress provisioning agent" aria-valuemin="0" aria-valuemax="100">
+                <div class="progress-fill" style="width: 35%;"></div>
+              </div>
+              <div class="mt-3 text-xs text-white/45">Estimasi 5–7 menit total.</div>
+            </div>
+          `;
+          break;
+
+        case 'C': // active, no &job → CTA to onboarding
+          html = `
+            <div class="fade-in">
+              <div class="text-sm text-white/85 mb-4">
+                <span class="text-white">Pembayaran terima.</span>
+                Lengkapi profil agent kamu (5 menit).
+              </div>
+              <a
+                href="/onboarding.html?cid=${encodeURIComponent(cid || '')}"
+                class="inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-medium no-underline focus-ring"
+                style="background: ${'#E5322D'}; color: #fff; border: 1px solid ${'#E5322D'};"
+              >
+                Lengkapi profil agent saya
+                <span aria-hidden="true">→</span>
+              </a>
+            </div>
+          `;
+          break;
+
+        case 'C2': // active, with &job → ready for Telegram
+          html = `
+            <div class="fade-in">
+              <div class="text-sm text-white/85 mb-4">
+                <span class="text-white">✓ Agent kamu siap.</span>
+                Cek Telegram.
+              </div>
+              <a
+                href="https://t.me/weuseaibot"
+                data-tg-deeplink
+                class="inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-medium no-underline focus-ring"
+                style="background: ${'#E5322D'}; color: #fff; border: 1px solid ${'#E5322D'};"
+              >
+                Buka Telegram
+                <span aria-hidden="true">→</span>
+              </a>
+            </div>
+          `;
+          break;
+
+        case 'D': // failed
+          html = `
+            <div class="fade-in">
+              <div class="text-sm text-white/85 mb-2">Ada kendala teknis.</div>
+              <div class="text-sm text-white/55 leading-relaxed">
+                Tim kami sudah menerima notifikasi dan akan menghubungi via email dalam 30 menit.
+              </div>
+            </div>
+          `;
+          break;
+
+        case 'E': // INVALID_CID
+          html = `
+            <div class="fade-in">
+              <div class="text-sm text-white/85 mb-2">Halaman ini hanya untuk konfirmasi pembayaran.</div>
+              <div class="text-sm text-white/55 mb-4">Mungkin kamu salah link?</div>
+              <a
+                href="/"
+                class="inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-medium no-underline focus-ring"
+                style="background: transparent; color: #fff; border: 1px solid rgba(255,255,255,0.28);"
+              >
+                Kembali ke beranda
+                <span aria-hidden="true">→</span>
+              </a>
+            </div>
+          `;
+          break;
+
+        case 'F': // timeout
+          html = `
+            <div class="fade-in">
+              <div class="text-sm text-white/85 mb-2">Provisioning butuh waktu lebih lama dari biasanya.</div>
+              <div class="text-sm text-white/55 leading-relaxed">
+                Tim kami sudah dapat notifikasi. Kamu akan dihubungi via email dalam 30 menit.
+              </div>
+            </div>
+          `;
+          break;
+
+        case 'G': // POLL_ERROR — silent retry
+          // Don't fully re-render if we're already in B with G overlay; just
+          // append a discreet indicator. For simplicity here, render the
+          // pending-progress card with an extra "Memeriksa..." note.
+          html = `
+            <div class="fade-in">
+              <div class="flex items-center gap-3 mb-3">
+                <span class="pulse-dot" aria-hidden="true"></span>
+                <span class="text-sm text-white/85">VPS sedang disiapkan...</span>
+              </div>
+              <div class="progress-track" role="progressbar" aria-label="Progress provisioning agent">
+                <div class="progress-fill" style="width: 35%;"></div>
+              </div>
+              <div class="mt-3 text-xs text-white/40 italic">Memeriksa...</div>
+            </div>
+          `;
+          break;
+      }
+      StatusBox.innerHTML = html;
+    }
+
+    // Rotate the state-B label between three lines while polling
+    const B_LABELS = [
+      'VPS sedang disiapkan...',
+      'Hermes sedang dipasang...',
+      'Skill kamu di-tune...',
+    ];
+    let bLabelIdx = 0;
+    setInterval(() => {
+      if (currentState !== 'B') return;
+      bLabelIdx = (bLabelIdx + 1) % B_LABELS.length;
+      const el = document.getElementById('b-label');
+      if (el) el.textContent = B_LABELS[bLabelIdx];
+    }, 3500);
+
+    // ─── Polling ──────────────────────────────────────────────
+
+    async function pollOnce() {
+      const url =
+        `${SUPABASE_URL}/rest/v1/subscriptions` +
+        `?customer_id=eq.${encodeURIComponent(cid)}` +
+        `&select=id,status,started_at` +
+        `&order=started_at.desc&limit=1`;
+      const r = await fetch(url, {
+        headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+      });
+      if (!r.ok) throw new Error(`poll failed: ${r.status}`);
+      const rows = await r.json();
+      return rows[0]?.status ?? null;
+    }
+
+    function isTerminal(state) {
+      return state === 'C' || state === 'C2' || state === 'D' || state === 'E' || state === 'F';
+    }
+
+    async function tick() {
+      try {
+        const status = await pollOnce();
+        if (status === 'active') {
+          renderState(job ? 'C2' : 'C');
+        } else if (status === 'failed') {
+          renderState('D');
+        } else if (status === 'pending_provision' || status === 'pending') {
+          if (Date.now() - startedAt > TIMEOUT_MS) {
+            renderState('F');
+          } else {
+            renderState('B');
+          }
+        } else if (status == null) {
+          renderState('E');
+        } else {
+          // Unknown status — treat as still pending
+          renderState('B');
+        }
+      } catch (e) {
+        renderState('G');
+      }
+      if (!isTerminal(currentState)) {
+        pollTimer = setTimeout(tick, POLL_INTERVAL_MS);
+      }
+    }
+
+    // ─── Boot ─────────────────────────────────────────────────
+
+    if (fixtureState) {
+      // Review-only fixture mode — no polling, no Supabase calls
+      renderState(fixtureState);
+    } else if (!cid) {
+      renderState('E');
+    } else {
+      renderState('A');
+      tick(); // kick off polling immediately
+    }
+
+    // Stop polling when the tab is hidden (resume when visible)
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden' && pollTimer) {
+        clearTimeout(pollTimer);
+        pollTimer = null;
+      } else if (document.visibilityState === 'visible' && !pollTimer && !isTerminal(currentState) && cid && !fixtureState) {
+        tick();
+      }
+    });
+  </script>
+</body>
+</html>

@@ -18,6 +18,30 @@ Reference history sebelum merge: `NEXT.md.platform` (archived).
 
 ---
 
+## Phase 2B revisit list (don't build now)
+
+- **Welcome page polling auth (signed JWT).** Phase 1 ships welcome.html
+  with `?cid=<uuid>` polling against `subscriptions` via the anon key
+  + RLS `anon_read_own_subscription_status` (added in migration
+  `20260506130000_anon_read_subscription_status.sql`). UUIDs are
+  unguessable + status text is non-sensitive, so MVP is acceptable. **In
+  Phase 2B, swap to:**
+  - `create-invoice` mints a short-lived JWT encoding the customer_id
+    (e.g. 24h expiry) and returns it as `?token=<jwt>` in the redirect
+    URL instead of `?cid=<uuid>`
+  - New Edge Function `GET /functions/v1/welcome-status?token=<jwt>`
+    verifies the JWT and does the subscription read on the user's
+    behalf (service role)
+  - RLS policy on `subscriptions` flips to `USING (false)` for the anon
+    role, locking out direct browser reads
+  - Spec lives in `docs/plans/2026-05-06-welcome-page-spec.md` ("Open
+    questions" section)
+- **Onboarding pairing-code expiry.** If customers report `pairing_code_expired`
+  more than 5% of the time, bump the expiry from 30 min → 60 min in
+  `services/.../onboarding-store-supabase.ts`.
+
+---
+
 ## Phase 0: Founder setup (status check)
 
 Per founder report:
