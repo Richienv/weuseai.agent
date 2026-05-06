@@ -2073,6 +2073,105 @@
       return <div data-us-project={projectId} className={className} style={style} />;
     }
 
+    // ─────────────────────── DOTTED UNICORN STUDIO ───────────────────────
+    // Wraps UnicornEmbed in an offscreen layer, samples its WebGL canvas
+    // each frame into a halftone overlay (red dots, luminance-modulated —
+    // same Grainrad-style renderer as DottedVideo).
+    function DottedUnicorn({ projectId, color = '#E5322D', cellSize = 6, threshold = 0.06, className = '', style = {} }) {
+      const wrapRef = useRef(null);
+      const sourceWrapRef = useRef(null);
+      const canvasRef = useRef(null);
+
+      useEffect(() => {
+        const wrap = wrapRef.current;
+        const sourceWrap = sourceWrapRef.current;
+        const canvas = canvasRef.current;
+        if (!wrap || !sourceWrap || !canvas) return;
+
+        const sample = document.createElement('canvas');
+        const sampleCtx = sample.getContext('2d', { willReadFrequently: true });
+        const ctx = canvas.getContext('2d');
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        let mounted = true;
+        let raf = 0;
+
+        const resize = () => {
+          const r = wrap.getBoundingClientRect();
+          canvas.width = Math.max(1, Math.floor(r.width * dpr));
+          canvas.height = Math.max(1, Math.floor(r.height * dpr));
+        };
+        resize();
+        const ro = new ResizeObserver(resize);
+        ro.observe(wrap);
+
+        const tick = () => {
+          if (!mounted) return;
+          raf = requestAnimationFrame(tick);
+          const usCanvas = sourceWrap.querySelector('canvas');
+          if (!usCanvas || !usCanvas.width || !usCanvas.height) return;
+
+          const w = canvas.width, h = canvas.height;
+          const cell = Math.max(2, cellSize * dpr);
+          const cols = Math.ceil(w / cell);
+          const rows = Math.ceil(h / cell);
+          if (sample.width !== cols) sample.width = cols;
+          if (sample.height !== rows) sample.height = rows;
+
+          const sw = usCanvas.width, sh = usCanvas.height;
+          const scale = Math.max(cols / sw, rows / sh);
+          const dw = sw * scale, dh = sh * scale;
+          const dx = (cols - dw) / 2, dy = (rows - dh) / 2;
+          try {
+            sampleCtx.drawImage(usCanvas, dx, dy, dw, dh);
+          } catch (e) { return; }
+          const data = sampleCtx.getImageData(0, 0, cols, rows).data;
+
+          ctx.clearRect(0, 0, w, h);
+          ctx.fillStyle = color;
+          const half = cell / 2;
+          const maxR = half * 0.95;
+          for (let y = 0; y < rows; y++) {
+            for (let x = 0; x < cols; x++) {
+              const i = (y * cols + x) * 4;
+              const lum = (0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]) / 255;
+              if (lum < threshold) continue;
+              const r = lum * maxR;
+              ctx.beginPath();
+              ctx.arc(x * cell + half, y * cell + half, r, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          }
+        };
+
+        raf = requestAnimationFrame(tick);
+        return () => {
+          mounted = false;
+          ro.disconnect();
+          cancelAnimationFrame(raf);
+        };
+      }, [projectId, color, cellSize, threshold]);
+
+      return (
+        <div ref={wrapRef} className={className} style={{ ...style, position: style.position || 'absolute' }}>
+          {/* Source rendering — kept in-flow at opacity 0 so UnicornStudio's
+              rAF loop keeps drawing every frame. Pointer-events none so it
+              doesn't trap interactions. */}
+          <div
+            ref={sourceWrapRef}
+            aria-hidden="true"
+            style={{ position: 'absolute', inset: 0, opacity: 0, pointerEvents: 'none' }}
+          >
+            <UnicornEmbed projectId={projectId} className="w-full h-full" style={{ width: '100%', height: '100%' }} />
+          </div>
+          <canvas
+            ref={canvasRef}
+            aria-hidden="true"
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', display: 'block' }}
+          />
+        </div>
+      );
+    }
+
     // ─────────────────────── COUNT UP ───────────────────────
     function CountUp({ to, suffix = '', duration = 1800, delay = 0, locale = 'id-ID', className = '', style = {} }) {
       const [val, setVal] = useState(0);
@@ -2600,10 +2699,12 @@
 
       return (
         <section className="relative overflow-hidden py-20 md:py-32 px-5 md:px-6 lg:px-16 bg-black">
-          <UnicornEmbed
+          <DottedUnicorn
             projectId="k6zzxblRW6JEuhAczFHj"
+            color="#E5322D"
+            cellSize={6}
             className="absolute inset-0 w-full h-full pointer-events-none"
-            style={{ zIndex: 1, opacity: 0.45, background: '#000' }}
+            style={{ zIndex: 1, background: '#000' }}
           />
           <FadeTop /> <FadeBottom />
           <div className="relative z-10 max-w-6xl mx-auto">
@@ -3537,16 +3638,15 @@
         {
           name: 'weuseai.agent Pro',
           subtitle: 'Agent AI',
-          subtitleAside: 'multi-agent, persistent, milik kamu',
+          subtitleAside: 'multi-agent paralel, milik kamu',
           featured: true,
+          spanWide: true,
           orderMobile: 'order-1',
           orderDesktop: 'md:order-2',
           rows: [
-            { have: true, text: 'Multi-agent kerja paralel — planner susun strategi, builder eksekusi, reviewer ngecek hasilnya' },
-            { have: true, text: 'Scrape web tanpa kena bot detection — lewat Cloudflare tanpa drama, 774× lebih cepat dari scraper standar' },
-            { have: true, text: 'Jalan 24/7 — kerja sambil kamu tidur, hasilnya nungguin pagi hari' },
-            { have: true, text: 'Workspace persistent — file, database, cron, semua hidup terus tanpa kamu jaga' },
-            { have: true, text: 'Sekali ajarin satu skill, agent inget selamanya' },
+            { have: true, text: 'Planner agent susun strategi langkah demi langkah' },
+            { have: true, text: 'Builder agent eksekusi banyak action di waktu yang sama' },
+            { have: true, text: 'Reviewer agent cek semua hasil bareng-bareng sebelum nyampe ke kamu' },
           ],
           ariaLabel: 'Perbandingan weuseai.agent Pro (paket kami)',
         },
@@ -3597,9 +3697,10 @@
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-6 items-stretch">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-5 md:gap-6 items-stretch">
               {cards.map((c, i) => {
                 const isFeatured = !!c.featured;
+                const isWide = !!c.spanWide;
                 return (
                   <Mot.div
                     key={c.name}
@@ -3609,7 +3710,7 @@
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true, amount: 0.3 }}
                     transition={{ duration: 0.6, ease: EASE, delay: 0.05 * i }}
-                    className={`liquid-glass rounded-2xl p-6 md:p-7 flex flex-col ${c.orderMobile} ${c.orderDesktop}`}
+                    className={`liquid-glass rounded-2xl ${isWide ? 'p-7 md:p-9 md:col-span-2' : 'p-6 md:p-7'} flex flex-col ${c.orderMobile} ${c.orderDesktop}`}
                     style={
                       isFeatured
                         ? {
@@ -3620,33 +3721,23 @@
                         : { opacity: 0.92 }
                     }
                   >
-                    <div className="flex items-baseline gap-2">
-                      <h3
-                        className="text-lg md:text-xl font-heading text-white leading-[1.15]"
-                        style={{ letterSpacing: '-0.02em' }}
-                      >
-                        {c.name}
-                      </h3>
-                      {isFeatured && (
-                        <span
-                          className="text-[10px] font-mono uppercase tracking-[0.18em]"
-                          style={{ color: '#E5322D' }}
-                        >
-                          Pilih kami
-                        </span>
-                      )}
-                    </div>
-                    <div className="mt-1 text-sm font-body font-light text-white/65">
+                    <h3
+                      className={`font-heading text-white leading-[1.1] ${isWide ? 'text-2xl md:text-3xl' : 'text-lg md:text-xl'}`}
+                      style={{ letterSpacing: '-0.02em' }}
+                    >
+                      {c.name}
+                    </h3>
+                    <div className={`mt-1 font-body font-light text-white/65 ${isWide ? 'text-base md:text-lg' : 'text-sm'}`}>
                       <span className="text-white/85">{c.subtitle}</span>
                       <span className="text-white/45"> {c.subtitleAside}</span>
                     </div>
 
-                    <ul className="mt-5 md:mt-6 space-y-3 flex-1">
+                    <ul className={`${isWide ? 'mt-6 md:mt-8 space-y-4' : 'mt-5 md:mt-6 space-y-3'} flex-1`}>
                       {c.rows.map((r, ri) => (
-                        <li key={ri} className="flex items-start gap-2.5 text-sm font-body font-light leading-relaxed">
+                        <li key={ri} className={`flex items-start ${isWide ? 'gap-3 text-base md:text-lg' : 'gap-2.5 text-sm'} font-body font-light leading-relaxed`}>
                           <span
                             aria-hidden="true"
-                            className="mt-[3px] inline-flex items-center justify-center w-4 h-4 rounded-full flex-shrink-0 text-[10px] font-bold"
+                            className={`mt-[3px] inline-flex items-center justify-center rounded-full flex-shrink-0 font-bold ${isWide ? 'w-5 h-5 text-[12px]' : 'w-4 h-4 text-[10px]'}`}
                             style={
                               r.have
                                 ? { background: 'rgba(229,50,45,0.18)', color: '#E5322D' }
