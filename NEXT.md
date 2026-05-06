@@ -1,7 +1,52 @@
 # NEXT.md — Task queue (kerjain urut)
 
-**Updated:** 2026-04-30 (post-merge liren-stand → weuseai.agent monorepo)
+**Updated:** 2026-05-06 (Day 4b — Hermes binding model documented)
 **Target launch:** 2 minggu setelah Day 4-5 end-to-end provisioning verified
+
+---
+
+## Hermes runtime model — locked notes (Day 4b, 2026-05-06)
+
+**TL;DR: Hermes is a Telegram-polling bot, NOT an HTTP server. There's
+no `/health` endpoint, no listening port, no firewall hole needed.
+"Health" = `systemctl status hermes-gateway`.**
+
+How it actually runs on customer VMs:
+
+| Concern | Answer |
+|---|---|
+| Process model | systemd unit at `/etc/systemd/system/hermes-gateway.service` |
+| ExecStart | `python -m hermes_cli.main gateway run --replace` (long-poll Telegram) |
+| User | `weuseai` (via `--run-as-user weuseai` flag at install time) |
+| Restart policy | `Restart=always`, RestartSec=60, MaxDelay=300, Steps=5 |
+| Boot start | yes — `multi-user.target.wants/hermes-gateway.service` |
+| Listen port | none — outbound long-poll to api.telegram.org only |
+| Firewall | only port 22 (SSH) is open externally |
+
+How to install correctly (locked into setup-script.ts, do NOT regress):
+
+```bash
+# Run as root (script runs via `sudo bash -s` over SSH).
+hermes gateway install --system --run-as-user weuseai   # creates unit
+hermes gateway start --system                            # actually starts it
+```
+
+Common mistakes that look like they work but don't:
+- `hermes gateway install` (no flags) → installs USER-level unit, no boot
+- `hermes gateway setup --telegram` → not a real flag, fails silently
+- Just `gateway install` without `gateway start` → unit dead, bot offline
+
+Diagnostic on a customer VM:
+```bash
+ssh liren@<vm-ip> 'systemctl is-active hermes-gateway && systemctl is-enabled hermes-gateway'
+# Expected: active enabled
+```
+
+Test coverage: `tests/setup-script.spec.ts` has three regression guards
+(2026-05-06):
+- `gateway install uses --system --run-as-user (not user-level service)`
+- `gateway start --system runs after install (otherwise unit sits dead)`
+- `omits invalid 'gateway setup --telegram' (Day 4b: not a real flag)`
 
 ---
 

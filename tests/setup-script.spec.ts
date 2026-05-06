@@ -96,7 +96,7 @@ test('script: runs Hermes install.sh as weuseai (pinned to upstream main)', () =
   )
 })
 
-test('script: gateway setup + install + cron — best-effort (failure tolerated)', () => {
+test('script: gateway install + start + cron — best-effort (failure tolerated)', () => {
   const s = buildSetupScript(baseParams)
   // Each hermes management command: tolerated failure so a CLI flag rename
   // upstream doesn't kill the whole script. The crucial halo already fired.
@@ -106,6 +106,54 @@ test('script: gateway setup + install + cron — best-effort (failure tolerated)
   for (const l of lines) {
     assert.match(l, /\|\|\s*(true|log\s)/, `tolerant: ${l.trim()}`)
   }
+})
+
+test('script: gateway install uses --system --run-as-user (not user-level service)', () => {
+  // Day 4b regression guard. User-level systemd units (default of
+  // `hermes gateway install` without flags) don't auto-start at boot
+  // and don't have `Restart=always` system-wide. We need a real
+  // /etc/systemd/system/hermes-gateway.service unit for production —
+  // hence --system + --run-as-user weuseai.
+  const s = buildSetupScript(baseParams)
+  assert.match(
+    s,
+    /hermes\s+gateway\s+install\s+--system\s+--run-as-user\s+weuseai/,
+    'gateway install must use --system --run-as-user',
+  )
+})
+
+test('script: gateway start --system runs after install (otherwise unit sits dead)', () => {
+  // Day 4b regression guard. Upstream hermes CLI design: `gateway install`
+  // ONLY installs the unit. Without a follow-up `gateway start --system`,
+  // the unit ends up enabled-but-inactive and the bot never polls Telegram.
+  // The CLI's own "Next steps" output says: sudo hermes gateway start --system.
+  const s = buildSetupScript(baseParams)
+  assert.match(
+    s,
+    /hermes\s+gateway\s+start\s+--system/,
+    'gateway start --system must be present after install',
+  )
+  // Order check: start must come after install, not before.
+  const installIdx = s.search(/hermes\s+gateway\s+install/)
+  const startIdx = s.search(/hermes\s+gateway\s+start/)
+  assert.ok(installIdx >= 0, 'install line found')
+  assert.ok(startIdx >= 0, 'start line found')
+  assert.ok(startIdx > installIdx, 'start must come after install')
+})
+
+test('script: omits invalid `gateway setup --telegram` (Day 4b: not a real flag)', () => {
+  // Phase 2A regression: previous version called
+  //   hermes gateway setup --telegram
+  // which Hermes rejects with "unrecognized arguments: --telegram".
+  // The error was swallowed by `|| log` so it looked like the script
+  // worked. Removed in 2026-05-06 patch — the bot token is read from
+  // .env automatically by the gateway runtime.
+  const s = buildSetupScript(baseParams)
+  assert.equal(
+    /gateway\s+setup\s+--telegram/.test(s),
+    false,
+    'must not call invalid `gateway setup --telegram`',
+  )
 })
 
 test('script: writes /opt/weuseai/ready as final step (success marker)', () => {

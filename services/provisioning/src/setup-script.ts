@@ -139,11 +139,33 @@ log "No telegramBotToken — skipping halo ping (customer will paste token via d
 `
 
   // Telegram-dependent post-install commands.
+  //
+  // Diagnosed 2026-05-06 on a fresh IDCH VM (Day 4b investigation):
+  //   - `hermes gateway setup --telegram` is INVALID syntax — `--telegram`
+  //     is not a recognized flag on `hermes gateway setup`. Hermes reads the
+  //     bot token from .env directly when the gateway runs; there's no
+  //     "configure platform" step. Removed.
+  //   - `hermes gateway install` (no flags) installs a USER-level systemd
+  //     unit under ~/.config/systemd/user. Those don't auto-start at boot
+  //     and need `loginctl enable-linger` to survive logouts. We need
+  //     `--system --run-as-user weuseai` for a real /etc/systemd/system
+  //     unit with `Restart=always` + multi-user.target enable.
+  //   - `gateway install` only INSTALLS the unit; it does NOT start it.
+  //     The CLI's own "Next steps" text says "sudo hermes gateway start
+  //     --system". Without that, the unit sits inactive/dead and the bot
+  //     never polls Telegram.
+  //
+  // Verified on test VM:
+  //   /etc/systemd/system/hermes-gateway.service exists,
+  //   enabled (multi-user.target.wants/), Active: active (running),
+  //   Restart=always RestartSec=60.
   const hermesGatewayBlock = hasTelegram
     ? `
-log "Configuring Hermes Telegram gateway..."
-su - weuseai -c '${HERMES} gateway setup --telegram' >> "$LOG" 2>&1 || log "✗ gateway setup failed (non-fatal)"
-su - weuseai -c '${HERMES} gateway install' >> "$LOG" 2>&1 || log "✗ gateway install failed (non-fatal)"
+log "Installing Hermes gateway as system service..."
+${HERMES} gateway install --system --run-as-user weuseai >> "$LOG" 2>&1 || log "✗ gateway install failed (non-fatal)"
+
+log "Starting Hermes gateway service..."
+${HERMES} gateway start --system >> "$LOG" 2>&1 || log "✗ gateway start failed (non-fatal)"
 
 log "Adding daily-news cron..."
 su - weuseai -c '${HERMES} cron add --schedule "0 0 * * *" --prompt "${shSingleQuote(DAILY_NEWS_CRON_PROMPT)}" --deliver telegram' >> "$LOG" 2>&1 || log "✗ cron add failed (non-fatal)"
