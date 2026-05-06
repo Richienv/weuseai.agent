@@ -12,6 +12,10 @@ import { createVPSProvider } from './providers/index.js'
 import { createDataStore } from './stores/index.js'
 import { createMessageBroker } from '../../hermes/src/adapters/index.js'
 import { parseSpinUpRequest, formatSpinUpResponse } from './spin-up-helpers.js'
+import { ExecSshProvisioner } from './ssh/exec-ssh-provisioner.js'
+import { MockSshProvisioner } from './ssh/mock-ssh-provisioner.js'
+import { OpenRouterKeyMinter } from './llm/openrouter-minter.js'
+import { MockLlmKeyMinter } from './llm/mock-minter.js'
 
 const PORT = Number(process.env.PORT ?? 8080)
 const AUTH_TOKEN = process.env.PROVISIONING_AUTH_TOKEN
@@ -26,10 +30,18 @@ if (isDryRun) {
   console.log('[provisioning] DRY-RUN mode (ENABLE_REAL_PROVISIONING=false) — using MockVPSProvider')
 }
 
+// Dry-run substitutes mocks for the side-effecting deps (no IDCH spawn,
+// no real OpenRouter mint) but keeps real Supabase + broker so we can
+// still inspect rows + telegram in staging.
+const ssh = isDryRun ? new MockSshProvisioner() : new ExecSshProvisioner()
+const llmMinter = isDryRun ? new MockLlmKeyMinter() : new OpenRouterKeyMinter()
+
 const sharedDeps: SpinUpDeps = {
   vps: createVPSProvider(),
   store: createDataStore(),
   broker: createMessageBroker(),
+  ssh,
+  llmMinter,
   providerName: isDryRun ? 'mock' : 'idcloudhost',
   alertChatId: process.env.RICHIE_CHAT_ID,
 }

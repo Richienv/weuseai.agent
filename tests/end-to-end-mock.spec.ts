@@ -13,14 +13,17 @@ import { MockDataStore } from '../services/provisioning/src/stores/mock-store.js
 import { MockMessageBroker } from '../services/hermes/src/adapters/mock-broker.js'
 import { MockPaymentProvider } from '../services/payment/lib/payment/mock-payment.js'
 import { MockLLMProvider } from '../services/proxy/src/providers/mock-llm.js'
+import { MockSshProvisioner } from '../services/provisioning/src/ssh/mock-ssh-provisioner.js'
+import { MockLlmKeyMinter } from '../services/provisioning/src/llm/mock-minter.js'
 import { spinUpCustomer } from '../services/provisioning/src/customer-flow.js'
 
-test('happy path: pay → spawn → Hermes alive → telegram message', async () => {
+test('happy path: pay → spawn → SSH setup → halo + ready marker', async () => {
   // ── arrange ───────────────────────────────────────────────
   const payment = new MockPaymentProvider()
   const vps = new MockVPSProvider({ autoRunAfterMs: 0 })
   const store = new MockDataStore()
   const broker = new MockMessageBroker()
+  const ssh = new MockSshProvisioner()
   const llm = new MockLLMProvider()
 
   store.seedCustomer({
@@ -57,14 +60,14 @@ test('happy path: pay → spawn → Hermes alive → telegram message', async ()
       vps,
       store,
       broker,
-      proxyUrl: 'https://proxy.test.local',
+      ssh,
+    llmMinter: new MockLlmKeyMinter(),
       billingAccountId: 'fake-billing',
-      mintToken: async (id) => `tok-${id}`,
-      healthCheck: async () => {
-        // Hermes considered alive immediately
-      },
-      pollIntervalMs: 5,
-      vpsRunningTimeoutMs: 1000,
+      ipPollIntervalMs: 1,
+      ipPollTimeoutMs: 1000,
+      sshPollIntervalMs: 1,
+      sshReadyTimeoutMs: 1000,
+      waitForSshOpen: async () => {/* mock — port always open */},
       log: () => {},
     },
   )
@@ -72,21 +75,19 @@ test('happy path: pay → spawn → Hermes alive → telegram message', async ()
   assert.ok(result.vpsId.startsWith('mock-vps-'))
   assert.equal(result.status, 'provisioning')
 
-  // ── 3. background completes (Hermes alive) ────────────────
+  // ── 3. background completes (SSH setup ran) ──────────────
   await result.done
-
-  const after = vps.listAll().find((v) => v.uuid === result.vpsId)
-  assert.equal(after?.status, 'running', 'mock VPS reached running')
 
   const stored = await store.findActiveVPSByCustomer('cust-1')
   assert.equal(stored?.status, 'running', 'data store updated to running')
   assert.equal(stored?.vps_id, result.vpsId)
+  assert.ok(stored?.ip_address, 'public IP populated from getPublicIp')
 
-  // ── 4. telegram message sent ──────────────────────────────
-  assert.equal(broker.sentMessages.length, 1)
-  assert.equal(broker.sentMessages[0].chatId, '987654321')
-  assert.match(broker.sentMessages[0].text, /agent kamu hidup/i)
-  assert.match(broker.sentMessages[0].text, /BotFather/)
+  // ── 4. SSH setup script ran with halo + Hermes install ───
+  assert.equal(ssh.calls.length, 1, 'ssh.runSetup called once')
+  assert.equal(ssh.calls[0].user, 'liren', 'IDCloudHost default user')
+  assert.match(ssh.calls[0].script, /Halo, gue agen lo/, 'halo greeting in script')
+  assert.match(ssh.calls[0].script, /install\.sh/, 'Hermes installer in script')
 
   // ── 5. LLM mock callable ──────────────────────────────────
   const reply = await llm.chatCompletion({
@@ -102,6 +103,7 @@ test('idempotency: spinUp dua kali ngembaliin VPS yang sama', async () => {
   const vps = new MockVPSProvider({ autoRunAfterMs: 0 })
   const store = new MockDataStore()
   const broker = new MockMessageBroker()
+  const ssh = new MockSshProvisioner()
 
   const opts = {
     customerId: 'cust-2',
@@ -113,12 +115,14 @@ test('idempotency: spinUp dua kali ngembaliin VPS yang sama', async () => {
     vps,
     store,
     broker,
-    healthCheck: async () => {},
-    pollIntervalMs: 5,
-    vpsRunningTimeoutMs: 1000,
+    ssh,
+    llmMinter: new MockLlmKeyMinter(),
+    ipPollIntervalMs: 1,
+    ipPollTimeoutMs: 1000,
+    sshPollIntervalMs: 1,
+    sshReadyTimeoutMs: 1000,
+    waitForSshOpen: async () => {},
     log: () => {},
-    mintToken: async () => 'tok',
-    proxyUrl: 'https://proxy.test.local',
     billingAccountId: 'fake-billing',
   }
 
@@ -128,6 +132,7 @@ test('idempotency: spinUp dua kali ngembaliin VPS yang sama', async () => {
   const second = await spinUpCustomer(opts, deps)
   assert.equal(second.vpsId, first.vpsId)
   assert.equal(vps.listAll().length, 1, 'no extra VM created on second call')
+  assert.equal(ssh.calls.length, 1, 'no second SSH run')
 })
 
 test('VPS create failure tetep route ke alert broker', async () => {
@@ -152,9 +157,10 @@ test('VPS create failure tetep route ke alert broker', async () => {
           vps,
           store,
           broker,
+          ssh: new MockSshProvisioner(),
+          llmMinter: new MockLlmKeyMinter(),
           alertChatId: 'admin-chat',
-          mintToken: async () => 'tok',
-          healthCheck: async () => {},
+          waitForSshOpen: async () => {},
           log: () => {},
         },
       ),

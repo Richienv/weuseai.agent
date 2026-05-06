@@ -77,7 +77,10 @@ test('idch.create: hits /vm with form-encoded body + apikey header', async () =>
   assert.equal(parsed.password, 'pwd-secret')
   assert.equal(parsed.billing_account_id, 'biz-99')
   assert.equal(parsed.os_name, 'ubuntu')
-  assert.equal(parsed.os_version, '24.04')
+  // IDCloudHost requires '-lts' suffix; '24.04' alone is rejected with
+  // "if 'os_name=ubuntu' then value must be one from the list ['20.04-lts',
+  // '22.04-lts', '24.04-lts']". Verified 2026-05-02 against the live API.
+  assert.equal(parsed.os_version, '24.04-lts')
   assert.equal(parsed.cloud_init, '#cloud-config\n')
 })
 
@@ -162,6 +165,70 @@ test('idch: omits region segment when no region configured', async () => {
     'https://api.idcloudhost.com/v1/user-resource/vm?uuid=vm-1',
     'no region prefix in URL when region absent',
   )
+})
+
+test('idch.getPublicIp: returns the address attached to the VM', async () => {
+  const vmUuid = 'a409b90c-d186-4eb8-a97b-296f4f58924a'
+  const { fn, calls } = makeFetchMock({
+    body: [
+      // IP that's been unassigned (don't pick this)
+      { id: 1, address: '210.79.191.216', uuid: 'old', is_deleted: false, unassigned_at: '2026-05-03 09:04:26' },
+      // The current attached IP
+      { id: 2, address: '103.181.143.21', uuid: 'cur', is_deleted: false, assigned_to: vmUuid, assigned_to_resource_type: 'virtual_machine' },
+    ],
+  })
+  const ip = await withMockedFetch(fn, async () => {
+    const p = new IDCloudHostVPSProvider({ apiKey: 'k', region: 'jkt01' })
+    return p.getPublicIp(vmUuid)
+  })
+  assert.equal(ip, '103.181.143.21')
+  // Hit the right URL (network/ip_addresses, NOT user-resource)
+  assert.match(calls[0].url, /\/v1\/jkt01\/network\/ip_addresses/)
+})
+
+test('idch.getPublicIp: returns null when no IP is attached to this VM', async () => {
+  const { fn } = makeFetchMock({
+    body: [
+      { id: 1, address: '210.79.191.216', is_deleted: false, unassigned_at: '2026-05-03 09:04:26' },
+      { id: 2, address: '103.181.143.21', is_deleted: false, assigned_to: 'some-other-vm', assigned_to_resource_type: 'virtual_machine' },
+    ],
+  })
+  const ip = await withMockedFetch(fn, async () => {
+    const p = new IDCloudHostVPSProvider({ apiKey: 'k', region: 'jkt01' })
+    return p.getPublicIp('our-vm-uuid')
+  })
+  assert.equal(ip, null)
+})
+
+test('idch.getPublicIp: ignores deleted IPs even if assigned_to matches', async () => {
+  // Defensive — IDCH might leave a stale assigned_to on a deleted record.
+  const vmUuid = 'vm-1'
+  const { fn } = makeFetchMock({
+    body: [
+      { id: 1, address: '1.1.1.1', is_deleted: true, assigned_to: vmUuid, assigned_to_resource_type: 'virtual_machine' },
+      { id: 2, address: '2.2.2.2', is_deleted: false, assigned_to: vmUuid, assigned_to_resource_type: 'virtual_machine' },
+    ],
+  })
+  const ip = await withMockedFetch(fn, async () => {
+    const p = new IDCloudHostVPSProvider({ apiKey: 'k', region: 'jkt01' })
+    return p.getPublicIp(vmUuid)
+  })
+  assert.equal(ip, '2.2.2.2')
+})
+
+test('idch.getPublicIp: ignores records with unassigned_at set even if assigned_to matches', async () => {
+  const vmUuid = 'vm-1'
+  const { fn } = makeFetchMock({
+    body: [
+      // Stale: was assigned but later unassigned
+      { id: 1, address: '1.1.1.1', is_deleted: false, assigned_to: vmUuid, unassigned_at: '2026-05-04 00:00:00' },
+    ],
+  })
+  const ip = await withMockedFetch(fn, async () => {
+    const p = new IDCloudHostVPSProvider({ apiKey: 'k', region: 'jkt01' })
+    return p.getPublicIp(vmUuid)
+  })
+  assert.equal(ip, null)
 })
 
 test('idch.create: defaults username to "liren" + ssh_key_uuid omitted when not given', async () => {

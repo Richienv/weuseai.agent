@@ -4,6 +4,7 @@ import type {
   Subscription,
   VPSInstanceRecord,
   CreateVPSInstanceInput,
+  OpenRouterKeyRecord,
 } from '../data-store.js'
 
 /** In-memory IDataStore. State exposed for assertions in tests. */
@@ -12,6 +13,7 @@ export class MockDataStore implements IDataStore {
   subscriptions = new Map<string, Subscription>()
   vpsInstances = new Map<string, VPSInstanceRecord>()
   credits = new Map<string, number>()
+  openRouterKeys = new Map<string, OpenRouterKeyRecord>()
 
   private idCounter = 0
   private nextId(prefix: string): string {
@@ -64,6 +66,17 @@ export class MockDataStore implements IDataStore {
     const next = Math.max(0, cur - cents)
     this.credits.set(customerId, next)
     return next
+  }
+
+  async upsertOpenRouterKey(rec: OpenRouterKeyRecord): Promise<void> {
+    this.openRouterKeys.set(rec.customer_id, {
+      ...rec,
+      created_at: rec.created_at ?? new Date().toISOString(),
+    })
+  }
+
+  async getOpenRouterKey(customerId: string): Promise<OpenRouterKeyRecord | null> {
+    return this.openRouterKeys.get(customerId) ?? null
   }
 
   /** Test helper. */

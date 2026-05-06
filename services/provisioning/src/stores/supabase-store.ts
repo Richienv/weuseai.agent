@@ -5,6 +5,7 @@ import type {
   Subscription,
   VPSInstanceRecord,
   CreateVPSInstanceInput,
+  OpenRouterKeyRecord,
 } from '../data-store.js'
 
 /** Supabase adapter. Reads creds from env unless explicitly passed. */
@@ -99,5 +100,27 @@ export class SupabaseDataStore implements IDataStore {
     })
     if (error) throw error
     return (data as number | null) ?? 0
+  }
+
+  async upsertOpenRouterKey(rec: OpenRouterKeyRecord): Promise<void> {
+    const { error } = await this.client
+      .from('customer_openrouter_keys')
+      .upsert({
+        customer_id: rec.customer_id,
+        openrouter_key_hash: rec.openrouter_key_hash,
+        credit_limit_usd_cents: rec.credit_limit_usd_cents,
+        last_topped_up_at: rec.last_topped_up_at ?? null,
+      })
+    if (error) throw error
+  }
+
+  async getOpenRouterKey(customerId: string): Promise<OpenRouterKeyRecord | null> {
+    const { data, error } = await this.client
+      .from('customer_openrouter_keys')
+      .select('*')
+      .eq('customer_id', customerId)
+      .maybeSingle()
+    if (error) throw error
+    return (data as OpenRouterKeyRecord | null) ?? null
   }
 }

@@ -45,6 +45,15 @@ export type VPSInstanceRecord = {
 
 export type CreateVPSInstanceInput = Omit<VPSInstanceRecord, 'id'>
 
+export type OpenRouterKeyRecord = {
+  customer_id: string
+  /** OpenRouter `hash` field. NOT the secret key. */
+  openrouter_key_hash: string
+  credit_limit_usd_cents: number
+  created_at?: string
+  last_topped_up_at?: string | null
+}
+
 export interface IDataStore {
   getCustomer(id: string): Promise<Customer | null>
 
@@ -57,4 +66,10 @@ export interface IDataStore {
 
   getBalance(customerId: string): Promise<number>
   decrementCredits(customerId: string, cents: number): Promise<number>
+
+  // ─── Phase 2A: per-customer OpenRouter key tracking ──────────────────
+  /** Insert a customer_openrouter_keys row. Idempotent on customer_id. */
+  upsertOpenRouterKey(rec: OpenRouterKeyRecord): Promise<void>
+  /** Get the persisted hash + cap for a customer (or null). */
+  getOpenRouterKey(customerId: string): Promise<OpenRouterKeyRecord | null>
 }

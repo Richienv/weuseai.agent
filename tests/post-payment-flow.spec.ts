@@ -22,6 +22,8 @@ import type {
 import { MockVPSProvider } from '../services/provisioning/src/providers/mock-vps.js'
 import { MockDataStore } from '../services/provisioning/src/stores/mock-store.js'
 import { MockMessageBroker } from '../services/hermes/src/adapters/mock-broker.js'
+import { MockSshProvisioner } from '../services/provisioning/src/ssh/mock-ssh-provisioner.js'
+import { MockLlmKeyMinter } from '../services/provisioning/src/llm/mock-minter.js'
 import { spinUpCustomer } from '../services/provisioning/src/customer-flow.js'
 
 // ──────────────────────────────────────────────────────────
@@ -109,11 +111,10 @@ function makeProvisioningWiredToSpinUp(opts: {
   const broker = new MockMessageBroker()
   let spinUpCalls = 0
 
-  if (opts.shouldFail) {
-    ;(vps as unknown as { create: () => Promise<never> }).create = async () => {
-      throw new Error('simulated VPS create failure')
-    }
-  }
+  // shouldFail is now plumbed into the SSH provisioner below — when set,
+  // ssh.runSetup returns ok:false and the customer-flow's failure path runs.
+  // Pre-pivot we simulated this via vps.create() throwing; SSH-based
+  // provisioning makes ssh.runSetup the natural failure point.
 
   return {
     vps,
@@ -139,11 +140,18 @@ function makeProvisioningWiredToSpinUp(opts: {
             vps,
             store,
             broker,
+            ssh: new MockSshProvisioner({
+              nextResult: opts.shouldFail
+                ? { ok: false, stdout: '', stderr: 'simulated SSH setup failure', exitCode: 1 }
+                : { ok: true, stdout: '', stderr: '', exitCode: 0 },
+            }),
+            llmMinter: new MockLlmKeyMinter(),
             alertChatId: 'admin-chat',
-            mintToken: async () => 'tok',
-            healthCheck: async () => {},
-            pollIntervalMs: 1,
-            vpsRunningTimeoutMs: 1000,
+            ipPollIntervalMs: 1,
+            ipPollTimeoutMs: 1000,
+            sshPollIntervalMs: 1,
+            sshReadyTimeoutMs: 1000,
+            waitForSshOpen: async () => {},
             log: () => {},
           },
         )
@@ -235,11 +243,12 @@ test('happy path: webhook PAID → subscription active + credits + provisioning 
   const created = prov.vps.listAll()
   assert.equal(created.length, 1)
 
-  // Welcome message sent to customer chat with BotFather instructions
-  assert.equal(prov.broker.sentMessages.length, 1)
-  assert.equal(prov.broker.sentMessages[0].chatId, 'chat-cust_pelanggan@example.id')
-  assert.match(prov.broker.sentMessages[0].text, /agent kamu hidup/i)
-  assert.match(prov.broker.sentMessages[0].text, /BotFather/)
+  // Welcome ("halo") is now sent by the setup script running ON the VM via
+  // direct curl to Telegram (proof-of-life mechanism), NOT by our broker.
+  // So broker.sentMessages stays empty on happy path. (Pre-pivot it sent
+  // a "agent kamu hidup / BotFather" message; SSH-pivot moves that
+  // responsibility into setup-script.ts.)
+  assert.equal(prov.broker.sentMessages.length, 0, 'no broker messages on happy path — halo via VM-side curl')
 })
 
 // ──────────────────────────────────────────────────────────

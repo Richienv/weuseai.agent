@@ -44,8 +44,8 @@ test('REAL: create + delete one VPS (costs ~Rp 100)', { skip: !SHOULD_RUN }, asy
   try {
     const vps = await p.create({
       name,
-      // Smallest tier to minimise cost.
-      spec: { vcpu: 1, ram: 1024, disk: 20 },
+      // Smallest spec IDCH jkt01 accepts (2 vCPU minimum, verified 2026-05-02).
+      spec: { vcpu: 2, ram: 2048, disk: 20 },
       password: cryptoRandomPassword(),
       // Empty cloud-init — we're testing API plumbing, not Hermes.
       cloudInit: '#cloud-config\nruncmd:\n  - echo "phase1-integration-test"\n',
