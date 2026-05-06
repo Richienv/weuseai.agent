@@ -1945,6 +1945,107 @@
     const FadeTop = ({ h = 200 }) => <div className="absolute top-0 left-0 right-0 pointer-events-none z-[2]" style={{ height: h, background: 'linear-gradient(to bottom, #000, transparent)' }} />;
     const FadeBottom = ({ h = 200 }) => <div className="absolute bottom-0 left-0 right-0 pointer-events-none z-[2]" style={{ height: h, background: 'linear-gradient(to top, #000, transparent)' }} />;
 
+    // ─────────────────────── DOTTED VIDEO (Grainrad-style halftone) ───────────────────────
+    // Samples a video frame-by-frame and renders each cell as a colored dot
+    // whose radius scales with luminance. Pure Canvas 2D, runs at video FPS.
+    // Source video must be same-origin (it is — /assets/).
+    function DottedVideo({ src, color = '#E5322D', cellSize = 6, threshold = 0.06, className = '', style = {} }) {
+      const wrapRef = useRef(null);
+      const videoRef = useRef(null);
+      const canvasRef = useRef(null);
+      const sampleRef = useRef(null);
+
+      useEffect(() => {
+        const wrap = wrapRef.current;
+        const video = videoRef.current;
+        const canvas = canvasRef.current;
+        if (!wrap || !video || !canvas) return;
+        const sample = document.createElement('canvas');
+        sampleRef.current = sample;
+        const sampleCtx = sample.getContext('2d', { willReadFrequently: true });
+        const ctx = canvas.getContext('2d');
+
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        let mounted = true;
+        let raf = 0;
+
+        const resize = () => {
+          const r = wrap.getBoundingClientRect();
+          canvas.width = Math.max(1, Math.floor(r.width * dpr));
+          canvas.height = Math.max(1, Math.floor(r.height * dpr));
+        };
+        resize();
+        const ro = new ResizeObserver(resize);
+        ro.observe(wrap);
+
+        const tick = () => {
+          if (!mounted) return;
+          raf = requestAnimationFrame(tick);
+          if (video.readyState < 2) return;
+
+          const w = canvas.width, h = canvas.height;
+          const cell = Math.max(2, cellSize * dpr);
+          const cols = Math.ceil(w / cell);
+          const rows = Math.ceil(h / cell);
+          if (sample.width !== cols) sample.width = cols;
+          if (sample.height !== rows) sample.height = rows;
+
+          // Cover-fit: draw video filling sample canvas, cropping overflow.
+          const vw = video.videoWidth, vh = video.videoHeight;
+          if (!vw || !vh) return;
+          const scale = Math.max(cols / vw, rows / vh);
+          const dw = vw * scale, dh = vh * scale;
+          const dx = (cols - dw) / 2, dy = (rows - dh) / 2;
+          sampleCtx.drawImage(video, dx, dy, dw, dh);
+          const data = sampleCtx.getImageData(0, 0, cols, rows).data;
+
+          ctx.clearRect(0, 0, w, h);
+          ctx.fillStyle = color;
+          const half = cell / 2;
+          const maxR = half * 0.95;
+          for (let y = 0; y < rows; y++) {
+            for (let x = 0; x < cols; x++) {
+              const i = (y * cols + x) * 4;
+              const lum = (0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]) / 255;
+              if (lum < threshold) continue;
+              const r = lum * maxR;
+              ctx.beginPath();
+              ctx.arc(x * cell + half, y * cell + half, r, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          }
+        };
+
+        const start = () => { if (!raf) raf = requestAnimationFrame(tick); };
+        if (video.readyState >= 2) start();
+        else video.addEventListener('loadeddata', start, { once: true });
+        // Some browsers need an explicit play call after autoplay attribute on dynamic mounts.
+        const playPromise = video.play();
+        if (playPromise && playPromise.catch) playPromise.catch(() => {});
+
+        return () => {
+          mounted = false;
+          ro.disconnect();
+          cancelAnimationFrame(raf);
+        };
+      }, [src, color, cellSize, threshold]);
+
+      return (
+        <div ref={wrapRef} className={className} style={style}>
+          <video
+            ref={videoRef}
+            src={src}
+            autoPlay loop muted playsInline
+            preload="auto"
+            crossOrigin="anonymous"
+            aria-hidden="true"
+            style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none' }}
+          />
+          <canvas ref={canvasRef} aria-hidden="true" style={{ width: '100%', height: '100%', display: 'block' }} />
+        </div>
+      );
+    }
+
     // ─────────────────────── UNICORN STUDIO EMBED ───────────────────────
     // Lazy-loads the unicornStudio.js lib once per page; (re-)initializes
     // any [data-us-project] divs on mount.
@@ -3468,15 +3569,12 @@
 
       return (
         <section id="vs-chat" className="relative overflow-hidden py-20 md:py-32 px-5 md:px-6 lg:px-16 bg-black">
-          <video
+          <DottedVideo
             src="/assets/chat-vs-agent-automations.mp4"
-            autoPlay
-            loop
-            muted
-            playsInline
-            aria-hidden="true"
-            className="absolute inset-0 w-full h-full pointer-events-none object-cover"
-            style={{ zIndex: 1, opacity: 0.4, background: '#000' }}
+            color="#E5322D"
+            cellSize={6}
+            className="absolute inset-0 w-full h-full pointer-events-none"
+            style={{ zIndex: 1, background: '#000' }}
           />
           <FadeTop /> <FadeBottom />
           <div className="relative z-10 max-w-6xl mx-auto">
@@ -3655,15 +3753,12 @@
 
       return (
         <section id="pricing" className="relative overflow-hidden py-20 md:py-32 px-5 md:px-6 lg:px-16 bg-black">
-          <video
+          <DottedVideo
             src="/assets/pricing-furnace.mp4"
-            autoPlay
-            loop
-            muted
-            playsInline
-            aria-hidden="true"
-            className="absolute inset-0 w-full h-full pointer-events-none object-cover"
-            style={{ zIndex: 1, opacity: 0.4, background: '#000' }}
+            color="#E5322D"
+            cellSize={6}
+            className="absolute inset-0 w-full h-full pointer-events-none"
+            style={{ zIndex: 1, background: '#000' }}
           />
           <FadeTop /> <FadeBottom />
           <div className="relative z-10 max-w-6xl mx-auto">
