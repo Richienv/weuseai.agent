@@ -1963,8 +1963,12 @@
         const sampleCtx = sample.getContext('2d', { willReadFrequently: true });
         const ctx = canvas.getContext('2d');
 
-        // Internal render at logical pixels (dpr=1) — halftone is decorative,
-        // dpr 2 doubles getImageData cost for no visible gain.
+        // Mobile / data-saver tier — bigger cells (fewer dots), slower refresh.
+        const isMobile = window.matchMedia('(max-width: 767px)').matches;
+        const saveData = !!(navigator.connection && navigator.connection.saveData);
+        const effectiveCell = isMobile || saveData ? Math.max(cellSize, 9) : cellSize;
+        const frameModulo = isMobile || saveData ? 3 : 2; // ~20fps on mobile, ~30fps desktop
+
         const dpr = 1;
         let mounted = true;
         let raf = 0;
@@ -1984,12 +1988,13 @@
           if (!mounted) return;
           raf = requestAnimationFrame(tick);
           if (!inView) return;
-          // Render every other frame (~30fps) — visually smooth, half the cost.
-          if ((frame++ & 1) === 1) return;
+          // Frame modulo controls effective FPS — 1 of every N rAF ticks
+          // actually re-samples + redraws.
+          if ((frame++ % frameModulo) !== 0) return;
           if (video.readyState < 2) return;
 
           const w = canvas.width, h = canvas.height;
-          const cell = Math.max(2, cellSize * dpr);
+          const cell = Math.max(2, effectiveCell * dpr);
           const cols = Math.ceil(w / cell);
           const rows = Math.ceil(h / cell);
           if (sample.width !== cols) sample.width = cols;
@@ -2055,7 +2060,7 @@
             ref={videoRef}
             src={src}
             loop muted playsInline
-            preload="auto"
+            preload="metadata"
             crossOrigin="anonymous"
             aria-hidden="true"
             style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none' }}
@@ -2110,6 +2115,12 @@
         const sample = document.createElement('canvas');
         const sampleCtx = sample.getContext('2d', { willReadFrequently: true });
         const ctx = canvas.getContext('2d');
+
+        const isMobile = window.matchMedia('(max-width: 767px)').matches;
+        const saveData = !!(navigator.connection && navigator.connection.saveData);
+        const effectiveCell = isMobile || saveData ? Math.max(cellSize, 9) : cellSize;
+        const frameModulo = isMobile || saveData ? 3 : 2;
+
         const dpr = 1;
         let mounted = true;
         let raf = 0;
@@ -2129,12 +2140,12 @@
           if (!mounted) return;
           raf = requestAnimationFrame(tick);
           if (!inView) return;
-          if ((frame++ & 1) === 1) return;
+          if ((frame++ % frameModulo) !== 0) return;
           const usCanvas = sourceWrap.querySelector('canvas');
           if (!usCanvas || !usCanvas.width || !usCanvas.height) return;
 
           const w = canvas.width, h = canvas.height;
-          const cell = Math.max(2, cellSize * dpr);
+          const cell = Math.max(2, effectiveCell * dpr);
           const cols = Math.ceil(w / cell);
           const rows = Math.ceil(h / cell);
           if (sample.width !== cols) sample.width = cols;
@@ -3866,6 +3877,7 @@
             '5 agent: Researcher, Web Auto, Doc, Slide, Pro',
             '4 web app: Workout, Finance, Task, Project',
             'VPS dedicated 24/7',
+            '500–800 interaction/bulan',
             '24/7 support — antrean paling depan',
             'Voice tuning ke gaya kamu',
           ],
