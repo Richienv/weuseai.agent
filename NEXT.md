@@ -113,6 +113,22 @@ analytics, support tickets) — don't pre-optimize.
 - **React `key` prop warning in Hero.** framer-motion list child without
   unique key — non-fatal but flagged in console. Fix when touching
   Hero anyway.
+- **E2E redirect-chain smoke test.** Don't trust direct URL access
+  alone — exercise the full Xendit redirect path. The 2026-05-07 hotfix
+  shipped because preview smoke tested `/welcome.html?cid=…` directly,
+  not `/welcome?cid=…` via Xendit's `success_redirect_url`. Add a CI
+  check that:
+  1. POST to `create-invoice` Edge Function with a fake plan
+  2. Extract `success_redirect_url` from the Xendit invoice response
+  3. `curl -L` that URL on production → assert HTTP 200
+  Fail loud if the redirect chain breaks. Cheap insurance against
+  customer-facing 404s.
+- **Vercel alias auto-promote investigation.** `weuseai-agent.vercel.app`
+  did not auto-promote on either main push (2026-05-07: production
+  launch + cleanUrls hotfix). Manual `vercel alias set` required both
+  times. Either Vercel project setting drift or the production-branch
+  mapping is broken. Investigate; failing to auto-promote means real
+  customers see stale code until someone notices.
 
 ---
 
