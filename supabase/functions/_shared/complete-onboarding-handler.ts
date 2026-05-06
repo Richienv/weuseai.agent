@@ -242,6 +242,17 @@ async function safeUpdateSubscription(
 
 function errMessage(e: unknown): string {
   if (e instanceof Error) return e.message
+  // Postgrest / Supabase errors are plain objects shaped like
+  // { code, message, details, hint }. `String(e)` gives "[object Object]"
+  // which is useless in logs and customer-facing detail strings.
+  if (e && typeof e === 'object') {
+    const o = e as Record<string, unknown>
+    const message = typeof o.message === 'string' ? o.message : null
+    const code = typeof o.code === 'string' ? o.code : null
+    if (message && code) return `${message} (${code})`.slice(0, 500)
+    if (message) return message.slice(0, 500)
+    try { return JSON.stringify(e).slice(0, 500) } catch { /* fall through */ }
+  }
   return String(e).slice(0, 500)
 }
 

@@ -104,9 +104,13 @@ export function createOnboardingStore(opts: {
     },
 
     async insertCustomerOpenRouterKey(input) {
+      // Upsert on customer_id (the table's primary key). Retries after a
+      // partial failure (e.g. spinUp returned 5xx, rollback revoked the
+      // OpenRouter key but the row stayed) need to overwrite the stale
+      // hash, not collide with it.
       const { error } = await supabase
         .from('customer_openrouter_keys')
-        .insert(input)
+        .upsert(input, { onConflict: 'customer_id' })
       if (error) throw error
     },
   }
