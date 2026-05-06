@@ -3130,16 +3130,8 @@
       };
 
       return (
-        <section id="filosofi" className="relative overflow-hidden" style={{ minHeight: 940 }}>
-          <DottedVideo
-            src="assets/new-mid-sec.mp4"
-            color="#E5322D"
-            cellSize={6}
-            className="absolute inset-0 w-full h-full pointer-events-none"
-            style={{ zIndex: 0, background: '#000' }}
-          />
-
-          <div className="absolute inset-0 z-[1] pointer-events-none" style={{ background: 'radial-gradient(ellipse at 30% 40%, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.40) 60%, rgba(0,0,0,0.55) 100%)' }} />
+        <section id="filosofi" className="relative overflow-hidden bg-black" style={{ minHeight: 940 }}>
+          <div className="absolute inset-0 z-[1] pointer-events-none" style={{ background: 'radial-gradient(ellipse at 30% 40%, rgba(229,50,45,0.05) 0%, rgba(0,0,0,0.55) 60%, rgba(0,0,0,0.85) 100%)' }} />
           <div className="absolute top-0 left-0 right-0 z-[2] pointer-events-none" style={{ height: 220, background: 'linear-gradient(to bottom, #000, transparent)' }} />
           <div className="absolute bottom-0 left-0 right-0 z-[2] pointer-events-none" style={{ height: 220, background: 'linear-gradient(to top, #000, transparent)' }} />
 
@@ -3277,8 +3269,16 @@
       };
 
       return (
-        <section className="relative py-20 md:py-32 px-5 md:px-6 lg:px-16 bg-black">
-          <div className="max-w-6xl mx-auto">
+        <section className="relative overflow-hidden py-20 md:py-32 px-5 md:px-6 lg:px-16 bg-black">
+          <DottedVideo
+            src="assets/empat-langkah-bg.mp4"
+            color="#E5322D"
+            cellSize={6}
+            className="absolute inset-0 w-full h-full pointer-events-none"
+            style={{ zIndex: 0, background: '#000', opacity: 0.55 }}
+          />
+          <FadeTop /> <FadeBottom />
+          <div className="relative z-10 max-w-6xl mx-auto">
             <div className="flex flex-col items-center text-center mb-14 md:mb-20">
               <div className="liquid-glass rounded-full px-3.5 py-1 text-xs font-medium font-body text-white/90">
                 Cara kerjanya
