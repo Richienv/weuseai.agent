@@ -23,3 +23,21 @@ verify_jwt = false
 
 [functions.create-invoice]
 verify_jwt = false
+
+# Onboarding flow (Phase 1, post-payment). Both bypass Supabase JWT:
+#
+#   - complete-onboarding → called from onboarding.html in the browser; the
+#                           customer doesn't have a Supabase JWT (we don't
+#                           use Supabase Auth for end customers). Auth is
+#                           "knowledge of the cid UUID" + server-side
+#                           validation that cid maps to a paid subscription
+#                           and that pairing is complete.
+#   - telegram-bot-webhook → called server-to-server by Telegram; auth is
+#                            the X-Telegram-Bot-Api-Secret-Token header
+#                            verified inside the function against the
+#                            secret_token set on setWebhook.
+[functions.complete-onboarding]
+verify_jwt = false
+
+[functions.telegram-bot-webhook]
+verify_jwt = false
