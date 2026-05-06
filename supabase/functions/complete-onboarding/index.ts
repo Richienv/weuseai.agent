@@ -75,5 +75,5 @@ Deno.serve(async (req) => {
     provisioning,
     publicBase: PUBLIC_BASE,
   })
-  return withCors(res)
+  return withCors(res, req)
 })

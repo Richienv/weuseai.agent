@@ -38,5 +38,5 @@ Deno.serve(async (req) => {
   if (preflight) return preflight
 
   const res = await handleRotatePairingCode(req, { db })
-  return withCors(res)
+  return withCors(res, req)
 })
