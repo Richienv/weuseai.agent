@@ -1908,7 +1908,6 @@
 
     const HERO_VIDEO = "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260307_083826_e938b29f-a43a-41ec-a153-3d4730578ab8.mp4";
     const HLS_STATS = "https://stream.mux.com/NcU3HlHeF7CUL86azTTzpy3Tlb00d6iF3BmCdFslMJYM.m3u8";
-    const HLS_CTA   = "https://stream.mux.com/8wrHPCX2dC3msyYU9ObwqNdm00u3ViXvOSHUMRYSEe5Q.m3u8";
 
     const EASE = [0.16, 1, 0.3, 1];
 
@@ -3549,14 +3548,19 @@
               ? {
                   borderColor: 'rgba(229, 50, 45, 0.65)',
                   boxShadow: '0 0 0 1px rgba(229,50,45,0.45), 0 18px 60px -25px rgba(229,50,45,0.55), 0 0 80px -30px rgba(229,50,45,0.35)',
+                  overflow: 'visible',
                 }
               : undefined
           }
         >
           {isFeatured && (
             <div
-              className="absolute top-0 right-5 -translate-y-1/2 px-2.5 py-0.5 rounded-full text-[9.5px] font-mono uppercase tracking-[0.18em] text-white"
-              style={{ background: '#E5322D' }}
+              className="absolute -top-3 right-5 px-3 py-1 rounded-full text-[10px] font-mono uppercase tracking-[0.18em] text-white whitespace-nowrap"
+              style={{
+                background: '#E5322D',
+                zIndex: 5,
+                boxShadow: '0 6px 20px -4px rgba(229,50,45,0.7), 0 0 0 1px rgba(229,50,45,0.5)',
+              }}
             >
               Paling diminati
             </div>
@@ -3602,6 +3606,11 @@
             <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-white/45 mb-2">
               Yang kamu dapat
             </div>
+            {tier.inheritFrom && (
+              <p className="text-xs font-body font-medium text-white/75 mb-3 italic">
+                Semua yang ada di {tier.inheritFrom}, plus:
+              </p>
+            )}
             <ul className="space-y-2.5 list-none">
               {tier.outcomes.map((o, oi) => (
                 <li key={oi} className="flex items-start gap-2.5 text-sm font-body font-light leading-relaxed">
@@ -3852,11 +3861,11 @@
           setupIdr: 1_290_000,
           setupAside: 'biaya setup sekali bayar · diskon launch',
           persona: 'Buat freelancer, founder, creator yang butuh agent kerja 24/7.',
+          inheritFrom: 'Starter',
           outcomes: [
             '5 agent: Researcher, Web Auto, Doc, Slide, Pro',
             '4 web app: Workout, Finance, Task, Project',
             'VPS dedicated 24/7',
-            '200–400 interaction/bulan',
             '24/7 support — antrean paling depan',
             'Voice tuning ke gaya kamu',
           ],
@@ -3874,11 +3883,12 @@
           setupIdr: 5_900_000,
           setupAside: 'biaya setup sekali bayar · diskon launch',
           persona: 'Buat eksekutif yang ngatur hidup di banyak platform.',
+          inheritFrom: 'Pro',
           outcomes: [
             '10 agent: Pro 5 + Trade, Macro, Business, Video, Social',
-            '4 web app + custom integration',
-            'VPS dedicated 24/7',
+            '8 web app: 4 Pro + Agent Monitoring Dashboard, Business Eagle View, Market Trend Update, Web Creator',
             '1.000–1.500 interaction/bulan',
+            'Custom integration sesuai kebutuhan',
             '24/7 dedicated support + onboarding privat',
           ],
           apps: ['Apple Health', 'Stripe', 'GitHub', 'Notion', 'Linear'],
@@ -4069,6 +4079,66 @@
             'Postcard dengan QR preview siap dikirim.',
           ],
           footer: 'skill: outreach-postcard · roadmap',
+          shipped: false,
+        },
+        {
+          handle: '@weuseaibot',
+          tagline: 'agen lo',
+          timestamp: 'jam 19:00 WIB',
+          body: [
+            'Foto 12 struk hari ini diproses.',
+            'Total Rp 847k — kategori: F&B 42%, transport 28%, lainnya 30%.',
+            'Sudah masuk Notion + Google Sheets, siap untuk laporan akhir bulan.',
+          ],
+          footer: 'skill: expense-snap · roadmap',
+          shipped: false,
+        },
+        {
+          handle: '@weuseaibot',
+          tagline: 'agen lo',
+          timestamp: 'jam 11:30 WIB',
+          body: [
+            'Recording meeting product strategy 47 menit selesai diolah.',
+            '7 action item terdeteksi, 3 paling kritis sudah masuk Asana.',
+            'Ringkasan + next-step dikirim ke 4 peserta meeting.',
+          ],
+          footer: 'skill: meeting-recap · roadmap',
+          shipped: false,
+        },
+        {
+          handle: '@weuseaibot',
+          tagline: 'agen lo',
+          timestamp: 'jam 17:30 WIB',
+          body: [
+            'Bahan kulkas: 3 telur, ayam fillet, brokoli, bawang putih, nasi.',
+            '3 resep cocok: chicken stir-fry, telur dadar veggie, nasi goreng cepat.',
+            'Estimasi masak 20 menit, kalori per porsi sudah dihitung.',
+          ],
+          footer: 'skill: resep-stock · roadmap',
+          shipped: false,
+        },
+        {
+          handle: '@weuseaibot',
+          tagline: 'agen lo',
+          timestamp: 'jam 6:00 WIB',
+          body: [
+            '4 emiten watchlist dianalisa: BBCA, BBRI, ASII, TLKM.',
+            'BBCA fundamental kuat, P/E rasional, dividend yield 3.2%.',
+            'ASII flagged: utang naik 18% YoY, perlu monitoring.',
+          ],
+          footer: 'skill: saham-fundamental · roadmap',
+          shipped: false,
+        },
+        {
+          handle: '@weuseaibot',
+          tagline: 'agen lo',
+          timestamp: 'jam 21:00 WIB',
+          body: [
+            '3 destinasi wishlist dipantau: Tokyo, Seoul, Bangkok.',
+            'Tiket Tokyo turun 22% (Garuda, 6 Jul, Rp 4,2jt PP).',
+            'Hotel Shibuya rate terbaik Rp 1,1jt/malam — booking window 14 hari.',
+          ],
+          footer: 'skill: travel-deal-watcher · roadmap',
           shipped: false,
         },
       ];
@@ -4395,8 +4465,14 @@
     // ─────────────────────── CTA + FOOTER ───────────────────────
     function CtaFooter() {
       return (
-        <section className="relative overflow-hidden" style={{ minHeight: 620 }}>
-          <HlsVideo src={HLS_CTA} />
+        <section className="relative overflow-hidden bg-black" style={{ minHeight: 620 }}>
+          <DottedVideo
+            src="/assets/ascii-wave.mp4"
+            color="#E5322D"
+            cellSize={6}
+            className="absolute inset-0 w-full h-full pointer-events-none"
+            style={{ zIndex: 0, background: '#000' }}
+          />
           <FadeTop /> <FadeBottom />
           <div className="relative z-10 flex flex-col items-center text-center px-5 md:px-6 pt-28 md:pt-40 pb-10 max-w-5xl mx-auto">
             <BlurText
