@@ -1945,6 +1945,33 @@
     const FadeTop = ({ h = 200 }) => <div className="absolute top-0 left-0 right-0 pointer-events-none z-[2]" style={{ height: h, background: 'linear-gradient(to bottom, #000, transparent)' }} />;
     const FadeBottom = ({ h = 200 }) => <div className="absolute bottom-0 left-0 right-0 pointer-events-none z-[2]" style={{ height: h, background: 'linear-gradient(to top, #000, transparent)' }} />;
 
+    // ─────────────────────── UNICORN STUDIO EMBED ───────────────────────
+    // Lazy-loads the unicornStudio.js lib once per page; (re-)initializes
+    // any [data-us-project] divs on mount.
+    function UnicornEmbed({ projectId, className = '', style = {} }) {
+      useEffect(() => {
+        const init = () => window.UnicornStudio?.init?.();
+        if (window.UnicornStudio && window.UnicornStudio.init) {
+          init();
+          return;
+        }
+        if (window.__usLoading) {
+          window.addEventListener('us-loaded', init, { once: true });
+          return () => window.removeEventListener('us-loaded', init);
+        }
+        window.__usLoading = true;
+        window.UnicornStudio = { isInitialized: false };
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/gh/hiunicornstudio/unicornstudio.js@v2.1.12/dist/unicornStudio.umd.js';
+        s.onload = () => {
+          init();
+          window.dispatchEvent(new Event('us-loaded'));
+        };
+        document.head.appendChild(s);
+      }, [projectId]);
+      return <div data-us-project={projectId} className={className} style={style} />;
+    }
+
     // ─────────────────────── COUNT UP ───────────────────────
     function CountUp({ to, suffix = '', duration = 1800, delay = 0, locale = 'id-ID', className = '', style = {} }) {
       const [val, setVal] = useState(0);
@@ -2471,8 +2498,14 @@
       };
 
       return (
-        <section className="relative py-20 md:py-32 px-5 md:px-6 lg:px-16 bg-black">
-          <div className="max-w-6xl mx-auto">
+        <section className="relative overflow-hidden py-20 md:py-32 px-5 md:px-6 lg:px-16 bg-black">
+          <UnicornEmbed
+            projectId="k6zzxblRW6JEuhAczFHj"
+            className="absolute inset-0 w-full h-full pointer-events-none"
+            style={{ zIndex: 1, opacity: 0.45, background: '#000' }}
+          />
+          <FadeTop /> <FadeBottom />
+          <div className="relative z-10 max-w-6xl mx-auto">
             <div className="flex flex-col items-center text-center mb-14 md:mb-20">
               <div className="liquid-glass rounded-full px-3.5 py-1 text-xs font-medium font-body text-white/90" style={{ borderColor: 'rgba(229, 50, 45, 0.45)' }}>
                 Pajak DIY
