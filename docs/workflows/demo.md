@@ -145,6 +145,124 @@ Should show one row with `status = 'success'` and `duration_ms` matching step 3'
 
 ---
 
+---
+
+## Pilot 2: daily-briefing-builder
+
+### Discover
+
+```sh
+curl -sS -X POST "$SUPABASE_URL/functions/v1/workflow-discover" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"customer_id\": \"$CID\",
+    \"agent_slug\": \"the-pro\",
+    \"message_text\": \"briefing pagi dong\"
+  }" | jq
+```
+
+**Expected:**
+- Top match: `daily-briefing-builder` with confidence ≥ 0.85
+- `auto_execute_recommended: true`
+- `extracted_parameters: {}` (no required fields in the schema)
+- `missing_parameters: []`
+
+### Execute
+
+```sh
+curl -sS -X POST "$SUPABASE_URL/functions/v1/workflow-execute" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"customer_id\": \"$CID\",
+    \"workflow_id\": \"<uuid-from-discover>\",
+    \"parameters\": {}
+  }" | jq
+```
+
+**Expected output:**
+```json
+{
+  "run_id": "<uuid>",
+  "status": "success",
+  "output": {
+    "format": "markdown",
+    "text": "# Briefing pagi — Jumat, 8 Mei 2026\n\n## Kalender\n\n- **09:00–09:15** — Standup mingguan · Zoom (2 attendees)\n...\n## Email\n\n### Penting (3)\n- **Re: Proposal Q2** — anto@ptmaju.example\n  Halo, terima kasih proposalnya...\n...\n## Berita\n\nTidak ada headline baru pagi ini.",
+    "date": "2026-05-08",
+    "sources_loaded": ["calendar", "email", "news"],
+    "warnings": []
+  },
+  "duration_ms": 320
+}
+```
+
+Phase 2E-1 ships with mock fixtures (typical-day calendar + gmail). Phase 2C-2 wires real MCPs. The handler interface stays identical.
+
+---
+
+## Pilot 3: tiktok-script-builder
+
+### Discover
+
+```sh
+curl -sS -X POST "$SUPABASE_URL/functions/v1/workflow-discover" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"customer_id\": \"$CID\",
+    \"agent_slug\": \"video-producer\",
+    \"message_text\": \"bikin script TikTok 30 detik tentang tips budgeting buat anak muda\"
+  }" | jq
+```
+
+**Expected:** top match `tiktok-script-builder`, with `extracted_parameters: { topic: "tips budgeting buat anak muda", length: 30 }`. `missing_parameters: []` (only `topic` is required; LLM extracted it).
+
+### Execute
+
+```sh
+curl -sS -X POST "$SUPABASE_URL/functions/v1/workflow-execute" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"customer_id\": \"$CID\",
+    \"workflow_id\": \"<uuid-from-discover>\",
+    \"parameters\": {
+      \"topic\": \"Tips budgeting buat anak muda Indonesia\",
+      \"length\": 30,
+      \"audience\": \"gen-z\",
+      \"platform\": \"tiktok\"
+    }
+  }" | jq
+```
+
+**Expected output:**
+```json
+{
+  "run_id": "<uuid>",
+  "status": "success",
+  "output": {
+    "format": "json",
+    "script": {
+      "hook": "Pernah cek saldo, langsung kaget?",
+      "body": "Coba 50/30/20 rule...",
+      "cta": "Save video ini buat reminder.",
+      "visual_scenes": [
+        { "timestamp": "0:00", "description": "POV cek saldo HP, ekspresi kaget" },
+        { "timestamp": "0:05", "description": "Cut to overlay 50/30/20" },
+        { "timestamp": "0:20", "description": "Demo split di kalkulator" },
+        { "timestamp": "0:28", "description": "Final CTA" }
+      ],
+      "sound_suggestion": "oh-no-oh-no original sound (aug 2026 trend)",
+      "hashtags": ["#fintok", "#budgeting", "#keuanganId", "#millennialmoney"]
+    }
+  },
+  "duration_ms": 2450
+}
+```
+
+The output schema is strictly validated: every required field present, hashtags match `^#[a-zA-Z0-9_]+$`, timestamps match `mm:ss`, hashtag count 3-10.
+
+Tier: `pro`. Starter customers get a 403 from `workflow-execute`.
+
+---
+
 ## Failure path demos
 
 ### Tier mismatch (403)

@@ -89,9 +89,93 @@ const INVOICE_GENERATOR: WorkflowSeed = {
   version: 1,
 }
 
+// ─── Pilot 2: daily-briefing-builder ────────────────────────────────────
+
+const DAILY_BRIEFING_BUILDER: WorkflowSeed = {
+  slug: 'daily-briefing-builder',
+  name_id: 'Briefing Pagi',
+  description_id:
+    'Rangkum kalender, email penting, dan headline berita pagi jadi satu briefing markdown.',
+  agent_slugs: ['the-pro'],
+  category: 'analysis',
+  intent_phrases: [
+    'briefing pagi',
+    'kasih ringkasan hari ini',
+    'summary hari ini',
+    'apa yang penting hari ini',
+    'rangkum kalender pagi ini',
+    'executive summary harian',
+    'recap hari ini',
+    'apa agenda hari ini',
+  ],
+  parameters_schema: {
+    type: 'object',
+    properties: {
+      date: { type: 'string', format: 'date' },
+      sources: {
+        type: 'array',
+        items: {
+          type: 'string',
+          enum: ['calendar', 'email', 'news'],
+        },
+      },
+    },
+  },
+  execution_type: 'edge-function',
+  handler_ref: 'edge-fn:daily-briefing-handler',
+  output_type: 'text',
+  tier: 'starter',
+  version: 1,
+}
+
+// ─── Pilot 3: tiktok-script-builder ─────────────────────────────────────
+
+const TIKTOK_SCRIPT_BUILDER: WorkflowSeed = {
+  slug: 'tiktok-script-builder',
+  name_id: 'Script TikTok',
+  description_id:
+    'Generate script TikTok atau Reels lengkap dengan hook, body, CTA, visual scenes, sound, dan hashtag.',
+  agent_slugs: ['video-producer'],
+  category: 'generation',
+  intent_phrases: [
+    'bikin script TikTok',
+    'script Reels',
+    'scriptin video pendek',
+    'ide konten TikTok',
+    'buat hook video',
+    'rencana TikTok harian',
+    'draft Reels 30 detik',
+    'bikin script video pendek',
+  ],
+  parameters_schema: {
+    type: 'object',
+    required: ['topic'],
+    properties: {
+      topic: { type: 'string', minLength: 3, maxLength: 200 },
+      length: { type: 'integer', enum: [15, 30, 60, 90], default: 30 },
+      audience: {
+        type: 'string',
+        enum: ['gen-z', 'millennial', 'general'],
+        default: 'general',
+      },
+      platform: {
+        type: 'string',
+        enum: ['tiktok', 'reels', 'shorts'],
+        default: 'tiktok',
+      },
+    },
+  },
+  execution_type: 'edge-function',
+  handler_ref: 'edge-fn:tiktok-script-handler',
+  output_type: 'json',
+  tier: 'pro',
+  version: 1,
+}
+
 const PILOTS: WorkflowSeed[] = [
   INVOICE_GENERATOR,
-  // Day 2+: daily-briefing-builder, tiktok-script-builder
+  DAILY_BRIEFING_BUILDER,
+  TIKTOK_SCRIPT_BUILDER,
 ]
 
 // ─── Main ───────────────────────────────────────────────────────────────

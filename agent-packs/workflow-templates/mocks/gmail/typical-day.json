@@ -1,0 +1,94 @@
+{
+  "emails": [
+    {
+      "id": "msg_001",
+      "from": "anto@ptmaju.example",
+      "subject": "Re: Proposal Q2 — pertanyaan tentang scope",
+      "snippet": "Halo, terima kasih proposalnya. Saya ingin tanya lebih detail soal scope deliverable di bagian B...",
+      "received_at": "2026-05-08T07:24:00+07:00",
+      "importance": "important",
+      "thread_id": "thr_001"
+    },
+    {
+      "id": "msg_002",
+      "from": "sarah@weuseai.example",
+      "subject": "Q2 review tomorrow — agenda update",
+      "snippet": "Bisa pindah ke jam 2 siang? Conflict sama partner meeting di pagi.",
+      "received_at": "2026-05-08T06:50:00+07:00",
+      "importance": "important",
+      "thread_id": "thr_002"
+    },
+    {
+      "id": "msg_003",
+      "from": "billing@idcloudhost.example",
+      "subject": "Invoice payment received — terima kasih",
+      "snippet": "Pembayaran invoice INV-26-04 sebesar Rp 1.450.000 telah kami terima.",
+      "received_at": "2026-05-08T05:12:00+07:00",
+      "importance": "important",
+      "thread_id": "thr_003"
+    },
+    {
+      "id": "msg_004",
+      "from": "newsletter@medium.example",
+      "subject": "Weekly digest: 5 stories on async work",
+      "snippet": "This week's top reads on async work, distributed teams, and...",
+      "received_at": "2026-05-08T03:00:00+07:00",
+      "importance": "noise",
+      "thread_id": "thr_004"
+    },
+    {
+      "id": "msg_005",
+      "from": "promo@shopee.example",
+      "subject": "Flash sale 10% off untuk member",
+      "snippet": "Voucher 10% berlaku 24 jam khusus member premium...",
+      "received_at": "2026-05-08T02:45:00+07:00",
+      "importance": "noise",
+      "thread_id": "thr_005"
+    },
+    {
+      "id": "msg_006",
+      "from": "linkedin@notifications.example",
+      "subject": "5 new connection requests",
+      "snippet": "Kamu punya 5 request koneksi baru pekan ini...",
+      "received_at": "2026-05-08T02:10:00+07:00",
+      "importance": "noise",
+      "thread_id": "thr_006"
+    },
+    {
+      "id": "msg_007",
+      "from": "github@notifications.example",
+      "subject": "[Repo] PR #142 was approved",
+      "snippet": "Your pull request was approved by 2 reviewers...",
+      "received_at": "2026-05-08T01:30:00+07:00",
+      "importance": "noise",
+      "thread_id": "thr_007"
+    },
+    {
+      "id": "msg_008",
+      "from": "calendar@google.example",
+      "subject": "Reminder: Standup mingguan in 1 hour",
+      "snippet": "Auto reminder for your 9am meeting...",
+      "received_at": "2026-05-08T08:00:00+07:00",
+      "importance": "noise",
+      "thread_id": "thr_008"
+    },
+    {
+      "id": "msg_009",
+      "from": "andre@weuseai.example",
+      "subject": "Re: Pricing partnership — follow up Selasa?",
+      "snippet": "Sip, mari ketemu Selasa minggu depan. Saya block jam 10...",
+      "received_at": "2026-05-07T22:15:00+07:00",
+      "importance": "follow_up",
+      "thread_id": "thr_009"
+    },
+    {
+      "id": "msg_010",
+      "from": "marcus@law-firm.example",
+      "subject": "Re: Term sheet review — pertanyaan klarifikasi",
+      "snippet": "Tolong info ketersediaan kamu untuk diskusi 30 menit minggu ini soal klausul exit...",
+      "received_at": "2026-05-07T18:42:00+07:00",
+      "importance": "follow_up",
+      "thread_id": "thr_010"
+    }
+  ]
+}

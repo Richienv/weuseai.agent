@@ -74,3 +74,9 @@ verify_jwt = false
 
 [functions.invoice-generator-handler]
 verify_jwt = false
+
+[functions.daily-briefing-handler]
+verify_jwt = false
+
+[functions.tiktok-script-handler]
+verify_jwt = false
