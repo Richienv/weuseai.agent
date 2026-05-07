@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Invoice {invoice_number} — {client_name}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #141413; background: #FAF9F5; padding: 48px; line-height: 1.5; }
+  .invoice { max-width: 720px; margin: 0 auto; background: #fff; padding: 48px; border: 1px solid rgba(20, 20, 19, 0.08); }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; padding-bottom: 24px; border-bottom: 1px solid rgba(20, 20, 19, 0.08); }
+  .brand { font-size: 14px; font-weight: 500; letter-spacing: 0.02em; color: rgba(20, 20, 19, 0.65); }
+  .invoice-meta { text-align: right; font-size: 13px; color: rgba(20, 20, 19, 0.65); }
+  .invoice-meta strong { color: #141413; font-weight: 500; }
+  .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: rgba(20, 20, 19, 0.5); margin-bottom: 4px; }
+  .parties { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-bottom: 40px; }
+  .party-name { font-size: 15px; font-weight: 500; }
+  .party-detail { font-size: 13px; color: rgba(20, 20, 19, 0.65); margin-top: 4px; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+  th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: rgba(20, 20, 19, 0.5); padding: 12px 8px; border-bottom: 1px solid rgba(20, 20, 19, 0.12); font-weight: 500; }
+  th.right, td.right { text-align: right; }
+  td { font-size: 14px; padding: 14px 8px; border-bottom: 1px solid rgba(20, 20, 19, 0.06); }
+  .totals { margin-left: auto; width: 280px; margin-top: 8px; }
+  .total-row { display: flex; justify-content: space-between; padding: 8px 8px; font-size: 14px; }
+  .total-row.subtotal { color: rgba(20, 20, 19, 0.65); }
+  .total-row.tax { color: rgba(20, 20, 19, 0.65); }
+  .total-row.grand { border-top: 1px solid rgba(20, 20, 19, 0.12); margin-top: 4px; padding-top: 14px; font-weight: 500; font-size: 15px; }
+  .footer { margin-top: 48px; padding-top: 24px; border-top: 1px solid rgba(20, 20, 19, 0.08); font-size: 12px; color: rgba(20, 20, 19, 0.5); }
+  .footer a { color: rgba(20, 20, 19, 0.65); text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="invoice">
+  <div class="header">
+    <div>
+      <div class="brand">weuseai.agent</div>
+      <div class="party-detail" style="margin-top:6px;">Invoice yang dibuat oleh agent kamu</div>
+    </div>
+    <div class="invoice-meta">
+      <div class="label">Invoice</div>
+      <div><strong>{invoice_number}</strong></div>
+      <div style="margin-top:8px;" class="label">Tanggal</div>
+      <div><strong>{issue_date}</strong></div>
+      <div style="margin-top:8px;" class="label">Jatuh tempo</div>
+      <div><strong>{due_date}</strong></div>
+    </div>
+  </div>
+
+  <div class="parties">
+    <div>
+      <div class="label">Ditagihkan ke</div>
+      <div class="party-name">{client_name}</div>
+      <div class="party-detail">{client_address}</div>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Deskripsi</th>
+        <th class="right">Qty</th>
+        <th class="right">Harga satuan</th>
+        <th class="right">Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      {items_rows}
+    </tbody>
+  </table>
+
+  <div class="totals">
+    <div class="total-row subtotal">
+      <span>Subtotal</span>
+      <span>{subtotal_formatted}</span>
+    </div>
+    <div class="total-row tax">
+      <span>Pajak ({tax_rate_percent}%)</span>
+      <span>{tax_formatted}</span>
+    </div>
+    <div class="total-row grand">
+      <span>Total</span>
+      <span>{total_formatted}</span>
+    </div>
+  </div>
+
+  <div class="footer">
+    Pembayaran ke nomor rekening yang disepakati. Pertanyaan: <a href="mailto:hello@weuseai.agent">hello@weuseai.agent</a>.
+  </div>
+</div>
+</body>
+</html>
