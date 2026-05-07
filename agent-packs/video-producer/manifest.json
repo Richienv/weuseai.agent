@@ -1,0 +1,36 @@
+{
+  "$schema": "../_manifest.schema.json",
+  "agent_slug": "video-producer",
+  "version": "1.0.0",
+  "description_id": "Bundle skill + template Video Producer. Script TikTok dan Reels, hashtag research, edit suggestions — output 10 video per hari tanpa kompromi pada hook.",
+  "skills": [
+    {
+      "id": "tiktok-script-builder",
+      "description_id": "Hermes generate JSON script (hook + body + CTA + visual scenes + sound + hashtags) pakai LLM customer, lalu validate di edge function untuk pastiin format match schema.",
+      "description_en": "Hermes generates JSON script using customer's LLM, then validates against locked schema via edge function.",
+      "templates_used": ["tiktok-script-format.md"],
+      "execution": "edge-function",
+      "handler_ref": "edge-fn:tiktok-script-handler",
+      "tier": "pro"
+    },
+    {
+      "id": "extend-capabilities",
+      "description_id": "Generate skill atau template baru saat customer minta sesuatu yang belum ada di inventory.",
+      "description_en": "Generate a new skill or template at runtime when the customer asks for something not in inventory.",
+      "templates_used": [],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:extend-capabilities",
+      "tier": "pro"
+    }
+  ],
+  "templates": [
+    {
+      "id": "tiktok-script-format.md",
+      "kind": "schema-spec",
+      "description_id": "Format spec untuk Hermes — instruksi generate JSON script dengan field hook, body, cta, visual_scenes, sound_suggestion, hashtags. Hashtag pattern dan timestamp regex strict.",
+      "best_for": "Reference yang Hermes baca saat generate script"
+    }
+  ],
+  "self_extend": true,
+  "extension_dir": "/var/lib/weuseai/customer-grown/"
+}

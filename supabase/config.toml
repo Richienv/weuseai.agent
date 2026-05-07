@@ -49,3 +49,37 @@ verify_jwt = false
 # from 20260506140000 (see 20260506150000_revoke_pairing_anon_update.sql).
 [functions.rotate-pairing-code]
 verify_jwt = false
+
+# Workflow library (Phase 2E-1.5, Hermes-native). All five bypass
+# Supabase JWT — Hermes on the customer's VPS calls these as
+# server-to-server with customer_id in the body. No browser-facing
+# CORS concerns; no Supabase JWT carried across.
+#
+# Removed vs the pre-pivot version: workflow-discover (Hermes does
+# intent matching natively now) + the OPENROUTER_ORCHESTRATION_KEY
+# secret (no platform-side LLM calls remain).
+#
+#   - workflow-list             → catalog browser (debugging UI)
+#   - workflow-execute          → validate + tier check + handler routing
+#                                 + workflow_runs audit row per call
+#   - invoice-generator-handler → renders HTML invoice template, uploads
+#                                 to Storage, returns 24h signed URL
+#   - daily-briefing-handler    → composes markdown briefing from mock
+#                                 fixtures (real MCPs land in 2C-2)
+#   - tiktok-script-handler     → schema validator only; Hermes generates
+#                                 JSON locally on VPS using customer's BYOK
+#                                 LLM, posts here for canonicalization
+[functions.workflow-list]
+verify_jwt = false
+
+[functions.workflow-execute]
+verify_jwt = false
+
+[functions.invoice-generator-handler]
+verify_jwt = false
+
+[functions.daily-briefing-handler]
+verify_jwt = false
+
+[functions.tiktok-script-handler]
+verify_jwt = false

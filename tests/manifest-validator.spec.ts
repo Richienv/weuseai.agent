@@ -1,0 +1,258 @@
+/**
+ * Tests for manifest-validator.ts (Phase 2E-1.5).
+ *
+ * Coverage:
+ *   - Schema-level validation (required fields, type checks, enum)
+ *   - Cross-field invariants (known persona slug, templates_used FK,
+ *     duplicate ids)
+ *   - Drift checks: each pilot manifest passes validation
+ *   - Drift check: agent-packs/_manifest.schema.json on disk has the same
+ *     required fields the inlined MANIFEST_SCHEMA constant declares
+ */
+
+import { test } from 'node:test'
+import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import { dirname, resolve } from 'node:path'
+
+import {
+  KNOWN_PERSONA_SLUGS,
+  MANIFEST_SCHEMA,
+  validateManifest,
+  type Manifest,
+} from '../supabase/functions/_shared/manifest-validator.ts'
+
+const TEST_DIR = dirname(fileURLToPath(import.meta.url))
+const REPO_ROOT = resolve(TEST_DIR, '..')
+
+// ─── helpers ──────────────────────────────────────────────────────────
+
+function readJson(rel: string): unknown {
+  return JSON.parse(readFileSync(resolve(REPO_ROOT, rel), 'utf8'))
+}
+
+const VALID_BASE: Manifest = {
+  agent_slug: 'doc-expert',
+  version: '1.0.0',
+  description_id: 'Bundle Doc Expert untuk testing.',
+  skills: [
+    {
+      id: 'invoice-generator',
+      description_id: 'Bikin invoice profesional dengan template tersedia.',
+      templates_used: ['invoice-pro.html'],
+      execution: 'edge-function',
+      handler_ref: 'edge-fn:invoice-generator-handler',
+      tier: 'starter',
+    },
+  ],
+  templates: [
+    {
+      id: 'invoice-pro.html',
+      kind: 'invoice',
+      description_id: 'Invoice profesional dengan PPN, NPWP, dan footer brand.',
+    },
+  ],
+  self_extend: true,
+  extension_dir: '/var/lib/weuseai/customer-grown/',
+}
+
+// ─── happy path ────────────────────────────────────────────────────────
+
+test('valid manifest with all required fields passes', () => {
+  const r = validateManifest(VALID_BASE)
+  assert.equal(r.ok, true)
+  if (r.ok) {
+    assert.equal(r.manifest.agent_slug, 'doc-expert')
+  }
+})
+
+test('manifest with $schema field stripped silently', () => {
+  const r = validateManifest({ $schema: '../_manifest.schema.json', ...VALID_BASE })
+  assert.equal(r.ok, true)
+})
+
+// ─── schema-level errors ───────────────────────────────────────────────
+
+test('rejects missing agent_slug', () => {
+  const { agent_slug: _ignored, ...bad } = VALID_BASE
+  void _ignored
+  const r = validateManifest(bad)
+  assert.equal(r.ok, false)
+  if (!r.ok) assert.match(r.errors.join(' '), /agent_slug/)
+})
+
+test('rejects bad version format (non-semver)', () => {
+  const r = validateManifest({ ...VALID_BASE, version: '1.0' })
+  assert.equal(r.ok, false)
+  if (!r.ok) assert.match(r.errors.join(' '), /version/)
+})
+
+test('rejects empty skills[]', () => {
+  const r = validateManifest({ ...VALID_BASE, skills: [] })
+  assert.equal(r.ok, false)
+  if (!r.ok) assert.match(r.errors.join(' '), /minItems/)
+})
+
+test('rejects skill with bad id format (uppercase)', () => {
+  const r = validateManifest({
+    ...VALID_BASE,
+    skills: [{ ...VALID_BASE.skills[0], id: 'InvoiceGenerator' }],
+    templates: [{ id: 'x.html', kind: 'x', description_id: 'aaaaaaaaaa' }],
+  })
+  assert.equal(r.ok, false)
+})
+
+test('rejects malformed handler_ref', () => {
+  const r = validateManifest({
+    ...VALID_BASE,
+    skills: [
+      {
+        ...VALID_BASE.skills[0],
+        handler_ref: 'not-namespaced',
+      },
+    ],
+    templates: [{ id: 'invoice-pro.html', kind: 'invoice', description_id: 'aaaaaaaaaa' }],
+  })
+  assert.equal(r.ok, false)
+  if (!r.ok) assert.match(r.errors.join(' '), /handler_ref/)
+})
+
+test('rejects unknown execution type', () => {
+  const r = validateManifest({
+    ...VALID_BASE,
+    skills: [{ ...VALID_BASE.skills[0], execution: 'magic' as never }],
+  })
+  assert.equal(r.ok, false)
+})
+
+test('rejects relative extension_dir', () => {
+  const r = validateManifest({ ...VALID_BASE, extension_dir: 'relative/path/' })
+  assert.equal(r.ok, false)
+  if (!r.ok) assert.match(r.errors.join(' '), /extension_dir/)
+})
+
+test('rejects bad tier', () => {
+  const r = validateManifest({
+    ...VALID_BASE,
+    skills: [{ ...VALID_BASE.skills[0], tier: 'free' as never }],
+  })
+  assert.equal(r.ok, false)
+})
+
+// ─── cross-field invariants ────────────────────────────────────────────
+
+test('rejects unknown agent_slug', () => {
+  const r = validateManifest({ ...VALID_BASE, agent_slug: 'random-persona' })
+  assert.equal(r.ok, false)
+  if (!r.ok) {
+    assert.match(r.errors.join(' '), /not a known persona/)
+  }
+})
+
+test('every PERSONA_SLUG is accepted', () => {
+  for (const slug of KNOWN_PERSONA_SLUGS) {
+    const r = validateManifest({ ...VALID_BASE, agent_slug: slug })
+    assert.equal(r.ok, true, `${slug} should be a valid agent_slug`)
+  }
+})
+
+test('rejects skill referencing template not in templates[]', () => {
+  const r = validateManifest({
+    ...VALID_BASE,
+    skills: [{ ...VALID_BASE.skills[0], templates_used: ['nonexistent.html'] }],
+  })
+  assert.equal(r.ok, false)
+  if (!r.ok) {
+    assert.match(r.errors.join(' '), /unknown template "nonexistent\.html"/)
+  }
+})
+
+test('rejects duplicate skill ids', () => {
+  const r = validateManifest({
+    ...VALID_BASE,
+    skills: [VALID_BASE.skills[0], VALID_BASE.skills[0]],
+  })
+  assert.equal(r.ok, false)
+  if (!r.ok) assert.match(r.errors.join(' '), /duplicate id/)
+})
+
+test('rejects duplicate template ids', () => {
+  const r = validateManifest({
+    ...VALID_BASE,
+    templates: [VALID_BASE.templates[0], VALID_BASE.templates[0]],
+  })
+  assert.equal(r.ok, false)
+  if (!r.ok) assert.match(r.errors.join(' '), /duplicate id/)
+})
+
+// ─── pilot manifest drift checks ───────────────────────────────────────
+
+test('drift: agent-packs/doc-expert/manifest.json passes validation', () => {
+  const m = readJson('agent-packs/doc-expert/manifest.json')
+  const r = validateManifest(m)
+  if (!r.ok) {
+    assert.fail(`doc-expert manifest invalid: ${r.errors.join('; ')}`)
+  }
+})
+
+test('drift: agent-packs/the-pro/manifest.json passes validation', () => {
+  const m = readJson('agent-packs/the-pro/manifest.json')
+  const r = validateManifest(m)
+  if (!r.ok) {
+    assert.fail(`the-pro manifest invalid: ${r.errors.join('; ')}`)
+  }
+})
+
+test('drift: agent-packs/video-producer/manifest.json passes validation', () => {
+  const m = readJson('agent-packs/video-producer/manifest.json')
+  const r = validateManifest(m)
+  if (!r.ok) {
+    assert.fail(`video-producer manifest invalid: ${r.errors.join('; ')}`)
+  }
+})
+
+// ─── schema file drift ────────────────────────────────────────────────
+
+test('drift: agent-packs/_manifest.schema.json required fields match MANIFEST_SCHEMA', () => {
+  const onDisk = readJson('agent-packs/_manifest.schema.json') as { required: string[] }
+  const inlined = MANIFEST_SCHEMA as { required: readonly string[] }
+  assert.deepEqual(
+    [...onDisk.required].sort(),
+    [...inlined.required].sort(),
+    'required fields drifted between agent-packs/_manifest.schema.json and MANIFEST_SCHEMA constant',
+  )
+})
+
+// ─── manifest references real handlers (sanity) ────────────────────────
+
+test('every pilot manifest skill handler_ref points to a known edge function or hermes-skill', () => {
+  const knownEdgeFns = new Set([
+    'invoice-generator-handler',
+    'daily-briefing-handler',
+    'tiktok-script-handler',
+    'workflow-execute',
+    'workflow-list',
+  ])
+  const knownHermesSkills = new Set(['extend-capabilities'])
+
+  for (const slug of ['doc-expert', 'the-pro', 'video-producer']) {
+    const m = readJson(`agent-packs/${slug}/manifest.json`) as Manifest
+    for (const skill of m.skills) {
+      const colonIdx = skill.handler_ref.indexOf(':')
+      const kind = skill.handler_ref.slice(0, colonIdx)
+      const name = skill.handler_ref.slice(colonIdx + 1)
+      if (kind === 'edge-fn') {
+        assert.ok(
+          knownEdgeFns.has(name),
+          `${slug}/${skill.id}: handler_ref edge-fn:${name} not in known set`,
+        )
+      } else if (kind === 'hermes-skill') {
+        assert.ok(
+          knownHermesSkills.has(name),
+          `${slug}/${skill.id}: handler_ref hermes-skill:${name} not in known set`,
+        )
+      }
+    }
+  }
+})
