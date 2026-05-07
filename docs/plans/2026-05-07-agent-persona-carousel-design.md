@@ -63,7 +63,7 @@ No structural changes to other sections.
 | 6 | `trade` | Trade Pro | Briefing pasar pagi, alert saham + crypto, ringkas laporan keuangan emiten. |
 | 7 | `macro` | Macro Strategist | Pantau berita ekonomi global, hubungkan dampak ke portofolio kamu. |
 | 8 | `business` | Business Director | Tracking metrik, anomaly alert, auto-bikin laporan KPI buat tim kamu. |
-| 9 | `video` | Video Producer | Script TikTok/Reels, saran edit, hashtag research — output 10x per hari. |
+| 9 | `video` | Video Producer | Script TikTok/Reels, saran edit, hashtag research — output 10 video per hari. |
 | 10 | `social` | Social Conductor | Trending topic detection, schedule best-time, auto-balas DM dengan brand voice. |
 
 Brand-voice audit:
@@ -71,7 +71,7 @@ Brand-voice audit:
 - No `lo/gue` ✓
 - No exclamation marks ✓
 - No banned words (`basically`, `just`, `literally`, `honestly`, `kind of`, `pretty much`, `revolutionary`, `disrupt`, `10x`, `game-changer`, `next-level`) ✓
-- Note: card #9 "output 10x per hari" — this is "10 times per day" (literal multiplier), not the banned tech-bro "10x" hyperbole. Acceptable per brand voice.
+- Note: founder's original draft for card #9 said "output 10x per hari" — `10x` is in the banned list. Rewritten to "output 10 video per hari" to comply (same meaning, no banned token).
 
 ---
 
