@@ -12,13 +12,20 @@
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import { dirname, resolve } from 'node:path'
 
 import {
+  __INTERNAL_THE_PRO_SCAFFOLD,
   pickFirstName,
   renderSoulMd,
   sanitizeExpectations,
   sha256Hex,
 } from '../supabase/functions/_shared/soul-md-template.ts'
+
+const TEST_DIR = dirname(fileURLToPath(import.meta.url))
+const REPO_ROOT = resolve(TEST_DIR, '..')
 
 // ─── sanitizeExpectations ──────────────────────────────────────────
 
@@ -131,8 +138,8 @@ test('render: substitutes all four variables', () => {
     customerName: 'Sarah Tanaka',
     expectationsClean: sanitizedSample,
   })
-  // Variables filled
-  assert.match(out, /built for Sarah Tanaka,/)
+  // Variables filled (The Pro scaffold says "built for X as part of weuseai.agent")
+  assert.match(out, /built for Sarah Tanaka as part of weuseai\.agent/)
   assert.match(out, /Name: Sarah Tanaka/)
   assert.match(out, /"Pagi, Sarah\."/)
   assert.match(out, /Bantu briefing pagi dan ringkas berita\./)
@@ -149,13 +156,21 @@ test('render: locked scaffold sections present byte-for-byte', () => {
     customerName: 'Anonymous',
     expectationsClean: sanitizedSample,
   })
-  // These five headings are the unique fingerprint of the scaffold —
-  // any drift here means content territory was edited without founder.
-  assert.match(out, /^# About me$/m)
-  assert.match(out, /^# How I communicate$/m)
-  assert.match(out, /^# Hard limits$/m)
-  assert.match(out, /^# Connected tools$/m)
-  assert.match(out, /^# When my customer first messages me$/m)
+  // The Pro persona has 9 sections. Any drift here means content
+  // territory was edited without founder approval.
+  for (const heading of [
+    '# About me',
+    '# How I communicate',
+    '# Who I serve',
+    '# What this customer expects from me',
+    '# What I do',
+    '# How I behave',
+    '# Hard limits',
+    '# Connected tools',
+    '# When my customer first messages me',
+  ]) {
+    assert.match(out, new RegExp(`^${heading}$`, 'm'), heading)
+  }
 })
 
 test('render: ambiguous first name falls back to full name in greeting', () => {
@@ -172,7 +187,7 @@ test('render: UTF-8 round-trips diacritics cleanly', () => {
     customerName: 'Andrés López',
     expectationsClean: sanitizedSample,
   })
-  assert.match(out, /built for Andrés López,/)
+  assert.match(out, /built for Andrés López as part of weuseai\.agent/)
   assert.match(out, /"Pagi, Andrés\."/)
 })
 
@@ -215,4 +230,95 @@ test('sha256Hex: handles UTF-8 multibyte input', async () => {
   // Sanity — diacritics shouldn't crash, output is still 64 hex.
   const h = await sha256Hex('Andrés López')
   assert.match(h, /^[0-9a-f]{64}$/)
+})
+
+// ─── persona routing (added 2026-05-07, agent-persona-packs) ──────────
+
+test('render: explicit personaSlug="the-pro" produces The Pro scaffold', () => {
+  const out = renderSoulMd({
+    customerName: 'Sarah Tanaka',
+    expectationsClean: sanitizedSample,
+    personaSlug: 'the-pro',
+  })
+  // The Pro signature line — distinct from any other persona.
+  assert.match(out, /I am The Pro, a specialist agent built for Sarah Tanaka/)
+  // Pro-specific specialty keyword that other personas won't have.
+  assert.match(out, /pendamping kerja harian/)
+})
+
+test('render: unknown personaSlug falls back to The Pro + warns', () => {
+  const warnings: string[] = []
+  const origWarn = console.warn
+  console.warn = (...args: unknown[]) => {
+    warnings.push(args.map(String).join(' '))
+  }
+  try {
+    const out = renderSoulMd({
+      customerName: 'Sarah Tanaka',
+      expectationsClean: sanitizedSample,
+      personaSlug: 'invalid-agent-xyz',
+    })
+    // Falls back to The Pro content
+    assert.match(out, /I am The Pro, a specialist agent/)
+    // Warning fired exactly once with diagnostic context
+    assert.equal(warnings.length, 1, 'expected one warning')
+    assert.match(warnings[0], /unknown personaSlug/)
+    assert.match(warnings[0], /invalid-agent-xyz/)
+    assert.match(warnings[0], /the-pro/)
+  } finally {
+    console.warn = origWarn
+  }
+})
+
+test('render: empty expectationsClean substitutes the empty-fallback string', () => {
+  const out = renderSoulMd({
+    customerName: 'Putri',
+    expectationsClean: '',
+  })
+  // Defensive fallback fires (handler boundary normally rejects empty
+  // expectations upstream — this is belt-and-suspenders).
+  assert.match(
+    out,
+    /Customer belum menulis ekspektasi spesifik\. Tanya di percakapan pertama/,
+  )
+  // Whitespace-only also triggers fallback (trim-then-check).
+  const out2 = renderSoulMd({
+    customerName: 'Putri',
+    expectationsClean: '   \n\t  ',
+  })
+  assert.match(
+    out2,
+    /Customer belum menulis ekspektasi spesifik/,
+  )
+  // No leftover placeholder
+  assert.equal(out.includes('{user_expectations_verbatim}'), false)
+})
+
+test('render: non-empty expectationsClean substitutes verbatim, NOT fallback', () => {
+  const out = renderSoulMd({
+    customerName: 'Putri',
+    expectationsClean: 'Bantu rapikan inbox dan ringkas berita pasar.',
+  })
+  // Real content present
+  assert.match(out, /Bantu rapikan inbox dan ringkas berita pasar\./)
+  // Fallback string NOT injected when real input is provided.
+  assert.equal(
+    out.includes('Customer belum menulis ekspektasi spesifik'),
+    false,
+  )
+})
+
+test('drift check: /agent-packs/the-pro/SOUL.md matches inlined scaffold', () => {
+  // The TS constant inside soul-md-template.ts is a mirror of the
+  // canonical markdown file. This test is the only thing keeping them
+  // in sync — if you edit one without the other, this fails fast.
+  const onDisk = readFileSync(
+    resolve(REPO_ROOT, 'agent-packs/the-pro/SOUL.md'),
+    'utf8',
+  )
+  assert.equal(
+    onDisk,
+    __INTERNAL_THE_PRO_SCAFFOLD,
+    'agent-packs/the-pro/SOUL.md drifted from THE_PRO_SCAFFOLD constant in soul-md-template.ts. Sync them.',
+  )
 })
