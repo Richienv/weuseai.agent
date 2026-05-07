@@ -1378,35 +1378,30 @@
     }
 
     /* ─── AGENT PERSONA CAROUSEL (2026-05-07) ─── */
-    /* Horizontal scroll-snap track with auto-rotation. Sits inside #proses
-       on the dark/red halftone canvas. 1 card visible mobile, 2 tablet, 3 desktop. */
-    .agent-carousel-root { position: relative; width: 100%; }
+    /* translateX-based horizontal carousel inside #proses on the dark/red
+       halftone canvas. 1 card visible mobile, 2 tablet, 3 desktop.
+       Originally used scroll-snap + overflow-x:auto, but the StartSection's
+       centered-flex parent chain prevented scrollLeft from updating. translateX
+       sidesteps the entire scroll-container path. */
     .agent-fade {
       position: relative;
+      overflow: hidden;
       -webkit-mask-image: linear-gradient(to right, transparent 0, #000 28px, #000 calc(100% - 28px), transparent 100%);
               mask-image: linear-gradient(to right, transparent 0, #000 28px, #000 calc(100% - 28px), transparent 100%);
+      padding: 4px 16px;
     }
+    @media (min-width: 768px) { .agent-fade { padding: 6px 24px; } }
     .agent-track {
       display: flex;
       gap: 14px;
-      overflow-x: auto;
-      overflow-y: hidden;
-      /* `proximity` (not `mandatory`) — mandatory fights scrollTo/scrollBy
-         calls and traps scrollLeft at the current snap point. proximity
-         still snaps after touch gestures complete, just less aggressively. */
-      scroll-snap-type: x proximity;
-      scroll-behavior: smooth;
-      padding: 4px 16px 4px 16px;
-      -webkit-overflow-scrolling: touch;
-      scrollbar-width: none;
+      will-change: transform;
+      transition: transform 700ms cubic-bezier(0.22, 0.61, 0.36, 1);
     }
-    .agent-track::-webkit-scrollbar { display: none; height: 0; }
-    @media (min-width: 768px) { .agent-track { gap: 18px; padding: 6px 24px; } }
+    @media (min-width: 768px) { .agent-track { gap: 18px; } }
 
     .agent-card {
       flex: 0 0 auto;
       width: min(82vw, 320px);
-      scroll-snap-align: start;
       display: flex; flex-direction: column;
       border-radius: 18px;
       overflow: hidden;
@@ -1414,7 +1409,7 @@
       border: 1px solid rgba(255, 255, 255, 0.08);
       backdrop-filter: blur(18px) saturate(1.05);
       -webkit-backdrop-filter: blur(18px) saturate(1.05);
-      transition: border-color 240ms ease, transform 240ms ease;
+      transition: border-color 240ms ease;
     }
     @media (min-width: 641px) and (max-width: 1024px) {
       .agent-card { width: min(42vw, 360px); }
@@ -1491,7 +1486,7 @@
     .agent-tier-line a:hover { color: #fff; border-bottom-color: #E5322D; }
 
     @media (prefers-reduced-motion: reduce) {
-      .agent-track { scroll-behavior: auto; }
+      .agent-track { transition: none; }
     }
 
     /* ─── PRICING DISCOUNT + LIMITED SEATS ─── */
@@ -2591,56 +2586,38 @@
         return cardW + gap;
       };
 
-      // Track active card via scroll position
+      // Apply transform when activeIndex changes
       useEffect(() => {
         const track = trackRef.current;
         if (!track) return;
-        let raf = 0;
-        const onScroll = () => {
-          if (raf) return;
-          raf = requestAnimationFrame(() => {
-            raf = 0;
-            const pitch = getCardPitch(track);
-            if (!pitch) return;
-            const idx = Math.round(track.scrollLeft / pitch);
-            const clamped = Math.max(0, Math.min(AGENTS.length - 1, idx));
-            setActiveIndex(clamped);
-          });
-        };
-        track.addEventListener('scroll', onScroll, { passive: true });
-        return () => {
-          track.removeEventListener('scroll', onScroll);
-          if (raf) cancelAnimationFrame(raf);
-        };
-      }, []);
+        const pitch = getCardPitch(track);
+        track.style.transform = `translate3d(-${activeIndex * pitch}px, 0, 0)`;
+      }, [activeIndex]);
 
-      // Auto-rotate every 4s when not paused + motion ok.
-      // Uses scrollTo (not scrollBy) with explicit target — scroll-snap
-      // proximity allows the move to land cleanly on a snap point.
-      // Note: previously gated by IntersectionObserver(inView) — removed
-      // because the perf savings are negligible (single timer + scrollTo)
-      // and the IO callback is unreliable across browser contexts.
+      // Re-apply transform on resize (pitch changes with viewport breakpoints)
       useEffect(() => {
-        if (paused || reducedMotion.current) return;
-        const id = setInterval(() => {
+        const onResize = () => {
           const track = trackRef.current;
           if (!track) return;
           const pitch = getCardPitch(track);
-          if (!pitch) return;
-          const currentIdx = Math.round(track.scrollLeft / pitch);
-          const nextIdx = (currentIdx + 1) % AGENTS.length;
-          track.scrollTo({ left: nextIdx * pitch, behavior: 'smooth' });
+          track.style.transform = `translate3d(-${activeIndex * pitch}px, 0, 0)`;
+        };
+        window.addEventListener('resize', onResize);
+        return () => window.removeEventListener('resize', onResize);
+      }, [activeIndex]);
+
+      // Auto-rotate every 4s when not paused + motion ok.
+      // Uses transform: translate3d (not scrollLeft) — the carousel's flex
+      // parent chain blocks scroll APIs entirely; transform is unaffected.
+      useEffect(() => {
+        if (paused || reducedMotion.current) return;
+        const id = setInterval(() => {
+          setActiveIndex((idx) => (idx + 1) % AGENTS.length);
         }, 4000);
         return () => clearInterval(id);
       }, [paused]);
 
-      const goTo = (i) => {
-        const track = trackRef.current;
-        if (!track) return;
-        const pitch = getCardPitch(track);
-        if (!pitch) return;
-        track.scrollTo({ left: i * pitch, behavior: 'smooth' });
-      };
+      const goTo = (i) => setActiveIndex(((i % AGENTS.length) + AGENTS.length) % AGENTS.length);
 
       return (
         <div
@@ -2667,7 +2644,7 @@
           </div>
 
           <div className="agent-fade">
-            <div ref={trackRef} className="agent-track" tabIndex={0}>
+            <div ref={trackRef} className="agent-track">
               {AGENTS.map((a, i) => (
                 <article key={a.slug} className="agent-card" aria-label={`Agent: ${a.name}`}>
                   {/* CSS-only halftone placeholder. When per-agent assets
