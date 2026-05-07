@@ -1482,6 +1482,149 @@
       .agent-card .creature .frame:last-child { opacity: 1; }
     }
 
+    /* ─── AGENT SCENE: chat bubble + action mini-dashboard ─── */
+    /* Replaces the abstract creature SVG with a literal preview of what
+       the agent does — a short user→agent exchange followed by an action
+       visualization (memory cards, charts, slide stack, etc). Mirrors
+       the visual language of the main DashboardDemo scenes lower on the
+       page. 5000ms loop, all elements share one cycle so they stay in
+       sync. Each element gets its own keyframe with a different "in"
+       timing so the order reads as a story. */
+    .agent-card .agent-scene {
+      position: absolute;
+      inset: 0;
+      padding: 14px 16px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 1;
+      font-family: 'Inter', sans-serif;
+      overflow: hidden;
+    }
+
+    .agent-card .scene-user {
+      align-self: flex-end;
+      max-width: 78%;
+      padding: 6px 11px;
+      border-radius: 11px 11px 4px 11px;
+      background: rgba(229, 50, 45, 0.14);
+      border: 1px solid rgba(229, 50, 45, 0.40);
+      color: #fff;
+      font-size: 11.5px;
+      line-height: 1.35;
+      opacity: 0;
+    }
+
+    .agent-card .scene-agent {
+      display: flex;
+      gap: 7px;
+      align-items: flex-start;
+      max-width: 100%;
+      opacity: 0;
+    }
+    .agent-card .scene-agent .scene-avatar {
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #E5322D, #8B1410);
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .agent-card .scene-agent .scene-bubble {
+      flex: 1;
+      padding: 7px 11px;
+      border-radius: 4px 11px 11px 11px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.10);
+      color: rgba(255, 255, 255, 0.90);
+      font-size: 11.5px;
+      line-height: 1.4;
+    }
+
+    .agent-card .scene-memos {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-top: 7px;
+    }
+    .agent-card .scene-memo {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 4px 8px;
+      border-radius: 5px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.02em;
+      color: rgba(255, 255, 255, 0.78);
+      opacity: 0;
+    }
+    .agent-card .scene-memo::before {
+      content: '';
+      width: 4px; height: 4px;
+      border-radius: 1px;
+      background: #E5322D;
+      flex-shrink: 0;
+    }
+
+    /* Keyframes — single 5000ms cycle, each element gets its own
+       in/out window so the story reads in order. All run with the same
+       duration so they restart in sync. */
+    .agent-card .scene-user  { animation: sceneUserIn  5000ms ease-out infinite; }
+    .agent-card .scene-agent { animation: sceneAgentIn 5000ms ease-out infinite; }
+    .agent-card .scene-memo:nth-child(1) { animation: sceneMemo1 5000ms ease-out infinite; }
+    .agent-card .scene-memo:nth-child(2) { animation: sceneMemo2 5000ms ease-out infinite; }
+    .agent-card .scene-memo:nth-child(3) { animation: sceneMemo3 5000ms ease-out infinite; }
+    .agent-card .scene-memo:nth-child(4) { animation: sceneMemo4 5000ms ease-out infinite; }
+
+    @keyframes sceneUserIn {
+      0%, 2%   { opacity: 0; transform: translateY(4px); }
+      6%       { opacity: 1; transform: translateY(0); }
+      92%      { opacity: 1; transform: translateY(0); }
+      96%, 100% { opacity: 0; transform: translateY(0); }
+    }
+    @keyframes sceneAgentIn {
+      0%, 30%  { opacity: 0; transform: translateY(4px); }
+      34%      { opacity: 1; transform: translateY(0); }
+      92%      { opacity: 1; transform: translateY(0); }
+      96%, 100% { opacity: 0; transform: translateY(0); }
+    }
+    @keyframes sceneMemo1 {
+      0%, 60%  { opacity: 0; transform: translateX(-6px); }
+      63%      { opacity: 1; transform: translateX(0); }
+      92%      { opacity: 1; transform: translateX(0); }
+      96%, 100% { opacity: 0; transform: translateX(0); }
+    }
+    @keyframes sceneMemo2 {
+      0%, 66%  { opacity: 0; transform: translateX(-6px); }
+      69%      { opacity: 1; transform: translateX(0); }
+      92%      { opacity: 1; transform: translateX(0); }
+      96%, 100% { opacity: 0; transform: translateX(0); }
+    }
+    @keyframes sceneMemo3 {
+      0%, 72%  { opacity: 0; transform: translateX(-6px); }
+      75%      { opacity: 1; transform: translateX(0); }
+      92%      { opacity: 1; transform: translateX(0); }
+      96%, 100% { opacity: 0; transform: translateX(0); }
+    }
+    @keyframes sceneMemo4 {
+      0%, 78%  { opacity: 0; transform: translateX(-6px); }
+      81%      { opacity: 1; transform: translateX(0); }
+      92%      { opacity: 1; transform: translateX(0); }
+      96%, 100% { opacity: 0; transform: translateX(0); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .agent-card .scene-user,
+      .agent-card .scene-agent,
+      .agent-card .scene-memo {
+        animation: none;
+        opacity: 1;
+        transform: none;
+      }
+    }
+
     /* ─── CAROUSEL CHEVRON NAV (desktop hover, mobile touch) ─── */
     .agent-fade { position: relative; }
     .agent-nav {
@@ -3414,6 +3557,40 @@
       );
     }
 
+    // ─────────────────────── AGENT SCENES (chat + action) ───────────────────────
+    // New direction (2026-05-07 pivot): each card shows a literal user→agent
+    // exchange + an action visualization, mirroring the DashboardDemo. The
+    // CSS in .agent-scene + sceneUserIn/sceneAgentIn/sceneMemoN keyframes
+    // handles the timing — components below just supply markup.
+    //
+    // Storyboard scope: only 'pro' has a scene right now. Other slugs fall
+    // through to CreatureSprite. After founder approval the rest will follow.
+    function AgentScenePro() {
+      return (
+        <div className="agent-scene scene-pro">
+          <div className="scene-user">Inget gimana gaya kerja saya?</div>
+          <div className="scene-agent">
+            <div className="scene-avatar" />
+            <div className="scene-bubble">
+              Ya, ini yang saya catat:
+              <div className="scene-memos">
+                <div className="scene-memo">klien jakarta</div>
+                <div className="scene-memo">deadline kamis</div>
+                <div className="scene-memo">preferensi makan</div>
+                <div className="scene-memo">kontrak Q3</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function AgentVisual({ slug, index }) {
+      // Only 'pro' is on the new scene direction for this storyboard pass.
+      if (slug === 'pro') return <AgentScenePro />;
+      return <CreatureSprite slug={slug} index={index} />;
+    }
+
     // ─────────────────────── AGENT PERSONA CAROUSEL ───────────────────────
     // 10 agent specialist cards mirroring the agents listed in Studio tier.
     // Sits inside #proses ("The wave") below the CTA, on the same red-halftone
@@ -3535,10 +3712,11 @@
               {AGENTS.map((a, i) => (
                 <article key={a.slug} className="agent-card" aria-label={`Agent: ${a.name}`}>
                   <div className="agent-viz">
-                    {/* Animated dot-pattern creature/symbol per agent.
-                        CSS halftone placeholder stays as a fallback layer
-                        below the SVG (visible if a creature is missing). */}
-                    <CreatureSprite slug={a.slug} index={i} />
+                    {/* Per-agent visual. 'pro' uses the new scene direction
+                        (chat bubble + memory cards); other slugs still use
+                        the dot-pattern creature SVG until that direction is
+                        approved + batched. */}
+                    <AgentVisual slug={a.slug} index={i} />
                   </div>
                   <div className="agent-body">
                     <div className="agent-name">{a.name}</div>
