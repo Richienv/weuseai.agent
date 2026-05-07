@@ -1440,54 +1440,85 @@
     }
 
     /* ─── CREATURE SPRITE ANIMATION ─── */
-    /* Each card hosts an inline SVG with N <g class="frame"> groups stacked
-       at the same coords. CSS keyframes cross-fade opacity 0→1→0 per group
-       with staggered delays so one frame is visible at a time. Per-card
-       cycle is ~2800ms (4 frames × 700ms). Stagger across cards via
-       inline animation-delay so the 10 cards aren't synchronized. */
+    /* Each card hosts an inline SVG with 4 <g class="frame"> groups stacked
+       at the same coords. CSS keyframes smooth-fade opacity 0→1→0 per group
+       with staggered delays — overlapping windows produce a cross-fade.
+       Per-card cycle is 1400ms (4 frames × 350ms). Stagger across cards
+       via --creature-delay so the 10 cards aren't synchronized.
+       Symbol size capped at ~50% of card area (centered with breathing
+       room), per founder direction "minimalist + elegant, editorial". */
     .agent-card .creature {
       position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
+      width: 70%;
+      height: 70%;
+      top: 15%;
+      left: 15%;
       pointer-events: none;
       z-index: 1; /* above ::after vignette */
     }
     .agent-card .creature .frame {
       opacity: 0;
-      animation: creatureCycle var(--creature-cycle, 2800ms) steps(1, end) infinite;
+      animation: creatureCycle 1400ms linear infinite;
       animation-delay: var(--creature-delay, 0ms);
     }
     .agent-card .creature .frame.f0 { animation-delay: calc(var(--creature-delay, 0ms) + 0ms); }
-    .agent-card .creature .frame.f1 { animation-delay: calc(var(--creature-delay, 0ms) + 700ms); }
-    .agent-card .creature .frame.f2 { animation-delay: calc(var(--creature-delay, 0ms) + 1400ms); }
-    .agent-card .creature .frame.f3 { animation-delay: calc(var(--creature-delay, 0ms) + 2100ms); }
+    .agent-card .creature .frame.f1 { animation-delay: calc(var(--creature-delay, 0ms) + 350ms); }
+    .agent-card .creature .frame.f2 { animation-delay: calc(var(--creature-delay, 0ms) + 700ms); }
+    .agent-card .creature .frame.f3 { animation-delay: calc(var(--creature-delay, 0ms) + 1050ms); }
+    /* Each frame is visible for ~30% of the cycle (420ms) with 100ms fade-in
+       and 100ms fade-out at the edges — the overlapping fade windows produce
+       a soft cross-fade between consecutive frames. */
     @keyframes creatureCycle {
-      0%, 24% { opacity: 1; }
-      25%, 100% { opacity: 0; }
-    }
-
-    /* For 5-frame creatures (Hydra), override cycle length + per-frame timing */
-    .agent-card .creature.frames-5 .frame {
-      animation-duration: 3500ms;
-    }
-    .agent-card .creature.frames-5 .frame.f0 { animation-delay: calc(var(--creature-delay, 0ms) + 0ms); }
-    .agent-card .creature.frames-5 .frame.f1 { animation-delay: calc(var(--creature-delay, 0ms) + 700ms); }
-    .agent-card .creature.frames-5 .frame.f2 { animation-delay: calc(var(--creature-delay, 0ms) + 1400ms); }
-    .agent-card .creature.frames-5 .frame.f3 { animation-delay: calc(var(--creature-delay, 0ms) + 2100ms); }
-    .agent-card .creature.frames-5 .frame.f4 { animation-delay: calc(var(--creature-delay, 0ms) + 2800ms); }
-    .agent-card .creature.frames-5 .frame {
-      animation-name: creatureCycle5;
-    }
-    @keyframes creatureCycle5 {
-      0%, 19% { opacity: 1; }
-      20%, 100% { opacity: 0; }
+      0%   { opacity: 0; }
+      7%   { opacity: 1; }
+      23%  { opacity: 1; }
+      30%  { opacity: 0; }
+      100% { opacity: 0; }
     }
 
     @media (prefers-reduced-motion: reduce) {
       .agent-card .creature .frame { animation: none; opacity: 0; }
       /* Show only the last (most "complete") frame statically */
       .agent-card .creature .frame:last-child { opacity: 1; }
+    }
+
+    /* ─── CAROUSEL CHEVRON NAV (desktop hover, mobile touch) ─── */
+    .agent-fade { position: relative; }
+    .agent-nav {
+      position: absolute;
+      top: 0; bottom: 0;
+      width: 56px;
+      z-index: 6;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      background: transparent;
+      border: 0;
+      padding: 0;
+      opacity: 0;
+      transition: opacity 220ms ease;
+      color: rgba(255, 255, 255, 0.85);
+    }
+    .agent-nav-prev { left: 0; }
+    .agent-nav-next { right: 0; }
+    .agent-fade:hover .agent-nav { opacity: 0.7; }
+    .agent-nav:hover { opacity: 1; }
+    .agent-nav:focus-visible { opacity: 1; outline: none; }
+    .agent-nav .agent-nav-glyph {
+      width: 36px;
+      height: 36px;
+      border-radius: 999px;
+      background: rgba(10, 10, 10, 0.65);
+      border: 1px solid rgba(255, 255, 255, 0.10);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .agent-nav svg { width: 14px; height: 14px; stroke: currentColor; stroke-width: 2.4; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+    /* Tablet/mobile: hide chevrons (touch swipe handles nav) */
+    @media (max-width: 768px) {
+      .agent-nav { display: none; }
     }
     .agent-card .agent-body {
       padding: 16px 18px 20px;
@@ -2761,77 +2792,77 @@
         ],
       },
 
-      // Web Master — Spider weaving. (a) spider body, (b) +2 threads,
-      // (c) +4 threads + first arc, (d) full web.
+      // Web Master — Browser window with search bar (founder pivot from
+      // earlier spider-web concept). Minimalist outline, 30-50 dots/frame.
       web: {
         frames: [
-          [ // f0 — spider body alone (small triangle/cluster) at center
+          [ // f0 — empty browser frame
             "                    ",
             "                    ",
             "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "         ##         ",
-            "        ####        ",
-            "         ##         ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-          ],
-          [ // f1 — spider + 2 radial threads (left + right)
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "##       ##       ##",
-            "        ####        ",
-            "         ##         ",
-            "                    ",
-            "                    ",
+            "  ################  ",
+            "  ##            ##  ",
+            "  ##            ##  ",
+            "  ##            ##  ",
+            "  ##            ##  ",
+            "  ##            ##  ",
+            "  ##            ##  ",
+            "  ##            ##  ",
+            "  ################  ",
             "                    ",
             "                    ",
             "                    ",
           ],
-          [ // f2 — spider + 4 threads (cardinal) + first spiral arc
-            "         #          ",
-            "         #          ",
-            "         #          ",
-            "  #              #  ",
-            "    #          #    ",
-            "      #      #      ",
-            "        #  #        ",
-            "##       ##       ##",
-            "        ####        ",
-            "        #  #        ",
-            "      #      #      ",
+          [ // f1 — frame + empty URL bar
             "                    ",
+            "                    ",
+            "                    ",
+            "  ################  ",
+            "  ##            ##  ",
+            "  ##  ########  ##  ",
+            "  ##            ##  ",
+            "  ##            ##  ",
+            "  ##            ##  ",
+            "  ##            ##  ",
+            "  ##            ##  ",
+            "  ################  ",
             "                    ",
             "                    ",
             "                    ",
           ],
-          [ // f3 — full web: 4 threads + 2 spiral rings
-            "         #          ",
-            "  #      #      #   ",
-            "    #    #    #     ",
-            "      #  #  #       ",
-            "        ###         ",
-            "      #  #  #       ",
-            "    #    #    #     ",
-            "##       ##       ##",
-            "        ####        ",
-            "    #    #    #     ",
-            "      #  #  #       ",
-            "        ###         ",
-            "      #  #  #       ",
-            "    #    #    #     ",
-            "         #          ",
+          [ // f2 — URL bar with typing cursor
+            "                    ",
+            "                    ",
+            "                    ",
+            "  ################  ",
+            "  ##            ##  ",
+            "  ##  ########  ##  ",
+            "  ##  ##        ##  ",
+            "  ##            ##  ",
+            "  ##            ##  ",
+            "  ##            ##  ",
+            "  ##            ##  ",
+            "  ################  ",
+            "                    ",
+            "                    ",
+            "                    ",
+          ],
+          [ // f3 — URL filled + content rectangle below
+            "                    ",
+            "                    ",
+            "                    ",
+            "  ################  ",
+            "  ##            ##  ",
+            "  ##  ########  ##  ",
+            "  ##  ########  ##  ",
+            "  ##            ##  ",
+            "  ##  ###  ##   ##  ",
+            "  ##  ##  ##    ##  ",
+            "  ##            ##  ",
+            "  ################  ",
+            "                    ",
+            "                    ",
+            "                    ",
           ],
         ],
       },
@@ -3058,149 +3089,152 @@
         ],
       },
 
-      // Macro Strategist — Globe with meridians appearing.
+      // Macro Strategist — 3 concentric rings (founder pivot from earlier
+      // globe+meridians). Builds outward: center dot → small ring → medium
+      // ring → all 3 rings. Minimalist outline, ~25-50 dots/frame.
       macro: {
         frames: [
-          [ // f0 — circle outline (globe alone)
+          [ // f0 — center dot only
             "                    ",
             "                    ",
-            "      ########      ",
-            "    ###      ###    ",
-            "   ##          ##   ",
-            "  ##            ##  ",
-            "  ##            ##  ",
-            "  ##            ##  ",
-            "  ##            ##  ",
-            "  ##            ##  ",
-            "   ##          ##   ",
-            "    ###      ###    ",
-            "      ########      ",
             "                    ",
             "                    ",
-          ],
-          [ // f1 — circle + horizontal equator
             "                    ",
             "                    ",
-            "      ########      ",
-            "    ###      ###    ",
-            "   ##          ##   ",
-            "  ##            ##  ",
-            "  ##            ##  ",
-            "  ################  ",
-            "  ##            ##  ",
-            "  ##            ##  ",
-            "   ##          ##   ",
-            "    ###      ###    ",
-            "      ########      ",
+            "                    ",
+            "         ##         ",
+            "         ##         ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
             "                    ",
             "                    ",
           ],
-          [ // f2 — circle + equator + vertical meridian (cross)
+          [ // f1 — center + small ring
             "                    ",
             "                    ",
-            "      ########      ",
-            "    ###  ##  ###    ",
-            "   ##    ##    ##   ",
-            "  ##     ##     ##  ",
-            "  ##     ##     ##  ",
-            "  ################  ",
-            "  ##     ##     ##  ",
-            "  ##     ##     ##  ",
-            "   ##    ##    ##   ",
-            "    ###  ##  ###    ",
-            "      ########      ",
+            "                    ",
+            "                    ",
+            "         ##         ",
+            "       ##  ##       ",
+            "      ##    ##      ",
+            "      ## ## ##      ",
+            "      ## ## ##      ",
+            "      ##    ##      ",
+            "       ##  ##       ",
+            "         ##         ",
+            "                    ",
             "                    ",
             "                    ",
           ],
-          [ // f3 — circle + 4 meridians (cross + diagonals = 8-way)
+          [ // f2 — center + small + medium ring
             "                    ",
             "                    ",
+            "       ######       ",
+            "     ##      ##     ",
+            "    ##  ####  ##    ",
+            "   ##  ##  ##  ##   ",
+            "   ##  ## ## ##  #  ",
+            "   ##  ## ## ##  #  ",
+            "   ##  ##  ##  ##   ",
+            "    ##  ##  ##      ",
+            "     ##      ##     ",
+            "       ######       ",
+            "                    ",
+            "                    ",
+            "                    ",
+          ],
+          [ // f3 — center + small + medium + large ring (all 3)
             "      ########      ",
-            "    ###  ##  ###    ",
-            "   ## # ##  # ##    ",
-            "  ##  # ##  #   ##  ",
-            "  ##   #### #   ##  ",
-            "  ################  ",
-            "  ##   #### #   ##  ",
-            "  ##  # ##  #   ##  ",
-            "   ## # ##  # ##    ",
-            "    ###  ##  ###    ",
+            "    ##        ##    ",
+            "   ##  ######  ##   ",
+            "  ##  ##    ##  ##  ",
+            "  ##  ## ## ##  ##  ",
+            "  ##  ## ## ##  ##  ",
+            "  ##  ##    ##  ##  ",
+            "   ##  ######  ##   ",
+            "    ##        ##    ",
             "      ########      ",
+            "                    ",
+            "                    ",
+            "                    ",
             "                    ",
             "                    ",
           ],
         ],
       },
 
-      // Business Director — Lion mane crown. Founder spec: jaw bar →
-      // ear tufts → mane radiating outward → full lion head silhouette.
+      // Business Director — Dollar sign $ (founder pivot from lion mane).
+      // Drawn progressively: vertical bar → S top → S middle → full $.
+      // Serif-style construction, ~30-45 dots/frame.
       business: {
         frames: [
-          [ // f0 — flat bar (jaw line) — the foundation of the lion's face
+          [ // f0 — vertical bar (the $ stem)
             "                    ",
             "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "      ##########    ",
-            "      ##########    ",
-            "                    ",
-            "                    ",
-          ],
-          [ // f1 — jaw + 2 ear tufts on top
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "      ##      ##    ",
-            "     ####    ####   ",
-            "      ##      ##    ",
-            "                    ",
-            "      ##########    ",
-            "      ##########    ",
+            "          ##        ",
+            "          ##        ",
+            "          ##        ",
+            "          ##        ",
+            "          ##        ",
+            "          ##        ",
+            "          ##        ",
+            "          ##        ",
+            "          ##        ",
+            "          ##        ",
+            "          ##        ",
             "                    ",
             "                    ",
           ],
-          [ // f2 — ear tufts + mane radiating outward
-            "          #         ",
-            "    #     #     #   ",
-            "      #   #   #     ",
-            "        # # #       ",
-            "  #       #       # ",
-            "    #     #     #   ",
-            "      #   #   #     ",
-            "      ##      ##    ",
-            "     ####    ####   ",
-            "      ##      ##    ",
+          [ // f1 — bar + S top
             "                    ",
-            "      ##########    ",
-            "      ##########    ",
+            "                    ",
+            "          ##        ",
+            "        ######      ",
+            "       ##    ##     ",
+            "       ##           ",
+            "       ##           ",
+            "        ###         ",
+            "          ##        ",
+            "          ##        ",
+            "          ##        ",
+            "          ##        ",
+            "          ##        ",
             "                    ",
             "                    ",
           ],
-          [ // f3 — full lion head silhouette with mane
-            "          #         ",
-            "    #     #     #   ",
-            "  ##  #   #   #  ## ",
-            "   ##   # # #   ##  ",
-            "  #   #########   # ",
-            "   #  #########  #  ",
-            "   #  #########  #  ",
-            "      ##      ##    ",
-            "     ####    ####   ",
-            "      ##  ##  ##    ",
-            "       ########     ",
-            "      ##########    ",
-            "      ##########    ",
+          [ // f2 — bar + S top + S middle
+            "                    ",
+            "                    ",
+            "          ##        ",
+            "        ######      ",
+            "       ##    ##     ",
+            "       ##           ",
+            "       ##           ",
+            "        ###         ",
+            "           ###      ",
+            "             ##     ",
+            "             ##     ",
+            "          ##        ",
+            "          ##        ",
+            "                    ",
+            "                    ",
+          ],
+          [ // f3 — full $ (bar + S complete)
+            "                    ",
+            "                    ",
+            "          ##        ",
+            "        ######      ",
+            "       ##    ##     ",
+            "       ##           ",
+            "        ###         ",
+            "          ##        ",
+            "           ###      ",
+            "             ##     ",
+            "       ##    ##     ",
+            "        ######      ",
+            "          ##        ",
             "                    ",
             "                    ",
           ],
@@ -3281,95 +3315,78 @@
         ],
       },
 
-      // Social Conductor — Hydra heads emerging + ripples expanding.
-      // 5 frames per founder spec.
+      // Social Conductor — Single eye with rippling iris (founder pivot
+      // from Hydra). Distinct from Researcher's owl: this is one wide eye,
+      // iris pulses small→medium→large→contracts. ~30-50 dots/frame.
       social: {
-        frameCount: 5,
         frames: [
-          [ // f0 — 1 head profile (snake-like silhouette)
+          [ // f0 — closed eye (horizontal line)
             "                    ",
             "                    ",
             "                    ",
             "                    ",
-            "        ##          ",
-            "        ####        ",
-            "         ##         ",
-            "         ##         ",
-            "         ##         ",
-            "         ##         ",
-            "         ##         ",
-            "       ######       ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "    ############    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
             "                    ",
             "                    ",
             "                    ",
           ],
-          [ // f1 — 2 heads (split)
+          [ // f1 — half-open
             "                    ",
             "                    ",
             "                    ",
-            "      ##      ##    ",
-            "      ####  ####    ",
-            "       ##    ##     ",
-            "       ##    ##     ",
-            "       ##    ##     ",
-            "       ##    ##     ",
-            "        ##  ##      ",
-            "        ##  ##      ",
-            "       ########     ",
+            "                    ",
+            "                    ",
+            "    ############    ",
+            "   ##          ##   ",
+            "   ##   ####    ##  ",
+            "    ############    ",
+            "                    ",
+            "                    ",
+            "                    ",
             "                    ",
             "                    ",
             "                    ",
           ],
-          [ // f2 — 3 heads with ripples behind
+          [ // f2 — fully open with iris
             "                    ",
             "                    ",
-            "    ##    ##    ##  ",
-            "    ####  ####  ####",
-            "     ##    ##    ## ",
-            "     ##    ##    ## ",
-            "     ##    ##    ## ",
-            "     ##    ##    ## ",
-            "      ##   ##   ##  ",
-            "       ## ## ##     ",
             "                    ",
-            "      ##########    ",
-            "    ##############  ",
+            "                    ",
+            "    ############    ",
+            "   ##          ##   ",
+            "   ##  ######   ##  ",
+            "   ##  ######   ##  ",
+            "   ##  ######   ##  ",
+            "   ##          ##   ",
+            "    ############    ",
+            "                    ",
+            "                    ",
             "                    ",
             "                    ",
           ],
-          [ // f3 — 5 heads pointing different directions
-            "##                ##",
-            "####            ####",
-            " ##  ##  ##  ##  ## ",
-            "      ####  ####    ",
-            "       ##    ##     ",
-            "        ## ## ##    ",
-            "        ##  #  ##   ",
-            "         ## # ##    ",
-            "          ###       ",
-            "          ##        ",
-            "       ########     ",
-            "      ##########    ",
-            "    ##############  ",
-            "  ##################",
-            "                    ",
-          ],
-          [ // f4 — heads remain, ripples expand outward (broadcast)
+          [ // f3 — iris contracts to pinpoint, ripple lines around eye
             "                    ",
             "                    ",
+            "          #         ",
+            "                    ",
+            "    ############    ",
+            "   ##          ##   ",
+            "   ##          ##   ",
+            "   ##    ##     ##  ",
+            "   ##          ##   ",
+            "   ##          ##   ",
+            "    ############    ",
+            "                    ",
+            "          #         ",
             "                    ",
             "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "       ########     ",
-            "      ##########    ",
-            "    ##############  ",
-            "  ##################",
-            "####################",
-            "  ##################",
-            "    ##############  ",
           ],
         ],
       },
@@ -3378,12 +3395,11 @@
     function CreatureSprite({ slug, index }) {
       const creature = CREATURES[slug];
       if (!creature) return null;
-      const cls = creature.frames.length === 5 ? 'creature frames-5' : 'creature';
-      // Stagger each card's animation by 280ms so the 10 cards aren't
+      // Stagger each card's animation by 140ms so the 10 cards aren't
       // synchronized on the same frame at the same moment.
-      const delay = `${(index || 0) * 280}ms`;
+      const delay = `${(index || 0) * 140}ms`;
       return (
-        <svg className={cls} viewBox="0 0 80 60" preserveAspectRatio="xMidYMid meet" style={{ '--creature-delay': delay }}>
+        <svg className="creature" viewBox="0 0 80 60" preserveAspectRatio="xMidYMid meet" style={{ '--creature-delay': delay }}>
           {creature.frames.map((g, i) => (
             <g key={i} className={`frame f${i}`}>
               {gridDots(g)}
@@ -3476,6 +3492,20 @@
       }, [paused]);
 
       const goTo = (i) => setActiveIndex(((i % AGENTS.length) + AGENTS.length) % AGENTS.length);
+      const goNext = () => setActiveIndex((i) => (i + 1) % AGENTS.length);
+      const goPrev = () => setActiveIndex((i) => (i - 1 + AGENTS.length) % AGENTS.length);
+
+      // Touch swipe handlers (mobile/tablet)
+      const touchStartX = useRef(null);
+      const onTouchStart = (e) => { touchStartX.current = e.touches[0]?.clientX ?? null; };
+      const onTouchEnd = (e) => {
+        if (touchStartX.current == null) return;
+        const dx = (e.changedTouches[0]?.clientX ?? touchStartX.current) - touchStartX.current;
+        touchStartX.current = null;
+        if (Math.abs(dx) > 40) {
+          if (dx < 0) goNext(); else goPrev();
+        }
+      };
 
       return (
         <div
@@ -3501,7 +3531,13 @@
             </p>
           </div>
 
-          <div className="agent-fade">
+          <div className="agent-fade" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+            <button type="button" className="agent-nav agent-nav-prev" onClick={goPrev} aria-label="Agent sebelumnya">
+              <span className="agent-nav-glyph"><svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="15 18 9 12 15 6" /></svg></span>
+            </button>
+            <button type="button" className="agent-nav agent-nav-next" onClick={goNext} aria-label="Agent berikutnya">
+              <span className="agent-nav-glyph"><svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="9 6 15 12 9 18" /></svg></span>
+            </button>
             <div ref={trackRef} className="agent-track">
               {AGENTS.map((a, i) => (
                 <article key={a.slug} className="agent-card" aria-label={`Agent: ${a.name}`}>
