@@ -145,3 +145,36 @@ async function safeText(r: Response): Promise<string> {
     return '<read failed>'
   }
 }
+
+// ─── Orchestration key (Phase 2E-1 Q3a, option b) ───────────────────────
+//
+// SERVICE-only OpenRouter key for platform-level orchestration LLM calls
+// (parameter extraction, intent classification helpers). Distinct from:
+//
+//   - Customer's per-VPS key (BYOK, lives on /home/weuseai/.hermes/.env,
+//     never reachable from Edge Functions)
+//   - OPENROUTER_PROVISIONING_KEY (used only to MINT customer keys)
+//
+// Cost lands on the platform (~$6/month at 1000 customers × 30 extraction
+// calls/customer-month at claude-3.5-haiku rates). Cap maxTokens=200 on
+// every call to keep this bounded.
+//
+// Reads OPENROUTER_ORCHESTRATION_KEY from env. Works in both Deno (Edge
+// Function) and Node (tests) — the module stays runtime-pure.
+
+export const ORCHESTRATION_MAX_OUTPUT_TOKENS = 200
+
+export function getOrchestrationKey(): string | null {
+  const denoEnv = (
+    globalThis as { Deno?: { env: { get(k: string): string | undefined } } }
+  ).Deno?.env
+  const nodeEnv = (
+    globalThis as { process?: { env: Record<string, string | undefined> } }
+  ).process?.env
+
+  const key =
+    denoEnv?.get('OPENROUTER_ORCHESTRATION_KEY') ??
+    nodeEnv?.OPENROUTER_ORCHESTRATION_KEY ??
+    null
+  return key && key.length > 0 ? key : null
+}

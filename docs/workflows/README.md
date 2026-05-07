@@ -188,8 +188,14 @@ Tune threshold from `workflow_runs` telemetry once we have data.
 ### Required Supabase secrets (set once via `supabase secrets set`)
 
 ```
-OPENAI_EMBED_API_KEY = sk-...    # For workflow-discover embedding pipeline
+OPENAI_EMBED_API_KEY         = sk-...           # workflow-discover embedding pipeline (~$0/mo)
+OPENROUTER_ORCHESTRATION_KEY = sk-or-v1-...     # parameter extraction at workflow-discover (~$6/mo
+                                                #   at 1000 customers × 30 calls/customer-month;
+                                                #   distinct from OPENROUTER_PROVISIONING_KEY which
+                                                #   only mints customer keys)
 ```
+
+**Why two OpenRouter keys?** `OPENROUTER_PROVISIONING_KEY` mints per-customer sub-accounts at provision time and never makes inference calls. `OPENROUTER_ORCHESTRATION_KEY` is platform-side inference for parameter extraction — separate billing line, separate audit log, can be revoked independently. The customer's own OpenRouter key (BYOK) lives only on their VPS and is never reachable from Edge Functions.
 
 ### Required Storage bucket (one-time setup)
 

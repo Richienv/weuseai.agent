@@ -49,7 +49,7 @@ curl -sS -X POST "$SUPABASE_URL/functions/v1/workflow-discover" \
   }" | jq
 ```
 
-**Expected:**
+**Expected (when `OPENROUTER_ORCHESTRATION_KEY` is configured):**
 ```json
 {
   "matches": [
@@ -57,17 +57,24 @@ curl -sS -X POST "$SUPABASE_URL/functions/v1/workflow-discover" \
       "workflow_id": "<uuid>",
       "slug": "invoice-generator",
       "name_id": "Generator Invoice",
-      "confidence": 0.91,           // cosine similarity, depends on actual embeddings
+      "confidence": 0.91,
       "parameters_schema": { ... },
-      "extracted_parameters": {},   // empty in 2E-1; LLM extraction lands in 2E-2
-      "missing_parameters": ["client_name", "items"]
-    }
+      "extracted_parameters": { "client_name": "PT Acme Indonesia" },
+      "missing_parameters": ["items"]
+    },
+    { "...top 2..." },
+    { "...top 3..." }
   ],
   "auto_execute_recommended": true
 }
 ```
 
-Note: `extracted_parameters` is empty in Phase 2E-1 — extraction requires the customer's OpenRouter key which lives only on their VPS. Phase 2E-2 wires extraction via Hermes runtime. For the demo, supply parameters explicitly in step 3.
+Notes:
+
+- **Extraction only fires for top-1 when `auto_execute_recommended=true`** (top-1 confidence ≥ 0.85 AND gap to top-2 ≥ 0.10). Ambiguous matches return all 3 with empty `extracted_parameters` — agent should ask the customer to confirm which workflow.
+- The orchestration LLM (`anthropic/claude-3.5-haiku`) parses Indonesian + English + currency variants (`3jt`, `Rp 3.000.000`, `tiga juta`, `500rb`) into structured params. Cost ~$0.0002/call on the platform's `OPENROUTER_ORCHESTRATION_KEY` (not the customer's BYOK key).
+- Per-field schema validation strips invalid extractions: if the LLM returns `amount: "three million"` against a `number` schema, that field gets stripped and listed in `missing_parameters`.
+- Retry-once on malformed JSON; second failure → empty `extracted_parameters` + row in `extraction_failures` for tuning.
 
 ### Step 3 — execute with parameters
 
@@ -189,5 +196,4 @@ The corresponding `workflow_runs` row has `status = 'failed'` and `error = 'PDF 
 
 - **Hermes integration:** the running agent on the customer's VPS doesn't yet call these endpoints. Demo above invokes them directly via curl. Phase 2E-2 adds a `workflow-router` skill on every VPS.
 - **Real PDF output:** invoice-generator returns HTML in 2E-1. PDF rendering (Browserless, Cloudflare Browser Rendering, or self-hosted WeasyPrint) lands in 2E-2 with a separate spec doc.
-- **LLM parameter extraction:** customer's OpenRouter key only lives on the VPS, so 2E-1's `workflow-discover` returns empty `extracted_parameters`. 2E-2 routes extraction through Hermes locally.
 - **daily-briefing-builder + tiktok-script-builder:** the other two pilots are in the next 2E-1 batch.

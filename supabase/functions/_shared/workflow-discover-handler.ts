@@ -24,6 +24,7 @@ import {
   type WorkflowTier,
 } from './workflow-types.ts'
 import { requiredFieldsOf } from './parameter-validator.ts'
+import { validateExtractedFields } from './parameter-extraction.ts'
 
 // ─── input + result shapes ──────────────────────────────────────────────
 
@@ -138,42 +139,59 @@ export async function workflowDiscoverHandler(
     }
   }
 
-  // Parameter extraction per match. Done in parallel — independent calls.
-  const matches: DiscoverMatch[] = await Promise.all(
-    topMatches.map(async ({ row, confidence }) => {
-      let extracted: Record<string, unknown> = {}
-      try {
-        extracted = await deps.llmExtractFn({
-          messageText: trimmedMessage,
-          parametersSchema: row.parameters_schema,
-          workflowSlug: row.slug,
-        })
-      } catch {
-        // Extraction failure is non-fatal — return empty extracted_parameters
-        // and let the caller (or customer) supply them. Don't fail the
-        // whole discovery just because the LLM couldn't infer fields.
-        extracted = {}
-      }
-      const required = requiredFieldsOf(row.parameters_schema as Record<string, unknown>)
-      const missing = required.filter((k) => extracted[k] === undefined)
-      return {
-        workflow_id: row.id,
-        slug: row.slug,
-        name_id: row.name_id,
-        confidence,
-        parameters_schema: row.parameters_schema,
-        extracted_parameters: extracted,
-        missing_parameters: missing,
-      }
-    }),
-  )
+  // Build initial matches with empty extraction — required fields all
+  // listed as missing. We extract ONLY for top-1 when auto-execute is
+  // recommended (cost optimization: ambiguous matches don't waste budget).
+  const matches: DiscoverMatch[] = topMatches.map(({ row, confidence }) => ({
+    workflow_id: row.id,
+    slug: row.slug,
+    name_id: row.name_id,
+    confidence,
+    parameters_schema: row.parameters_schema,
+    extracted_parameters: {},
+    missing_parameters: requiredFieldsOf(
+      row.parameters_schema as Record<string, unknown>,
+    ),
+  }))
+
+  const autoExec = shouldAutoExecute(matches)
+
+  if (autoExec && matches.length > 0) {
+    const top = matches[0]
+    let rawExtracted: Record<string, unknown> = {}
+    try {
+      rawExtracted = await deps.llmExtractFn({
+        messageText: trimmedMessage,
+        parametersSchema: top.parameters_schema,
+        workflowSlug: top.slug,
+      })
+    } catch {
+      // Extraction throw is non-fatal — leave empty, all required show
+      // up as missing. The customer (or agent) supplies them at execute
+      // time. Telemetry is the dep's responsibility.
+      rawExtracted = {}
+    }
+
+    // Per-field schema validation: strip invalid fields the LLM
+    // returned (wrong type, unknown property, out-of-range), keep
+    // valid ones, recompute missing.
+    const { valid } = validateExtractedFields(rawExtracted, top.parameters_schema)
+    const required = requiredFieldsOf(
+      top.parameters_schema as Record<string, unknown>,
+    )
+    matches[0] = {
+      ...top,
+      extracted_parameters: valid,
+      missing_parameters: required.filter((k) => valid[k] === undefined),
+    }
+  }
 
   return {
     ok: true,
     status: 200,
     body: {
       matches,
-      auto_execute_recommended: shouldAutoExecute(matches),
+      auto_execute_recommended: autoExec,
     },
   }
 }

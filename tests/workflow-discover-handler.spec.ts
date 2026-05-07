@@ -142,7 +142,7 @@ test('discover: 500 when vector search throws', async () => {
 
 // ─── happy path ────────────────────────────────────────────────────────
 
-test('discover: returns matches with confidence + extracted + missing', async () => {
+test('discover: top-1 auto-execute path runs extraction + recomputes missing', async () => {
   const r = await workflowDiscoverHandler(
     baseInput,
     deps({
@@ -159,11 +159,68 @@ test('discover: returns matches with confidence + extracted + missing', async ()
   assert.equal(matches.length, 2)
   assert.equal(matches[0].confidence, 0.92)
   assert.equal(matches[0].slug, 'invoice-generator')
+  // Extraction fired only for top-1 (auto-execute true: 0.92 >= 0.85,
+  // gap 0.51 >= 0.10).
   assert.deepEqual(matches[0].extracted_parameters, { client_name: 'PT Acme' })
   // 'items' is required + missing from extraction
   assert.ok(matches[0].missing_parameters.includes('items'))
   // 'client_name' is required but extracted, so NOT in missing
   assert.equal(matches[0].missing_parameters.includes('client_name'), false)
+  // Top-2 had NO extraction fired; missing_parameters lists everything required.
+  assert.deepEqual(
+    matches[1].extracted_parameters,
+    {},
+    'top-2 should have empty extracted_parameters (cost optimization)',
+  )
+  assert.deepEqual(
+    matches[1].missing_parameters.sort(),
+    ['client_name', 'items'],
+  )
+})
+
+test('discover: ambiguous matches (gap < 0.10) → no extraction call (cost optimization)', async () => {
+  let extractCalls = 0
+  const customDeps = deps({
+    searchResults: [
+      { row: row(), confidence: 0.92 },
+      { row: row({ slug: 'other-wf' }), confidence: 0.85 },  // gap = 0.07
+    ],
+  })
+  customDeps.llmExtractFn = async () => {
+    extractCalls++
+    return { client_name: 'PT Acme' }
+  }
+  const r = await workflowDiscoverHandler(baseInput, customDeps)
+  assert.equal(r.ok, true)
+  if (!r.ok) return
+  // No extraction call when ambiguous.
+  assert.equal(extractCalls, 0)
+  assert.equal(r.body.auto_execute_recommended, false)
+  // Both matches have empty extracted + every required field listed missing.
+  for (const m of r.body.matches) {
+    assert.deepEqual(m.extracted_parameters, {})
+    assert.deepEqual(m.missing_parameters.sort(), ['client_name', 'items'])
+  }
+})
+
+test('discover: extraction fires exactly ONCE for top-1 (not per match)', async () => {
+  let extractCalls = 0
+  const seenSlugs: string[] = []
+  const customDeps = deps({
+    searchResults: [
+      { row: row({ slug: 'invoice-generator' }), confidence: 0.95 },
+      { row: row({ slug: 'unrelated-wf-1' }), confidence: 0.40 },
+      { row: row({ slug: 'unrelated-wf-2' }), confidence: 0.30 },
+    ],
+  })
+  customDeps.llmExtractFn = async ({ workflowSlug }) => {
+    extractCalls++
+    seenSlugs.push(workflowSlug)
+    return {}
+  }
+  await workflowDiscoverHandler(baseInput, customDeps)
+  assert.equal(extractCalls, 1, 'one extraction call only')
+  assert.deepEqual(seenSlugs, ['invoice-generator'], 'top-1 only')
 })
 
 test('discover: auto_execute_recommended=true when top-1 ≥ 0.85 and gap ≥ 0.10', async () => {
@@ -216,10 +273,13 @@ test('discover: empty result is ok with empty matches array', async () => {
 
 // ─── extraction failure isolation ──────────────────────────────────────
 
-test('discover: LLM extract throw returns match with empty extracted (failsafe)', async () => {
+test('discover: LLM extract throw on top-1 auto-execute path returns empty + missing populated', async () => {
   const r = await workflowDiscoverHandler(
     baseInput,
     deps({
+      // Single match at 0.91 → above 0.85 threshold + only 1 result so
+      // gap rule auto-passes → auto_execute_recommended=true → extraction
+      // is invoked → extraction throws → we fall back to empty.
       searchResults: [{ row: row(), confidence: 0.91 }],
       extractThrows: new Error('OpenRouter 503'),
     }),
@@ -232,6 +292,31 @@ test('discover: LLM extract throw returns match with empty extracted (failsafe)'
     r.body.matches[0].missing_parameters.sort(),
     ['client_name', 'items'],
   )
+})
+
+test('discover: invalid extracted field stripped via per-field schema validation', async () => {
+  // LLM returns amount as a string — schema says number → strip + mark missing.
+  const r = await workflowDiscoverHandler(
+    baseInput,
+    deps({
+      searchResults: [{ row: row(), confidence: 0.95 }],
+      // amount is unknown to the schema (test row only declares client_name,
+      // items, tax_rate) → stripped as unknown property regardless of value.
+      extractReturn: { client_name: 'PT Acme', amount: 'three million' },
+    }),
+  )
+  assert.equal(r.ok, true)
+  if (!r.ok) return
+  // 'amount' isn't even in the schema for invoice-generator (the test row
+  // schema only has client_name + items + tax_rate). 'amount' gets stripped
+  // as unknown property regardless of value type.
+  assert.equal(
+    'amount' in r.body.matches[0].extracted_parameters,
+    false,
+    'unknown property "amount" stripped',
+  )
+  // client_name is valid, kept.
+  assert.equal(r.body.matches[0].extracted_parameters.client_name, 'PT Acme')
 })
 
 // ─── tier filtering passed to vector search ────────────────────────────

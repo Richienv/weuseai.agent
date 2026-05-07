@@ -7,17 +7,23 @@
 //   supabase functions deploy workflow-discover --project-ref gtjgsligllbjcisiyrah
 //
 // Required env (Supabase auto-provided + secrets):
-//   SUPABASE_URL                    auto
-//   SUPABASE_SERVICE_ROLE_KEY       auto
-//   OPENAI_EMBED_API_KEY            secret (sk-..., used for embedding only)
+//   SUPABASE_URL                       auto
+//   SUPABASE_SERVICE_ROLE_KEY          auto
+//   OPENAI_EMBED_API_KEY               secret (sk-..., embedding only)
+//   OPENROUTER_ORCHESTRATION_KEY       secret (sk-or-v1-..., parameter
+//                                              extraction only — distinct
+//                                              from OPENROUTER_PROVISIONING_KEY)
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
 
 import { handleCors, withCors } from '../_shared/cors.ts'
 import { embedText } from '../_shared/embedding.ts'
-import { llmJsonCompletion } from '../_shared/llm-client.ts'
+import { getOrchestrationKey } from '../_shared/llm-client.ts'
 import {
-  buildExtractionPrompt,
+  extractParametersFromMessage,
+  type ExtractionFailureReason,
+} from '../_shared/parameter-extraction.ts'
+import {
   workflowDiscoverHandler,
   type CustomerInfo,
 } from '../_shared/workflow-discover-handler.ts'
@@ -115,13 +121,58 @@ Deno.serve(async (req) => {
       }))
     },
     llmExtractFn: async ({ messageText, parametersSchema, workflowSlug }) => {
-      // Look up the customer's OpenRouter key for parameter extraction.
-      // We don't have customer_id at this scope (it's inside the handler);
-      // keep extraction off — we'll add it in 2E-2 when handler signatures
-      // can pass auth context downstream. For pilot: skip extraction here,
-      // return empty — caller computes missing_parameters from required.
-      // Phase 2E-1 acceptance: missing_parameters lists everything required.
-      return {}
+      // Phase 2E-1 Q3a (option b): platform-orchestration key for
+      // extraction. Cost lands on us, not the customer (~$0.0002/call).
+      // Handler only invokes us when shouldAutoExecute → ambiguous matches
+      // don't waste budget.
+      const orchestrationKey = getOrchestrationKey()
+      if (!orchestrationKey) {
+        console.warn(
+          'workflow-discover: OPENROUTER_ORCHESTRATION_KEY not configured. ' +
+            'Extraction skipped; missing_parameters will list every required field.',
+        )
+        return {}
+      }
+
+      // Look up workflow_id from the customer's request scope (we don't
+      // have it here — this dep only sees prompt-shaped inputs). Telemetry
+      // logs the workflow slug + reason; the row links back to workflow
+      // via slug lookup if needed for analysis.
+      const result = await extractParametersFromMessage({
+        apiKey: orchestrationKey,
+        messageText,
+        parametersSchema,
+        workflowSlug,
+        onFailure: async (reason: ExtractionFailureReason, rawExcerpt?: string) => {
+          // Best-effort telemetry insert. Failure here is silently
+          // dropped — extraction-failure logging shouldn't compound a
+          // user-facing failure.
+          try {
+            const { data: workflowRow } = await supabase
+              .from('workflows')
+              .select('id')
+              .eq('slug', workflowSlug)
+              .maybeSingle()
+            const { error } = await supabase.from('extraction_failures').insert({
+              workflow_id: (workflowRow as { id?: string } | null)?.id ?? null,
+              customer_id: input.customer_id,
+              message_excerpt: messageText.slice(0, 500),
+              reason,
+              raw_excerpt: rawExcerpt ?? null,
+            })
+            if (error) {
+              console.warn('extraction_failures insert error:', error.message)
+            }
+          } catch (e) {
+            console.warn(
+              'extraction_failures telemetry hook threw:',
+              e instanceof Error ? e.message : String(e),
+            )
+          }
+        },
+      })
+
+      return result.extracted
     },
   })
 
