@@ -1,6 +1,6 @@
 # Workflow Library Foundation — Phase 2E-1 Spec (2026-05-07)
 
-> **Status:** DRAFT 2026-05-07 — awaiting founder review before implementation.
+> **Status:** APPROVED 2026-05-07 (founder). All 6 open questions resolved. Implementation in progress on `feat/workflow-library-foundation`.
 > **Goal:** Working workflow registry + 3 pilot workflows end-to-end. Prove the orchestrator pattern, then scale.
 > **Branch:** `feat/workflow-library-foundation` (off `main` at `c972413`).
 
@@ -227,9 +227,18 @@ All three follow the established CORS chain pattern (`handleCors → handler →
       "missing_parameters": ["passenger_count", "departure_window"]
     },
     { "...top 2 and top 3..." }
-  ]
+  ],
+  "auto_execute_recommended": true
 }
 ```
+
+**Top-K + confidence semantics:**
+
+- `matches` is an array of exactly **3** results, **sorted descending by `confidence`** (cosine similarity, range 0-1).
+- `confidence` is the literal cosine score — visible to callers so the agent can make its own routing decision.
+- **`auto_execute_recommended`** is a boolean convenience flag: `true` iff `matches[0].confidence >= 0.85` AND `matches[0].confidence - matches[1].confidence >= 0.10` (top-1 is clearly ahead of top-2). The agent SHOULD auto-execute on `true`; ask the customer to confirm on `false`.
+- **0.85 threshold** is an initial guess based on the OpenAI embedding similarity range for related-but-not-identical phrases. Tune from production telemetry once `workflow_runs` has data.
+- The 0.10 separation rule prevents auto-execute when two workflows are similarly likely (e.g. user says "ringkas berita pasar" and both `daily-briefing-builder` and `tiktok-script-builder` score 0.86 — ambiguous, ask user).
 
 **Process:**
 1. Validate `customer_id` exists, get their tier.
@@ -447,11 +456,54 @@ Phase 2E-1 ships with **MOCK MCP adapters** — pulls from a fixture file in Sup
 2. Compose markdown summary using a structured prompt + small LLM (Haiku-eq via OpenRouter).
 3. Return as `output_type: 'text'`, body in `output.text`.
 
-**Mock fixture format (drift-tested):**
+**Mock fixture path convention (drift-tested):**
+
+Path: `templates/mocks/{source}/{scenario}.json`. Documented in `docs/workflows/README.md` so Phase 2C-2 can swap real MCP adapters without changing the schema.
+
+Three scenarios ship with the pilot:
+
 ```
-mocks/daily-briefing/calendar-2026-05-07.json    # ICS-like array of events
-mocks/daily-briefing/email-2026-05-07.json       # array of {subject, sender, snippet}
+templates/mocks/calendar/typical-day.json    # 5 events: 4 meetings + 1 personal lunch
+templates/mocks/gmail/typical-day.json       # 10 emails: 3 important + 5 noise + 2 follow-up
+templates/mocks/calendar/empty.json          # zero events (graceful-handling test)
+templates/mocks/gmail/empty.json             # zero emails (graceful-handling test)
 ```
+
+**Calendar JSON shape (mirrors Google Calendar Events API):**
+```json
+{
+  "events": [
+    {
+      "id": "evt_001",
+      "summary": "Standup",
+      "start": { "dateTime": "2026-05-07T09:00:00+07:00" },
+      "end":   { "dateTime": "2026-05-07T09:15:00+07:00" },
+      "attendees": [{ "email": "rina@example.com" }],
+      "location": "Zoom",
+      "type": "meeting"
+    }
+  ]
+}
+```
+
+**Gmail JSON shape (mirrors Gmail messages.list + messages.get):**
+```json
+{
+  "emails": [
+    {
+      "id": "msg_001",
+      "from": "rina@example.com",
+      "subject": "Re: Q3 review tomorrow",
+      "snippet": "Bisa pindah ke jam 2 siang?",
+      "received_at": "2026-05-07T07:24:00+07:00",
+      "importance": "important",
+      "thread_id": "thr_001"
+    }
+  ]
+}
+```
+
+**`importance` values:** `important` | `noise` | `follow_up`. Used by the handler to bucket the briefing output. Real MCP responses won't have this field — Phase 2C-2 either adds it via classifier or drops the bucket and outputs the full list.
 
 **Tests:**
 - Missing date → defaults to today (Asia/Jakarta), uses correct fixture
@@ -498,7 +550,7 @@ mocks/daily-briefing/email-2026-05-07.json       # array of {subject, sender, sn
 **Handler implementation:**
 
 1. Build a structured prompt template with the topic, length, audience.
-2. Call small LLM (Haiku-eq via OpenRouter — pinned model: `anthropic/claude-3-haiku`) with JSON-mode response format.
+2. Call small LLM via OpenRouter — pinned model: `anthropic/claude-3.5-haiku` (claude-3-haiku is deprecated; 3.5 is current stable with reliable JSON mode). Customer's OpenRouter key from `customer_openrouter_keys` (Phase 2A) used here so cost stays on BYOK side.
 3. Validate output against the response schema.
 4. Return JSON.
 
@@ -768,14 +820,31 @@ The pilot ships with mock MCP adapters (read from Supabase Storage fixtures). Re
 
 ### Q6: Pinned LLM for tiktok-script-builder
 
-Proposing `anthropic/claude-3-haiku` via OpenRouter. Stable, JSON-mode capable, cheap.
-
-**Alternatives:**
-- `google/gemini-flash-1.5` (cheaper, also JSON-mode)
-- `meta-llama/llama-3.1-8b-instruct` (cheaper still, but JSON-mode less reliable)
-
-**Recommendation: claude-3-haiku.** Confirm or pick alternative?
+~~Proposing `anthropic/claude-3-haiku` via OpenRouter.~~ Updated to `anthropic/claude-3.5-haiku` per founder direction (claude-3-haiku deprecated; 3.5 is current stable with reliable JSON mode). Cost ~similar. Future upgrade path to claude-haiku-4.5 when stable.
 
 ---
 
-*Last updated: 2026-05-07 by Claude (Phase 2E-1 spec draft)*
+## Decisions locked 2026-05-07
+
+| # | Decision | Outcome |
+|---|---|---|
+| Q1 | Embedding provider | OpenAI direct (`text-embedding-3-small`, 1536 dim). Future privacy/data-residency concerns can swap to self-hosted in Phase 3 if needed. |
+| Q2 | Tier enum | `('starter', 'pro', 'studio')` — aligned to existing `subscriptions.tier`. No `'free'` in business model. If a workflow ever needs to be subscription-free, add a separate `is_public boolean` column. |
+| Q3 | PDF rendering | Ship HTML output for Phase 2E-1 pilot. PDF deferred to Phase 2E-2 with separate spec doc covering renderer choice (Browserless / Cloudflare Browser Rendering / WeasyPrint). HTML output is enough to prove the pattern + concierge testing. |
+| Q4 | Hermes runtime integration | Defer to Phase 2E-2. Curl-based demo via Edge Function endpoint sufficient for 2E-1 acceptance. |
+| Q5 | MCP integration | Mock fixtures in Supabase Storage. Path convention `templates/mocks/{source}/{scenario}.json`. Real MCP adapters swap in via Phase 2C-2 without schema changes. |
+| Q6 | LLM model pin | `anthropic/claude-3.5-haiku` via OpenRouter (customer's BYOK key). |
+
+Vector search top-K + threshold (added to spec body):
+- `workflow-discover` returns exactly 3 matches sorted by descending `confidence` (cosine).
+- `auto_execute_recommended = true` iff top-1 ≥ 0.85 AND top-1 minus top-2 ≥ 0.10.
+- Below threshold → agent asks customer to confirm.
+
+Schema spot-checks all approved as-is:
+- `handler_ref` namespacing (4 prefixes)
+- `agent_slugs text[]` validated against PERSONA_SLUGS in tests
+- 4-state `workflow_runs.status` (extra states added later if ops needs them)
+
+---
+
+*Last updated: 2026-05-07 by Claude (Phase 2E-1 spec, post-approval)*
