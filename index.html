@@ -1426,18 +1426,11 @@
       width: 100%;
       aspect-ratio: 4 / 3;
       background-color: #050505;
-      /* Static red halftone placeholder. Swapped for <DottedVideo> when
-         per-agent ASCII assets at /assets/agent-<slug>.mp4 ship. */
-      background-image: radial-gradient(circle at 1px 1px, rgba(229, 50, 45, 0.55) 1.1px, transparent 1.6px);
-      background-size: 6px 6px;
       overflow: hidden;
     }
-    .agent-card .agent-viz::after {
-      content: '';
-      position: absolute; inset: 0;
-      background: radial-gradient(ellipse at 50% 60%, transparent 25%, rgba(0,0,0,0.55) 78%, rgba(0,0,0,0.92) 100%);
-      pointer-events: none;
-    }
+    /* Halftone background + vignette removed (2026-05-07 pivot): the
+       chat bubble + action scenes need clean black so bubbles read as
+       the focal point. */
 
     /* ─── CREATURE SPRITE ANIMATION ─── */
     /* Each card hosts an inline SVG with 4 <g class="frame"> groups stacked
@@ -1615,14 +1608,364 @@
       96%, 100% { opacity: 0; transform: translateX(0); }
     }
 
+    /* ─── ACTION VISUALIZATIONS (per-agent specific styling) ─── */
+    /* Generic stagger utility — any container marked .scene-stagger has its
+       children fade in one-by-one between 60–80% of the cycle (3.0s–4.0s),
+       holding visible until the global fade-out at 96%. Up to 6 children
+       supported. Used by every agent's action block except chart/multi
+       which have bespoke timing. */
+    .agent-card .scene-stagger > * { opacity: 0; }
+    .agent-card .scene-stagger > *:nth-child(1) { animation: sceneItem1 5000ms ease-out infinite; }
+    .agent-card .scene-stagger > *:nth-child(2) { animation: sceneItem2 5000ms ease-out infinite; }
+    .agent-card .scene-stagger > *:nth-child(3) { animation: sceneItem3 5000ms ease-out infinite; }
+    .agent-card .scene-stagger > *:nth-child(4) { animation: sceneItem4 5000ms ease-out infinite; }
+    .agent-card .scene-stagger > *:nth-child(5) { animation: sceneItem5 5000ms ease-out infinite; }
+    .agent-card .scene-stagger > *:nth-child(6) { animation: sceneItem6 5000ms ease-out infinite; }
+    @keyframes sceneItem1 {
+      0%, 60%   { opacity: 0; transform: translateX(-6px); }
+      63%       { opacity: 1; transform: translateX(0); }
+      92%       { opacity: 1; transform: translateX(0); }
+      96%, 100% { opacity: 0; transform: translateX(0); }
+    }
+    @keyframes sceneItem2 {
+      0%, 64%   { opacity: 0; transform: translateX(-6px); }
+      67%       { opacity: 1; transform: translateX(0); }
+      92%       { opacity: 1; transform: translateX(0); }
+      96%, 100% { opacity: 0; transform: translateX(0); }
+    }
+    @keyframes sceneItem3 {
+      0%, 68%   { opacity: 0; transform: translateX(-6px); }
+      71%       { opacity: 1; transform: translateX(0); }
+      92%       { opacity: 1; transform: translateX(0); }
+      96%, 100% { opacity: 0; transform: translateX(0); }
+    }
+    @keyframes sceneItem4 {
+      0%, 72%   { opacity: 0; transform: translateX(-6px); }
+      75%       { opacity: 1; transform: translateX(0); }
+      92%       { opacity: 1; transform: translateX(0); }
+      96%, 100% { opacity: 0; transform: translateX(0); }
+    }
+    @keyframes sceneItem5 {
+      0%, 76%   { opacity: 0; transform: translateX(-6px); }
+      79%       { opacity: 1; transform: translateX(0); }
+      92%       { opacity: 1; transform: translateX(0); }
+      96%, 100% { opacity: 0; transform: translateX(0); }
+    }
+    @keyframes sceneItem6 {
+      0%, 80%   { opacity: 0; transform: translateX(-6px); }
+      83%       { opacity: 1; transform: translateX(0); }
+      92%       { opacity: 1; transform: translateX(0); }
+      96%, 100% { opacity: 0; transform: translateX(0); }
+    }
+
+    /* === Researcher: papers list with confidence chips === */
+    .agent-card .scene-papers { display: flex; flex-direction: column; gap: 4px; margin-top: 7px; }
+    .agent-card .scene-paper {
+      display: flex; align-items: center; gap: 7px;
+      padding: 4px 7px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+    }
+    .agent-card .scene-paper .paper-icon {
+      width: 11px; height: 13px;
+      border-radius: 1px;
+      background:
+        linear-gradient(to bottom,
+          rgba(255,255,255,0.10) 0%,
+          rgba(255,255,255,0.10) 100%);
+      position: relative;
+      flex-shrink: 0;
+    }
+    .agent-card .scene-paper .paper-icon::before,
+    .agent-card .scene-paper .paper-icon::after {
+      content: '';
+      position: absolute; left: 2px; right: 2px;
+      height: 1px;
+      background: rgba(0, 0, 0, 0.50);
+    }
+    .agent-card .scene-paper .paper-icon::before { top: 4px; }
+    .agent-card .scene-paper .paper-icon::after  { top: 7px; }
+    .agent-card .scene-paper .paper-title {
+      flex: 1;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9.5px;
+      color: rgba(255, 255, 255, 0.78);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .agent-card .scene-paper .paper-conf {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 8px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 1.5px 6px;
+      border-radius: 999px;
+      flex-shrink: 0;
+    }
+    .agent-card .scene-paper .paper-conf.high {
+      color: #E5322D;
+      background: rgba(229, 50, 45, 0.10);
+      border: 1px solid rgba(229, 50, 45, 0.40);
+    }
+    .agent-card .scene-paper .paper-conf.med {
+      color: rgba(255, 255, 255, 0.65);
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.10);
+    }
+    .agent-card .scene-paper .paper-conf.low {
+      color: rgba(255, 255, 255, 0.40);
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    /* === Web Master: browser tabs === */
+    .agent-card .scene-tabs { display: flex; flex-direction: column; gap: 5px; margin-top: 7px; }
+    .agent-card .scene-tab {
+      display: flex; align-items: center; gap: 8px;
+      padding: 5px 9px;
+      border-radius: 5px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9.5px;
+      color: rgba(255, 255, 255, 0.78);
+    }
+    .agent-card .scene-tab .tab-dots { display: flex; gap: 3px; flex-shrink: 0; }
+    .agent-card .scene-tab .tab-dots span {
+      width: 5px; height: 5px; border-radius: 50%;
+      background: rgba(255, 255, 255, 0.22);
+    }
+    .agent-card .scene-tab .tab-dots span:first-child { background: #E5322D; }
+    .agent-card .scene-tab .tab-url {
+      flex: 1;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .agent-card .scene-tab .tab-check {
+      color: #E5322D;
+      font-size: 11px;
+      flex-shrink: 0;
+    }
+
+    /* === Doc Expert: paper outline + lines filling === */
+    .agent-card .scene-doc {
+      margin-top: 8px;
+      padding: 9px 11px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.10);
+      display: flex; flex-direction: column; gap: 5px;
+    }
+    .agent-card .scene-doc-line {
+      height: 4px;
+      border-radius: 1px;
+      background: rgba(255, 255, 255, 0.18);
+    }
+    .agent-card .scene-doc-line.short { width: 60%; }
+    .agent-card .scene-doc-line.med   { width: 88%; }
+    .agent-card .scene-doc-line.long  { width: 100%; }
+
+    /* === Slide Master: slide cards === */
+    .agent-card .scene-slides { display: flex; gap: 5px; margin-top: 8px; }
+    .agent-card .scene-slide {
+      flex: 1;
+      aspect-ratio: 16 / 11;
+      border-radius: 3px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      padding: 4px 5px;
+      display: flex; flex-direction: column; gap: 2px;
+    }
+    .agent-card .scene-slide .slide-h {
+      height: 2px; width: 60%;
+      background: #E5322D;
+      border-radius: 1px;
+    }
+    .agent-card .scene-slide .slide-l {
+      height: 1.5px; width: 100%;
+      background: rgba(255, 255, 255, 0.25);
+      border-radius: 1px;
+    }
+
+    /* === Trade Pro: line chart drawing === */
+    .agent-card .scene-chart {
+      margin-top: 8px;
+      height: 60px;
+      position: relative;
+      padding-left: 1px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.10);
+      border-left: 1px solid rgba(255, 255, 255, 0.10);
+    }
+    .agent-card .scene-chart svg { width: 100%; height: 100%; display: block; overflow: visible; }
+    .agent-card .scene-chart .chart-line {
+      stroke: #E5322D;
+      stroke-width: 1.5;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-dasharray: 220;
+      stroke-dashoffset: 220;
+      animation: chartDraw 5000ms ease-out infinite;
+    }
+    .agent-card .scene-chart .chart-marker {
+      fill: #E5322D;
+      opacity: 0;
+      animation: chartMarker 5000ms ease-out infinite;
+    }
+    @keyframes chartDraw {
+      0%, 30%   { stroke-dashoffset: 220; }
+      85%       { stroke-dashoffset: 0; }
+      92%       { stroke-dashoffset: 0; }
+      96%, 100% { stroke-dashoffset: 220; }
+    }
+    @keyframes chartMarker {
+      0%, 80%   { opacity: 0; }
+      85%       { opacity: 1; }
+      92%       { opacity: 1; }
+      96%, 100% { opacity: 0; }
+    }
+
+    /* === Macro Strategist: 3 scenario bars === */
+    .agent-card .scene-multi {
+      display: flex; flex-direction: column; gap: 7px; margin-top: 9px;
+    }
+    .agent-card .scene-multi-row { display: flex; align-items: center; gap: 8px; }
+    .agent-card .scene-multi-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      color: rgba(255, 255, 255, 0.55);
+      width: 32px;
+      flex-shrink: 0;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .agent-card .scene-multi-bar {
+      flex: 1;
+      height: 5px;
+      background: rgba(255, 255, 255, 0.04);
+      border-radius: 2px;
+      position: relative;
+      overflow: hidden;
+    }
+    .agent-card .scene-multi-bar::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; bottom: 0;
+      width: 0;
+      border-radius: 2px;
+      animation: multiGrowBull 5000ms ease-out infinite;
+    }
+    .agent-card .scene-multi-row.bull .scene-multi-bar::after {
+      background: #E5322D;
+      animation-name: multiGrowBull;
+    }
+    .agent-card .scene-multi-row.base .scene-multi-bar::after {
+      background: rgba(255, 255, 255, 0.55);
+      animation-name: multiGrowBase;
+    }
+    .agent-card .scene-multi-row.bear .scene-multi-bar::after {
+      background: rgba(255, 255, 255, 0.28);
+      animation-name: multiGrowBear;
+    }
+    @keyframes multiGrowBull {
+      0%, 60%   { width: 0; }
+      85%       { width: 88%; }
+      92%       { width: 88%; }
+      96%, 100% { width: 0; }
+    }
+    @keyframes multiGrowBase {
+      0%, 64%   { width: 0; }
+      85%       { width: 60%; }
+      92%       { width: 60%; }
+      96%, 100% { width: 0; }
+    }
+    @keyframes multiGrowBear {
+      0%, 68%   { width: 0; }
+      85%       { width: 32%; }
+      92%       { width: 32%; }
+      96%, 100% { width: 0; }
+    }
+
+    /* === Business Director: KPI cards === */
+    .agent-card .scene-kpis { display: flex; gap: 6px; margin-top: 9px; }
+    .agent-card .scene-kpi {
+      flex: 1;
+      padding: 7px 8px;
+      border-radius: 5px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+    }
+    .agent-card .scene-kpi .kpi-num {
+      font-family: 'Instrument Serif', serif;
+      font-size: 18px;
+      line-height: 1;
+      color: #fff;
+      letter-spacing: -0.02em;
+    }
+    .agent-card .scene-kpi .kpi-num .kpi-pct {
+      font-size: 11px; color: rgba(255,255,255,0.55); margin-left: 2px;
+    }
+    .agent-card .scene-kpi .kpi-lbl {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 8px;
+      letter-spacing: 0.10em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.45);
+      margin-top: 5px;
+    }
+
+    /* === Video Producer: vertical frame thumbnails (9:16) === */
+    .agent-card .scene-frames { display: flex; gap: 4px; margin-top: 8px; }
+    .agent-card .scene-frame {
+      flex: 1;
+      aspect-ratio: 9 / 14;
+      border-radius: 3px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.10);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .agent-card .scene-frame::before {
+      content: '';
+      width: 0; height: 0;
+      border-left: 5px solid #E5322D;
+      border-top: 3.5px solid transparent;
+      border-bottom: 3.5px solid transparent;
+      margin-left: 1px;
+    }
+
+    /* === Social Conductor: platform pills with checkmark === */
+    .agent-card .scene-platforms { display: flex; gap: 5px; margin-top: 9px; flex-wrap: wrap; }
+    .agent-card .scene-platform {
+      display: flex; align-items: center; gap: 5px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: rgba(229, 50, 45, 0.10);
+      border: 1px solid rgba(229, 50, 45, 0.40);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 0.05em;
+      color: #E5322D;
+    }
+    .agent-card .scene-platform::after {
+      content: '✓';
+      font-size: 9px;
+    }
+
     @media (prefers-reduced-motion: reduce) {
       .agent-card .scene-user,
       .agent-card .scene-agent,
-      .agent-card .scene-memo {
+      .agent-card .scene-memo,
+      .agent-card .scene-stagger > *,
+      .agent-card .scene-chart .chart-line,
+      .agent-card .scene-chart .chart-marker,
+      .agent-card .scene-multi-bar::after {
         animation: none;
         opacity: 1;
         transform: none;
       }
+      .agent-card .scene-chart .chart-line { stroke-dashoffset: 0; }
+      .agent-card .scene-multi-row.bull .scene-multi-bar::after { width: 88%; }
+      .agent-card .scene-multi-row.base .scene-multi-bar::after { width: 60%; }
+      .agent-card .scene-multi-row.bear .scene-multi-bar::after { width: 32%; }
     }
 
     /* ─── CAROUSEL CHEVRON NAV (desktop hover, mobile touch) ─── */
@@ -3565,29 +3908,265 @@
     //
     // Storyboard scope: only 'pro' has a scene right now. Other slugs fall
     // through to CreatureSprite. After founder approval the rest will follow.
-    function AgentScenePro() {
+    // Reusable bubble shell — every scene shares the same user→agent
+    // structure, only the action block inside the agent bubble varies.
+    function SceneShell({ user, agentLead, children, slug }) {
       return (
-        <div className="agent-scene scene-pro">
-          <div className="scene-user">Inget gimana gaya kerja saya?</div>
+        <div className={`agent-scene scene-${slug}`}>
+          <div className="scene-user">{user}</div>
           <div className="scene-agent">
             <div className="scene-avatar" />
             <div className="scene-bubble">
-              Ya, ini yang saya catat:
-              <div className="scene-memos">
-                <div className="scene-memo">klien jakarta</div>
-                <div className="scene-memo">deadline kamis</div>
-                <div className="scene-memo">preferensi makan</div>
-                <div className="scene-memo">kontrak Q3</div>
-              </div>
+              {agentLead}
+              {children}
             </div>
           </div>
         </div>
       );
     }
 
+    function AgentScenePro() {
+      return (
+        <SceneShell
+          slug="pro"
+          user="Inget gimana gaya kerja saya?"
+          agentLead="Iya, ini yang aku catat:"
+        >
+          <div className="scene-memos scene-stagger">
+            <div className="scene-memo">klien jakarta</div>
+            <div className="scene-memo">deadline kamis</div>
+            <div className="scene-memo">preferensi makan</div>
+            <div className="scene-memo">kontrak Q3</div>
+          </div>
+        </SceneShell>
+      );
+    }
+
+    function AgentSceneResearcher() {
+      return (
+        <SceneShell
+          slug="researcher"
+          user="Riset volatilitas IDR 30 hari"
+          agentLead="12 sumber, sintesis siap:"
+        >
+          <div className="scene-papers scene-stagger">
+            <div className="scene-paper">
+              <span className="paper-icon" />
+              <span className="paper-title">bi.go.id · monthly report</span>
+              <span className="paper-conf high">tinggi</span>
+            </div>
+            <div className="scene-paper">
+              <span className="paper-icon" />
+              <span className="paper-title">imf.org · em outlook</span>
+              <span className="paper-conf high">tinggi</span>
+            </div>
+            <div className="scene-paper">
+              <span className="paper-icon" />
+              <span className="paper-title">reuters · idr trend</span>
+              <span className="paper-conf med">sedang</span>
+            </div>
+            <div className="scene-paper">
+              <span className="paper-icon" />
+              <span className="paper-title">forum trader · sentimen</span>
+              <span className="paper-conf low">rendah</span>
+            </div>
+          </div>
+        </SceneShell>
+      );
+    }
+
+    function AgentSceneWeb() {
+      return (
+        <SceneShell
+          slug="web"
+          user="Scrape 50 agensi Jakarta"
+          agentLead="Buka tabs, ekstrak data:"
+        >
+          <div className="scene-tabs scene-stagger">
+            <div className="scene-tab">
+              <span className="tab-dots"><span /><span /><span /></span>
+              <span className="tab-url">agensi-a.co.id/tim</span>
+              <span className="tab-check">✓</span>
+            </div>
+            <div className="scene-tab">
+              <span className="tab-dots"><span /><span /><span /></span>
+              <span className="tab-url">agensi-b.com/about</span>
+              <span className="tab-check">✓</span>
+            </div>
+            <div className="scene-tab">
+              <span className="tab-dots"><span /><span /><span /></span>
+              <span className="tab-url">agensi-c.id/profile</span>
+              <span className="tab-check">✓</span>
+            </div>
+          </div>
+        </SceneShell>
+      );
+    }
+
+    function AgentSceneDoc() {
+      return (
+        <SceneShell
+          slug="doc"
+          user="Bikin invoice 3jt klien PT Maju"
+          agentLead="Templat siap, isi data:"
+        >
+          <div className="scene-doc scene-stagger">
+            <div className="scene-doc-line long" />
+            <div className="scene-doc-line med" />
+            <div className="scene-doc-line long" />
+            <div className="scene-doc-line short" />
+            <div className="scene-doc-line med" />
+            <div className="scene-doc-line short" />
+          </div>
+        </SceneShell>
+      );
+    }
+
+    function AgentSceneSlide() {
+      return (
+        <SceneShell
+          slug="slide"
+          user="Pitch deck buat angel investor"
+          agentLead="12 slide, alur masalah → solusi:"
+        >
+          <div className="scene-slides scene-stagger">
+            <div className="scene-slide"><span className="slide-h" /><span className="slide-l" /><span className="slide-l" /></div>
+            <div className="scene-slide"><span className="slide-h" /><span className="slide-l" /><span className="slide-l" /></div>
+            <div className="scene-slide"><span className="slide-h" /><span className="slide-l" /><span className="slide-l" /></div>
+            <div className="scene-slide"><span className="slide-h" /><span className="slide-l" /><span className="slide-l" /></div>
+            <div className="scene-slide"><span className="slide-h" /><span className="slide-l" /><span className="slide-l" /></div>
+          </div>
+        </SceneShell>
+      );
+    }
+
+    function AgentSceneTrade() {
+      // Simple SVG line chart — a polyline with stroke-dasharray draw, plus
+      // a marker dot at the rightmost point. Coords on a 100×40 viewBox so
+      // the line sweeps through ~3 swings.
+      return (
+        <SceneShell
+          slug="trade"
+          user="Analisis BBCA earnings"
+          agentLead="Data + grafik 90 hari:"
+        >
+          <div className="scene-chart">
+            <svg viewBox="0 0 100 40" preserveAspectRatio="none">
+              <polyline className="chart-line" points="0,30 12,26 22,32 35,18 48,22 60,12 75,16 88,6 100,10" />
+              <circle className="chart-marker" cx="100" cy="10" r="2.4" />
+              <circle className="chart-marker" cx="60" cy="12" r="1.8" style={{ animationDelay: '-50ms' }} />
+            </svg>
+          </div>
+        </SceneShell>
+      );
+    }
+
+    function AgentSceneMacro() {
+      return (
+        <SceneShell
+          slug="macro"
+          user="BI rate naik, dampak ke saham?"
+          agentLead="Skenario base / bull / bear:"
+        >
+          <div className="scene-multi">
+            <div className="scene-multi-row bull">
+              <span className="scene-multi-label">bull</span>
+              <span className="scene-multi-bar" />
+            </div>
+            <div className="scene-multi-row base">
+              <span className="scene-multi-label">base</span>
+              <span className="scene-multi-bar" />
+            </div>
+            <div className="scene-multi-row bear">
+              <span className="scene-multi-label">bear</span>
+              <span className="scene-multi-bar" />
+            </div>
+          </div>
+        </SceneShell>
+      );
+    }
+
+    function AgentSceneBusiness() {
+      return (
+        <SceneShell
+          slug="business"
+          user="Cek KPI minggu ini"
+          agentLead="3 angka penting:"
+        >
+          <div className="scene-kpis scene-stagger">
+            <div className="scene-kpi">
+              <div className="kpi-num">Rp 142<span className="kpi-pct">jt</span></div>
+              <div className="kpi-lbl">revenue</div>
+            </div>
+            <div className="scene-kpi">
+              <div className="kpi-num">38<span className="kpi-pct">%</span></div>
+              <div className="kpi-lbl">margin</div>
+            </div>
+            <div className="scene-kpi">
+              <div className="kpi-num">+12<span className="kpi-pct">%</span></div>
+              <div className="kpi-lbl">growth</div>
+            </div>
+          </div>
+        </SceneShell>
+      );
+    }
+
+    function AgentSceneVideo() {
+      return (
+        <SceneShell
+          slug="video"
+          user="Script TikTok 60s gym tips"
+          agentLead="Hook 3 detik + body 45s:"
+        >
+          <div className="scene-frames scene-stagger">
+            <div className="scene-frame" />
+            <div className="scene-frame" />
+            <div className="scene-frame" />
+            <div className="scene-frame" />
+            <div className="scene-frame" />
+            <div className="scene-frame" />
+          </div>
+        </SceneShell>
+      );
+    }
+
+    function AgentSceneSocial() {
+      return (
+        <SceneShell
+          slug="social"
+          user="Posting ini ke 5 platform"
+          agentLead="Adapt per platform, jadwal optimal:"
+        >
+          <div className="scene-platforms scene-stagger">
+            <div className="scene-platform">IG</div>
+            <div className="scene-platform">TikTok</div>
+            <div className="scene-platform">X</div>
+            <div className="scene-platform">FB</div>
+            <div className="scene-platform">LinkedIn</div>
+          </div>
+        </SceneShell>
+      );
+    }
+
+    // Router: every slug now has a scene. CreatureSprite is no longer
+    // referenced from the carousel (kept in source for prefers-reduced-
+    // motion fallback / future use).
+    const AGENT_SCENES = {
+      pro:        AgentScenePro,
+      researcher: AgentSceneResearcher,
+      web:        AgentSceneWeb,
+      doc:        AgentSceneDoc,
+      slide:      AgentSceneSlide,
+      trade:      AgentSceneTrade,
+      macro:      AgentSceneMacro,
+      business:   AgentSceneBusiness,
+      video:      AgentSceneVideo,
+      social:     AgentSceneSocial,
+    };
     function AgentVisual({ slug, index }) {
-      // Only 'pro' is on the new scene direction for this storyboard pass.
-      if (slug === 'pro') return <AgentScenePro />;
+      const Scene = AGENT_SCENES[slug];
+      if (Scene) return <Scene />;
+      // Fallback: legacy creature sprite (shouldn't trigger in production).
       return <CreatureSprite slug={slug} index={index} />;
     }
 
