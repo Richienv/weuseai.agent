@@ -2569,7 +2569,6 @@
       const rootRef = useRef(null);
       const [activeIndex, setActiveIndex] = useState(0);
       const [paused, setPaused] = useState(false);
-      const [inView, setInView] = useState(false);
       const reducedMotion = useRef(false);
 
       // Detect prefers-reduced-motion once
@@ -2579,18 +2578,6 @@
         const onChange = (e) => { reducedMotion.current = e.matches; };
         mq.addEventListener?.('change', onChange);
         return () => mq.removeEventListener?.('change', onChange);
-      }, []);
-
-      // Visibility-gate the auto-rotate timer
-      useEffect(() => {
-        const el = rootRef.current;
-        if (!el) return;
-        const io = new IntersectionObserver(
-          (entries) => entries.forEach((e) => setInView(e.isIntersecting)),
-          { rootMargin: '0px' }
-        );
-        io.observe(el);
-        return () => io.disconnect();
       }, []);
 
       // Helper: card pitch (card width + gap) from live computed style.
@@ -2627,11 +2614,14 @@
         };
       }, []);
 
-      // Auto-rotate every 4s when in view + not paused + motion ok.
+      // Auto-rotate every 4s when not paused + motion ok.
       // Uses scrollTo (not scrollBy) with explicit target — scroll-snap
       // proximity allows the move to land cleanly on a snap point.
+      // Note: previously gated by IntersectionObserver(inView) — removed
+      // because the perf savings are negligible (single timer + scrollTo)
+      // and the IO callback is unreliable across browser contexts.
       useEffect(() => {
-        if (paused || !inView || reducedMotion.current) return;
+        if (paused || reducedMotion.current) return;
         const id = setInterval(() => {
           const track = trackRef.current;
           if (!track) return;
@@ -2642,7 +2632,7 @@
           track.scrollTo({ left: nextIdx * pitch, behavior: 'smooth' });
         }, 4000);
         return () => clearInterval(id);
-      }, [paused, inView]);
+      }, [paused]);
 
       const goTo = (i) => {
         const track = trackRef.current;
