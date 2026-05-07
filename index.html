@@ -1391,7 +1391,10 @@
       gap: 14px;
       overflow-x: auto;
       overflow-y: hidden;
-      scroll-snap-type: x mandatory;
+      /* `proximity` (not `mandatory`) — mandatory fights scrollTo/scrollBy
+         calls and traps scrollLeft at the current snap point. proximity
+         still snaps after touch gestures complete, just less aggressively. */
+      scroll-snap-type: x proximity;
       scroll-behavior: smooth;
       padding: 4px 16px 4px 16px;
       -webkit-overflow-scrolling: touch;
@@ -2590,6 +2593,17 @@
         return () => io.disconnect();
       }, []);
 
+      // Helper: card pitch (card width + gap) from live computed style.
+      // Gap differs by viewport (14px mobile, 18px tablet+); reading from
+      // computed style avoids hardcoding it twice.
+      const getCardPitch = (track) => {
+        const cards = track.querySelectorAll('.agent-card');
+        if (!cards.length) return 0;
+        const cardW = cards[0].getBoundingClientRect().width;
+        const gap = parseFloat(getComputedStyle(track).columnGap) || 14;
+        return cardW + gap;
+      };
+
       // Track active card via scroll position
       useEffect(() => {
         const track = trackRef.current;
@@ -2599,10 +2613,9 @@
           if (raf) return;
           raf = requestAnimationFrame(() => {
             raf = 0;
-            const cards = track.querySelectorAll('.agent-card');
-            if (!cards.length) return;
-            const cardW = cards[0].getBoundingClientRect().width + 14;
-            const idx = Math.round(track.scrollLeft / cardW);
+            const pitch = getCardPitch(track);
+            if (!pitch) return;
+            const idx = Math.round(track.scrollLeft / pitch);
             const clamped = Math.max(0, Math.min(AGENTS.length - 1, idx));
             setActiveIndex(clamped);
           });
@@ -2614,22 +2627,19 @@
         };
       }, []);
 
-      // Auto-rotate every 4s when in view + not paused + motion ok
+      // Auto-rotate every 4s when in view + not paused + motion ok.
+      // Uses scrollTo (not scrollBy) with explicit target — scroll-snap
+      // proximity allows the move to land cleanly on a snap point.
       useEffect(() => {
         if (paused || !inView || reducedMotion.current) return;
         const id = setInterval(() => {
           const track = trackRef.current;
           if (!track) return;
-          const cards = track.querySelectorAll('.agent-card');
-          if (!cards.length) return;
-          const cardW = cards[0].getBoundingClientRect().width + 14;
-          const maxScroll = track.scrollWidth - track.clientWidth;
-          const next = track.scrollLeft + cardW;
-          if (next > maxScroll - 4) {
-            track.scrollTo({ left: 0, behavior: 'smooth' });
-          } else {
-            track.scrollBy({ left: cardW, behavior: 'smooth' });
-          }
+          const pitch = getCardPitch(track);
+          if (!pitch) return;
+          const currentIdx = Math.round(track.scrollLeft / pitch);
+          const nextIdx = (currentIdx + 1) % AGENTS.length;
+          track.scrollTo({ left: nextIdx * pitch, behavior: 'smooth' });
         }, 4000);
         return () => clearInterval(id);
       }, [paused, inView]);
@@ -2637,10 +2647,9 @@
       const goTo = (i) => {
         const track = trackRef.current;
         if (!track) return;
-        const cards = track.querySelectorAll('.agent-card');
-        if (!cards[i]) return;
-        const cardW = cards[0].getBoundingClientRect().width + 14;
-        track.scrollTo({ left: cardW * i, behavior: 'smooth' });
+        const pitch = getCardPitch(track);
+        if (!pitch) return;
+        track.scrollTo({ left: i * pitch, behavior: 'smooth' });
       };
 
       return (
