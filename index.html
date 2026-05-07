@@ -1486,10 +1486,10 @@
     .agent-card .agent-scene {
       position: absolute;
       inset: 0;
-      padding: 12px 14px 14px;
+      padding: 10px 12px 12px;
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 5px;
       z-index: 1;
       font-family: 'Inter', sans-serif;
       overflow: hidden;
@@ -1497,29 +1497,29 @@
 
     .agent-card .scene-user {
       align-self: flex-end;
-      max-width: 78%;
-      padding: 5px 10px;
+      max-width: 80%;
+      padding: 5px 11px;
       border-radius: 11px 11px 4px 11px;
       background: rgba(229, 50, 45, 0.14);
       border: 1px solid rgba(229, 50, 45, 0.40);
       color: #fff;
-      font-size: 11px;
+      font-size: 12px;
       line-height: 1.35;
       opacity: 0;
     }
 
-    /* Single agent block — one avatar (left rail) + 2 stacked bubbles
-       (ack + output). Visually grouped so both reads as "from the same
-       agent." */
+    /* Single agent block — one avatar (left rail) + 4 stacked bubbles
+       (ack → progress → insight → output). Visually grouped so all
+       four read as "from the same agent." */
     .agent-card .scene-agent-block {
       display: flex;
-      gap: 7px;
+      gap: 6px;
       align-items: flex-start;
       max-width: 100%;
       opacity: 0;
     }
     .agent-card .scene-agent-block .scene-avatar {
-      width: 16px; height: 16px;
+      width: 14px; height: 14px;
       border-radius: 50%;
       background: linear-gradient(135deg, #E5322D, #8B1410);
       flex-shrink: 0;
@@ -1533,27 +1533,39 @@
       min-width: 0;
     }
     .agent-card .scene-bubble {
-      padding: 5px 10px;
+      padding: 4px 9px;
       border-radius: 4px 11px 11px 11px;
       background: rgba(255, 255, 255, 0.04);
       border: 1px solid rgba(255, 255, 255, 0.10);
-      color: rgba(255, 255, 255, 0.90);
-      font-size: 11px;
-      line-height: 1.4;
-    }
-    /* The "ack" bubble (bubble 2 — the one that announces what the agent
-       is doing) is visually slimmer to read as a quick confirmation. */
-    .agent-card .scene-bubble-ack {
-      color: rgba(255, 255, 255, 0.70);
-      font-style: italic;
+      color: rgba(255, 255, 255, 0.88);
       font-size: 10.5px;
-      padding: 4px 10px;
+      line-height: 1.32;
     }
-    /* The "output" bubble (bubble 3 — the one that contains the action
-       items) is the focal — full opacity text + slightly stronger border. */
-    .agent-card .scene-bubble-output {
+    /* Per-role bubble hierarchy:
+       ack      — italic, dim 65%        ("Aku [verb] dulu")
+       progress — normal, dim 78%        ("12 sumber, BI report")
+       insight  — bold + oxblood accent  ("Pola: ...") ← the smart moment
+       output   — normal, full opacity   ("Siap untuk kamu:")           */
+    .agent-card .scene-bubble-ack {
+      color: rgba(255, 255, 255, 0.65);
+      font-style: italic;
+      font-size: 10px;
+      padding: 3px 9px;
+    }
+    .agent-card .scene-bubble-progress {
+      color: rgba(255, 255, 255, 0.78);
       opacity: 0;
-      border-color: rgba(255, 255, 255, 0.14);
+    }
+    .agent-card .scene-bubble-insight {
+      background: rgba(229, 50, 45, 0.06);
+      border-color: rgba(229, 50, 45, 0.28);
+      color: rgba(255, 255, 255, 0.96);
+      font-weight: 500;
+      opacity: 0;
+    }
+    .agent-card .scene-bubble-output {
+      border-color: rgba(255, 255, 255, 0.16);
+      opacity: 0;
     }
 
     .agent-card .scene-memos {
@@ -1583,47 +1595,75 @@
       flex-shrink: 0;
     }
 
-    /* Timing — 5000ms cycle, overlap pacing (each element starts before
-       the previous finishes). Three bubbles + staggered action items.
+    /* Timing — 10000ms cycle, 5-bubble thinking flow. Slowed down so each
+       agent reads as a smart consultant who PROCESSES then DELIVERS, not
+       a fast assistant. 1.0–1.5s pause between bubbles; insight bubble
+       (the "smart moment") gets a stronger pulse highlight.
        Reference timeline:
-         0.0s  user fade-in starts (400ms)
-         0.2s  agent block (avatar + ack bubble) starts
-         0.7s  output bubble starts (slight delay after ack)
-         1.1s  first action item starts emerging (200ms stagger)
-         2.5s  all items at final state
-         3.5s  hold full state
-         4.5s  everything fades out (500ms)
-         5.0s  loop restart  */
-    .agent-card .scene-user        { animation: sceneUserIn   5000ms ease-out infinite; }
-    .agent-card .scene-agent-block { animation: sceneAgent1In 5000ms ease-out infinite; }
+         0.0s  Bubble 1 (user) fade-in (400ms)
+         1.0s  Bubble 2 (ack) starts        — "Aku [verb] dulu"
+         2.5s  Bubble 3 (progress) starts   — concrete number
+         4.0s  Bubble 4 (insight) starts    — pattern / recommendation
+         5.5s  Bubble 5 (output) starts     — "Siap untuk kamu:"
+         6.5s  First action item emerges from B5 (200ms stagger)
+         8.0s  All items at final state
+         9.0s  Hold full state (1s breathing room)
+         9.5s  Everything fades out (500ms)
+        10.0s  Loop restart                                                  */
+    .agent-card .scene-user            { animation: sceneUserIn      10000ms ease-out infinite; }
+    .agent-card .scene-agent-block     { animation: sceneAgent1In    10000ms ease-out infinite; }
+    .agent-card .scene-bubble-progress { animation: sceneProgressIn  10000ms ease-out infinite; }
+    .agent-card .scene-bubble-insight {
+      animation: sceneInsightIn 10000ms ease-out infinite, insightPulse 10000ms ease-out infinite;
+    }
     .agent-card .scene-bubble-output {
-      animation: sceneAgent2In 5000ms ease-out infinite, bubblePulse 5000ms ease-out infinite;
+      animation: sceneOutputIn 10000ms ease-out infinite, bubblePulse 10000ms ease-out infinite;
     }
 
     @keyframes sceneUserIn {
       0%        { opacity: 0; transform: translateY(4px); }
-      8%        { opacity: 1; transform: translateY(0); }
+      4%        { opacity: 1; transform: translateY(0); }
       90%       { opacity: 1; transform: translateY(0); }
-      96%, 100% { opacity: 0; transform: translateY(0); }
+      95%, 100% { opacity: 0; transform: translateY(0); }
     }
     @keyframes sceneAgent1In {
-      0%, 4%    { opacity: 0; transform: translateY(4px); }
-      12%       { opacity: 1; transform: translateY(0); }
+      0%, 10%   { opacity: 0; transform: translateY(4px); }
+      14%       { opacity: 1; transform: translateY(0); }
       90%       { opacity: 1; transform: translateY(0); }
-      96%, 100% { opacity: 0; transform: translateY(0); }
+      95%, 100% { opacity: 0; transform: translateY(0); }
     }
-    @keyframes sceneAgent2In {
-      0%, 14%   { opacity: 0; transform: translateY(4px); }
-      22%       { opacity: 1; transform: translateY(0); }
+    @keyframes sceneProgressIn {
+      0%, 25%   { opacity: 0; transform: translateY(4px); }
+      29%       { opacity: 1; transform: translateY(0); }
       90%       { opacity: 1; transform: translateY(0); }
-      96%, 100% { opacity: 0; transform: translateY(0); }
+      95%, 100% { opacity: 0; transform: translateY(0); }
     }
-    /* Subtle pulse on the output bubble while items emerge — signals
-       "the agent is generating these," not "items appear from nowhere." */
+    @keyframes sceneInsightIn {
+      0%, 40%   { opacity: 0; transform: translateY(4px); }
+      44%       { opacity: 1; transform: translateY(0); }
+      90%       { opacity: 1; transform: translateY(0); }
+      95%, 100% { opacity: 0; transform: translateY(0); }
+    }
+    @keyframes sceneOutputIn {
+      0%, 55%   { opacity: 0; transform: translateY(4px); }
+      59%       { opacity: 1; transform: translateY(0); }
+      90%       { opacity: 1; transform: translateY(0); }
+      95%, 100% { opacity: 0; transform: translateY(0); }
+    }
+
+    /* The insight bubble is "the smart moment" — give it a stronger,
+       slightly-longer-lasting pulse so the eye lands there. */
+    @keyframes insightPulse {
+      0%, 40%   { box-shadow: 0 0 0 0 rgba(229, 50, 45, 0); }
+      44%       { box-shadow: 0 0 0 6px rgba(229, 50, 45, 0.18); }
+      56%       { box-shadow: 0 0 0 0 rgba(229, 50, 45, 0); }
+      100%      { box-shadow: 0 0 0 0 rgba(229, 50, 45, 0); }
+    }
+    /* Subtle pulse on the output bubble while items emerge from it. */
     @keyframes bubblePulse {
-      0%, 22%   { box-shadow: 0 0 0 0 rgba(229, 50, 45, 0); }
-      26%       { box-shadow: 0 0 0 5px rgba(229, 50, 45, 0.10); }
-      40%       { box-shadow: 0 0 0 0 rgba(229, 50, 45, 0); }
+      0%, 65%   { box-shadow: 0 0 0 0 rgba(229, 50, 45, 0); }
+      69%       { box-shadow: 0 0 0 5px rgba(229, 50, 45, 0.10); }
+      80%       { box-shadow: 0 0 0 0 rgba(229, 50, 45, 0); }
       100%      { box-shadow: 0 0 0 0 rgba(229, 50, 45, 0); }
     }
 
@@ -1638,47 +1678,50 @@
       opacity: 0;
       transform-origin: top center;
     }
-    .agent-card .scene-stagger > *:nth-child(1) { animation: sceneItem1 5000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
-    .agent-card .scene-stagger > *:nth-child(2) { animation: sceneItem2 5000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
-    .agent-card .scene-stagger > *:nth-child(3) { animation: sceneItem3 5000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
-    .agent-card .scene-stagger > *:nth-child(4) { animation: sceneItem4 5000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
-    .agent-card .scene-stagger > *:nth-child(5) { animation: sceneItem5 5000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
-    .agent-card .scene-stagger > *:nth-child(6) { animation: sceneItem6 5000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
+    .agent-card .scene-stagger > *:nth-child(1) { animation: sceneItem1 10000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
+    .agent-card .scene-stagger > *:nth-child(2) { animation: sceneItem2 10000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
+    .agent-card .scene-stagger > *:nth-child(3) { animation: sceneItem3 10000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
+    .agent-card .scene-stagger > *:nth-child(4) { animation: sceneItem4 10000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
+    .agent-card .scene-stagger > *:nth-child(5) { animation: sceneItem5 10000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
+    .agent-card .scene-stagger > *:nth-child(6) { animation: sceneItem6 10000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
+    /* Items emerge from B5 (output bubble) starting at 6.5s = 65%.
+       transform-origin: top center anchors the scale animation to the
+       bubble above so items appear to spawn FROM B5, not float in. */
     @keyframes sceneItem1 {
-      0%, 22%   { opacity: 0; transform: translateY(-12px) scale(0.6); filter: blur(2px); }
-      28%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+      0%, 65%   { opacity: 0; transform: translateY(-12px) scale(0.6); filter: blur(2px); }
+      68%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
       90%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
-      96%, 100% { opacity: 0; transform: translateY(0) scale(1); filter: blur(0); }
+      95%, 100% { opacity: 0; transform: translateY(0) scale(1); filter: blur(0); }
     }
     @keyframes sceneItem2 {
-      0%, 26%   { opacity: 0; transform: translateY(-12px) scale(0.6); filter: blur(2px); }
-      32%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+      0%, 67%   { opacity: 0; transform: translateY(-12px) scale(0.6); filter: blur(2px); }
+      70%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
       90%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
-      96%, 100% { opacity: 0; transform: translateY(0) scale(1); filter: blur(0); }
+      95%, 100% { opacity: 0; transform: translateY(0) scale(1); filter: blur(0); }
     }
     @keyframes sceneItem3 {
-      0%, 30%   { opacity: 0; transform: translateY(-12px) scale(0.6); filter: blur(2px); }
-      36%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+      0%, 69%   { opacity: 0; transform: translateY(-12px) scale(0.6); filter: blur(2px); }
+      72%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
       90%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
-      96%, 100% { opacity: 0; transform: translateY(0) scale(1); filter: blur(0); }
+      95%, 100% { opacity: 0; transform: translateY(0) scale(1); filter: blur(0); }
     }
     @keyframes sceneItem4 {
-      0%, 34%   { opacity: 0; transform: translateY(-12px) scale(0.6); filter: blur(2px); }
-      40%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+      0%, 71%   { opacity: 0; transform: translateY(-12px) scale(0.6); filter: blur(2px); }
+      74%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
       90%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
-      96%, 100% { opacity: 0; transform: translateY(0) scale(1); filter: blur(0); }
+      95%, 100% { opacity: 0; transform: translateY(0) scale(1); filter: blur(0); }
     }
     @keyframes sceneItem5 {
-      0%, 38%   { opacity: 0; transform: translateY(-12px) scale(0.6); filter: blur(2px); }
-      44%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+      0%, 73%   { opacity: 0; transform: translateY(-12px) scale(0.6); filter: blur(2px); }
+      76%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
       90%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
-      96%, 100% { opacity: 0; transform: translateY(0) scale(1); filter: blur(0); }
+      95%, 100% { opacity: 0; transform: translateY(0) scale(1); filter: blur(0); }
     }
     @keyframes sceneItem6 {
-      0%, 42%   { opacity: 0; transform: translateY(-12px) scale(0.6); filter: blur(2px); }
-      48%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+      0%, 75%   { opacity: 0; transform: translateY(-12px) scale(0.6); filter: blur(2px); }
+      78%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
       90%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
-      96%, 100% { opacity: 0; transform: translateY(0) scale(1); filter: blur(0); }
+      95%, 100% { opacity: 0; transform: translateY(0) scale(1); filter: blur(0); }
     }
 
     /* === Researcher: papers list with confidence chips === */
@@ -1827,24 +1870,24 @@
       stroke-linejoin: round;
       stroke-dasharray: 220;
       stroke-dashoffset: 220;
-      animation: chartDraw 5000ms ease-out infinite;
+      animation: chartDraw 10000ms ease-out infinite;
     }
     .agent-card .scene-chart .chart-marker {
       fill: #E5322D;
       opacity: 0;
-      animation: chartMarker 5000ms ease-out infinite;
+      animation: chartMarker 10000ms ease-out infinite;
     }
     @keyframes chartDraw {
-      0%, 22%   { stroke-dashoffset: 220; }
-      48%       { stroke-dashoffset: 0; }
+      0%, 65%   { stroke-dashoffset: 220; }
+      78%       { stroke-dashoffset: 0; }
       90%       { stroke-dashoffset: 0; }
-      96%, 100% { stroke-dashoffset: 220; }
+      95%, 100% { stroke-dashoffset: 220; }
     }
     @keyframes chartMarker {
-      0%, 44%   { opacity: 0; }
-      50%       { opacity: 1; }
+      0%, 76%   { opacity: 0; }
+      80%       { opacity: 1; }
       90%       { opacity: 1; }
-      96%, 100% { opacity: 0; }
+      95%, 100% { opacity: 0; }
     }
 
     /* === Macro Strategist: 3 scenario bars === */
@@ -1875,7 +1918,7 @@
       top: 0; left: 0; bottom: 0;
       width: 0;
       border-radius: 2px;
-      animation: multiGrowBull 5000ms ease-out infinite;
+      animation: multiGrowBull 10000ms ease-out infinite;
     }
     .agent-card .scene-multi-row.bull .scene-multi-bar::after {
       background: #E5322D;
@@ -1890,22 +1933,22 @@
       animation-name: multiGrowBear;
     }
     @keyframes multiGrowBull {
-      0%, 22%   { width: 0; }
-      36%       { width: 88%; }
+      0%, 65%   { width: 0; }
+      73%       { width: 88%; }
       90%       { width: 88%; }
-      96%, 100% { width: 0; }
+      95%, 100% { width: 0; }
     }
     @keyframes multiGrowBase {
-      0%, 26%   { width: 0; }
-      40%       { width: 60%; }
+      0%, 67%   { width: 0; }
+      75%       { width: 60%; }
       90%       { width: 60%; }
-      96%, 100% { width: 0; }
+      95%, 100% { width: 0; }
     }
     @keyframes multiGrowBear {
-      0%, 30%   { width: 0; }
-      44%       { width: 32%; }
+      0%, 69%   { width: 0; }
+      77%       { width: 32%; }
       90%       { width: 32%; }
-      96%, 100% { width: 0; }
+      95%, 100% { width: 0; }
     }
 
     /* === Business Director: KPI cards === */
@@ -1976,6 +2019,8 @@
     @media (prefers-reduced-motion: reduce) {
       .agent-card .scene-user,
       .agent-card .scene-agent-block,
+      .agent-card .scene-bubble-progress,
+      .agent-card .scene-bubble-insight,
       .agent-card .scene-bubble-output,
       .agent-card .scene-stagger > *,
       .agent-card .scene-chart .chart-line,
@@ -1985,6 +2030,7 @@
         opacity: 1;
         transform: none;
         filter: none;
+        box-shadow: none;
       }
       .agent-card .scene-chart .chart-line { stroke-dashoffset: 0; }
       .agent-card .scene-multi-row.bull .scene-multi-bar::after { width: 88%; }
@@ -3932,11 +3978,16 @@
     //
     // Storyboard scope: only 'pro' has a scene right now. Other slugs fall
     // through to CreatureSprite. After founder approval the rest will follow.
-    // Reusable shell — 3-bubble pattern (user → agent ack → agent output).
-    // Both agent bubbles share one avatar to read as "from same agent."
-    // Action items ({children}) live inside the output bubble and emerge
+    // Reusable shell — 5-bubble "smart consultant" pattern:
+    //   B1 user      → original question
+    //   B2 ack       → "Aku [verb] dulu" (italic dim, present-tense)
+    //   B3 progress  → concrete number ("12 sumber, BI report")
+    //   B4 insight   → pattern / recommendation ← THE smart moment (oxblood accent + pulse)
+    //   B5 output    → connector ("Siap untuk kamu:") + action items
+    // All 4 agent bubbles share one avatar (left rail) so they read as
+    // "from same agent thinking out loud." Action items emerge from B5
     // via the .scene-stagger magic-escape pattern.
-    function SceneShell({ user, agentAck, agentOutput, children, slug }) {
+    function SceneShell({ user, agentAck, agentProgress, agentInsight, agentOutput, children, slug }) {
       return (
         <div className={`agent-scene scene-${slug}`}>
           <div className="scene-user">{user}</div>
@@ -3944,6 +3995,8 @@
             <div className="scene-avatar" />
             <div className="scene-agent-bubbles">
               <div className="scene-bubble scene-bubble-ack">{agentAck}</div>
+              <div className="scene-bubble scene-bubble-progress">{agentProgress}</div>
+              <div className="scene-bubble scene-bubble-insight">{agentInsight}</div>
               <div className="scene-bubble scene-bubble-output">
                 {agentOutput}
                 {children}
@@ -3959,8 +4012,10 @@
         <SceneShell
           slug="pro"
           user="Inget gimana gaya kerja saya?"
-          agentAck="Aku cek memori dulu."
-          agentOutput="Ini yang aku catat tentang kamu:"
+          agentAck="Aku cek memori."
+          agentProgress="12 percakapan dari 3 minggu terakhir."
+          agentInsight="Pola: fokus klien Jakarta, deadline Kamis."
+          agentOutput="Ini yang aku catat:"
         >
           <div className="scene-memos scene-stagger">
             <div className="scene-memo">klien jakarta</div>
@@ -3977,8 +4032,10 @@
         <SceneShell
           slug="researcher"
           user="Riset volatilitas IDR 30 hari"
-          agentAck="Aku scan 100+ sumber, filter yang relevan."
-          agentOutput="12 paling solid, sintesis siap:"
+          agentAck="Aku scan 100+ sumber."
+          agentProgress="12 paper akademik + BI report."
+          agentInsight="Korelasi tinggi dengan kebijakan Fed."
+          agentOutput="Sintesis siap:"
         >
           <div className="scene-papers scene-stagger">
             <div className="scene-paper">
@@ -4012,6 +4069,8 @@
           slug="web"
           user="Scrape 50 agensi Jakarta"
           agentAck="Aku buka 3 browser paralel."
+          agentProgress="OLX + LinkedIn + direktori asosiasi."
+          agentInsight="78 ditemukan, dedupe jadi 50 valid."
           agentOutput="Data ekstrak, siap export:"
         >
           <div className="scene-tabs scene-stagger">
@@ -4040,7 +4099,9 @@
         <SceneShell
           slug="doc"
           user="Bikin invoice 3jt klien PT Maju"
-          agentAck="Templat ketemu, lagi isi data."
+          agentAck="Templat ditemukan."
+          agentProgress="PT = badan usaha."
+          agentInsight="Tambah PPN 11%, total Rp 3,33jt."
           agentOutput="Siap kirim ke klien:"
         >
           <div className="scene-doc scene-stagger">
@@ -4060,7 +4121,9 @@
         <SceneShell
           slug="slide"
           user="Pitch deck buat angel investor"
-          agentAck="Aku susun alur masalah → solusi."
+          agentAck="Aku cek industri kamu."
+          agentProgress="SaaS B2B → format YC 12-slide."
+          agentInsight="Alur: masalah → solusi → traction → ask."
           agentOutput="12 slide siap review:"
         >
           <div className="scene-slides scene-stagger">
@@ -4082,7 +4145,9 @@
         <SceneShell
           slug="trade"
           user="Analisis BBCA earnings"
-          agentAck="Tarik data 90 hari + earnings call lalu."
+          agentAck="Tarik data 90 hari + 4 earnings lalu."
+          agentProgress="EPS naik 8% YoY, NIM stabil 5,6%."
+          agentInsight="Konsensus analis: target Rp 11.500."
           agentOutput="Sizing aman 2% portfolio:"
         >
           <div className="scene-chart">
@@ -4101,8 +4166,10 @@
         <SceneShell
           slug="macro"
           user="BI rate naik, dampak ke saham?"
-          agentAck="Aku model 3 skenario."
-          agentOutput="Base / bull / bear, probabilitas:"
+          agentAck="Cek konteks: naik 25bps."
+          agentProgress="Historical 2022–2023: efek 2–3 bulan lag."
+          agentInsight="Sektor terdampak: properti, banking."
+          agentOutput="Base / bull / bear:"
         >
           <div className="scene-multi">
             <div className="scene-multi-row bull">
@@ -4127,7 +4194,9 @@
         <SceneShell
           slug="business"
           user="Cek KPI minggu ini"
-          agentAck="Tarik dashboard, hitung anomaly."
+          agentAck="Tarik dashboard."
+          agentProgress="Revenue +12% WoW, margin stabil."
+          agentInsight="Anomaly: CAC naik 18% — investigate."
           agentOutput="3 angka penting:"
         >
           <div className="scene-kpis scene-stagger">
@@ -4153,7 +4222,9 @@
         <SceneShell
           slug="video"
           user="Script TikTok 60s gym tips"
-          agentAck="Hook 3 detik + body 45s + CTA."
+          agentAck="Cek trending TikTok."
+          agentProgress="Home workout naik 340% bulan ini."
+          agentInsight="Hook angle: '5 menit hasil maksimal'."
           agentOutput="6 frame visual siap shoot:"
         >
           <div className="scene-frames scene-stagger">
@@ -4173,8 +4244,10 @@
         <SceneShell
           slug="social"
           user="Posting ini ke 5 platform"
-          agentAck="Adapt copy per platform, cek brand voice."
-          agentOutput="Jadwal optimal per audiens:"
+          agentAck="Cek brand voice + platform spec."
+          agentProgress="Best time: IG 19.30, TikTok 21.00 WIB."
+          agentInsight="Caption per platform, hashtag custom."
+          agentOutput="Jadwal optimal:"
         >
           <div className="scene-platforms scene-stagger">
             <div className="scene-platform">IG</div>
