@@ -1438,6 +1438,57 @@
       background: radial-gradient(ellipse at 50% 60%, transparent 25%, rgba(0,0,0,0.55) 78%, rgba(0,0,0,0.92) 100%);
       pointer-events: none;
     }
+
+    /* ─── CREATURE SPRITE ANIMATION ─── */
+    /* Each card hosts an inline SVG with N <g class="frame"> groups stacked
+       at the same coords. CSS keyframes cross-fade opacity 0→1→0 per group
+       with staggered delays so one frame is visible at a time. Per-card
+       cycle is ~2800ms (4 frames × 700ms). Stagger across cards via
+       inline animation-delay so the 10 cards aren't synchronized. */
+    .agent-card .creature {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1; /* above ::after vignette */
+    }
+    .agent-card .creature .frame {
+      opacity: 0;
+      animation: creatureCycle var(--creature-cycle, 2800ms) steps(1, end) infinite;
+      animation-delay: var(--creature-delay, 0ms);
+    }
+    .agent-card .creature .frame.f0 { animation-delay: calc(var(--creature-delay, 0ms) + 0ms); }
+    .agent-card .creature .frame.f1 { animation-delay: calc(var(--creature-delay, 0ms) + 700ms); }
+    .agent-card .creature .frame.f2 { animation-delay: calc(var(--creature-delay, 0ms) + 1400ms); }
+    .agent-card .creature .frame.f3 { animation-delay: calc(var(--creature-delay, 0ms) + 2100ms); }
+    @keyframes creatureCycle {
+      0%, 24% { opacity: 1; }
+      25%, 100% { opacity: 0; }
+    }
+
+    /* For 5-frame creatures (Hydra), override cycle length + per-frame timing */
+    .agent-card .creature.frames-5 .frame {
+      animation-duration: 3500ms;
+    }
+    .agent-card .creature.frames-5 .frame.f0 { animation-delay: calc(var(--creature-delay, 0ms) + 0ms); }
+    .agent-card .creature.frames-5 .frame.f1 { animation-delay: calc(var(--creature-delay, 0ms) + 700ms); }
+    .agent-card .creature.frames-5 .frame.f2 { animation-delay: calc(var(--creature-delay, 0ms) + 1400ms); }
+    .agent-card .creature.frames-5 .frame.f3 { animation-delay: calc(var(--creature-delay, 0ms) + 2100ms); }
+    .agent-card .creature.frames-5 .frame.f4 { animation-delay: calc(var(--creature-delay, 0ms) + 2800ms); }
+    .agent-card .creature.frames-5 .frame {
+      animation-name: creatureCycle5;
+    }
+    @keyframes creatureCycle5 {
+      0%, 19% { opacity: 1; }
+      20%, 100% { opacity: 0; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .agent-card .creature .frame { animation: none; opacity: 0; }
+      /* Show only the last (most "complete") frame statically */
+      .agent-card .creature .frame:last-child { opacity: 1; }
+    }
     .agent-card .agent-body {
       padding: 16px 18px 20px;
       display: flex; flex-direction: column; gap: 8px;
@@ -2530,15 +2581,206 @@
       );
     }
 
+    // ─────────────────────── CREATURE SPRITES ───────────────────────
+    // Each agent card hosts a unique creature animation (10 creatures × 3-5
+    // frames each, dot-pattern silhouettes in Signal Red). SVG inline + CSS
+    // @keyframes cross-fades between frames. Storyboard locked in
+    // docs/plans/2026-05-07-agent-persona-creatures-design.md.
+    //
+    // Each frame is a grid string, # = dot, space = empty. The grid is
+    // 20 cols × 15 rows (4-unit pitch in 80×60 viewBox, dot radius 1.3).
+    //
+    // To replace a placeholder frame: edit the strings below, the JSX
+    // helper auto-converts every # into a <circle> at the grid coords.
+    function gridDots(grid) {
+      const dots = [];
+      for (let r = 0; r < grid.length; r++) {
+        const row = grid[r];
+        for (let c = 0; c < row.length; c++) {
+          if (row[c] === '#') {
+            dots.push(<circle key={`${r}-${c}`} cx={c * 4 + 2} cy={r * 4 + 2} r="1.3" fill="#E5322D" />);
+          }
+        }
+      }
+      return dots;
+    }
+
+    // Each creature key is the agent slug. Value is { frames: string[][] }.
+    // Empty/missing creatures fall back to the static halftone placeholder.
+    const CREATURES = {
+      // Deep Researcher — Owl face. (a) closed eye in oval head, (b) eye
+      // opens, (c) head turns 30° (wing detail visible), (d) iris focuses.
+      researcher: {
+        frames: [
+          [ // f0 — closed eye line in oval head
+            "                    ",
+            "                    ",
+            "       ######       ",
+            "     ##########     ",
+            "    ############    ",
+            "   ##############   ",
+            "   ##############   ",
+            "   ## --   -- ###   ",
+            "   ##############   ",
+            "    ############    ",
+            "     ##########     ",
+            "      ########      ",
+            "       ######       ",
+            "                    ",
+            "                    ",
+          ],
+          [ // f1 — eye opens (round owl eyes, no iris)
+            "                    ",
+            "                    ",
+            "       ######       ",
+            "     ##########     ",
+            "    ############    ",
+            "   ##############   ",
+            "   ## ##   ## ###   ",
+            "   ## ##   ## ###   ",
+            "   ##############   ",
+            "    ############    ",
+            "     ##########     ",
+            "      ########      ",
+            "       ######       ",
+            "                    ",
+            "                    ",
+          ],
+          [ // f2 — head turns slightly, wing/feather detail visible
+            "                    ",
+            "                    ",
+            "        ######      ",
+            "      ##########    ",
+            "     ############   ",
+            "    ##############  ",
+            "    ## ##   ## ###  ",
+            "    ## ##   ## ### #",
+            "    ##############  ",
+            "    ############# # ",
+            "     ##########  ## ",
+            "      ########   #  ",
+            "       ######       ",
+            "                    ",
+            "                    ",
+          ],
+          [ // f3 — iris contracts to a focused pinpoint
+            "                    ",
+            "                    ",
+            "       ######       ",
+            "     ##########     ",
+            "    ############    ",
+            "   ##############   ",
+            "   ## # #   # # #   ",
+            "   ##  #     #  #   ",
+            "   ##############   ",
+            "    ############    ",
+            "     ##########     ",
+            "      ########      ",
+            "       ######       ",
+            "                    ",
+            "                    ",
+          ],
+        ],
+      },
+
+      // Web Master — Spider weaving. (a) spider body, (b) +2 threads,
+      // (c) +4 threads + first arc, (d) full web.
+      web: {
+        frames: [
+          [ // f0 — spider body alone (small triangle/cluster) at center
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "         ##         ",
+            "        ####        ",
+            "         ##         ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+          ],
+          [ // f1 — spider + 2 radial threads (left + right)
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "##       ##       ##",
+            "        ####        ",
+            "         ##         ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+          ],
+          [ // f2 — spider + 4 threads (cardinal) + first spiral arc
+            "         #          ",
+            "         #          ",
+            "         #          ",
+            "  #              #  ",
+            "    #          #    ",
+            "      #      #      ",
+            "        #  #        ",
+            "##       ##       ##",
+            "        ####        ",
+            "        #  #        ",
+            "      #      #      ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+          ],
+          [ // f3 — full web: 4 threads + 2 spiral rings
+            "         #          ",
+            "  #      #      #   ",
+            "    #    #    #     ",
+            "      #  #  #       ",
+            "        ###         ",
+            "      #  #  #       ",
+            "    #    #    #     ",
+            "##       ##       ##",
+            "        ####        ",
+            "    #    #    #     ",
+            "      #  #  #       ",
+            "        ###         ",
+            "      #  #  #       ",
+            "    #    #    #     ",
+            "         #          ",
+          ],
+        ],
+      },
+    };
+
+    function CreatureSprite({ slug, index }) {
+      const creature = CREATURES[slug];
+      if (!creature) return null;
+      const cls = creature.frames.length === 5 ? 'creature frames-5' : 'creature';
+      // Stagger each card's animation by 280ms so the 10 cards aren't
+      // synchronized on the same frame at the same moment.
+      const delay = `${(index || 0) * 280}ms`;
+      return (
+        <svg className={cls} viewBox="0 0 80 60" preserveAspectRatio="xMidYMid meet" style={{ '--creature-delay': delay }}>
+          {creature.frames.map((g, i) => (
+            <g key={i} className={`frame f${i}`}>
+              {gridDots(g)}
+            </g>
+          ))}
+        </svg>
+      );
+    }
+
     // ─────────────────────── AGENT PERSONA CAROUSEL ───────────────────────
     // 10 agent specialist cards mirroring the agents listed in Studio tier.
     // Sits inside #proses ("The wave") below the CTA, on the same red-halftone
     // canvas. Auto-rotates every 4s, hover-pause, prefers-reduced-motion respect.
-    //
-    // TODO: Replace placeholder videos at /assets/agent-{pro,researcher,web,
-    // doc,slide,trade,macro,business,video,social}.mp4 with custom ASCII renders
-    // per agent (Richie to provide). Phase 1 cycles new-hero.mp4 + ascii-wave.mp4
-    // as placeholders.
     const AGENTS = [
       { slug: 'pro',        name: 'The Pro',           desc: 'Briefing pagi, ingat percakapan lintas sesi, jadi pendamping yang ngerti gaya kamu.' },
       { slug: 'researcher', name: 'Deep Researcher',   desc: 'Riset topik kompleks dari ratusan sumber, sintesis jadi laporan siap pakai.' },
@@ -2647,14 +2889,12 @@
             <div ref={trackRef} className="agent-track">
               {AGENTS.map((a, i) => (
                 <article key={a.slug} className="agent-card" aria-label={`Agent: ${a.name}`}>
-                  {/* CSS-only halftone placeholder. When per-agent assets
-                      ship (see TODO above), swap to:
-                      <div className="agent-viz">
-                        <DottedVideo src={agentVideoSrc(a.slug, i)} color="#E5322D" cellSize={4} ... />
-                      </div>
-                      Static placeholder used in v1 to avoid 10 simultaneous
-                      video elements freezing the renderer. */}
-                  <div className="agent-viz" />
+                  <div className="agent-viz">
+                    {/* Animated dot-pattern creature/symbol per agent.
+                        CSS halftone placeholder stays as a fallback layer
+                        below the SVG (visible if a creature is missing). */}
+                    <CreatureSprite slug={a.slug} index={i} />
+                  </div>
                   <div className="agent-body">
                     <div className="agent-name">{a.name}</div>
                     <div className="agent-desc">{a.desc}</div>
