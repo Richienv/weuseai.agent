@@ -1395,9 +1395,35 @@
       display: flex;
       gap: 14px;
       will-change: transform;
-      transition: transform 700ms cubic-bezier(0.22, 0.61, 0.36, 1);
+      width: max-content;
     }
     @media (min-width: 768px) { .agent-track { gap: 18px; } }
+
+    /* === Continuous marquee mode (2026-05-08 pivot) === */
+    /* Track is duplicated (20 cards = original 10 × 2). CSS animates from
+       translateX(0) to translateX(-50%), which lands on the second copy's
+       leftmost card — visually identical to start, so the restart is
+       invisible. Pure CSS, no JS scroll math. Hover (and focus-within)
+       pause via .is-paused class set by React state.
+       Speed: 100s for full -50% → ~10s per card passing through center. */
+    .agent-track-marquee {
+      animation: agentMarquee 100s linear infinite;
+    }
+    .agent-track-marquee.is-paused {
+      animation-play-state: paused;
+    }
+    @keyframes agentMarquee {
+      from { transform: translateX(0); }
+      to   { transform: translateX(-50%); }
+    }
+    /* Honour reduced-motion: stop the marquee, show the first ~3 cards
+       statically. User can still scroll horizontally if needed. */
+    @media (prefers-reduced-motion: reduce) {
+      .agent-track-marquee {
+        animation: none;
+        transform: translateX(0);
+      }
+    }
 
     .agent-card {
       flex: 0 0 auto;
@@ -1483,13 +1509,56 @@
        page. 5000ms loop, all elements share one cycle so they stay in
        sync. Each element gets its own keyframe with a different "in"
        timing so the order reads as a story. */
-    .agent-card .agent-scene {
+    /* Chat header — WhatsApp-style: avatar + agent name + status. Sits
+       at top of every card's viz area, above the chat scene. Universal:
+       same status text ("aktif sekarang") for all 10. */
+    .agent-card .scene-header {
       position: absolute;
-      inset: 0;
-      padding: 10px 12px 12px;
+      top: 0; left: 0; right: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 12px;
+      background: rgba(255, 255, 255, 0.02);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+      z-index: 2;
+    }
+    .agent-card .scene-header .scene-header-avatar {
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #E5322D, #8B1410);
+      border: 1px solid rgba(229, 50, 45, 0.55);
+      flex-shrink: 0;
+    }
+    .agent-card .scene-header .scene-header-text {
+      flex: 1;
       display: flex;
       flex-direction: column;
-      gap: 5px;
+      min-width: 0;
+    }
+    .agent-card .scene-header .scene-header-name {
+      font-family: 'Instrument Serif', serif;
+      font-size: 13px;
+      color: #E5322D;
+      line-height: 1.05;
+      letter-spacing: 0.005em;
+    }
+    .agent-card .scene-header .scene-header-status {
+      font-family: 'Inter', sans-serif;
+      font-size: 8.5px;
+      color: rgba(255, 255, 255, 0.40);
+      font-style: italic;
+      margin-top: 2px;
+      letter-spacing: 0.02em;
+    }
+
+    .agent-card .agent-scene {
+      position: absolute;
+      top: 38px; left: 0; right: 0; bottom: 0;
+      padding: 8px 12px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
       z-index: 1;
       font-family: 'Inter', sans-serif;
       overflow: hidden;
@@ -1595,76 +1664,74 @@
       flex-shrink: 0;
     }
 
-    /* Timing — 10000ms cycle, 5-bubble thinking flow. Slowed down so each
-       agent reads as a smart consultant who PROCESSES then DELIVERS, not
-       a fast assistant. 1.0–1.5s pause between bubbles; insight bubble
-       (the "smart moment") gets a stronger pulse highlight.
+    /* Timing — 13000ms cycle (~13s loop). 5-bubble thinking flow + two
+       sequential animations (data → deliverable) so each agent reads as
+       a consultant who processes, recommends, and SHIPS A DELIVERABLE.
        Reference timeline:
-         0.0s  Bubble 1 (user) fade-in (400ms)
-         1.0s  Bubble 2 (ack) starts        — "Aku [verb] dulu"
-         2.5s  Bubble 3 (progress) starts   — concrete number
-         4.0s  Bubble 4 (insight) starts    — pattern / recommendation
-         5.5s  Bubble 5 (output) starts     — "Siap untuk kamu:"
-         6.5s  First action item emerges from B5 (200ms stagger)
-         8.0s  All items at final state
-         9.0s  Hold full state (1s breathing room)
-         9.5s  Everything fades out (500ms)
-        10.0s  Loop restart                                                  */
-    .agent-card .scene-user            { animation: sceneUserIn      10000ms ease-out infinite; }
-    .agent-card .scene-agent-block     { animation: sceneAgent1In    10000ms ease-out infinite; }
-    .agent-card .scene-bubble-progress { animation: sceneProgressIn  10000ms ease-out infinite; }
+         0.0s  B1 user fade-in (400ms)
+         1.0s  B2 ack starts                 — "Aku [verb] dulu"
+         2.5s  B3 progress starts             — concrete number
+         4.0s  B4 insight starts              — pattern / recommendation
+         5.5s  B5 output starts               — "Siap untuk kamu:"
+         6.5s  Animation 1 starts             — raw data view (200ms stagger)
+         8.5s  Animation 1 fades out (500ms)
+         9.0s  Animation 2 emerges            — deliverable (oxblood border)
+        11.5s  Hold full state (1s breathing)
+        12.5s  Everything fades out (500ms)
+        13.0s  Loop restart                                                   */
+    .agent-card .scene-user            { animation: sceneUserIn      13000ms ease-out infinite; }
+    .agent-card .scene-agent-block     { animation: sceneAgent1In    13000ms ease-out infinite; }
+    .agent-card .scene-bubble-progress { animation: sceneProgressIn  13000ms ease-out infinite; }
     .agent-card .scene-bubble-insight {
-      animation: sceneInsightIn 10000ms ease-out infinite, insightPulse 10000ms ease-out infinite;
+      animation: sceneInsightIn 13000ms ease-out infinite, insightPulse 13000ms ease-out infinite;
     }
     .agent-card .scene-bubble-output {
-      animation: sceneOutputIn 10000ms ease-out infinite, bubblePulse 10000ms ease-out infinite;
+      animation: sceneOutputIn 13000ms ease-out infinite, bubblePulse 13000ms ease-out infinite;
     }
 
     @keyframes sceneUserIn {
       0%        { opacity: 0; transform: translateY(4px); }
-      4%        { opacity: 1; transform: translateY(0); }
-      90%       { opacity: 1; transform: translateY(0); }
-      95%, 100% { opacity: 0; transform: translateY(0); }
+      3%        { opacity: 1; transform: translateY(0); }
+      92%       { opacity: 1; transform: translateY(0); }
+      96%, 100% { opacity: 0; transform: translateY(0); }
     }
     @keyframes sceneAgent1In {
-      0%, 10%   { opacity: 0; transform: translateY(4px); }
-      14%       { opacity: 1; transform: translateY(0); }
-      90%       { opacity: 1; transform: translateY(0); }
-      95%, 100% { opacity: 0; transform: translateY(0); }
+      0%, 7.5%   { opacity: 0; transform: translateY(4px); }
+      11%        { opacity: 1; transform: translateY(0); }
+      92%        { opacity: 1; transform: translateY(0); }
+      96%, 100%  { opacity: 0; transform: translateY(0); }
     }
     @keyframes sceneProgressIn {
-      0%, 25%   { opacity: 0; transform: translateY(4px); }
-      29%       { opacity: 1; transform: translateY(0); }
-      90%       { opacity: 1; transform: translateY(0); }
-      95%, 100% { opacity: 0; transform: translateY(0); }
+      0%, 19%    { opacity: 0; transform: translateY(4px); }
+      22%        { opacity: 1; transform: translateY(0); }
+      92%        { opacity: 1; transform: translateY(0); }
+      96%, 100%  { opacity: 0; transform: translateY(0); }
     }
     @keyframes sceneInsightIn {
-      0%, 40%   { opacity: 0; transform: translateY(4px); }
-      44%       { opacity: 1; transform: translateY(0); }
-      90%       { opacity: 1; transform: translateY(0); }
-      95%, 100% { opacity: 0; transform: translateY(0); }
+      0%, 31%    { opacity: 0; transform: translateY(4px); }
+      34%        { opacity: 1; transform: translateY(0); }
+      92%        { opacity: 1; transform: translateY(0); }
+      96%, 100%  { opacity: 0; transform: translateY(0); }
     }
     @keyframes sceneOutputIn {
-      0%, 55%   { opacity: 0; transform: translateY(4px); }
-      59%       { opacity: 1; transform: translateY(0); }
-      90%       { opacity: 1; transform: translateY(0); }
-      95%, 100% { opacity: 0; transform: translateY(0); }
+      0%, 42%    { opacity: 0; transform: translateY(4px); }
+      45%        { opacity: 1; transform: translateY(0); }
+      92%        { opacity: 1; transform: translateY(0); }
+      96%, 100%  { opacity: 0; transform: translateY(0); }
     }
-
-    /* The insight bubble is "the smart moment" — give it a stronger,
-       slightly-longer-lasting pulse so the eye lands there. */
+    /* Insight bubble pulse — the "smart moment" */
     @keyframes insightPulse {
-      0%, 40%   { box-shadow: 0 0 0 0 rgba(229, 50, 45, 0); }
-      44%       { box-shadow: 0 0 0 6px rgba(229, 50, 45, 0.18); }
-      56%       { box-shadow: 0 0 0 0 rgba(229, 50, 45, 0); }
-      100%      { box-shadow: 0 0 0 0 rgba(229, 50, 45, 0); }
+      0%, 31%    { box-shadow: 0 0 0 0 rgba(229, 50, 45, 0); }
+      34%        { box-shadow: 0 0 0 6px rgba(229, 50, 45, 0.18); }
+      42%        { box-shadow: 0 0 0 0 rgba(229, 50, 45, 0); }
+      100%       { box-shadow: 0 0 0 0 rgba(229, 50, 45, 0); }
     }
-    /* Subtle pulse on the output bubble while items emerge from it. */
+    /* Output bubble pulse during anim1 emergence */
     @keyframes bubblePulse {
-      0%, 65%   { box-shadow: 0 0 0 0 rgba(229, 50, 45, 0); }
-      69%       { box-shadow: 0 0 0 5px rgba(229, 50, 45, 0.10); }
-      80%       { box-shadow: 0 0 0 0 rgba(229, 50, 45, 0); }
-      100%      { box-shadow: 0 0 0 0 rgba(229, 50, 45, 0); }
+      0%, 50%    { box-shadow: 0 0 0 0 rgba(229, 50, 45, 0); }
+      53%        { box-shadow: 0 0 0 5px rgba(229, 50, 45, 0.10); }
+      62%        { box-shadow: 0 0 0 0 rgba(229, 50, 45, 0); }
+      100%       { box-shadow: 0 0 0 0 rgba(229, 50, 45, 0); }
     }
 
     /* ─── ACTION VISUALIZATIONS (per-agent specific styling) ─── */
@@ -1678,50 +1745,50 @@
       opacity: 0;
       transform-origin: top center;
     }
-    .agent-card .scene-stagger > *:nth-child(1) { animation: sceneItem1 10000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
-    .agent-card .scene-stagger > *:nth-child(2) { animation: sceneItem2 10000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
-    .agent-card .scene-stagger > *:nth-child(3) { animation: sceneItem3 10000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
-    .agent-card .scene-stagger > *:nth-child(4) { animation: sceneItem4 10000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
-    .agent-card .scene-stagger > *:nth-child(5) { animation: sceneItem5 10000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
-    .agent-card .scene-stagger > *:nth-child(6) { animation: sceneItem6 10000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
-    /* Items emerge from B5 (output bubble) starting at 6.5s = 65%.
-       transform-origin: top center anchors the scale animation to the
-       bubble above so items appear to spawn FROM B5, not float in. */
+    .agent-card .scene-stagger > *:nth-child(1) { animation: sceneItem1 13000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
+    .agent-card .scene-stagger > *:nth-child(2) { animation: sceneItem2 13000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
+    .agent-card .scene-stagger > *:nth-child(3) { animation: sceneItem3 13000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
+    .agent-card .scene-stagger > *:nth-child(4) { animation: sceneItem4 13000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
+    .agent-card .scene-stagger > *:nth-child(5) { animation: sceneItem5 13000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
+    .agent-card .scene-stagger > *:nth-child(6) { animation: sceneItem6 13000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
+    /* Anim1 items: emerge at 50% (6.5s), all in by ~62% (8.0s), fade out
+       at 65% (8.5s) so anim2 can take the stage. transform-origin: top
+       center anchors the scale animation to B5 above. */
     @keyframes sceneItem1 {
-      0%, 65%   { opacity: 0; transform: translateY(-12px) scale(0.6); filter: blur(2px); }
-      68%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
-      90%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
-      95%, 100% { opacity: 0; transform: translateY(0) scale(1); filter: blur(0); }
+      0%, 50%   { opacity: 0; transform: translateY(-12px) scale(0.6); filter: blur(2px); }
+      53%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+      65%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+      69%, 100% { opacity: 0; transform: translateY(-4px) scale(0.95); filter: blur(1px); }
     }
     @keyframes sceneItem2 {
-      0%, 67%   { opacity: 0; transform: translateY(-12px) scale(0.6); filter: blur(2px); }
-      70%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
-      90%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
-      95%, 100% { opacity: 0; transform: translateY(0) scale(1); filter: blur(0); }
+      0%, 51.5% { opacity: 0; transform: translateY(-12px) scale(0.6); filter: blur(2px); }
+      54.5%     { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+      65%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+      69%, 100% { opacity: 0; transform: translateY(-4px) scale(0.95); filter: blur(1px); }
     }
     @keyframes sceneItem3 {
-      0%, 69%   { opacity: 0; transform: translateY(-12px) scale(0.6); filter: blur(2px); }
-      72%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
-      90%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
-      95%, 100% { opacity: 0; transform: translateY(0) scale(1); filter: blur(0); }
+      0%, 53%   { opacity: 0; transform: translateY(-12px) scale(0.6); filter: blur(2px); }
+      56%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+      65%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+      69%, 100% { opacity: 0; transform: translateY(-4px) scale(0.95); filter: blur(1px); }
     }
     @keyframes sceneItem4 {
-      0%, 71%   { opacity: 0; transform: translateY(-12px) scale(0.6); filter: blur(2px); }
-      74%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
-      90%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
-      95%, 100% { opacity: 0; transform: translateY(0) scale(1); filter: blur(0); }
+      0%, 54.5% { opacity: 0; transform: translateY(-12px) scale(0.6); filter: blur(2px); }
+      57.5%     { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+      65%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+      69%, 100% { opacity: 0; transform: translateY(-4px) scale(0.95); filter: blur(1px); }
     }
     @keyframes sceneItem5 {
-      0%, 73%   { opacity: 0; transform: translateY(-12px) scale(0.6); filter: blur(2px); }
-      76%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
-      90%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
-      95%, 100% { opacity: 0; transform: translateY(0) scale(1); filter: blur(0); }
+      0%, 56%   { opacity: 0; transform: translateY(-12px) scale(0.6); filter: blur(2px); }
+      59%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+      65%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+      69%, 100% { opacity: 0; transform: translateY(-4px) scale(0.95); filter: blur(1px); }
     }
     @keyframes sceneItem6 {
-      0%, 75%   { opacity: 0; transform: translateY(-12px) scale(0.6); filter: blur(2px); }
-      78%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
-      90%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
-      95%, 100% { opacity: 0; transform: translateY(0) scale(1); filter: blur(0); }
+      0%, 57.5% { opacity: 0; transform: translateY(-12px) scale(0.6); filter: blur(2px); }
+      60.5%     { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+      65%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+      69%, 100% { opacity: 0; transform: translateY(-4px) scale(0.95); filter: blur(1px); }
     }
 
     /* === Researcher: papers list with confidence chips === */
@@ -1870,24 +1937,24 @@
       stroke-linejoin: round;
       stroke-dasharray: 220;
       stroke-dashoffset: 220;
-      animation: chartDraw 10000ms ease-out infinite;
+      animation: chartDraw 13000ms ease-out infinite;
     }
     .agent-card .scene-chart .chart-marker {
       fill: #E5322D;
       opacity: 0;
-      animation: chartMarker 10000ms ease-out infinite;
+      animation: chartMarker 13000ms ease-out infinite;
     }
     @keyframes chartDraw {
-      0%, 65%   { stroke-dashoffset: 220; }
-      78%       { stroke-dashoffset: 0; }
-      90%       { stroke-dashoffset: 0; }
-      95%, 100% { stroke-dashoffset: 220; }
+      0%, 50%   { stroke-dashoffset: 220; }
+      62%       { stroke-dashoffset: 0; }
+      65%       { stroke-dashoffset: 0; }
+      69%, 100% { stroke-dashoffset: 220; }
     }
     @keyframes chartMarker {
-      0%, 76%   { opacity: 0; }
-      80%       { opacity: 1; }
-      90%       { opacity: 1; }
-      95%, 100% { opacity: 0; }
+      0%, 60%   { opacity: 0; }
+      63%       { opacity: 1; }
+      65%       { opacity: 1; }
+      69%, 100% { opacity: 0; }
     }
 
     /* === Macro Strategist: 3 scenario bars === */
@@ -1918,7 +1985,7 @@
       top: 0; left: 0; bottom: 0;
       width: 0;
       border-radius: 2px;
-      animation: multiGrowBull 10000ms ease-out infinite;
+      animation: multiGrowBull 13000ms ease-out infinite;
     }
     .agent-card .scene-multi-row.bull .scene-multi-bar::after {
       background: #E5322D;
@@ -1933,22 +2000,22 @@
       animation-name: multiGrowBear;
     }
     @keyframes multiGrowBull {
-      0%, 65%   { width: 0; }
-      73%       { width: 88%; }
-      90%       { width: 88%; }
-      95%, 100% { width: 0; }
+      0%, 50%   { width: 0; }
+      58%       { width: 88%; }
+      65%       { width: 88%; }
+      69%, 100% { width: 0; }
     }
     @keyframes multiGrowBase {
-      0%, 67%   { width: 0; }
-      75%       { width: 60%; }
-      90%       { width: 60%; }
-      95%, 100% { width: 0; }
+      0%, 51.5% { width: 0; }
+      59.5%     { width: 60%; }
+      65%       { width: 60%; }
+      69%, 100% { width: 0; }
     }
     @keyframes multiGrowBear {
-      0%, 69%   { width: 0; }
-      77%       { width: 32%; }
-      90%       { width: 32%; }
-      95%, 100% { width: 0; }
+      0%, 53%   { width: 0; }
+      61%       { width: 32%; }
+      65%       { width: 32%; }
+      69%, 100% { width: 0; }
     }
 
     /* === Business Director: KPI cards === */
@@ -2016,6 +2083,176 @@
       font-size: 9px;
     }
 
+    /* === ANIMATION 2 — the "deliverable" view === */
+    /* anim1 fades out at 65-69% (8.5–9.0s), anim2 fades in at 69-72% (9.0–9.4s).
+       They share the same vertical space (sequential reveal, not stacked).  */
+    .agent-card .scene-anim1-wrap { /* container only — items inside have their own fade keyframes */ }
+    .agent-card .scene-anim2-wrap {
+      opacity: 0;
+      animation: anim2In 13000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite;
+    }
+    @keyframes anim2In {
+      0%, 69%    { opacity: 0; transform: translateY(-10px) scale(0.85); filter: blur(2px); }
+      72%        { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+      92%        { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+      96%, 100%  { opacity: 0; }
+    }
+    /* Anim2 inner items stagger in on top of the anim2 emergence */
+    .agent-card .scene-anim2 > * { opacity: 0; }
+    .agent-card .scene-anim2 > *:nth-child(1) { animation: anim2Item1 13000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
+    .agent-card .scene-anim2 > *:nth-child(2) { animation: anim2Item2 13000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
+    .agent-card .scene-anim2 > *:nth-child(3) { animation: anim2Item3 13000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
+    .agent-card .scene-anim2 > *:nth-child(4) { animation: anim2Item4 13000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
+    .agent-card .scene-anim2 > *:nth-child(5) { animation: anim2Item5 13000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
+    @keyframes anim2Item1 {
+      0%, 73%    { opacity: 0; transform: translateY(-6px); }
+      76%        { opacity: 1; transform: translateY(0); }
+      92%        { opacity: 1; }
+      96%, 100%  { opacity: 0; }
+    }
+    @keyframes anim2Item2 {
+      0%, 75%    { opacity: 0; transform: translateY(-6px); }
+      78%        { opacity: 1; transform: translateY(0); }
+      92%        { opacity: 1; }
+      96%, 100%  { opacity: 0; }
+    }
+    @keyframes anim2Item3 {
+      0%, 77%    { opacity: 0; transform: translateY(-6px); }
+      80%        { opacity: 1; transform: translateY(0); }
+      92%        { opacity: 1; }
+      96%, 100%  { opacity: 0; }
+    }
+    @keyframes anim2Item4 {
+      0%, 79%    { opacity: 0; transform: translateY(-6px); }
+      82%        { opacity: 1; transform: translateY(0); }
+      92%        { opacity: 1; }
+      96%, 100%  { opacity: 0; }
+    }
+    @keyframes anim2Item5 {
+      0%, 81%    { opacity: 0; transform: translateY(-6px); }
+      84%        { opacity: 1; transform: translateY(0); }
+      92%        { opacity: 1; }
+      96%, 100%  { opacity: 0; }
+    }
+
+    /* === Anim2 visual containers — stronger oxblood border, bigger pad === */
+    .agent-card .scene-anim2 {
+      margin-top: 4px;
+      padding: 7px 9px;
+      border-radius: 6px;
+      background: rgba(229, 50, 45, 0.04);
+      border: 1.5px solid rgba(229, 50, 45, 0.35);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    /* Generic anim2 row patterns */
+    .agent-card .scene-anim2 .anim2-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9.5px;
+      color: rgba(255, 255, 255, 0.85);
+      line-height: 1.3;
+    }
+    .agent-card .scene-anim2 .anim2-time {
+      color: #E5322D;
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      flex-shrink: 0;
+      min-width: 36px;
+    }
+    .agent-card .scene-anim2 .anim2-label {
+      flex: 1;
+      color: rgba(255, 255, 255, 0.85);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .agent-card .scene-anim2 .anim2-meta {
+      color: rgba(255, 255, 255, 0.45);
+      font-size: 8.5px;
+      flex-shrink: 0;
+    }
+    .agent-card .scene-anim2 .anim2-num {
+      color: #E5322D;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+    .agent-card .scene-anim2 .anim2-arrow {
+      color: #E5322D;
+      width: 12px; flex-shrink: 0; text-align: center;
+    }
+    .agent-card .scene-anim2 .anim2-arrow.up { color: #E5322D; }
+    .agent-card .scene-anim2 .anim2-arrow.down { color: rgba(255,255,255,0.55); }
+    .agent-card .scene-anim2 .anim2-arrow.flat { color: rgba(255,255,255,0.40); }
+    .agent-card .scene-anim2 .anim2-disclaimer {
+      font-family: 'Inter', sans-serif;
+      font-size: 8px;
+      font-style: italic;
+      color: rgba(255, 255, 255, 0.40);
+      margin-top: 2px;
+      letter-spacing: 0.02em;
+    }
+    .agent-card .scene-anim2 .anim2-bullet {
+      display: flex;
+      gap: 7px;
+      align-items: flex-start;
+    }
+    .agent-card .scene-anim2 .anim2-bullet::before {
+      content: '';
+      width: 4px; height: 4px;
+      border-radius: 1px;
+      background: #E5322D;
+      flex-shrink: 0;
+      margin-top: 5px;
+    }
+    .agent-card .scene-anim2 .anim2-headline {
+      font-family: 'Instrument Serif', serif;
+      font-size: 11.5px;
+      color: #fff;
+      line-height: 1.2;
+      letter-spacing: -0.01em;
+    }
+    .agent-card .scene-anim2 .anim2-email-meta {
+      display: flex;
+      gap: 6px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+    }
+    .agent-card .scene-anim2 .anim2-email-meta .label {
+      color: rgba(255,255,255,0.45);
+      flex-shrink: 0;
+    }
+    .agent-card .scene-anim2 .anim2-email-meta .val {
+      color: rgba(255,255,255,0.88);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .agent-card .scene-anim2 .anim2-attach {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 3px 7px;
+      border-radius: 4px;
+      background: rgba(229, 50, 45, 0.10);
+      border: 1px solid rgba(229, 50, 45, 0.40);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 8.5px;
+      color: #E5322D;
+      letter-spacing: 0.04em;
+      width: fit-content;
+    }
+    .agent-card .scene-anim2 .anim2-cta {
+      display: inline-flex;
+      padding: 3px 9px;
+      border-radius: 999px;
+      background: #E5322D;
+      color: #fff;
+      font-family: 'Inter', sans-serif;
+      font-size: 9px;
+      font-weight: 500;
+      width: fit-content;
+    }
+
     @media (prefers-reduced-motion: reduce) {
       .agent-card .scene-user,
       .agent-card .scene-agent-block,
@@ -2023,6 +2260,8 @@
       .agent-card .scene-bubble-insight,
       .agent-card .scene-bubble-output,
       .agent-card .scene-stagger > *,
+      .agent-card .scene-anim2-wrap,
+      .agent-card .scene-anim2 > *,
       .agent-card .scene-chart .chart-line,
       .agent-card .scene-chart .chart-marker,
       .agent-card .scene-multi-bar::after {
@@ -3978,52 +4217,76 @@
     //
     // Storyboard scope: only 'pro' has a scene right now. Other slugs fall
     // through to CreatureSprite. After founder approval the rest will follow.
-    // Reusable shell — 5-bubble "smart consultant" pattern:
+    // Reusable shell — chat header + 5-bubble "smart consultant" pattern:
+    //   Header       → avatar + agent name (serif oxblood) + "aktif sekarang"
     //   B1 user      → original question
     //   B2 ack       → "Aku [verb] dulu" (italic dim, present-tense)
     //   B3 progress  → concrete number ("12 sumber, BI report")
     //   B4 insight   → pattern / recommendation ← THE smart moment (oxblood accent + pulse)
-    //   B5 output    → connector ("Siap untuk kamu:") + action items
-    // All 4 agent bubbles share one avatar (left rail) so they read as
-    // "from same agent thinking out loud." Action items emerge from B5
-    // via the .scene-stagger magic-escape pattern.
-    function SceneShell({ user, agentAck, agentProgress, agentInsight, agentOutput, children, slug }) {
+    //   B5 output    → connector ("Siap untuk kamu:") + Animation 1 (data) → Animation 2 (deliverable)
+    // Action items emerge from B5 via .scene-stagger magic-escape.
+    // anim2 takes the same vertical space as Animation 1 (sequential reveal,
+    // not stacked) — Anim1 fades out at ~9s, Anim2 fades in at ~9s.
+    function SceneShell({ name, user, agentAck, agentProgress, agentInsight, agentOutput, anim1, anim2, slug }) {
       return (
-        <div className={`agent-scene scene-${slug}`}>
-          <div className="scene-user">{user}</div>
-          <div className="scene-agent-block">
-            <div className="scene-avatar" />
-            <div className="scene-agent-bubbles">
-              <div className="scene-bubble scene-bubble-ack">{agentAck}</div>
-              <div className="scene-bubble scene-bubble-progress">{agentProgress}</div>
-              <div className="scene-bubble scene-bubble-insight">{agentInsight}</div>
-              <div className="scene-bubble scene-bubble-output">
-                {agentOutput}
-                {children}
+        <>
+          <div className="scene-header">
+            <div className="scene-header-avatar" />
+            <div className="scene-header-text">
+              <div className="scene-header-name">{name}</div>
+              <div className="scene-header-status">aktif sekarang</div>
+            </div>
+          </div>
+          <div className={`agent-scene scene-${slug}`}>
+            <div className="scene-user">{user}</div>
+            <div className="scene-agent-block">
+              <div className="scene-avatar" />
+              <div className="scene-agent-bubbles">
+                <div className="scene-bubble scene-bubble-ack">{agentAck}</div>
+                <div className="scene-bubble scene-bubble-progress">{agentProgress}</div>
+                <div className="scene-bubble scene-bubble-insight">{agentInsight}</div>
+                <div className="scene-bubble scene-bubble-output">
+                  {agentOutput}
+                  <div className="scene-anim1-wrap">{anim1}</div>
+                  <div className="scene-anim2-wrap">{anim2}</div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        </>
       );
     }
+
+    // Animation 1 (raw data view) and Animation 2 (deliverable view) per
+    // agent. Anim1 fades out and Anim2 fades in around 9s into the loop —
+    // both share the same vertical space inside the output bubble.
 
     function AgentScenePro() {
       return (
         <SceneShell
           slug="pro"
+          name="The Pro"
           user="Inget gimana gaya kerja saya?"
           agentAck="Aku cek memori."
           agentProgress="12 percakapan dari 3 minggu terakhir."
           agentInsight="Pola: fokus klien Jakarta, deadline Kamis."
           agentOutput="Ini yang aku catat:"
-        >
-          <div className="scene-memos scene-stagger">
-            <div className="scene-memo">klien jakarta</div>
-            <div className="scene-memo">deadline kamis</div>
-            <div className="scene-memo">preferensi makan</div>
-            <div className="scene-memo">kontrak Q3</div>
-          </div>
-        </SceneShell>
+          anim1={
+            <div className="scene-memos scene-stagger">
+              <div className="scene-memo">klien jakarta</div>
+              <div className="scene-memo">deadline kamis</div>
+              <div className="scene-memo">preferensi makan</div>
+              <div className="scene-memo">kontrak Q3</div>
+            </div>
+          }
+          anim2={
+            <div className="scene-anim2">
+              <div className="anim2-row"><span className="anim2-time">08:00</span><span className="anim2-label">email check</span><span className="anim2-meta">15min</span></div>
+              <div className="anim2-row"><span className="anim2-time">10:00</span><span className="anim2-label">meeting klien jakarta</span><span className="anim2-meta">1h</span></div>
+              <div className="anim2-row"><span className="anim2-time">14:00</span><span className="anim2-label">deadline review kamis</span><span className="anim2-meta">2h</span></div>
+            </div>
+          }
+        />
       );
     }
 
@@ -4031,35 +4294,44 @@
       return (
         <SceneShell
           slug="researcher"
+          name="Deep Researcher"
           user="Riset volatilitas IDR 30 hari"
           agentAck="Aku scan 100+ sumber."
           agentProgress="12 paper akademik + BI report."
           agentInsight="Korelasi tinggi dengan kebijakan Fed."
           agentOutput="Sintesis siap:"
-        >
-          <div className="scene-papers scene-stagger">
-            <div className="scene-paper">
-              <span className="paper-icon" />
-              <span className="paper-title">bi.go.id · monthly report</span>
-              <span className="paper-conf high">tinggi</span>
+          anim1={
+            <div className="scene-papers scene-stagger">
+              <div className="scene-paper">
+                <span className="paper-icon" />
+                <span className="paper-title">bi.go.id · monthly report</span>
+                <span className="paper-conf high">tinggi</span>
+              </div>
+              <div className="scene-paper">
+                <span className="paper-icon" />
+                <span className="paper-title">imf.org · em outlook</span>
+                <span className="paper-conf high">tinggi</span>
+              </div>
+              <div className="scene-paper">
+                <span className="paper-icon" />
+                <span className="paper-title">reuters · idr trend</span>
+                <span className="paper-conf med">sedang</span>
+              </div>
+              <div className="scene-paper">
+                <span className="paper-icon" />
+                <span className="paper-title">forum trader · sentimen</span>
+                <span className="paper-conf low">rendah</span>
+              </div>
             </div>
-            <div className="scene-paper">
-              <span className="paper-icon" />
-              <span className="paper-title">imf.org · em outlook</span>
-              <span className="paper-conf high">tinggi</span>
+          }
+          anim2={
+            <div className="scene-anim2">
+              <div className="anim2-bullet">IDR volatility +12% Q1 vs Q4 2025</div>
+              <div className="anim2-bullet">Driven by Fed rate uncertainty</div>
+              <div className="anim2-bullet">Forecast stabilize Q3 2026</div>
             </div>
-            <div className="scene-paper">
-              <span className="paper-icon" />
-              <span className="paper-title">reuters · idr trend</span>
-              <span className="paper-conf med">sedang</span>
-            </div>
-            <div className="scene-paper">
-              <span className="paper-icon" />
-              <span className="paper-title">forum trader · sentimen</span>
-              <span className="paper-conf low">rendah</span>
-            </div>
-          </div>
-        </SceneShell>
+          }
+        />
       );
     }
 
@@ -4067,30 +4339,39 @@
       return (
         <SceneShell
           slug="web"
+          name="Web Master"
           user="Scrape 50 agensi Jakarta"
           agentAck="Aku buka 3 browser paralel."
           agentProgress="OLX + LinkedIn + direktori asosiasi."
           agentInsight="78 ditemukan, dedupe jadi 50 valid."
           agentOutput="Data ekstrak, siap export:"
-        >
-          <div className="scene-tabs scene-stagger">
-            <div className="scene-tab">
-              <span className="tab-dots"><span /><span /><span /></span>
-              <span className="tab-url">agensi-a.co.id/tim</span>
-              <span className="tab-check">✓</span>
+          anim1={
+            <div className="scene-tabs scene-stagger">
+              <div className="scene-tab">
+                <span className="tab-dots"><span /><span /><span /></span>
+                <span className="tab-url">agensi-a.co.id/tim</span>
+                <span className="tab-check">✓</span>
+              </div>
+              <div className="scene-tab">
+                <span className="tab-dots"><span /><span /><span /></span>
+                <span className="tab-url">agensi-b.com/about</span>
+                <span className="tab-check">✓</span>
+              </div>
+              <div className="scene-tab">
+                <span className="tab-dots"><span /><span /><span /></span>
+                <span className="tab-url">agensi-c.id/profile</span>
+                <span className="tab-check">✓</span>
+              </div>
             </div>
-            <div className="scene-tab">
-              <span className="tab-dots"><span /><span /><span /></span>
-              <span className="tab-url">agensi-b.com/about</span>
-              <span className="tab-check">✓</span>
+          }
+          anim2={
+            <div className="scene-anim2">
+              <div className="anim2-row"><span className="anim2-label">PT Kreatif Studio</span><span className="anim2-num">92</span></div>
+              <div className="anim2-row"><span className="anim2-label">Agency Bali Digital</span><span className="anim2-num">88</span></div>
+              <div className="anim2-row"><span className="anim2-label">Studio Jakarta Co</span><span className="anim2-num">85</span></div>
             </div>
-            <div className="scene-tab">
-              <span className="tab-dots"><span /><span /><span /></span>
-              <span className="tab-url">agensi-c.id/profile</span>
-              <span className="tab-check">✓</span>
-            </div>
-          </div>
-        </SceneShell>
+          }
+        />
       );
     }
 
@@ -4098,21 +4379,31 @@
       return (
         <SceneShell
           slug="doc"
+          name="Doc Expert"
           user="Bikin invoice 3jt klien PT Maju"
           agentAck="Templat ditemukan."
           agentProgress="PT = badan usaha."
           agentInsight="Tambah PPN 11%, total Rp 3,33jt."
           agentOutput="Siap kirim ke klien:"
-        >
-          <div className="scene-doc scene-stagger">
-            <div className="scene-doc-line long" />
-            <div className="scene-doc-line med" />
-            <div className="scene-doc-line long" />
-            <div className="scene-doc-line short" />
-            <div className="scene-doc-line med" />
-            <div className="scene-doc-line short" />
-          </div>
-        </SceneShell>
+          anim1={
+            <div className="scene-doc scene-stagger">
+              <div className="scene-doc-line long" />
+              <div className="scene-doc-line med" />
+              <div className="scene-doc-line long" />
+              <div className="scene-doc-line short" />
+              <div className="scene-doc-line med" />
+              <div className="scene-doc-line short" />
+            </div>
+          }
+          anim2={
+            <div className="scene-anim2">
+              <div className="anim2-email-meta"><span className="label">to:</span><span className="val">klien@ptmaju.co.id</span></div>
+              <div className="anim2-email-meta"><span className="label">subject:</span><span className="val">Invoice Mei 2026</span></div>
+              <div className="anim2-attach">PDF · invoice-mei.pdf</div>
+              <div className="anim2-cta">Kirim sekarang</div>
+            </div>
+          }
+        />
       );
     }
 
@@ -4120,20 +4411,30 @@
       return (
         <SceneShell
           slug="slide"
+          name="Slide Master"
           user="Pitch deck buat angel investor"
           agentAck="Aku cek industri kamu."
           agentProgress="SaaS B2B → format YC 12-slide."
           agentInsight="Alur: masalah → solusi → traction → ask."
           agentOutput="12 slide siap review:"
-        >
-          <div className="scene-slides scene-stagger">
-            <div className="scene-slide"><span className="slide-h" /><span className="slide-l" /><span className="slide-l" /></div>
-            <div className="scene-slide"><span className="slide-h" /><span className="slide-l" /><span className="slide-l" /></div>
-            <div className="scene-slide"><span className="slide-h" /><span className="slide-l" /><span className="slide-l" /></div>
-            <div className="scene-slide"><span className="slide-h" /><span className="slide-l" /><span className="slide-l" /></div>
-            <div className="scene-slide"><span className="slide-h" /><span className="slide-l" /><span className="slide-l" /></div>
-          </div>
-        </SceneShell>
+          anim1={
+            <div className="scene-slides scene-stagger">
+              <div className="scene-slide"><span className="slide-h" /><span className="slide-l" /><span className="slide-l" /></div>
+              <div className="scene-slide"><span className="slide-h" /><span className="slide-l" /><span className="slide-l" /></div>
+              <div className="scene-slide"><span className="slide-h" /><span className="slide-l" /><span className="slide-l" /></div>
+              <div className="scene-slide"><span className="slide-h" /><span className="slide-l" /><span className="slide-l" /></div>
+              <div className="scene-slide"><span className="slide-h" /><span className="slide-l" /><span className="slide-l" /></div>
+            </div>
+          }
+          anim2={
+            <div className="scene-anim2">
+              <div className="anim2-headline">Solution: AI-First Workflow</div>
+              <div className="anim2-bullet">Otomasi 80% admin tugas harian</div>
+              <div className="anim2-bullet">Setup dalam 5 menit, bukan 5 hari</div>
+              <div className="anim2-bullet">Pricing transparan, no hidden fee</div>
+            </div>
+          }
+        />
       );
     }
 
@@ -4144,20 +4445,31 @@
       return (
         <SceneShell
           slug="trade"
+          name="Trade Pro"
           user="Analisis BBCA earnings"
           agentAck="Tarik data 90 hari + 4 earnings lalu."
           agentProgress="EPS naik 8% YoY, NIM stabil 5,6%."
           agentInsight="Konsensus analis: target Rp 11.500."
           agentOutput="Sizing aman 2% portfolio:"
-        >
-          <div className="scene-chart">
-            <svg viewBox="0 0 100 40" preserveAspectRatio="none">
-              <polyline className="chart-line" points="0,30 12,26 22,32 35,18 48,22 60,12 75,16 88,6 100,10" />
-              <circle className="chart-marker" cx="100" cy="10" r="2.4" />
-              <circle className="chart-marker" cx="60" cy="12" r="1.8" style={{ animationDelay: '-50ms' }} />
-            </svg>
-          </div>
-        </SceneShell>
+          anim1={
+            <div className="scene-chart">
+              <svg viewBox="0 0 100 40" preserveAspectRatio="none">
+                <polyline className="chart-line" points="0,30 12,26 22,32 35,18 48,22 60,12 75,16 88,6 100,10" />
+                <circle className="chart-marker" cx="100" cy="10" r="2.4" />
+                <circle className="chart-marker" cx="60" cy="12" r="1.8" style={{ animationDelay: '-50ms' }} />
+              </svg>
+            </div>
+          }
+          anim2={
+            <div className="scene-anim2">
+              <div className="anim2-row"><span className="anim2-label">entry</span><span className="anim2-num">Rp 9.250</span></div>
+              <div className="anim2-row"><span className="anim2-label">stop loss</span><span className="anim2-num">Rp 9.100 <span style={{ color: 'rgba(255,255,255,0.45)' }}>(−1,6%)</span></span></div>
+              <div className="anim2-row"><span className="anim2-label">target</span><span className="anim2-num">Rp 9.800 <span style={{ color: 'rgba(255,255,255,0.45)' }}>(+5,9%)</span></span></div>
+              <div className="anim2-row"><span className="anim2-label">sizing</span><span className="anim2-meta">2% portfolio</span></div>
+              <div className="anim2-disclaimer">Bukan rekomendasi investasi. Sizing example only.</div>
+            </div>
+          }
+        />
       );
     }
 
@@ -4165,27 +4477,36 @@
       return (
         <SceneShell
           slug="macro"
+          name="Macro Strategist"
           user="BI rate naik, dampak ke saham?"
           agentAck="Cek konteks: naik 25bps."
           agentProgress="Historical 2022–2023: efek 2–3 bulan lag."
           agentInsight="Sektor terdampak: properti, banking."
           agentOutput="Base / bull / bear:"
-        >
-          <div className="scene-multi">
-            <div className="scene-multi-row bull">
-              <span className="scene-multi-label">bull</span>
-              <span className="scene-multi-bar" />
+          anim1={
+            <div className="scene-multi">
+              <div className="scene-multi-row bull">
+                <span className="scene-multi-label">bull</span>
+                <span className="scene-multi-bar" />
+              </div>
+              <div className="scene-multi-row base">
+                <span className="scene-multi-label">base</span>
+                <span className="scene-multi-bar" />
+              </div>
+              <div className="scene-multi-row bear">
+                <span className="scene-multi-label">bear</span>
+                <span className="scene-multi-bar" />
+              </div>
             </div>
-            <div className="scene-multi-row base">
-              <span className="scene-multi-label">base</span>
-              <span className="scene-multi-bar" />
+          }
+          anim2={
+            <div className="scene-anim2">
+              <div className="anim2-row"><span className="anim2-arrow up">↑</span><span className="anim2-label">Banking</span><span className="anim2-num">+5%</span></div>
+              <div className="anim2-row"><span className="anim2-arrow down">↓</span><span className="anim2-label">Properti</span><span className="anim2-num" style={{ color: 'rgba(255,255,255,0.65)' }}>−3%</span></div>
+              <div className="anim2-row"><span className="anim2-arrow flat">→</span><span className="anim2-label">Consumer</span><span className="anim2-meta">netral</span></div>
             </div>
-            <div className="scene-multi-row bear">
-              <span className="scene-multi-label">bear</span>
-              <span className="scene-multi-bar" />
-            </div>
-          </div>
-        </SceneShell>
+          }
+        />
       );
     }
 
@@ -4193,27 +4514,37 @@
       return (
         <SceneShell
           slug="business"
+          name="Business Director"
           user="Cek KPI minggu ini"
           agentAck="Tarik dashboard."
           agentProgress="Revenue +12% WoW, margin stabil."
           agentInsight="Anomaly: CAC naik 18% — investigate."
           agentOutput="3 angka penting:"
-        >
-          <div className="scene-kpis scene-stagger">
-            <div className="scene-kpi">
-              <div className="kpi-num">Rp 142<span className="kpi-pct">jt</span></div>
-              <div className="kpi-lbl">revenue</div>
+          anim1={
+            <div className="scene-kpis scene-stagger">
+              <div className="scene-kpi">
+                <div className="kpi-num">Rp 142<span className="kpi-pct">jt</span></div>
+                <div className="kpi-lbl">revenue</div>
+              </div>
+              <div className="scene-kpi">
+                <div className="kpi-num">38<span className="kpi-pct">%</span></div>
+                <div className="kpi-lbl">margin</div>
+              </div>
+              <div className="scene-kpi">
+                <div className="kpi-num">+12<span className="kpi-pct">%</span></div>
+                <div className="kpi-lbl">growth</div>
+              </div>
             </div>
-            <div className="scene-kpi">
-              <div className="kpi-num">38<span className="kpi-pct">%</span></div>
-              <div className="kpi-lbl">margin</div>
+          }
+          anim2={
+            <div className="scene-anim2">
+              <div className="anim2-headline">CAC breakdown</div>
+              <div className="anim2-row"><span className="anim2-label">FB Ads</span><span className="anim2-num">↑ 23%</span></div>
+              <div className="anim2-row"><span className="anim2-label">Google</span><span className="anim2-num">↑ 15%</span></div>
+              <div className="anim2-row"><span className="anim2-label">Organic</span><span className="anim2-meta">flat</span></div>
             </div>
-            <div className="scene-kpi">
-              <div className="kpi-num">+12<span className="kpi-pct">%</span></div>
-              <div className="kpi-lbl">growth</div>
-            </div>
-          </div>
-        </SceneShell>
+          }
+        />
       );
     }
 
@@ -4221,21 +4552,30 @@
       return (
         <SceneShell
           slug="video"
+          name="Video Producer"
           user="Script TikTok 60s gym tips"
           agentAck="Cek trending TikTok."
           agentProgress="Home workout naik 340% bulan ini."
           agentInsight="Hook angle: '5 menit hasil maksimal'."
           agentOutput="6 frame visual siap shoot:"
-        >
-          <div className="scene-frames scene-stagger">
-            <div className="scene-frame" />
-            <div className="scene-frame" />
-            <div className="scene-frame" />
-            <div className="scene-frame" />
-            <div className="scene-frame" />
-            <div className="scene-frame" />
-          </div>
-        </SceneShell>
+          anim1={
+            <div className="scene-frames scene-stagger">
+              <div className="scene-frame" />
+              <div className="scene-frame" />
+              <div className="scene-frame" />
+              <div className="scene-frame" />
+              <div className="scene-frame" />
+              <div className="scene-frame" />
+            </div>
+          }
+          anim2={
+            <div className="scene-anim2">
+              <div className="anim2-row"><span className="anim2-time">0–3s</span><span className="anim2-label">"Coba 5 menit ini"</span><span className="anim2-meta">hook</span></div>
+              <div className="anim2-row"><span className="anim2-time">3–48s</span><span className="anim2-label">5 exercises</span><span className="anim2-meta">body</span></div>
+              <div className="anim2-row"><span className="anim2-time">48–60s</span><span className="anim2-label">"Ikut challenge"</span><span className="anim2-meta">cta</span></div>
+            </div>
+          }
+        />
       );
     }
 
@@ -4243,20 +4583,29 @@
       return (
         <SceneShell
           slug="social"
+          name="Social Conductor"
           user="Posting ini ke 5 platform"
           agentAck="Cek brand voice + platform spec."
           agentProgress="Best time: IG 19.30, TikTok 21.00 WIB."
           agentInsight="Caption per platform, hashtag custom."
           agentOutput="Jadwal optimal:"
-        >
-          <div className="scene-platforms scene-stagger">
-            <div className="scene-platform">IG</div>
-            <div className="scene-platform">TikTok</div>
-            <div className="scene-platform">X</div>
-            <div className="scene-platform">FB</div>
-            <div className="scene-platform">LinkedIn</div>
-          </div>
-        </SceneShell>
+          anim1={
+            <div className="scene-platforms scene-stagger">
+              <div className="scene-platform">IG</div>
+              <div className="scene-platform">TikTok</div>
+              <div className="scene-platform">X</div>
+              <div className="scene-platform">FB</div>
+              <div className="scene-platform">LinkedIn</div>
+            </div>
+          }
+          anim2={
+            <div className="scene-anim2">
+              <div className="anim2-row"><span className="anim2-time">Sen</span><span className="anim2-label">IG carousel</span><span className="anim2-meta">19:30</span></div>
+              <div className="anim2-row"><span className="anim2-time">Sel</span><span className="anim2-label">TikTok video</span><span className="anim2-meta">21:00</span></div>
+              <div className="anim2-row"><span className="anim2-time">Rab</span><span className="anim2-label">X thread</span><span className="anim2-meta">12:00</span></div>
+            </div>
+          }
+        />
       );
     }
 
@@ -4307,78 +4656,14 @@
     }
 
     function AgentCarousel() {
-      const trackRef = useRef(null);
       const rootRef = useRef(null);
-      const [activeIndex, setActiveIndex] = useState(0);
       const [paused, setPaused] = useState(false);
-      const reducedMotion = useRef(false);
 
-      // Detect prefers-reduced-motion once
-      useEffect(() => {
-        const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
-        reducedMotion.current = mq.matches;
-        const onChange = (e) => { reducedMotion.current = e.matches; };
-        mq.addEventListener?.('change', onChange);
-        return () => mq.removeEventListener?.('change', onChange);
-      }, []);
-
-      // Helper: card pitch (card width + gap) from live computed style.
-      // Gap differs by viewport (14px mobile, 18px tablet+); reading from
-      // computed style avoids hardcoding it twice.
-      const getCardPitch = (track) => {
-        const cards = track.querySelectorAll('.agent-card');
-        if (!cards.length) return 0;
-        const cardW = cards[0].getBoundingClientRect().width;
-        const gap = parseFloat(getComputedStyle(track).columnGap) || 14;
-        return cardW + gap;
-      };
-
-      // Apply transform when activeIndex changes
-      useEffect(() => {
-        const track = trackRef.current;
-        if (!track) return;
-        const pitch = getCardPitch(track);
-        track.style.transform = `translate3d(-${activeIndex * pitch}px, 0, 0)`;
-      }, [activeIndex]);
-
-      // Re-apply transform on resize (pitch changes with viewport breakpoints)
-      useEffect(() => {
-        const onResize = () => {
-          const track = trackRef.current;
-          if (!track) return;
-          const pitch = getCardPitch(track);
-          track.style.transform = `translate3d(-${activeIndex * pitch}px, 0, 0)`;
-        };
-        window.addEventListener('resize', onResize);
-        return () => window.removeEventListener('resize', onResize);
-      }, [activeIndex]);
-
-      // Auto-rotate every 4s when not paused + motion ok.
-      // Uses transform: translate3d (not scrollLeft) — the carousel's flex
-      // parent chain blocks scroll APIs entirely; transform is unaffected.
-      useEffect(() => {
-        if (paused || reducedMotion.current) return;
-        const id = setInterval(() => {
-          setActiveIndex((idx) => (idx + 1) % AGENTS.length);
-        }, 4000);
-        return () => clearInterval(id);
-      }, [paused]);
-
-      const goTo = (i) => setActiveIndex(((i % AGENTS.length) + AGENTS.length) % AGENTS.length);
-      const goNext = () => setActiveIndex((i) => (i + 1) % AGENTS.length);
-      const goPrev = () => setActiveIndex((i) => (i - 1 + AGENTS.length) % AGENTS.length);
-
-      // Touch swipe handlers (mobile/tablet)
-      const touchStartX = useRef(null);
-      const onTouchStart = (e) => { touchStartX.current = e.touches[0]?.clientX ?? null; };
-      const onTouchEnd = (e) => {
-        if (touchStartX.current == null) return;
-        const dx = (e.changedTouches[0]?.clientX ?? touchStartX.current) - touchStartX.current;
-        touchStartX.current = null;
-        if (Math.abs(dx) > 40) {
-          if (dx < 0) goNext(); else goPrev();
-        }
-      };
+      // Duplicate AGENTS for the seamless infinite loop. The track is
+      // 2× the original width; CSS animates from translateX(0) to
+      // translateX(-50%), which lands on a position visually identical
+      // to translateX(0) thanks to the duplicate — restart is invisible.
+      const trackContent = [...AGENTS, ...AGENTS];
 
       return (
         <div
@@ -4392,22 +4677,20 @@
           onFocus={() => setPaused(true)}
           onBlur={() => setPaused(false)}
         >
-          <div className="agent-fade" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
-            <button type="button" className="agent-nav agent-nav-prev" onClick={goPrev} aria-label="Agent sebelumnya">
-              <span className="agent-nav-glyph"><svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="15 18 9 12 15 6" /></svg></span>
-            </button>
-            <button type="button" className="agent-nav agent-nav-next" onClick={goNext} aria-label="Agent berikutnya">
-              <span className="agent-nav-glyph"><svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="9 6 15 12 9 18" /></svg></span>
-            </button>
-            <div ref={trackRef} className="agent-track">
-              {AGENTS.map((a, i) => (
-                <article key={a.slug} className="agent-card" aria-label={`Agent: ${a.name}`}>
+          <div className="agent-fade">
+            <div
+              className={`agent-track agent-track-marquee${paused ? ' is-paused' : ''}`}
+              aria-live="polite"
+            >
+              {trackContent.map((a, i) => (
+                <article
+                  key={`${a.slug}-${i}`}
+                  className="agent-card"
+                  aria-label={`Agent: ${a.name}`}
+                  aria-hidden={i >= AGENTS.length}
+                >
                   <div className="agent-viz">
-                    {/* Per-agent visual. 'pro' uses the new scene direction
-                        (chat bubble + memory cards); other slugs still use
-                        the dot-pattern creature SVG until that direction is
-                        approved + batched. */}
-                    <AgentVisual slug={a.slug} index={i} />
+                    <AgentVisual slug={a.slug} index={i % AGENTS.length} />
                   </div>
                   <div className="agent-body">
                     <div className="agent-name">{a.name}</div>
@@ -4416,20 +4699,6 @@
                 </article>
               ))}
             </div>
-          </div>
-
-          <div className="agent-dots" role="tablist" aria-label="Pilih agent">
-            {AGENTS.map((a, i) => (
-              <button
-                key={a.slug}
-                type="button"
-                role="tab"
-                aria-label={`Slide ke kartu ${i + 1} — ${a.name}`}
-                aria-current={i === activeIndex}
-                className="agent-dot"
-                onClick={() => goTo(i)}
-              />
-            ))}
           </div>
 
           <p className="agent-tier-line">
