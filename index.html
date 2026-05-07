@@ -1377,6 +1377,118 @@
       50%      { border-color: #E5322D; box-shadow: 0 0 6px rgba(229,50,45,0.55); }
     }
 
+    /* ─── AGENT PERSONA CAROUSEL (2026-05-07) ─── */
+    /* translateX-based horizontal carousel inside #proses on the dark/red
+       halftone canvas. 1 card visible mobile, 2 tablet, 3 desktop.
+       Originally used scroll-snap + overflow-x:auto, but the StartSection's
+       centered-flex parent chain prevented scrollLeft from updating. translateX
+       sidesteps the entire scroll-container path. */
+    .agent-fade {
+      position: relative;
+      overflow: hidden;
+      -webkit-mask-image: linear-gradient(to right, transparent 0, #000 28px, #000 calc(100% - 28px), transparent 100%);
+              mask-image: linear-gradient(to right, transparent 0, #000 28px, #000 calc(100% - 28px), transparent 100%);
+      padding: 4px 16px;
+    }
+    @media (min-width: 768px) { .agent-fade { padding: 6px 24px; } }
+    .agent-track {
+      display: flex;
+      gap: 14px;
+      will-change: transform;
+      transition: transform 700ms cubic-bezier(0.22, 0.61, 0.36, 1);
+    }
+    @media (min-width: 768px) { .agent-track { gap: 18px; } }
+
+    .agent-card {
+      flex: 0 0 auto;
+      width: min(82vw, 320px);
+      display: flex; flex-direction: column;
+      border-radius: 18px;
+      overflow: hidden;
+      background: rgba(10, 10, 10, 0.55);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(18px) saturate(1.05);
+      -webkit-backdrop-filter: blur(18px) saturate(1.05);
+      transition: border-color 240ms ease;
+    }
+    @media (min-width: 641px) and (max-width: 1024px) {
+      .agent-card { width: min(42vw, 360px); }
+    }
+    @media (min-width: 1025px) {
+      .agent-card { width: min(28vw, 380px); }
+    }
+    .agent-card:hover {
+      border-color: rgba(229, 50, 45, 0.40);
+    }
+
+    .agent-card .agent-viz {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      background-color: #050505;
+      /* Static red halftone placeholder. Swapped for <DottedVideo> when
+         per-agent ASCII assets at /assets/agent-<slug>.mp4 ship. */
+      background-image: radial-gradient(circle at 1px 1px, rgba(229, 50, 45, 0.55) 1.1px, transparent 1.6px);
+      background-size: 6px 6px;
+      overflow: hidden;
+    }
+    .agent-card .agent-viz::after {
+      content: '';
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse at 50% 60%, transparent 25%, rgba(0,0,0,0.55) 78%, rgba(0,0,0,0.92) 100%);
+      pointer-events: none;
+    }
+    .agent-card .agent-body {
+      padding: 16px 18px 20px;
+      display: flex; flex-direction: column; gap: 8px;
+      flex: 1;
+    }
+    .agent-card .agent-name {
+      font-family: 'Instrument Serif', serif;
+      font-size: 22px;
+      letter-spacing: -0.01em;
+      line-height: 1.05;
+      color: #F5F2EA;
+    }
+    @media (min-width: 768px) { .agent-card .agent-name { font-size: 24px; } }
+    .agent-card .agent-desc {
+      font-family: 'Inter', sans-serif;
+      font-weight: 300;
+      font-size: 13px;
+      line-height: 1.5;
+      color: rgba(245, 242, 234, 0.62);
+    }
+    @media (min-width: 768px) { .agent-card .agent-desc { font-size: 13.5px; } }
+
+    /* Dot indicators */
+    .agent-dots { display: flex; justify-content: center; gap: 6px; margin-top: 18px; }
+    .agent-dot {
+      width: 6px; height: 6px; border-radius: 999px;
+      background: rgba(255, 255, 255, 0.20);
+      border: none;
+      padding: 0;
+      cursor: pointer;
+      transition: background 240ms ease, width 240ms ease;
+    }
+    .agent-dot[aria-current="true"] { background: #E5322D; width: 18px; }
+
+    /* Tier tie-in sub-text */
+    .agent-tier-line {
+      margin-top: 22px;
+      font-family: 'Inter', sans-serif;
+      font-style: italic;
+      font-weight: 300;
+      font-size: 12.5px;
+      color: rgba(245, 242, 234, 0.52);
+      text-align: center;
+    }
+    .agent-tier-line a { color: rgba(245, 242, 234, 0.85); text-decoration: none; border-bottom: 1px solid rgba(229, 50, 45, 0.55); padding-bottom: 1px; }
+    .agent-tier-line a:hover { color: #fff; border-bottom-color: #E5322D; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .agent-track { transition: none; }
+    }
+
     /* ─── PRICING DISCOUNT + LIMITED SEATS ─── */
     .price-launch-pill {
       display: inline-flex; align-items: center; gap: 6px;
@@ -2418,6 +2530,161 @@
       );
     }
 
+    // ─────────────────────── AGENT PERSONA CAROUSEL ───────────────────────
+    // 10 agent specialist cards mirroring the agents listed in Studio tier.
+    // Sits inside #proses ("The wave") below the CTA, on the same red-halftone
+    // canvas. Auto-rotates every 4s, hover-pause, prefers-reduced-motion respect.
+    //
+    // TODO: Replace placeholder videos at /assets/agent-{pro,researcher,web,
+    // doc,slide,trade,macro,business,video,social}.mp4 with custom ASCII renders
+    // per agent (Richie to provide). Phase 1 cycles new-hero.mp4 + ascii-wave.mp4
+    // as placeholders.
+    const AGENTS = [
+      { slug: 'pro',        name: 'The Pro',           desc: 'Briefing pagi, ingat percakapan lintas sesi, jadi pendamping yang ngerti gaya kamu.' },
+      { slug: 'researcher', name: 'Deep Researcher',   desc: 'Riset topik kompleks dari ratusan sumber, sintesis jadi laporan siap pakai.' },
+      { slug: 'web',        name: 'Web Master',        desc: 'Otomasi browser — scrape data, isi form, monitor halaman, klik apa pun.' },
+      { slug: 'doc',        name: 'Doc Expert',        desc: 'Bikin laporan, proposal, dan email — sesuai gaya kamu, siap kirim dalam menit.' },
+      { slug: 'slide',      name: 'Slide Master',      desc: 'Dari outline ke deck 12 slide profesional, lengkap dengan grafik dan speaker notes.' },
+      { slug: 'trade',      name: 'Trade Pro',         desc: 'Briefing pasar pagi, alert saham + crypto, ringkas laporan keuangan emiten.' },
+      { slug: 'macro',      name: 'Macro Strategist',  desc: 'Pantau berita ekonomi global, hubungkan dampak ke portofolio kamu.' },
+      { slug: 'business',   name: 'Business Director', desc: 'Tracking metrik, anomaly alert, auto-bikin laporan KPI buat tim kamu.' },
+      { slug: 'video',      name: 'Video Producer',    desc: 'Script TikTok/Reels, saran edit, hashtag research — output 10 video per hari.' },
+      { slug: 'social',     name: 'Social Conductor',  desc: 'Trending topic detection, schedule best-time, auto-balas DM dengan brand voice.' },
+    ];
+
+    // Phase 1 placeholder: even-index cards use new-hero, odd use ascii-wave.
+    // Final asset: `/assets/agent-${slug}.mp4` (TODO above).
+    function agentVideoSrc(slug, index) {
+      // When per-agent assets ship, swap to: return `/assets/agent-${slug}.mp4`;
+      return index % 2 === 0 ? '/assets/new-hero.mp4' : '/assets/ascii-wave.mp4';
+    }
+
+    function AgentCarousel() {
+      const trackRef = useRef(null);
+      const rootRef = useRef(null);
+      const [activeIndex, setActiveIndex] = useState(0);
+      const [paused, setPaused] = useState(false);
+      const reducedMotion = useRef(false);
+
+      // Detect prefers-reduced-motion once
+      useEffect(() => {
+        const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+        reducedMotion.current = mq.matches;
+        const onChange = (e) => { reducedMotion.current = e.matches; };
+        mq.addEventListener?.('change', onChange);
+        return () => mq.removeEventListener?.('change', onChange);
+      }, []);
+
+      // Helper: card pitch (card width + gap) from live computed style.
+      // Gap differs by viewport (14px mobile, 18px tablet+); reading from
+      // computed style avoids hardcoding it twice.
+      const getCardPitch = (track) => {
+        const cards = track.querySelectorAll('.agent-card');
+        if (!cards.length) return 0;
+        const cardW = cards[0].getBoundingClientRect().width;
+        const gap = parseFloat(getComputedStyle(track).columnGap) || 14;
+        return cardW + gap;
+      };
+
+      // Apply transform when activeIndex changes
+      useEffect(() => {
+        const track = trackRef.current;
+        if (!track) return;
+        const pitch = getCardPitch(track);
+        track.style.transform = `translate3d(-${activeIndex * pitch}px, 0, 0)`;
+      }, [activeIndex]);
+
+      // Re-apply transform on resize (pitch changes with viewport breakpoints)
+      useEffect(() => {
+        const onResize = () => {
+          const track = trackRef.current;
+          if (!track) return;
+          const pitch = getCardPitch(track);
+          track.style.transform = `translate3d(-${activeIndex * pitch}px, 0, 0)`;
+        };
+        window.addEventListener('resize', onResize);
+        return () => window.removeEventListener('resize', onResize);
+      }, [activeIndex]);
+
+      // Auto-rotate every 4s when not paused + motion ok.
+      // Uses transform: translate3d (not scrollLeft) — the carousel's flex
+      // parent chain blocks scroll APIs entirely; transform is unaffected.
+      useEffect(() => {
+        if (paused || reducedMotion.current) return;
+        const id = setInterval(() => {
+          setActiveIndex((idx) => (idx + 1) % AGENTS.length);
+        }, 4000);
+        return () => clearInterval(id);
+      }, [paused]);
+
+      const goTo = (i) => setActiveIndex(((i % AGENTS.length) + AGENTS.length) % AGENTS.length);
+
+      return (
+        <div
+          ref={rootRef}
+          className="relative z-10 mt-16 md:mt-24 w-full"
+          role="region"
+          aria-roledescription="carousel"
+          aria-label="Agen yang tersedia"
+          onMouseEnter={() => setPaused(true)}
+          onMouseLeave={() => setPaused(false)}
+          onFocus={() => setPaused(true)}
+          onBlur={() => setPaused(false)}
+        >
+          <div className="text-center mb-7 md:mb-9">
+            <div className="inline-block liquid-glass rounded-full px-3.5 py-1 text-xs font-medium font-body text-white/90">
+              Agen kamu
+            </div>
+            <h3 className="mt-5 text-3xl md:text-4xl lg:text-5xl font-heading tracking-tight leading-[0.98]" style={{ letterSpacing: '-0.04em' }}>
+              10 spesialis. Satu komando.
+            </h3>
+            <p className="mt-3 mx-auto max-w-lg text-white/65 font-body font-light text-sm md:text-base leading-relaxed">
+              Setiap agent fokus di satu domain — dari riset, konten, sampai trading. Aktif 24/7.
+            </p>
+          </div>
+
+          <div className="agent-fade">
+            <div ref={trackRef} className="agent-track">
+              {AGENTS.map((a, i) => (
+                <article key={a.slug} className="agent-card" aria-label={`Agent: ${a.name}`}>
+                  {/* CSS-only halftone placeholder. When per-agent assets
+                      ship (see TODO above), swap to:
+                      <div className="agent-viz">
+                        <DottedVideo src={agentVideoSrc(a.slug, i)} color="#E5322D" cellSize={4} ... />
+                      </div>
+                      Static placeholder used in v1 to avoid 10 simultaneous
+                      video elements freezing the renderer. */}
+                  <div className="agent-viz" />
+                  <div className="agent-body">
+                    <div className="agent-name">{a.name}</div>
+                    <div className="agent-desc">{a.desc}</div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </div>
+
+          <div className="agent-dots" role="tablist" aria-label="Pilih agent">
+            {AGENTS.map((a, i) => (
+              <button
+                key={a.slug}
+                type="button"
+                role="tab"
+                aria-label={`Slide ke kartu ${i + 1} — ${a.name}`}
+                aria-current={i === activeIndex}
+                className="agent-dot"
+                onClick={() => goTo(i)}
+              />
+            ))}
+          </div>
+
+          <p className="agent-tier-line">
+            Starter: 1 agent · Pro: 5 agent · Studio: 10 agent — pilih yang cocok di <a href="#pricing">harga →</a>
+          </p>
+        </div>
+      );
+    }
+
     // ─────────────────────── START SECTION ───────────────────────
     function StartSection() {
       return (
@@ -2446,6 +2713,7 @@
             <button className="mt-10 liquid-glass-strong rounded-full px-6 py-3 text-sm font-medium flex items-center gap-2">
               Mulai hari ini <ArrowUpRight size={14} stroke={2.2} />
             </button>
+            <AgentCarousel />
           </div>
         </section>
       );
