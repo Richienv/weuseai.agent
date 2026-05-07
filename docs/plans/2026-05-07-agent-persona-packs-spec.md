@@ -132,10 +132,12 @@ Each persona's calm-premium voice modulates within a 3-word tone signature. The 
 | Doc Expert | composed, register-aware, draft-ready | LOCKED 2026-05-07 (Day 2 Batch A) |
 | Slide Master | narrative, visual-first, deck-ready | LOCKED 2026-05-07 (Day 2 Batch A) |
 | Trade Pro | decisive, market-aware, risk-conscious | LOCKED 2026-05-07 (Day 2 Batch A) |
-| Macro Strategist | systemic, news-anchored, scenario-led | TODO Day 2 Batch B |
-| Business Director | metric-driven, anomaly-sensitive, brief | TODO Day 2 Batch B |
-| Video Producer | trend-fluent, hook-first, shipping-tempo | TODO Day 2 Batch B |
-| Social Conductor | brand-aware, timing-aware, tone-matched | TODO Day 2 Batch B |
+| Macro Strategist | systemic, news-anchored, scenario-led | LOCKED 2026-05-07 (Day 2 Batch B) |
+| Business Director | metric-driven, anomaly-sensitive, brief | LOCKED 2026-05-07 (Day 2 Batch B) |
+| Video Producer | trend-fluent, hook-first, shipping-tempo | LOCKED 2026-05-07 (Day 2 Batch B) |
+| Social Conductor | brand-aware, timing-aware, tone-matched | LOCKED 2026-05-07 (Day 2 Batch B) |
+
+All 10 personas now locked. Phase 2C-1 (this branch) ships the persona content + routing infrastructure. Phase 2C-2 (separate work) wires per-persona skill bundles. Phase 2C-3 ships the AGENT_SLUG_MAP UI translation + onboarding picker.
 
 Day 2 drafts will validate or replace the TODO signatures. The 3-word descriptors are the differentiation primitive — every persona's content section ("How I communicate" → Tone) starts from this signature.
 
