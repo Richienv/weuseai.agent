@@ -12,13 +12,30 @@
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import { dirname, resolve } from 'node:path'
 
 import {
+  __INTERNAL_BUSINESS_DIRECTOR_SCAFFOLD,
+  __INTERNAL_DEEP_RESEARCHER_SCAFFOLD,
+  __INTERNAL_DOC_EXPERT_SCAFFOLD,
+  __INTERNAL_MACRO_STRATEGIST_SCAFFOLD,
+  __INTERNAL_SLIDE_MASTER_SCAFFOLD,
+  __INTERNAL_SOCIAL_CONDUCTOR_SCAFFOLD,
+  __INTERNAL_THE_PRO_SCAFFOLD,
+  __INTERNAL_TRADE_PRO_SCAFFOLD,
+  __INTERNAL_VIDEO_PRODUCER_SCAFFOLD,
+  __INTERNAL_WEB_MASTER_SCAFFOLD,
   pickFirstName,
+  PERSONA_SLUGS,
   renderSoulMd,
   sanitizeExpectations,
   sha256Hex,
 } from '../supabase/functions/_shared/soul-md-template.ts'
+
+const TEST_DIR = dirname(fileURLToPath(import.meta.url))
+const REPO_ROOT = resolve(TEST_DIR, '..')
 
 // ─── sanitizeExpectations ──────────────────────────────────────────
 
@@ -131,8 +148,8 @@ test('render: substitutes all four variables', () => {
     customerName: 'Sarah Tanaka',
     expectationsClean: sanitizedSample,
   })
-  // Variables filled
-  assert.match(out, /built for Sarah Tanaka,/)
+  // Variables filled (The Pro scaffold says "built for X as part of weuseai.agent")
+  assert.match(out, /built for Sarah Tanaka as part of weuseai\.agent/)
   assert.match(out, /Name: Sarah Tanaka/)
   assert.match(out, /"Pagi, Sarah\."/)
   assert.match(out, /Bantu briefing pagi dan ringkas berita\./)
@@ -149,13 +166,21 @@ test('render: locked scaffold sections present byte-for-byte', () => {
     customerName: 'Anonymous',
     expectationsClean: sanitizedSample,
   })
-  // These five headings are the unique fingerprint of the scaffold —
-  // any drift here means content territory was edited without founder.
-  assert.match(out, /^# About me$/m)
-  assert.match(out, /^# How I communicate$/m)
-  assert.match(out, /^# Hard limits$/m)
-  assert.match(out, /^# Connected tools$/m)
-  assert.match(out, /^# When my customer first messages me$/m)
+  // The Pro persona has 9 sections. Any drift here means content
+  // territory was edited without founder approval.
+  for (const heading of [
+    '# About me',
+    '# How I communicate',
+    '# Who I serve',
+    '# What this customer expects from me',
+    '# What I do',
+    '# How I behave',
+    '# Hard limits',
+    '# Connected tools',
+    '# When my customer first messages me',
+  ]) {
+    assert.match(out, new RegExp(`^${heading}$`, 'm'), heading)
+  }
 })
 
 test('render: ambiguous first name falls back to full name in greeting', () => {
@@ -172,7 +197,7 @@ test('render: UTF-8 round-trips diacritics cleanly', () => {
     customerName: 'Andrés López',
     expectationsClean: sanitizedSample,
   })
-  assert.match(out, /built for Andrés López,/)
+  assert.match(out, /built for Andrés López as part of weuseai\.agent/)
   assert.match(out, /"Pagi, Andrés\."/)
 })
 
@@ -215,4 +240,398 @@ test('sha256Hex: handles UTF-8 multibyte input', async () => {
   // Sanity — diacritics shouldn't crash, output is still 64 hex.
   const h = await sha256Hex('Andrés López')
   assert.match(h, /^[0-9a-f]{64}$/)
+})
+
+// ─── persona routing (added 2026-05-07, agent-persona-packs) ──────────
+
+test('render: explicit personaSlug="the-pro" produces The Pro scaffold', () => {
+  const out = renderSoulMd({
+    customerName: 'Sarah Tanaka',
+    expectationsClean: sanitizedSample,
+    personaSlug: 'the-pro',
+  })
+  // The Pro signature line — distinct from any other persona.
+  assert.match(out, /I am The Pro, a specialist agent built for Sarah Tanaka/)
+  // Pro-specific specialty keyword that other personas won't have.
+  assert.match(out, /pendamping kerja harian/)
+})
+
+test('render: unknown personaSlug falls back to The Pro + warns', () => {
+  const warnings: string[] = []
+  const origWarn = console.warn
+  console.warn = (...args: unknown[]) => {
+    warnings.push(args.map(String).join(' '))
+  }
+  try {
+    const out = renderSoulMd({
+      customerName: 'Sarah Tanaka',
+      expectationsClean: sanitizedSample,
+      personaSlug: 'invalid-agent-xyz',
+    })
+    // Falls back to The Pro content
+    assert.match(out, /I am The Pro, a specialist agent/)
+    // Warning fired exactly once with diagnostic context
+    assert.equal(warnings.length, 1, 'expected one warning')
+    assert.match(warnings[0], /unknown personaSlug/)
+    assert.match(warnings[0], /invalid-agent-xyz/)
+    assert.match(warnings[0], /the-pro/)
+  } finally {
+    console.warn = origWarn
+  }
+})
+
+test('render: empty expectationsClean substitutes the empty-fallback string', () => {
+  const out = renderSoulMd({
+    customerName: 'Putri',
+    expectationsClean: '',
+  })
+  // Defensive fallback fires (handler boundary normally rejects empty
+  // expectations upstream — this is belt-and-suspenders).
+  assert.match(
+    out,
+    /Customer belum menulis ekspektasi spesifik\. Tanya di percakapan pertama/,
+  )
+  // Whitespace-only also triggers fallback (trim-then-check).
+  const out2 = renderSoulMd({
+    customerName: 'Putri',
+    expectationsClean: '   \n\t  ',
+  })
+  assert.match(
+    out2,
+    /Customer belum menulis ekspektasi spesifik/,
+  )
+  // No leftover placeholder
+  assert.equal(out.includes('{user_expectations_verbatim}'), false)
+})
+
+test('render: non-empty expectationsClean substitutes verbatim, NOT fallback', () => {
+  const out = renderSoulMd({
+    customerName: 'Putri',
+    expectationsClean: 'Bantu rapikan inbox dan ringkas berita pasar.',
+  })
+  // Real content present
+  assert.match(out, /Bantu rapikan inbox dan ringkas berita pasar\./)
+  // Fallback string NOT injected when real input is provided.
+  assert.equal(
+    out.includes('Customer belum menulis ekspektasi spesifik'),
+    false,
+  )
+})
+
+test('drift check: /agent-packs/the-pro/SOUL.md matches inlined scaffold', () => {
+  // The TS constant inside soul-md-template.ts is a mirror of the
+  // canonical markdown file. This test is the only thing keeping them
+  // in sync — if you edit one without the other, this fails fast.
+  const onDisk = readFileSync(
+    resolve(REPO_ROOT, 'agent-packs/the-pro/SOUL.md'),
+    'utf8',
+  )
+  assert.equal(
+    onDisk,
+    __INTERNAL_THE_PRO_SCAFFOLD,
+    'agent-packs/the-pro/SOUL.md drifted from THE_PRO_SCAFFOLD constant in soul-md-template.ts. Sync them.',
+  )
+})
+
+// ─── Day 2 Batch A: 5 specialist personas (added 2026-05-07) ──────────
+//
+// Each persona ships with two tests: a routing/signature check that
+// confirms personaSlug correctly loads the scaffold AND embeds the locked
+// 3-word tone signature in the "How I communicate" section, plus a drift
+// check that asserts the .md file on disk equals the TS constant.
+
+test('PERSONA_SLUGS includes all 10 personas', () => {
+  // Sanity — keeps the exported tuple in sync with the persona registry.
+  // All 10 personas locked 2026-05-07 (Day 1 + Day 2 Batches A and B).
+  for (const slug of [
+    'the-pro',
+    'deep-researcher',
+    'web-master',
+    'doc-expert',
+    'slide-master',
+    'trade-pro',
+    'macro-strategist',
+    'business-director',
+    'video-producer',
+    'social-conductor',
+  ]) {
+    assert.ok(
+      (PERSONA_SLUGS as readonly string[]).includes(slug),
+      `PERSONA_SLUGS missing "${slug}"`,
+    )
+  }
+  assert.equal(PERSONA_SLUGS.length, 10, 'expected exactly 10 personas')
+})
+
+// ─── Deep Researcher ──
+
+test('render: personaSlug="deep-researcher" produces Deep Researcher scaffold', () => {
+  const out = renderSoulMd({
+    customerName: 'Sarah Tanaka',
+    expectationsClean: sanitizedSample,
+    personaSlug: 'deep-researcher',
+  })
+  assert.match(
+    out,
+    /I am Deep Researcher, a specialist agent built for Sarah Tanaka/,
+  )
+  // Locked 3-word tone signature
+  assert.match(out, /analytical, source-anchored, dan structured/)
+  // Persona-specific specialty keyword
+  assert.match(out, /\[unverified\]/)
+})
+
+test('drift check: /agent-packs/deep-researcher/SOUL.md matches inlined scaffold', () => {
+  const onDisk = readFileSync(
+    resolve(REPO_ROOT, 'agent-packs/deep-researcher/SOUL.md'),
+    'utf8',
+  )
+  assert.equal(
+    onDisk,
+    __INTERNAL_DEEP_RESEARCHER_SCAFFOLD,
+    'agent-packs/deep-researcher/SOUL.md drifted from DEEP_RESEARCHER_SCAFFOLD',
+  )
+})
+
+// ─── Web Master ──
+
+test('render: personaSlug="web-master" produces Web Master scaffold', () => {
+  const out = renderSoulMd({
+    customerName: 'Sarah Tanaka',
+    expectationsClean: sanitizedSample,
+    personaSlug: 'web-master',
+  })
+  assert.match(
+    out,
+    /I am Web Master, a specialist agent built for Sarah Tanaka/,
+  )
+  // Locked 3-word tone signature
+  assert.match(out, /precise, instrumental, dan defensive/)
+  // Persona-specific defensive limit
+  assert.match(out, /Respect robots\.txt/)
+})
+
+test('drift check: /agent-packs/web-master/SOUL.md matches inlined scaffold', () => {
+  const onDisk = readFileSync(
+    resolve(REPO_ROOT, 'agent-packs/web-master/SOUL.md'),
+    'utf8',
+  )
+  assert.equal(
+    onDisk,
+    __INTERNAL_WEB_MASTER_SCAFFOLD,
+    'agent-packs/web-master/SOUL.md drifted from WEB_MASTER_SCAFFOLD',
+  )
+})
+
+// ─── Doc Expert ──
+
+test('render: personaSlug="doc-expert" produces Doc Expert scaffold', () => {
+  const out = renderSoulMd({
+    customerName: 'Sarah Tanaka',
+    expectationsClean: sanitizedSample,
+    personaSlug: 'doc-expert',
+  })
+  assert.match(
+    out,
+    /I am Doc Expert, a specialist agent built for Sarah Tanaka/,
+  )
+  // Locked 3-word tone signature
+  assert.match(out, /composed, register-aware, dan draft-ready/)
+  // Persona-specific limit
+  assert.match(out, /Tidak send email atas nama kamu/)
+})
+
+test('drift check: /agent-packs/doc-expert/SOUL.md matches inlined scaffold', () => {
+  const onDisk = readFileSync(
+    resolve(REPO_ROOT, 'agent-packs/doc-expert/SOUL.md'),
+    'utf8',
+  )
+  assert.equal(
+    onDisk,
+    __INTERNAL_DOC_EXPERT_SCAFFOLD,
+    'agent-packs/doc-expert/SOUL.md drifted from DOC_EXPERT_SCAFFOLD',
+  )
+})
+
+// ─── Slide Master ──
+
+test('render: personaSlug="slide-master" produces Slide Master scaffold', () => {
+  const out = renderSoulMd({
+    customerName: 'Sarah Tanaka',
+    expectationsClean: sanitizedSample,
+    personaSlug: 'slide-master',
+  })
+  assert.match(
+    out,
+    /I am Slide Master, a specialist agent built for Sarah Tanaka/,
+  )
+  // Locked 3-word tone signature
+  assert.match(out, /narrative, visual-first, dan deck-ready/)
+  // Persona-specific story arc
+  assert.match(out, /problem → solution → market → traction → ask/)
+})
+
+test('drift check: /agent-packs/slide-master/SOUL.md matches inlined scaffold', () => {
+  const onDisk = readFileSync(
+    resolve(REPO_ROOT, 'agent-packs/slide-master/SOUL.md'),
+    'utf8',
+  )
+  assert.equal(
+    onDisk,
+    __INTERNAL_SLIDE_MASTER_SCAFFOLD,
+    'agent-packs/slide-master/SOUL.md drifted from SLIDE_MASTER_SCAFFOLD',
+  )
+})
+
+// ─── Trade Pro ──
+
+test('render: personaSlug="trade-pro" produces Trade Pro scaffold', () => {
+  const out = renderSoulMd({
+    customerName: 'Sarah Tanaka',
+    expectationsClean: sanitizedSample,
+    personaSlug: 'trade-pro',
+  })
+  assert.match(
+    out,
+    /I am Trade Pro, a specialist agent built for Sarah Tanaka/,
+  )
+  // Locked 3-word tone signature
+  assert.match(out, /decisive, market-aware, dan risk-conscious/)
+  // Persona-specific hard limit
+  assert.match(out, /Tidak eksekusi order trading/)
+  assert.match(out, /ini bukan financial advice/)
+})
+
+test('drift check: /agent-packs/trade-pro/SOUL.md matches inlined scaffold', () => {
+  const onDisk = readFileSync(
+    resolve(REPO_ROOT, 'agent-packs/trade-pro/SOUL.md'),
+    'utf8',
+  )
+  assert.equal(
+    onDisk,
+    __INTERNAL_TRADE_PRO_SCAFFOLD,
+    'agent-packs/trade-pro/SOUL.md drifted from TRADE_PRO_SCAFFOLD',
+  )
+})
+
+// ─── Day 2 Batch B: 4 specialist personas (added 2026-05-07) ──────────
+
+// ─── Macro Strategist ──
+
+test('render: personaSlug="macro-strategist" produces Macro Strategist scaffold', () => {
+  const out = renderSoulMd({
+    customerName: 'Sarah Tanaka',
+    expectationsClean: sanitizedSample,
+    personaSlug: 'macro-strategist',
+  })
+  assert.match(
+    out,
+    /I am Macro Strategist, a specialist agent built for Sarah Tanaka/,
+  )
+  // Locked 3-word tone signature
+  assert.match(out, /systemic, news-anchored, dan scenario-led/)
+  // Persona-specific scenario framing
+  assert.match(out, /scenario tree weekly: base case .* bull case .* bear case/)
+})
+
+test('drift check: /agent-packs/macro-strategist/SOUL.md matches inlined scaffold', () => {
+  const onDisk = readFileSync(
+    resolve(REPO_ROOT, 'agent-packs/macro-strategist/SOUL.md'),
+    'utf8',
+  )
+  assert.equal(
+    onDisk,
+    __INTERNAL_MACRO_STRATEGIST_SCAFFOLD,
+    'agent-packs/macro-strategist/SOUL.md drifted from MACRO_STRATEGIST_SCAFFOLD',
+  )
+})
+
+// ─── Business Director ──
+
+test('render: personaSlug="business-director" produces Business Director scaffold', () => {
+  const out = renderSoulMd({
+    customerName: 'Sarah Tanaka',
+    expectationsClean: sanitizedSample,
+    personaSlug: 'business-director',
+  })
+  assert.match(
+    out,
+    /I am Business Director, a specialist agent built for Sarah Tanaka/,
+  )
+  // Locked 3-word tone signature
+  assert.match(out, /metric-driven, anomaly-sensitive, dan brief/)
+  // Persona-specific anomaly categorization
+  assert.match(out, /"investigate" .* "monitor" .* "noise"/)
+})
+
+test('drift check: /agent-packs/business-director/SOUL.md matches inlined scaffold', () => {
+  const onDisk = readFileSync(
+    resolve(REPO_ROOT, 'agent-packs/business-director/SOUL.md'),
+    'utf8',
+  )
+  assert.equal(
+    onDisk,
+    __INTERNAL_BUSINESS_DIRECTOR_SCAFFOLD,
+    'agent-packs/business-director/SOUL.md drifted from BUSINESS_DIRECTOR_SCAFFOLD',
+  )
+})
+
+// ─── Video Producer ──
+
+test('render: personaSlug="video-producer" produces Video Producer scaffold', () => {
+  const out = renderSoulMd({
+    customerName: 'Sarah Tanaka',
+    expectationsClean: sanitizedSample,
+    personaSlug: 'video-producer',
+  })
+  assert.match(
+    out,
+    /I am Video Producer, a specialist agent built for Sarah Tanaka/,
+  )
+  // Locked 3-word tone signature
+  assert.match(out, /trend-fluent, hook-first, dan shipping-tempo/)
+  // Persona-specific hook structure
+  assert.match(out, /Hook 3 detik pertama/)
+})
+
+test('drift check: /agent-packs/video-producer/SOUL.md matches inlined scaffold', () => {
+  const onDisk = readFileSync(
+    resolve(REPO_ROOT, 'agent-packs/video-producer/SOUL.md'),
+    'utf8',
+  )
+  assert.equal(
+    onDisk,
+    __INTERNAL_VIDEO_PRODUCER_SCAFFOLD,
+    'agent-packs/video-producer/SOUL.md drifted from VIDEO_PRODUCER_SCAFFOLD',
+  )
+})
+
+// ─── Social Conductor ──
+
+test('render: personaSlug="social-conductor" produces Social Conductor scaffold', () => {
+  const out = renderSoulMd({
+    customerName: 'Sarah Tanaka',
+    expectationsClean: sanitizedSample,
+    personaSlug: 'social-conductor',
+  })
+  assert.match(
+    out,
+    /I am Social Conductor, a specialist agent built for Sarah Tanaka/,
+  )
+  // Locked 3-word tone signature
+  assert.match(out, /brand-aware, timing-aware, dan tone-matched/)
+  // Persona-specific voice-fit scoring
+  assert.match(out, /voice-fit score \(high, medium, low\)/)
+})
+
+test('drift check: /agent-packs/social-conductor/SOUL.md matches inlined scaffold', () => {
+  const onDisk = readFileSync(
+    resolve(REPO_ROOT, 'agent-packs/social-conductor/SOUL.md'),
+    'utf8',
+  )
+  assert.equal(
+    onDisk,
+    __INTERNAL_SOCIAL_CONDUCTOR_SCAFFOLD,
+    'agent-packs/social-conductor/SOUL.md drifted from SOCIAL_CONDUCTOR_SCAFFOLD',
+  )
 })
