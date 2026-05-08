@@ -3014,10 +3014,13 @@
         const sampleCtx = sample.getContext('2d', { willReadFrequently: true });
         const ctx = canvas.getContext('2d');
 
-        // Mobile / data-saver tier — bigger cells (fewer dots), slower refresh.
+        // Mobile / data-saver tier — slightly bigger cells (perf), slower refresh.
+        // Floor is per-call so callers asking for fine detail (cellSize 3-4)
+        // get fine detail on mobile too, while the section background which
+        // requests cellSize=6 stays at 6.
         const isMobile = window.matchMedia('(max-width: 767px)').matches;
         const saveData = !!(navigator.connection && navigator.connection.saveData);
-        const effectiveCell = isMobile || saveData ? Math.max(cellSize, 9) : cellSize;
+        const effectiveCell = isMobile || saveData ? Math.max(cellSize, 5) : cellSize;
         const frameModulo = isMobile || saveData ? 3 : 2; // ~20fps on mobile, ~30fps desktop
 
         const dpr = 1;
@@ -4764,12 +4767,13 @@
         <DottedVideo
           src={`/assets/agent-${video || slug}.mp4`}
           color={invert ? '#0a0a0a' : '#E5322D'}
-          cellSize={5}
+          // Smaller cells = denser dot grid = finer silhouette detail.
+          // Mobile clamps up via DottedVideo internals (Math.max(cellSize, 6)).
+          cellSize={3}
           threshold={0.05}
-          // Mild gamma lift for inverted cards — flattens the dot-size
-          // distribution so the BLACK halftone reads more like a printed
-          // surface than a sparse splatter, without losing the silhouette.
-          gamma={invert ? 0.75 : 1}
+          // Default gamma (1.0) — let dot size scale linearly with source
+          // luminance. Earlier 0.75 lift crushed mid-tones into solid black
+          // and lost UI detail. Linear keeps the natural contrast falloff.
           className="absolute inset-0 w-full h-full"
           style={{ background: invert ? '#E5322D' : '#050505' }}
         />
