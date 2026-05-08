@@ -71,11 +71,19 @@ test('script: writes /home/weuseai/.hermes/.env (chmod 0600) with creds', () => 
   assert.match(s, /chmod (?:0)?600 \/home\/weuseai\/\.hermes\/\.env/, '.env locked down')
 })
 
-test('script: writes SOUL.md with Bahasa lo/gue persona', () => {
+test('script: writes SOUL.md with The Pro persona (post-2C-1 default)', () => {
+  // Phase 2C-1 replaced the lo/gue 2-liner with The Pro scaffold. This
+  // test was previously asserting the old lo/gue text — updated 2026-05-08
+  // (during Phase 2E-2 staging) to match the current default persona.
   const s = buildSetupScript(baseParams)
   assert.match(s, /\/home\/weuseai\/\.hermes\/SOUL\.md/, 'SOUL.md path')
-  assert.match(s, /asisten AI berbahasa Indonesia/, 'persona')
-  assert.match(s, /casual lo\/gue/, 'tone')
+  // The Pro signature line — distinct from any other persona scaffold.
+  assert.match(s, /I am The Pro, a specialist agent built for/, 'The Pro identity')
+  assert.match(s, /pendamping kerja harian/, 'specialty marker')
+  assert.match(s, /calm, observasional, dan anticipatory/, 'tone signature')
+  // Defensive: confirm we DON'T accidentally regress to the lo/gue scaffold.
+  assert.doesNotMatch(s, /Lo asisten AI berbahasa Indonesia/, 'no lo/gue regression')
+  assert.doesNotMatch(s, /casual lo\/gue/, 'no lo/gue tone')
 })
 
 test('script: writes daily-news skill SKILL.md', () => {
@@ -198,4 +206,123 @@ test('script: omits Telegram block when bot token absent', () => {
   // But persona + install still run:
   assert.match(s, /SOUL\.md/, 'persona still written')
   assert.match(s, /install\.sh/, 'install still runs')
+})
+
+// ─── Phase 2E-2: bundle delivery + bundle-pull integration ────────────
+
+// Tiny valid gzip with no actual content (just the magic header + empty
+// deflate). Sufficient for setup-script.spec to test the bundle-install
+// shell BLOCK shape without a real tarball.
+const FAKE_BUNDLE_BASE64 = 'H4sIAAAAAAAAAwMAAAAAAAAAAAA='
+
+test('script (2E-2): includes bundle install block when bundleTarBase64 supplied', () => {
+  const s = buildSetupScript({
+    ...baseParams,
+    bundleTarBase64: FAKE_BUNDLE_BASE64,
+    agentSlug: 'doc-expert',
+  })
+  assert.match(s, /Installing agent-pack bundle \(doc-expert\)/)
+  assert.match(s, /base64 -d \| tar -xz -C \/home\/weuseai\/\.hermes\/agent-pack/)
+})
+
+test('script (2E-2): customer-grown directory initialized at provision', () => {
+  const s = buildSetupScript({
+    ...baseParams,
+    bundleTarBase64: FAKE_BUNDLE_BASE64,
+    agentSlug: 'doc-expert',
+  })
+  assert.match(s, /mkdir -p \/var\/lib\/weuseai\/customer-grown\/templates \/var\/lib\/weuseai\/customer-grown\/skills/)
+  assert.match(s, /touch \/var\/lib\/weuseai\/customer-grown\/extension-log\.jsonl/)
+  assert.match(s, /chown -R weuseai:weuseai \/var\/lib\/weuseai/)
+})
+
+test('script (2E-2): installs /usr/local/bin/weuseai-bundle-pull', () => {
+  const s = buildSetupScript({
+    ...baseParams,
+    bundleTarBase64: FAKE_BUNDLE_BASE64,
+    agentSlug: 'doc-expert',
+  })
+  assert.match(s, /\/usr\/local\/bin\/weuseai-bundle-pull/)
+  assert.match(s, /chmod 0755 \/usr\/local\/bin\/weuseai-bundle-pull/)
+})
+
+test('script (2E-2): writes systemd drop-in for ExecStartPre', () => {
+  const s = buildSetupScript({
+    ...baseParams,
+    bundleTarBase64: FAKE_BUNDLE_BASE64,
+    agentSlug: 'doc-expert',
+  })
+  assert.match(s, /\/etc\/systemd\/system\/hermes-gateway\.service\.d\/10-bundle-pull\.conf/)
+  // The `+` prefix is REQUIRED — without it the script inherits User=
+  // weuseai and silently fails on every privileged op (write to /var/log,
+  // chown -R, etc.). Diagnosed 2026-05-08 across 4 live VPS runs. Don't
+  // regress this without re-running the full live VPS smoke. See
+  // services/provisioning/src/setup-script.ts comment block at the
+  // drop-in write for the full failure-mode walkthrough.
+  assert.match(s, /ExecStartPre=\+\/usr\/local\/bin\/weuseai-bundle-pull/)
+})
+
+test('script (2E-2): writes WEUSEAI_AGENT_SLUG + WEUSEAI_CUSTOMER_ID + WEUSEAI_WORKFLOW_EXECUTE_URL to .env', () => {
+  const s = buildSetupScript({
+    ...baseParams,
+    bundleTarBase64: FAKE_BUNDLE_BASE64,
+    agentSlug: 'doc-expert',
+  })
+  assert.match(s, /WEUSEAI_AGENT_SLUG=doc-expert/)
+  assert.match(s, new RegExp(`WEUSEAI_CUSTOMER_ID=${baseParams.customerId}`))
+  assert.match(s, /WEUSEAI_WORKFLOW_EXECUTE_URL=https:\/\/gtjgsligllbjcisiyrah/)
+})
+
+test('script (2E-2): defaults agentSlug to "the-pro" when unspecified', () => {
+  const s = buildSetupScript({
+    ...baseParams,
+    bundleTarBase64: FAKE_BUNDLE_BASE64,
+    // No agentSlug — defaults to 'the-pro'
+  })
+  assert.match(s, /WEUSEAI_AGENT_SLUG=the-pro/)
+  assert.match(s, /Installing agent-pack bundle \(the-pro\)/)
+})
+
+test('script (2E-2): omits ALL bundle delivery blocks when bundleTarBase64 absent (back-compat)', () => {
+  const s = buildSetupScript(baseParams)  // no bundleTarBase64
+  assert.doesNotMatch(s, /Installing agent-pack bundle/)
+  assert.doesNotMatch(s, /weuseai-bundle-pull/)
+  assert.doesNotMatch(s, /\/etc\/systemd\/system\/hermes-gateway\.service\.d/)
+  assert.doesNotMatch(s, /WEUSEAI_AGENT_SLUG=/)
+  // But Phase 1/2A baseline (DAILY_NEWS_SKILL_MD + SOUL.md) still ships:
+  assert.match(s, /SOUL\.md/)
+  assert.match(s, /daily-news-briefing-bahasa\/SKILL\.md/)
+  // Friendly log line confirms back-compat path
+  assert.match(s, /No agent-pack bundle supplied/)
+})
+
+test('script (2E-2): embedded bundle-pull script is decodable + structurally valid', () => {
+  const s = buildSetupScript({
+    ...baseParams,
+    bundleTarBase64: FAKE_BUNDLE_BASE64,
+    agentSlug: 'doc-expert',
+  })
+  // Find the base64 line that becomes /usr/local/bin/weuseai-bundle-pull
+  const m = /echo '([A-Za-z0-9+/=]+)' \| base64 -d > \/usr\/local\/bin\/weuseai-bundle-pull/.exec(s)
+  assert.ok(m, 'expected base64 line for bundle-pull script')
+  const decoded = Buffer.from(m![1], 'base64').toString('utf8')
+  // Structural markers from the bundle-pull-script generator
+  assert.match(decoded, /^#!\/bin\/bash/)
+  assert.match(decoded, /bundle-fetch/)
+  assert.match(decoded, /enabled_for_tiers/)
+  assert.match(decoded, /\/var\/lib\/weuseai\/bundle/)
+})
+
+test('script (2E-2): Telegram still wires correctly with bundle present', () => {
+  const s = buildSetupScript({
+    ...baseParams,
+    bundleTarBase64: FAKE_BUNDLE_BASE64,
+    agentSlug: 'doc-expert',
+    telegramBotToken: '12345:abc',
+    telegramAllowedUserIds: '6805409051',
+  })
+  // Bundle install + Telegram halo + gateway all present in same script
+  assert.match(s, /Installing agent-pack bundle/)
+  assert.match(s, /api\.telegram\.org\/bot12345:abc\/sendMessage/)
+  assert.match(s, /gateway install --system --run-as-user weuseai/)
 })

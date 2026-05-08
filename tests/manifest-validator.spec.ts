@@ -19,9 +19,28 @@ import { dirname, resolve } from 'node:path'
 import {
   KNOWN_PERSONA_SLUGS,
   MANIFEST_SCHEMA,
+  resolveEnabledForTiers,
+  tierToEnabledForTiers,
   validateManifest,
   type Manifest,
+  type ManifestSkill,
 } from '../supabase/functions/_shared/manifest-validator.ts'
+
+// Suppress deprecation warnings during tests so output stays clean.
+// We test the warning behavior explicitly elsewhere.
+const origConsoleWarn = console.warn
+const silenceConsoleWarn = () => {
+  const captured: string[] = []
+  console.warn = (...args: unknown[]) => {
+    captured.push(args.map(String).join(' '))
+  }
+  return {
+    captured,
+    restore: () => {
+      console.warn = origConsoleWarn
+    },
+  }
+}
 
 const TEST_DIR = dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT = resolve(TEST_DIR, '..')
@@ -222,6 +241,153 @@ test('drift: agent-packs/_manifest.schema.json required fields match MANIFEST_SC
     [...inlined.required].sort(),
     'required fields drifted between agent-packs/_manifest.schema.json and MANIFEST_SCHEMA constant',
   )
+})
+
+// ─── enabled_for_tiers migration (Phase 2E-2) ──────────────────────────
+
+test('tierToEnabledForTiers: starter → all 3', () => {
+  assert.deepEqual(tierToEnabledForTiers('starter'), ['starter', 'pro', 'studio'])
+})
+
+test('tierToEnabledForTiers: pro → pro + studio', () => {
+  assert.deepEqual(tierToEnabledForTiers('pro'), ['pro', 'studio'])
+})
+
+test('tierToEnabledForTiers: studio → studio only', () => {
+  assert.deepEqual(tierToEnabledForTiers('studio'), ['studio'])
+})
+
+test('resolveEnabledForTiers: prefers enabled_for_tiers when both present', () => {
+  const skill: ManifestSkill = {
+    id: 'x',
+    description_id: 'aaaaaaaaaa',
+    execution: 'edge-function',
+    handler_ref: 'edge-fn:x',
+    tier: 'starter',
+    enabled_for_tiers: ['pro', 'studio'],
+  }
+  assert.deepEqual(resolveEnabledForTiers(skill), ['pro', 'studio'])
+})
+
+test('resolveEnabledForTiers: falls back to legacy tier translation', () => {
+  const skill: ManifestSkill = {
+    id: 'x',
+    description_id: 'aaaaaaaaaa',
+    execution: 'edge-function',
+    handler_ref: 'edge-fn:x',
+    tier: 'pro',
+  }
+  assert.deepEqual(resolveEnabledForTiers(skill), ['pro', 'studio'])
+})
+
+test('resolveEnabledForTiers: returns null when neither present', () => {
+  const skill: ManifestSkill = {
+    id: 'x',
+    description_id: 'aaaaaaaaaa',
+    execution: 'edge-function',
+    handler_ref: 'edge-fn:x',
+  }
+  assert.equal(resolveEnabledForTiers(skill), null)
+})
+
+test('validate: skill with enabled_for_tiers (canonical) passes without warning', () => {
+  const sw = silenceConsoleWarn()
+  const r = validateManifest({
+    ...VALID_BASE,
+    skills: [
+      {
+        ...VALID_BASE.skills[0],
+        tier: undefined,
+        enabled_for_tiers: ['starter', 'pro', 'studio'],
+      },
+    ],
+  })
+  sw.restore()
+  assert.equal(r.ok, true)
+  // No deprecation warnings for canonical-only manifests
+  assert.equal(
+    sw.captured.filter((s) => s.includes('DEPRECATED')).length,
+    0,
+  )
+})
+
+test('validate: legacy tier-only skill passes WITH deprecation warning', () => {
+  const sw = silenceConsoleWarn()
+  const r = validateManifest(VALID_BASE)  // VALID_BASE still uses legacy tier
+  sw.restore()
+  assert.equal(r.ok, true)
+  // One deprecation warning per legacy skill
+  assert.equal(
+    sw.captured.filter((s) => s.includes('DEPRECATED')).length,
+    1,
+    `expected 1 DEPRECATED warning, got: ${JSON.stringify(sw.captured)}`,
+  )
+})
+
+test('validate: both fields present → enabled_for_tiers wins, warning emitted for spurious tier', () => {
+  const sw = silenceConsoleWarn()
+  const r = validateManifest({
+    ...VALID_BASE,
+    skills: [
+      {
+        ...VALID_BASE.skills[0],
+        tier: 'starter',
+        enabled_for_tiers: ['pro', 'studio'],
+      },
+    ],
+  })
+  sw.restore()
+  assert.equal(r.ok, true)
+  assert.equal(
+    sw.captured.filter((s) => s.includes('BOTH')).length,
+    1,
+  )
+})
+
+test('validate: skill with NEITHER tier nor enabled_for_tiers fails', () => {
+  const sw = silenceConsoleWarn()
+  const r = validateManifest({
+    ...VALID_BASE,
+    skills: [
+      {
+        ...VALID_BASE.skills[0],
+        tier: undefined,
+      },
+    ],
+  })
+  sw.restore()
+  assert.equal(r.ok, false)
+  if (!r.ok) {
+    assert.match(r.errors.join(' '), /must declare tier eligibility/)
+  }
+})
+
+test('validate: enabled_for_tiers with invalid tier value rejected', () => {
+  const r = validateManifest({
+    ...VALID_BASE,
+    skills: [
+      {
+        ...VALID_BASE.skills[0],
+        tier: undefined,
+        enabled_for_tiers: ['starter', 'free' as never],
+      },
+    ],
+  })
+  assert.equal(r.ok, false)
+})
+
+test('validate: enabled_for_tiers as empty array rejected (minItems 1)', () => {
+  const r = validateManifest({
+    ...VALID_BASE,
+    skills: [
+      {
+        ...VALID_BASE.skills[0],
+        tier: undefined,
+        enabled_for_tiers: [],
+      },
+    ],
+  })
+  assert.equal(r.ok, false)
 })
 
 // ─── manifest references real handlers (sanity) ────────────────────────

@@ -21,6 +21,10 @@ import type { IDataStore } from './data-store.js'
 import type { IMessageBroker } from '../../hermes/src/adapters/message-broker.js'
 import type { ISshProvisioner } from './ssh-provisioner.js'
 import type { ILlmKeyMinter } from './llm-key-minter.js'
+import { readFileSync } from 'node:fs'
+import { resolve as pathResolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
 import { buildSetupScript, type Tier } from './setup-script.js'
 
 export type { Tier }
@@ -60,6 +64,14 @@ export type SpinUpOpts = {
   customerLlmProvider?: 'deepseek' | 'openrouter' | 'openai' | 'glm'
   alwaysOnEnabled?: boolean
   useStarterCredits?: boolean
+  /**
+   * Phase 2E-2: which agent persona's bundle ships at provision. Default
+   * `'the-pro'` (matches the persona-pack default). Customer's chosen
+   * persona at onboarding overrides this when `complete-onboarding`
+   * triggers a bundle re-deploy via Storage. Initial provision uses
+   * The Pro until the customer picks otherwise.
+   */
+  agentSlug?: string
 }
 
 export type SpinUpDeps = {
@@ -275,15 +287,44 @@ export async function tearDownCustomer(
 
 // ──────── helpers ────────
 
+// Phase 2E-2 Day 2: bootstrap bundle (~5KB tar.gz) read once at module
+// load time. Setup-script gets the base64 inlined; Hermes' bundle-pull
+// script does the full per-agent bundle pull from Storage at boot.
+//
+// Source of truth: agent-packs/_bootstrap-bundle.tar.gz (committed to repo,
+// rebuilt by scripts/build-bootstrap-bundle.ts when source files change).
+// Drift test in tests/bootstrap-bundle.spec.ts catches stale builds.
+const BOOTSTRAP_BUNDLE_BASE64 = (() => {
+  try {
+    // Resolve from this file's location: ../../../agent-packs/_bootstrap-bundle.tar.gz
+    const here = fileURLToPath(import.meta.url)
+    const bundlePath = pathResolve(here, '../../../../agent-packs/_bootstrap-bundle.tar.gz')
+    const bytes = readFileSync(bundlePath)
+    return bytes.toString('base64')
+  } catch (e) {
+    // Bootstrap bundle missing → log + degrade to no-bundle provisioning
+    // (matches the back-compat path in setup-script.ts when bundleTarBase64
+    // is undefined). Non-fatal; provisioning still proceeds.
+    console.warn(
+      '[customer-flow] Bootstrap bundle missing or unreadable:',
+      e instanceof Error ? e.message : String(e),
+    )
+    return undefined
+  }
+})()
+
 function buildScriptFor(opts: SpinUpOpts, openRouterKey: string): string {
   // Phase 2A: every tier uses the same script shape — single OpenRouter key
   // routed via OpenAI-compatible env vars. No more starter/proxy split.
+  // Phase 2E-2: include bootstrap bundle + agentSlug for Hermes-native bundle.
   return buildSetupScript({
     customerId: opts.customerId,
     tier: opts.tier,
     telegramBotToken: opts.customerTelegramBotToken,
     telegramAllowedUserIds: opts.customerTelegramAllowedUserIds,
     openRouterKey,
+    agentSlug: opts.agentSlug ?? 'the-pro',
+    bundleTarBase64: BOOTSTRAP_BUNDLE_BASE64,
   })
 }
 

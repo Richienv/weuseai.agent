@@ -83,3 +83,24 @@ verify_jwt = false
 
 [functions.tiktok-script-handler]
 verify_jwt = false
+
+# Bundle delivery (Phase 2E-2). All three bypass Supabase JWT — admin
+# endpoint (bundle-publish) does its own service-role-bearer check
+# inline; customer endpoints (bundle-fetch, bundle-pull-record) trust
+# customer_id UUID + active subscription (same model as workflow-execute).
+#
+#   - bundle-publish      → admin only (service-role bearer required)
+#                            uploads bundles/<slug>/<version>.tar.gz to
+#                            workflow-templates Storage bucket
+#   - bundle-fetch        → customer-auth, returns 5-min signed URL by
+#                            tier+policy version resolution
+#   - bundle-pull-record  → customer-auth, telemetry write into
+#                            bundle_pull_attempts (best-effort)
+[functions.bundle-publish]
+verify_jwt = false
+
+[functions.bundle-fetch]
+verify_jwt = false
+
+[functions.bundle-pull-record]
+verify_jwt = false
