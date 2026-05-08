@@ -1581,13 +1581,14 @@
       top: 38px; left: 0; right: 0; bottom: 0;
       z-index: 1;
       font-family: 'Inter', sans-serif;
-      display: grid;
-      grid-template-rows: 1fr auto;
+      display: flex;
+      flex-direction: column;
       overflow: hidden;
     }
     .agent-card .bubble-zone {
       position: relative;
       overflow: hidden;
+      flex: 1 1 0;
       min-height: 0;
     }
     .agent-card .chat-content {
