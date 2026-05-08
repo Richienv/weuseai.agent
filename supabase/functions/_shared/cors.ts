@@ -76,10 +76,31 @@ export function handleCors(
 
 // Wraps any Response so it carries CORS headers. Lets the pure handler
 // stay CORS-agnostic — tests call it without browser-context concerns.
+//
+// Argument tolerance: the canonical call form is `withCors(res, req)`,
+// but historical callers (the workflow library entrypoints landed via
+// PR #2/#3) were written as `withCors(req, res)`. We auto-detect a
+// swapped first arg and recover; the alternative was rewriting 25
+// call-sites across 5 entrypoint files.
 export function withCors(
-  res: Response,
-  headersOrReq?: Record<string, string> | Request,
+  resOrReq: Response | Request,
+  headersOrReqOrRes?: Record<string, string> | Request | Response,
 ): Response {
+  let res: Response
+  let headersOrReq: Record<string, string> | Request | undefined
+  if (resOrReq instanceof Request) {
+    // Caller passed (req, res) — swap them so the rest of the function
+    // can assume the canonical (res, req|headers) shape.
+    res = headersOrReqOrRes as Response
+    headersOrReq = resOrReq
+  } else {
+    res = resOrReq
+    headersOrReq = headersOrReqOrRes as
+      | Record<string, string>
+      | Request
+      | undefined
+  }
+
   let headers: Record<string, string>
   if (headersOrReq instanceof Request) {
     headers = browserCorsHeaders(headersOrReq)
