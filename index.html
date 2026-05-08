@@ -4728,43 +4728,42 @@
       );
     }
 
-    // Router: every slug now has a scene. CreatureSprite is no longer
-    // referenced from the carousel (kept in source for prefers-reduced-
-    // motion fallback / future use).
-    const AGENT_SCENES = {
-      pro:        AgentScenePro,
-      researcher: AgentSceneResearcher,
-      web:        AgentSceneWeb,
-      doc:        AgentSceneDoc,
-      slide:      AgentSceneSlide,
-      trade:      AgentSceneTrade,
-      macro:      AgentSceneMacro,
-      business:   AgentSceneBusiness,
-      video:      AgentSceneVideo,
-      social:     AgentSceneSocial,
-    };
-    function AgentVisual({ slug, index }) {
-      const Scene = AGENT_SCENES[slug];
-      if (Scene) return <Scene />;
-      // Fallback: legacy creature sprite (shouldn't trigger in production).
-      return <CreatureSprite slug={slug} index={index} />;
+    // Pivot 2026-05-09: every agent card now renders a hand-built mp4
+    // through the DottedVideo halftone canvas (matching the section's red-dot
+    // background). Chat-bubble + animation scenes (AgentScene*) are kept in
+    // source as reference but no longer routed from the carousel.
+    function AgentVisual({ video, slug }) {
+      // Smaller cells than the section background — keeps card silhouette
+      // legible at the smaller card resolution. Mobile auto-bumps to 9.
+      return (
+        <DottedVideo
+          src={`/assets/agent-${video || slug}.mp4`}
+          color="#E5322D"
+          cellSize={5}
+          threshold={0.05}
+          className="absolute inset-0 w-full h-full"
+          style={{ background: '#050505' }}
+        />
+      );
     }
 
     // ─────────────────────── AGENT PERSONA CAROUSEL ───────────────────────
-    // 10 agent specialist cards mirroring the agents listed in Studio tier.
-    // Sits inside #proses ("The wave") below the CTA, on the same red-halftone
-    // canvas. Auto-rotates every 4s, hover-pause, prefers-reduced-motion respect.
+    // 9 agent specialist cards. Sits inside #proses ("The wave") below the
+    // CTA, on the same red-halftone canvas. Auto-rotates every 13s, hover-
+    // pause, prefers-reduced-motion respect.
+    // Each agent is represented by a hand-built m4v rendered through the
+    // DottedVideo halftone canvas (matching the section background). The
+    // `video` field maps to /assets/agent-{video}.m4v.
     const AGENTS = [
-      { slug: 'pro',        name: 'The Pro',           desc: 'Briefing pagi, ingat percakapan lintas sesi, jadi pendamping yang ngerti gaya kamu.' },
-      { slug: 'researcher', name: 'Deep Researcher',   desc: 'Riset topik kompleks dari ratusan sumber, sintesis jadi laporan siap pakai.' },
-      { slug: 'web',        name: 'Web Master',        desc: 'Otomasi browser — scrape data, isi form, monitor halaman, klik apa pun.' },
-      { slug: 'doc',        name: 'Doc Expert',        desc: 'Bikin laporan, proposal, dan email — sesuai gaya kamu, siap kirim dalam menit.' },
-      { slug: 'slide',      name: 'Slide Master',      desc: 'Dari outline ke deck 12 slide profesional, lengkap dengan grafik dan speaker notes.' },
-      { slug: 'trade',      name: 'Trade Pro',         desc: 'Briefing pasar pagi, alert saham + crypto, ringkas laporan keuangan emiten.' },
-      { slug: 'macro',      name: 'Macro Strategist',  desc: 'Pantau berita ekonomi global, hubungkan dampak ke portofolio kamu.' },
-      { slug: 'business',   name: 'Business Director', desc: 'Tracking metrik, anomaly alert, auto-bikin laporan KPI buat tim kamu.' },
-      { slug: 'video',      name: 'Video Producer',    desc: 'Script TikTok/Reels, saran edit, hashtag research — output 10 video per hari.' },
-      { slug: 'social',     name: 'Social Conductor',  desc: 'Trending topic detection, schedule best-time, auto-balas DM dengan brand voice.' },
+      { slug: 'pro',         video: 'pro',         name: 'The Pro',           desc: 'Briefing pagi, ingat percakapan lintas sesi, jadi pendamping yang ngerti gaya kamu.' },
+      { slug: 'researcher',  video: 'researcher',  name: 'Deep Researcher',   desc: 'Riset topik kompleks dari ratusan sumber, sintesis jadi laporan siap pakai.' },
+      { slug: 'builder',     video: 'builder',     name: 'App Builder',       desc: 'Bikin web app dari ide ke deploy — tanpa nulis kode dari nol.' },
+      { slug: 'doc',         video: 'doc',         name: 'Doc Expert',        desc: 'Bikin laporan, proposal, dan dokumen — sesuai gaya kamu, siap kirim dalam menit.' },
+      { slug: 'email',       video: 'email',       name: 'Email Manager',     desc: 'Sortir 300+ email per hari, draft balasan dengan tone kamu, auto-handle yang gak penting.' },
+      { slug: 'calendar',    video: 'calendar',    name: 'Calendar Agent',    desc: 'Atur jadwal, hindari bentrok, kasih saran reschedule — diplomatis sesuai konteks kamu.' },
+      { slug: 'trade',       video: 'trade',       name: 'Trade Pro',         desc: 'Briefing pasar pagi, alert saham + crypto, ringkas laporan keuangan emiten.' },
+      { slug: 'macro',       video: 'macro',       name: 'Macro Strategist',  desc: 'Pantau berita ekonomi global, hubungkan dampak ke portofolio kamu.' },
+      { slug: 'business',    video: 'business',    name: 'Business Director', desc: 'Tracking metrik, anomaly alert, auto-bikin laporan KPI buat tim kamu.' },
     ];
 
     // Phase 1 placeholder: even-index cards use new-hero, odd use ascii-wave.
@@ -4777,9 +4776,9 @@
     function AgentCarousel() {
       const trackRef = useRef(null);
       const rootRef = useRef(null);
-      // displayIndex is the position in the 12-slot track [sentinel_last,
-      // ...10 real, sentinel_first]. realIndex (the agent shown) is
-      // displayIndex - 1, clamped to 0-9. Sentinels at 0 and 11 are
+      // displayIndex is the position in the 11-slot track [sentinel_last,
+      // ...9 real, sentinel_first]. realIndex (the agent shown) is
+      // displayIndex - 1, clamped to 0-8. Sentinels at 0 and 10 are
       // identical to last/first real cards — visible only during the
       // wrap-around transition, then we silently snap back to the real
       // copy with no transition. Result: seamless infinite carousel.
@@ -4854,13 +4853,13 @@
       const goNext = () => {
         if (wrapping.current) return;
         setDisplayIndex((d) => {
-          // Going past the last real card → animate to sentinel at 11
+          // Going past the last real card → animate to sentinel at 10
           // (which renders AGENTS[0]), then snap to the real AGENTS[0] at slot 1.
           if (d >= AGENTS.length) {
             wrapping.current = true;
             // After the standard 700ms slide animation, snap back
             setTimeout(() => snapTo(1), 720);
-            return AGENTS.length + 1; // = 11
+            return AGENTS.length + 1; // = 10
           }
           return d + 1;
         });
@@ -4870,7 +4869,7 @@
         if (wrapping.current) return;
         setDisplayIndex((d) => {
           // Going before the first real card → animate to sentinel at 0
-          // (which renders AGENTS[last]), then snap to the real AGENTS[last] at slot 10.
+          // (which renders AGENTS[last]), then snap to the real AGENTS[last] at slot 9.
           if (d <= 1) {
             wrapping.current = true;
             setTimeout(() => snapTo(AGENTS.length), 720);
@@ -4881,7 +4880,7 @@
       };
 
       const goTo = (i) => {
-        // Map a real index 0-9 to displayIndex 1-10. Doesn't wrap (jump-to dot).
+        // Map a real index 0-8 to displayIndex 1-9. Doesn't wrap (jump-to dot).
         const target = (((i % AGENTS.length) + AGENTS.length) % AGENTS.length) + 1;
         setDisplayIndex(target);
       };
@@ -4919,7 +4918,7 @@
             </button>
             <div className="agent-fade" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
               <div ref={trackRef} className="agent-track" aria-live="polite">
-                {/* 12-slot track: [last-card-sentinel, ...10 real cards,
+                {/* 11-slot track: [last-card-sentinel, ...9 real cards,
                     first-card-sentinel]. Sentinels are dupes of the
                     last/first real cards so the wrap-around slide has
                     something to animate to. After the slide completes,
@@ -4936,7 +4935,7 @@
                       data-active={isActive}
                     >
                       <div className="agent-viz">
-                        <AgentVisual key={`${a.slug}-${i}`} slug={a.slug} index={i} />
+                        <AgentVisual key={`${a.slug}-${i}`} slug={a.slug} video={a.video} />
                       </div>
                       <div className="agent-body">
                         <div className="agent-name">{a.name}</div>
@@ -4964,7 +4963,7 @@
           </div>
 
           <p className="agent-tier-line">
-            Starter: 1 agent · Pro: 5 agent · Studio: 10 agent — pilih yang cocok di <a href="#pricing">harga →</a>
+            Starter: 1 agent · Pro: 5 agent · Studio: full set — pilih yang cocok di <a href="#pricing">harga →</a>
           </p>
         </div>
       );

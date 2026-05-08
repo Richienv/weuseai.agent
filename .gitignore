@@ -8,6 +8,7 @@
 # Editors
 .vscode
 .idea
+.claude
 
 # Node
 node_modules/
