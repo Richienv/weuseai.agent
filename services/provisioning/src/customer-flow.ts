@@ -313,10 +313,21 @@ const BOOTSTRAP_BUNDLE_BASE64 = (() => {
   }
 })()
 
+// Phase 2E-3: fleet SSH pubkey read once at module load. Set on the
+// provisioning service env (Fly.io) as FLEET_SSH_PUBKEY. Empty/missing
+// → setup-script omits the authorized_keys write (back-compat); the
+// resulting VPS won't be tier-bump-able until manually injected.
+const FLEET_SSH_PUBKEY = process.env.FLEET_SSH_PUBKEY ?? ''
+
+// Phase 2E-3 Q7: pinned Hermes version. Default in setup-script.ts
+// (v0.13.0); operator can override via env.
+const HERMES_VERSION = process.env.HERMES_VERSION
+
 function buildScriptFor(opts: SpinUpOpts, openRouterKey: string): string {
   // Phase 2A: every tier uses the same script shape — single OpenRouter key
   // routed via OpenAI-compatible env vars. No more starter/proxy split.
   // Phase 2E-2: include bootstrap bundle + agentSlug for Hermes-native bundle.
+  // Phase 2E-3: include fleet SSH pubkey + Hermes version pin.
   return buildSetupScript({
     customerId: opts.customerId,
     tier: opts.tier,
@@ -325,6 +336,8 @@ function buildScriptFor(opts: SpinUpOpts, openRouterKey: string): string {
     openRouterKey,
     agentSlug: opts.agentSlug ?? 'the-pro',
     bundleTarBase64: BOOTSTRAP_BUNDLE_BASE64,
+    fleetSshPubkey: FLEET_SSH_PUBKEY || undefined,
+    hermesVersion: HERMES_VERSION,
   })
 }
 
