@@ -3000,7 +3000,7 @@
     // to drop the (now-bright) inverted BG.
     // contrast: 1.0 = identity. >1 pushes mid-tones outward around 0.5,
     // boosting on/off separation. Applied after gamma.
-    function DottedVideo({ src, color = '#E5322D', cellSize = 6, threshold = 0.06, invert = false, gamma = 1, contrast = 1, playbackRate = 1, className = '', style = {} }) {
+    function DottedVideo({ src, color = '#E5322D', cellSize = 6, threshold = 0.06, invert = false, gamma = 1, contrast = 1, playbackRate = 1, dotScale = 0.95, className = '', style = {} }) {
       const wrapRef = useRef(null);
       const videoRef = useRef(null);
       const canvasRef = useRef(null);
@@ -3020,10 +3020,14 @@
         // Mobile / data-saver tier — slightly bigger cells (perf), slower refresh.
         // Floor is per-call so callers asking for fine detail (cellSize 3-4)
         // get fine detail on mobile too, while the section background which
-        // requests cellSize=6 stays at 6.
+        // requests cellSize=6 stays at 6. LED-matrix callers (cellSize >= 10)
+        // get an extra mobile bump (+4) so each card stays readable on a
+        // narrower viewport — fewer, fatter dots beat a fine grid on small
+        // phones.
         const isMobile = window.matchMedia('(max-width: 767px)').matches;
         const saveData = !!(navigator.connection && navigator.connection.saveData);
-        const effectiveCell = isMobile || saveData ? Math.max(cellSize, 5) : cellSize;
+        const mobileBump = (isMobile || saveData) ? (cellSize >= 10 ? cellSize + 4 : Math.max(cellSize, 5)) : cellSize;
+        const effectiveCell = mobileBump;
         const frameModulo = isMobile || saveData ? 3 : 2; // ~20fps on mobile, ~30fps desktop
 
         const dpr = 1;
@@ -3068,7 +3072,10 @@
           ctx.clearRect(0, 0, w, h);
           ctx.fillStyle = color;
           const half = cell / 2;
-          const maxR = half * 0.95;
+          // dotScale shrinks the max dot radius relative to the cell.
+          // 0.95 = halftone (dots nearly touch when bright). 0.55 = LED-matrix
+          // / scoreboard (visible breathing room between bulbs even at full lum).
+          const maxR = half * dotScale;
           for (let y = 0; y < rows; y++) {
             for (let x = 0; x < cols; x++) {
               const i = (y * cols + x) * 4;
@@ -3116,7 +3123,7 @@
           io.disconnect();
           cancelAnimationFrame(raf);
         };
-      }, [src, color, cellSize, threshold, invert, gamma, contrast, playbackRate]);
+      }, [src, color, cellSize, threshold, invert, gamma, contrast, playbackRate, dotScale]);
 
       return (
         <div ref={wrapRef} className={className} style={style}>
@@ -4769,36 +4776,44 @@
     // Per-slug overrides — any DottedVideo prop can be set per-agent.
     // Useful when a source video is naturally busier (cellSize ↑) or when
     // a card needs more polarization / a deeper BG to feel distinct.
+    // LED-matrix treatment: calendar + trade get an extra-sparse grid
+    // (cellSize 14) and a darker BG so the bigger bulbs read like a
+    // dim stadium scoreboard rather than a packed neon sign.
     const AGENT_VISUAL_OVERRIDES = {
-      calendar: { cellSize: 5, contrast: 1.85, bg: '#B82420' },
-      trade:    { cellSize: 5, contrast: 1.85, bg: '#B82420' },
+      calendar: { cellSize: 14, contrast: 2.7, bg: '#B82420', dotScale: 0.55 },
+      trade:    { cellSize: 14, contrast: 2.7, bg: '#B82420', dotScale: 0.55 },
     };
 
     function AgentVisual({ video, slug, invert }) {
       const o = AGENT_VISUAL_OVERRIDES[slug] || {};
-      // 8 specialist cards: PURE-BLACK dots on a vibrant red BG — the
-      // polarity that read best in earlier tests (most UI detail visible).
-      // Visual punch comes from:
-      //   - Pure #000 dots (sharper edges than the previous #0a0a0a)
-      //   - Vibrant #ED3530 BG (slightly brighter than brand red so the
-      //     contrast against pure black feels more "printed-poster")
-      //   - 0.85× playback for editorial slow-mo (still feels live)
-      // The Pro keeps its red-on-near-black look (high contrast already
-      // baked into the source video).
+      // LED-matrix / scoreboard treatment.
+      //   - cellSize 10 (vs the old halftone 3) = far fewer, far bigger dots.
+      //     Mobile auto-bumps to 14 inside DottedVideo for legibility.
+      //   - dotScale 0.55 keeps each dot smaller than its cell, so visible
+      //     gutters separate the LEDs instead of a packed halftone gradient.
+      //   - contrast 2.5 + threshold 0.15 push midtones to the rails, so each
+      //     dot reads more "on/off bulb" than smooth tonal fade.
+      //   - Polarity & playbackRate match the control: The Pro stays red-on-
+      //     near-black at 1.0×, the 8 specialists keep BLACK bulbs on the
+      //     vibrant red BG (#ED3530) at 0.85× editorial slow-mo. Because the
+      //     dots are big and sparse, both polarities now read as a low-fi
+      //     LED bulletin board rather than a printed halftone poster.
       return (
         <DottedVideo
           src={`/assets/agent-${video || slug}.mp4`}
           color={invert ? '#000000' : '#E5322D'}
-          // Smaller cells = denser dot grid = finer silhouette detail.
-          // Mobile clamps up via DottedVideo internals (Math.max(cellSize, 5)).
-          cellSize={o.cellSize ?? 3}
-          threshold={0.05}
-          // Contrast 1.5 polarizes bright UI → full black dots, midtones
-          // squeeze a touch smaller. Just enough punch without crushing
-          // detail or making the card feel darker overall.
-          contrast={o.contrast ?? (invert ? 1.5 : 1)}
+          cellSize={o.cellSize ?? 10}
+          // Higher threshold drops more cells fully OFF — that empty-bulb
+          // negative space is what sells the scoreboard read.
+          threshold={o.threshold ?? 0.15}
+          // High contrast crushes midtones into either ~full or ~off, so
+          // each dot looks like a discrete LED state instead of a fade.
+          contrast={o.contrast ?? (invert ? 2.5 : 1.6)}
+          // dotScale < 1 leaves breathing room between bulbs; that gutter
+          // is the difference between "halftone" and "LED matrix".
+          dotScale={o.dotScale ?? 0.55}
           // Slight slow-mo for the inverted cards — feels editorial /
-          // halftone-poster instead of jittery UI capture.
+          // scoreboard-tick instead of jittery UI capture.
           playbackRate={invert ? 0.85 : 1}
           className="absolute inset-0 w-full h-full"
           style={{ background: invert ? (o.bg ?? '#ED3530') : '#050505' }}
