@@ -4287,7 +4287,11 @@
               <div className="scene-header-status">aktif sekarang</div>
             </div>
           </div>
-          <div className={`agent-scene scene-${slug}`}>
+          {/* Use data-scene (not className) to avoid collisions with the
+              inner .scene-doc (Doc paper outline) and .scene-slide (Slide
+              Master slide cards) — those classes were getting applied to
+              the entire scene container, painting a gray bg + border. */}
+          <div className="agent-scene" data-scene={slug}>
             {/* Bubble zone — auto-scrolling chat viewport. As newer bubbles
                 grow, older ones get pushed up + clipped by overflow:hidden.
                 Latest bubble always anchored to bottom of zone. */}
