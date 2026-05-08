@@ -1409,16 +1409,38 @@
     }
     @media (min-width: 768px) { .agent-track { gap: 18px; } }
 
-    /* Performance: pause every animation inside non-active cards. Only the
-       focused card runs its 13s thinking-flow cycle — keeps CPU low even
-       though there are 10 cards in the DOM. When activeIndex changes, the
-       newly-active card resumes animation from 0% (CSS keyframes restart
-       on play-state change for paused descendants). */
-    .agent-card[data-active="false"] *,
-    .agent-card[data-active="false"] *::before,
-    .agent-card[data-active="false"] *::after {
-      animation-play-state: paused !important;
+    /* Inactive cards: kill animations entirely + snap every element to
+       its FINAL visual state. The card reads as a "complete preview" of
+       the agent (all bubbles + both anims visible), no animation overhead.
+       Active card runs the full 13s cycle from frame 0 (the cycleKey
+       React remount handles that); inactive cards stay static.
+       Why not just animation-play-state:paused? Because the cycleKey
+       remount resets paused animations to frame 0 — collapsed + invisible
+       — and the card reads as blank. */
+    .agent-card[data-active="false"] .chat-slot,
+    .agent-card[data-active="false"] .pin-slot {
+      animation: none !important;
+      grid-template-rows: 1fr !important;
+      opacity: 1 !important;
     }
+    .agent-card[data-active="false"] .scene-bubble-insight,
+    .agent-card[data-active="false"] .scene-stagger > *,
+    .agent-card[data-active="false"] .scene-anim2 > *,
+    .agent-card[data-active="false"] .scene-chart .chart-line,
+    .agent-card[data-active="false"] .scene-chart .chart-marker,
+    .agent-card[data-active="false"] .scene-multi-bar::after {
+      animation: none !important;
+      opacity: 1 !important;
+      transform: none !important;
+      filter: none !important;
+      box-shadow: none !important;
+    }
+    .agent-card[data-active="false"] .scene-chart .chart-line {
+      stroke-dashoffset: 0 !important;
+    }
+    .agent-card[data-active="false"] .scene-multi-row.bull .scene-multi-bar::after { width: 88% !important; }
+    .agent-card[data-active="false"] .scene-multi-row.base .scene-multi-bar::after { width: 60% !important; }
+    .agent-card[data-active="false"] .scene-multi-row.bear .scene-multi-bar::after { width: 32% !important; }
 
     @media (prefers-reduced-motion: reduce) {
       .agent-track { transition: none; }
