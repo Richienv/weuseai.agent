@@ -2991,7 +2991,16 @@
     // Samples a video frame-by-frame and renders each cell as a colored dot
     // whose radius scales with luminance. Pure Canvas 2D, runs at video FPS.
     // Source video must be same-origin (it is — /assets/).
-    function DottedVideo({ src, color = '#E5322D', cellSize = 6, threshold = 0.06, className = '', style = {} }) {
+    // invert: flip the luminance mapping so DARK pixels of the source video
+    // become the visible dots (instead of bright pixels). Useful when the
+    // source has a dark subject on a bright background — keeps the silhouette
+    // legible instead of rendering the bright BG as a sea of solid dots.
+    // gamma: power curve applied after invert. <1 brightens midtones (makes
+    // soft details visible), >1 darkens them. Combine with a higher threshold
+    // to drop the (now-bright) inverted BG.
+    // contrast: 1.0 = identity. >1 pushes mid-tones outward around 0.5,
+    // boosting on/off separation. Applied after gamma.
+    function DottedVideo({ src, color = '#E5322D', cellSize = 6, threshold = 0.06, invert = false, gamma = 1, contrast = 1, className = '', style = {} }) {
       const wrapRef = useRef(null);
       const videoRef = useRef(null);
       const canvasRef = useRef(null);
@@ -3058,8 +3067,14 @@
             for (let x = 0; x < cols; x++) {
               const i = (y * cols + x) * 4;
               const lum = (0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]) / 255;
-              if (lum < threshold) continue;
-              const r = lum * maxR;
+              let v = invert ? (1 - lum) : lum;
+              if (gamma !== 1) v = Math.pow(v, gamma);
+              if (contrast !== 1) {
+                v = (v - 0.5) * contrast + 0.5;
+                if (v < 0) v = 0; else if (v > 1) v = 1;
+              }
+              if (v < threshold) continue;
+              const r = v * maxR;
               ctx.beginPath();
               ctx.arc(x * cell + half, y * cell + half, r, 0, Math.PI * 2);
               ctx.fill();
@@ -3094,7 +3109,7 @@
           io.disconnect();
           cancelAnimationFrame(raf);
         };
-      }, [src, color, cellSize, threshold]);
+      }, [src, color, cellSize, threshold, invert, gamma, contrast]);
 
       return (
         <div ref={wrapRef} className={className} style={style}>
@@ -4729,20 +4744,34 @@
     }
 
     // Pivot 2026-05-09: every agent card now renders a hand-built mp4
-    // through the DottedVideo halftone canvas (matching the section's red-dot
-    // background). Chat-bubble + animation scenes (AgentScene*) are kept in
-    // source as reference but no longer routed from the carousel.
-    function AgentVisual({ video, slug }) {
-      // Smaller cells than the section background — keeps card silhouette
-      // legible at the smaller card resolution. Mobile auto-bumps to 9.
+    // through the DottedVideo halftone canvas. Chat-bubble + animation
+    // scenes (AgentScene*) are kept in source as reference but no longer
+    // routed from the carousel.
+    //
+    // Two polarities:
+    //   1. Default (The Pro only) — red dots on near-black, big dots where
+    //      the source is bright. Source video has high contrast already, so
+    //      this reads cleanly.
+    //   2. Inverted (the other 8) — solid red card with BLACK dots forming
+    //      the dark subject of the source video. Source videos here are
+    //      mostly bright UI screenshots (88-98% pixels in the top band),
+    //      which would render as a solid red mush in default polarity. The
+    //      red↔black swap + strong contrast (3.0) drops the bright BG and
+    //      lets the dark text/icons punch through as a printed-halftone
+    //      silhouette.
+    function AgentVisual({ video, slug, invert }) {
       return (
         <DottedVideo
           src={`/assets/agent-${video || slug}.mp4`}
-          color="#E5322D"
+          color={invert ? '#0a0a0a' : '#E5322D'}
           cellSize={5}
           threshold={0.05}
+          // Mild gamma lift for inverted cards — flattens the dot-size
+          // distribution so the BLACK halftone reads more like a printed
+          // surface than a sparse splatter, without losing the silhouette.
+          gamma={invert ? 0.75 : 1}
           className="absolute inset-0 w-full h-full"
-          style={{ background: '#050505' }}
+          style={{ background: invert ? '#E5322D' : '#050505' }}
         />
       );
     }
@@ -4935,7 +4964,7 @@
                       data-active={isActive}
                     >
                       <div className="agent-viz">
-                        <AgentVisual key={`${a.slug}-${i}`} slug={a.slug} video={a.video} />
+                        <AgentVisual key={`${a.slug}-${i}`} slug={a.slug} video={a.video} invert={a.slug !== 'pro'} />
                       </div>
                       <div className="agent-body">
                         <div className="agent-name">{a.name}</div>
