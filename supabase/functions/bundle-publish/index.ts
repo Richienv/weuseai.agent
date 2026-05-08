@@ -34,21 +34,44 @@ const supabase = createClient(SUPABASE_URL, SERVICE_KEY, {
 
 // ─── admin auth check ─────────────────────────────────────────────────
 //
-// Caller must send the service-role JWT as Bearer. The Edge Function
-// platform doesn't gate this for us (verify_jwt=false in config.toml so
-// that customer-side functions don't get gated either) — we check here
-// inline. Service-role JWT from the `Authorization: Bearer <token>`
-// header is matched against the env-stored SERVICE_KEY.
+// Caller must send a Bearer token that resolves to role=service_role at
+// the gateway. With verify_jwt=false in config.toml the gateway doesn't
+// REJECT unauth requests, but it still authenticates whatever bearer
+// IS provided and synthesises a signed JWT with the matching role claim
+// (legacy JWT → forwarded untouched; sb_secret_* → rewritten into a
+// fresh service_role JWT; sb_publishable_* / anon → anon JWT). We decode
+// the forwarded JWT's payload and require role=service_role.
+//
+// We do NOT compare the bearer string against env. Doing so breaks the
+// moment a project enables the new sb_secret_*/sb_publishable_* key
+// system, because the gateway rewrites the bearer en-route.
 //
 // This is intentionally simple: the bundle-publish endpoint is called
 // only from server-side (customer-flow.ts in the provisioning service +
 // CI/CD), both of which can present the service key.
 
+function decodeJwtPayload(token: string): Record<string, unknown> | null {
+  const parts = token.split('.')
+  if (parts.length !== 3) return null
+  try {
+    // base64url-decode middle segment.
+    const b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/')
+    const padded = b64 + '='.repeat((4 - (b64.length % 4)) % 4)
+    const json = atob(padded)
+    return JSON.parse(json)
+  } catch {
+    return null
+  }
+}
+
 function isAdminCaller(req: Request): boolean {
   const auth = req.headers.get('authorization') ?? ''
   if (!auth.startsWith('Bearer ')) return false
   const token = auth.slice(7).trim()
-  return token === SERVICE_KEY
+  if (!token) return false
+  const payload = decodeJwtPayload(token)
+  if (!payload) return false
+  return payload.role === 'service_role'
 }
 
 // ─── handler ───────────────────────────────────────────────────────────

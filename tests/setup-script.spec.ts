@@ -253,7 +253,13 @@ test('script (2E-2): writes systemd drop-in for ExecStartPre', () => {
     agentSlug: 'doc-expert',
   })
   assert.match(s, /\/etc\/systemd\/system\/hermes-gateway\.service\.d\/10-bundle-pull\.conf/)
-  assert.match(s, /ExecStartPre=\/usr\/local\/bin\/weuseai-bundle-pull/)
+  // The `+` prefix is REQUIRED — without it the script inherits User=
+  // weuseai and silently fails on every privileged op (write to /var/log,
+  // chown -R, etc.). Diagnosed 2026-05-08 across 4 live VPS runs. Don't
+  // regress this without re-running the full live VPS smoke. See
+  // services/provisioning/src/setup-script.ts comment block at the
+  // drop-in write for the full failure-mode walkthrough.
+  assert.match(s, /ExecStartPre=\+\/usr\/local\/bin\/weuseai-bundle-pull/)
 })
 
 test('script (2E-2): writes WEUSEAI_AGENT_SLUG + WEUSEAI_CUSTOMER_ID + WEUSEAI_WORKFLOW_EXECUTE_URL to .env', () => {

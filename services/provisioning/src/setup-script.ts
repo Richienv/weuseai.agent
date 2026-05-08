@@ -368,11 +368,34 @@ log "Adding ExecStartPre=/usr/local/bin/weuseai-bundle-pull to Hermes systemd un
 # Hermes' \`gateway install --system\` writes the unit at gateway-install
 # time (step 8 below). We use a drop-in override here so the boot script
 # stays in place even if the unit is re-installed later.
+#
+# CRITICAL: the \`+\` prefix on ExecStartPre runs the bundle-pull script
+# with FULL PRIVILEGES (root), regardless of the unit's User= setting.
+# Hermes installs as User=weuseai, but the bundle-pull script needs:
+#   - write to /var/log/weuseai-bundle-pull.log (root-owned dir),
+#   - mkdir -p /var/lib/weuseai/bundle/<slug>/<version>,
+#   - chown -R weuseai:weuseai (requires CAP_CHOWN), and
+#   - chmod 0755 on system paths.
+# Without "+", systemd inherits User=weuseai, every privileged op fails
+# silently (set -e is off for graceful degrade), the script exits 0, and
+# .installed-version never appears. Diagnosed 2026-05-08 across 4
+# Run 1 attempts before the manual \`bash -x\` re-invocation as root
+# revealed the script logic was fine — it was the privilege drop.
+# Reference: \`man systemd.service\`, "Special executable prefixes".
+# The main ExecStart= still runs as weuseai, unchanged.
 mkdir -p /etc/systemd/system/hermes-gateway.service.d
 cat > /etc/systemd/system/hermes-gateway.service.d/10-bundle-pull.conf <<'WEUSEAI_DROPIN_EOF'
 [Service]
-ExecStartPre=/usr/local/bin/weuseai-bundle-pull
+ExecStartPre=+/usr/local/bin/weuseai-bundle-pull
 WEUSEAI_DROPIN_EOF
+
+# Force a daemon-reload now so the drop-in is registered BEFORE
+# \`hermes gateway install\` writes the .service file later. Without
+# this, the timing varies: if the Hermes CLI doesn't itself daemon-
+# reload after writing the unit, our drop-in isn't picked up until the
+# next reload (typically reboot). Belt-and-suspenders to guarantee the
+# ExecStartPre fires on the first \`gateway start --system\` call.
+systemctl daemon-reload >> "$LOG" 2>&1 || log "⚠ daemon-reload failed (non-fatal)"
 log "✓ bundle-pull installed"
 `
     : ''
