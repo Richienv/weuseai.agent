@@ -1409,38 +1409,10 @@
     }
     @media (min-width: 768px) { .agent-track { gap: 18px; } }
 
-    /* Inactive cards: kill animations entirely + snap every element to
-       its FINAL visual state. The card reads as a "complete preview" of
-       the agent (all bubbles + both anims visible), no animation overhead.
-       Active card runs the full 13s cycle from frame 0 (the cycleKey
-       React remount handles that); inactive cards stay static.
-       Why not just animation-play-state:paused? Because the cycleKey
-       remount resets paused animations to frame 0 — collapsed + invisible
-       — and the card reads as blank. */
-    .agent-card[data-active="false"] .chat-slot,
-    .agent-card[data-active="false"] .pin-slot {
-      animation: none !important;
-      grid-template-rows: 1fr !important;
-      opacity: 1 !important;
-    }
-    .agent-card[data-active="false"] .scene-bubble-insight,
-    .agent-card[data-active="false"] .scene-stagger > *,
-    .agent-card[data-active="false"] .scene-anim2 > *,
-    .agent-card[data-active="false"] .scene-chart .chart-line,
-    .agent-card[data-active="false"] .scene-chart .chart-marker,
-    .agent-card[data-active="false"] .scene-multi-bar::after {
-      animation: none !important;
-      opacity: 1 !important;
-      transform: none !important;
-      filter: none !important;
-      box-shadow: none !important;
-    }
-    .agent-card[data-active="false"] .scene-chart .chart-line {
-      stroke-dashoffset: 0 !important;
-    }
-    .agent-card[data-active="false"] .scene-multi-row.bull .scene-multi-bar::after { width: 88% !important; }
-    .agent-card[data-active="false"] .scene-multi-row.base .scene-multi-bar::after { width: 60% !important; }
-    .agent-card[data-active="false"] .scene-multi-row.bear .scene-multi-bar::after { width: 32% !important; }
+    /* (No active/inactive distinction in animation. All 10 cards run their
+       13s thinking-flow loop in sync — same pattern as the DashboardDemo
+       lower on this page where the conversation just plays through. Active
+       index only controls which card is centered in the viewport.) */
 
     @media (prefers-reduced-motion: reduce) {
       .agent-track { transition: none; }
@@ -4771,14 +4743,10 @@
       const [activeIndex, setActiveIndex] = useState(0);
       const [paused, setPaused] = useState(false);
       const reducedMotion = useRef(false);
-      // Bumped whenever activeIndex changes. Used as part of the active
-      // card's React key so its AgentVisual subtree remounts → all CSS
-      // animations restart from frame 0. Without this, the new active
-      // card resumes from whatever paused mid-state it was in (since the
-      // CSS pause rule freezes the play-head, not resets it), causing a
-      // frozen mid-frame UX gap before the next loop wraps around.
-      const [cycleKey, setCycleKey] = useState(0);
-      useEffect(() => { setCycleKey(k => k + 1); }, [activeIndex]);
+      // (Animation runs continuously across all 10 cards in sync, like the
+      // DashboardDemo lower on this page — no remount-on-click reset, no
+      // active/inactive pause distinction. activeIndex only controls which
+      // card is centered in the viewport.)
 
       // Detect prefers-reduced-motion
       useEffect(() => {
@@ -4874,15 +4842,9 @@
                     data-active={i === activeIndex}
                   >
                     <div className="agent-viz">
-                      {/* Active card gets a fresh key per cycle → remount →
-                          CSS animations restart at frame 0. Inactive cards
-                          keep a stable key so they don't churn. Result: 2
-                          remounts per click (old active + new active). */}
-                      <AgentVisual
-                        key={i === activeIndex ? `${a.slug}-active-${cycleKey}` : `${a.slug}-idle`}
-                        slug={a.slug}
-                        index={i}
-                      />
+                      {/* Stable key — never remounts. All 10 cards animate
+                          their 13s loop continuously, in sync. */}
+                      <AgentVisual key={a.slug} slug={a.slug} index={i} />
                     </div>
                     <div className="agent-body">
                       <div className="agent-name">{a.name}</div>
