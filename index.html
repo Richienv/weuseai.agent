@@ -1383,6 +1383,16 @@
        Originally used scroll-snap + overflow-x:auto, but the StartSection's
        centered-flex parent chain prevented scrollLeft from updating. translateX
        sidesteps the entire scroll-container path. */
+    /* Wrap container — positioning context for the always-visible nav
+       buttons (which sit OUTSIDE .agent-fade so they're not clipped by
+       the fade-edge mask). */
+    .agent-fade-wrap {
+      position: relative;
+      padding: 0 28px; /* room for nav buttons on each side */
+    }
+    @media (min-width: 768px) {
+      .agent-fade-wrap { padding: 0 36px; }
+    }
     .agent-fade {
       position: relative;
       overflow: hidden;
@@ -1395,34 +1405,23 @@
       display: flex;
       gap: 14px;
       will-change: transform;
-      width: max-content;
+      transition: transform 700ms cubic-bezier(0.22, 0.61, 0.36, 1);
     }
     @media (min-width: 768px) { .agent-track { gap: 18px; } }
 
-    /* === Continuous marquee mode (2026-05-08 pivot) === */
-    /* Track is duplicated (20 cards = original 10 × 2). CSS animates from
-       translateX(0) to translateX(-50%), which lands on the second copy's
-       leftmost card — visually identical to start, so the restart is
-       invisible. Pure CSS, no JS scroll math. Hover (and focus-within)
-       pause via .is-paused class set by React state.
-       Speed: 100s for full -50% → ~10s per card passing through center. */
-    .agent-track-marquee {
-      animation: agentMarquee 100s linear infinite;
+    /* Performance: pause every animation inside non-active cards. Only the
+       focused card runs its 13s thinking-flow cycle — keeps CPU low even
+       though there are 10 cards in the DOM. When activeIndex changes, the
+       newly-active card resumes animation from 0% (CSS keyframes restart
+       on play-state change for paused descendants). */
+    .agent-card[data-active="false"] *,
+    .agent-card[data-active="false"] *::before,
+    .agent-card[data-active="false"] *::after {
+      animation-play-state: paused !important;
     }
-    .agent-track-marquee.is-paused {
-      animation-play-state: paused;
-    }
-    @keyframes agentMarquee {
-      from { transform: translateX(0); }
-      to   { transform: translateX(-50%); }
-    }
-    /* Honour reduced-motion: stop the marquee, show the first ~3 cards
-       statically. User can still scroll horizontally if needed. */
+
     @media (prefers-reduced-motion: reduce) {
-      .agent-track-marquee {
-        animation: none;
-        transform: translateX(0);
-      }
+      .agent-track { transition: none; }
     }
 
     .agent-card {
@@ -1509,26 +1508,20 @@
        page. 5000ms loop, all elements share one cycle so they stay in
        sync. Each element gets its own keyframe with a different "in"
        timing so the order reads as a story. */
-    /* Chat header — WhatsApp-style: avatar + agent name + status. Sits
-       at top of every card's viz area, above the chat scene. Universal:
-       same status text ("aktif sekarang") for all 10. */
+    /* Chat header — WhatsApp-style: agent name + status. No avatar dot
+       in the header (the per-message red dot beside each agent bubble is
+       the "agent's voice" indicator; doubling up reads as noise).
+       Universal status "aktif sekarang" across all 10 cards. */
     .agent-card .scene-header {
       position: absolute;
       top: 0; left: 0; right: 0;
       display: flex;
       align-items: center;
       gap: 8px;
-      padding: 7px 12px;
+      padding: 7px 14px;
       background: rgba(255, 255, 255, 0.02);
       border-bottom: 1px solid rgba(255, 255, 255, 0.07);
       z-index: 2;
-    }
-    .agent-card .scene-header .scene-header-avatar {
-      width: 20px; height: 20px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, #E5322D, #8B1410);
-      border: 1px solid rgba(229, 50, 45, 0.55);
-      flex-shrink: 0;
     }
     .agent-card .scene-header .scene-header-text {
       flex: 1;
@@ -1552,18 +1545,49 @@
       letter-spacing: 0.02em;
     }
 
+    /* === Chat viewport: WhatsApp-style auto-scroll === */
+    /* Newest content always lands at viewport BOTTOM. Older content slides
+       UP and eventually out of view (clipped by overflow:hidden). Achieved
+       by anchoring .chat-content to bottom:0 of .chat-viewport, then
+       growing each .chat-slot's grid-template-rows from 0fr → 1fr at its
+       scheduled time. As more slots grow, content height increases and
+       pushes earlier slots up — same visual logic as a chat app autoscroll. */
     .agent-card .agent-scene {
       position: absolute;
       top: 38px; left: 0; right: 0; bottom: 0;
-      padding: 8px 12px 10px;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
       z-index: 1;
       font-family: 'Inter', sans-serif;
       overflow: hidden;
     }
+    .agent-card .chat-viewport {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+    }
+    .agent-card .chat-content {
+      position: absolute;
+      bottom: 0;
+      left: 0; right: 0;
+      padding: 8px 12px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
 
+    /* Each chat-slot animates grid-template-rows from 0fr to 1fr — the
+       row height interpolates from 0 to its natural content height.
+       Inner wrapper is overflow:hidden + min-height:0 so content clips
+       cleanly during the grow. */
+    .agent-card .chat-slot {
+      display: grid;
+      grid-template-rows: 0fr;
+    }
+    .agent-card .chat-slot > .chat-slot-inner {
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    /* === Bubble visual hierarchy (unchanged from prior round) === */
     .agent-card .scene-user {
       align-self: flex-end;
       max-width: 80%;
@@ -1574,33 +1598,37 @@
       color: #fff;
       font-size: 12px;
       line-height: 1.35;
-      opacity: 0;
+      margin-left: auto; /* right-align inside chat-slot */
+    }
+    /* Wrapper for slot-user so the bubble can right-align */
+    .agent-card .chat-slot.slot-user > .chat-slot-inner {
+      display: flex;
+      justify-content: flex-end;
     }
 
-    /* Single agent block — one avatar (left rail) + 4 stacked bubbles
-       (ack → progress → insight → output). Visually grouped so all
-       four read as "from the same agent." */
-    .agent-card .scene-agent-block {
+    /* Each agent message: avatar (only on first / "ack") + bubble.
+       Continuation rows omit the avatar and indent to align with bubbles
+       above — like WhatsApp grouping consecutive messages from one sender. */
+    .agent-card .scene-agent-row {
       display: flex;
       gap: 6px;
       align-items: flex-start;
-      max-width: 100%;
-      opacity: 0;
     }
-    .agent-card .scene-agent-block .scene-avatar {
+    .agent-card .scene-agent-row.continuation {
+      padding-left: 20px; /* 14px avatar + 6px gap */
+    }
+    .agent-card .scene-agent-row .scene-avatar {
       width: 14px; height: 14px;
       border-radius: 50%;
       background: linear-gradient(135deg, #E5322D, #8B1410);
       flex-shrink: 0;
       margin-top: 3px;
     }
-    .agent-card .scene-agent-bubbles {
+    .agent-card .scene-agent-row .scene-bubble {
       flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
       min-width: 0;
     }
+
     .agent-card .scene-bubble {
       padding: 4px 9px;
       border-radius: 4px 11px 11px 11px;
@@ -1610,11 +1638,6 @@
       font-size: 10.5px;
       line-height: 1.32;
     }
-    /* Per-role bubble hierarchy:
-       ack      — italic, dim 65%        ("Aku [verb] dulu")
-       progress — normal, dim 78%        ("12 sumber, BI report")
-       insight  — bold + oxblood accent  ("Pola: ...") ← the smart moment
-       output   — normal, full opacity   ("Siap untuk kamu:")           */
     .agent-card .scene-bubble-ack {
       color: rgba(255, 255, 255, 0.65);
       font-style: italic;
@@ -1623,18 +1646,15 @@
     }
     .agent-card .scene-bubble-progress {
       color: rgba(255, 255, 255, 0.78);
-      opacity: 0;
     }
     .agent-card .scene-bubble-insight {
       background: rgba(229, 50, 45, 0.06);
       border-color: rgba(229, 50, 45, 0.28);
       color: rgba(255, 255, 255, 0.96);
       font-weight: 500;
-      opacity: 0;
     }
     .agent-card .scene-bubble-output {
       border-color: rgba(255, 255, 255, 0.16);
-      opacity: 0;
     }
 
     .agent-card .scene-memos {
@@ -1664,74 +1684,81 @@
       flex-shrink: 0;
     }
 
-    /* Timing — 13000ms cycle (~13s loop). 5-bubble thinking flow + two
-       sequential animations (data → deliverable) so each agent reads as
-       a consultant who processes, recommends, and SHIPS A DELIVERABLE.
+    /* Timing — 13000ms cycle. Per-slot grow animation (grid-template-rows
+       0fr → 1fr) creates the WhatsApp scroll: as each new bubble grows,
+       earlier bubbles get pushed up. Older bubbles stay rendered (just
+       scrolled off the top via overflow:hidden), so anim1 and anim2 can
+       both exist on screen simultaneously near the end of the cycle.
        Reference timeline:
-         0.0s  B1 user fade-in (400ms)
-         1.0s  B2 ack starts                 — "Aku [verb] dulu"
-         2.5s  B3 progress starts             — concrete number
-         4.0s  B4 insight starts              — pattern / recommendation
-         5.5s  B5 output starts               — "Siap untuk kamu:"
-         6.5s  Animation 1 starts             — raw data view (200ms stagger)
-         8.5s  Animation 1 fades out (500ms)
-         9.0s  Animation 2 emerges            — deliverable (oxblood border)
+         0.0s  user bubble grows in
+         1.0s  ack bubble grows in (pushes user up)
+         2.5s  progress grows
+         4.0s  insight grows ← smart moment, gets oxblood pulse
+         5.5s  output grows
+         6.5s  Animation 1 (raw data) grows
+         9.0s  Animation 2 (deliverable) grows ← anim1 stays, just scrolled up
         11.5s  Hold full state (1s breathing)
-        12.5s  Everything fades out (500ms)
-        13.0s  Loop restart                                                   */
-    .agent-card .scene-user            { animation: sceneUserIn      13000ms ease-out infinite; }
-    .agent-card .scene-agent-block     { animation: sceneAgent1In    13000ms ease-out infinite; }
-    .agent-card .scene-bubble-progress { animation: sceneProgressIn  13000ms ease-out infinite; }
+        12.5s  All slots collapse together (500ms fade)
+        13.0s  Loop restart                                                  */
+    .agent-card .slot-user     { animation: slotUser     13000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
+    .agent-card .slot-ack      { animation: slotAck      13000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
+    .agent-card .slot-progress { animation: slotProgress 13000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
+    .agent-card .slot-insight  { animation: slotInsight  13000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
+    .agent-card .slot-output   { animation: slotOutput   13000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
+    .agent-card .slot-anim1    { animation: slotAnim1    13000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
+    .agent-card .slot-anim2    { animation: slotAnim2    13000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
+    /* Insight bubble pulse — the "smart moment" */
     .agent-card .scene-bubble-insight {
-      animation: sceneInsightIn 13000ms ease-out infinite, insightPulse 13000ms ease-out infinite;
-    }
-    .agent-card .scene-bubble-output {
-      animation: sceneOutputIn 13000ms ease-out infinite, bubblePulse 13000ms ease-out infinite;
+      animation: insightPulse 13000ms ease-out infinite;
     }
 
-    @keyframes sceneUserIn {
-      0%        { opacity: 0; transform: translateY(4px); }
-      3%        { opacity: 1; transform: translateY(0); }
-      92%       { opacity: 1; transform: translateY(0); }
-      96%, 100% { opacity: 0; transform: translateY(0); }
+    @keyframes slotUser {
+      0%        { grid-template-rows: 0fr; opacity: 0; }
+      3%        { grid-template-rows: 1fr; opacity: 1; }
+      92%       { grid-template-rows: 1fr; opacity: 1; }
+      96%, 100% { grid-template-rows: 0fr; opacity: 0; }
     }
-    @keyframes sceneAgent1In {
-      0%, 7.5%   { opacity: 0; transform: translateY(4px); }
-      11%        { opacity: 1; transform: translateY(0); }
-      92%        { opacity: 1; transform: translateY(0); }
-      96%, 100%  { opacity: 0; transform: translateY(0); }
+    @keyframes slotAck {
+      0%, 7.5% { grid-template-rows: 0fr; opacity: 0; }
+      11%      { grid-template-rows: 1fr; opacity: 1; }
+      92%      { grid-template-rows: 1fr; opacity: 1; }
+      96%, 100% { grid-template-rows: 0fr; opacity: 0; }
     }
-    @keyframes sceneProgressIn {
-      0%, 19%    { opacity: 0; transform: translateY(4px); }
-      22%        { opacity: 1; transform: translateY(0); }
-      92%        { opacity: 1; transform: translateY(0); }
-      96%, 100%  { opacity: 0; transform: translateY(0); }
+    @keyframes slotProgress {
+      0%, 19%  { grid-template-rows: 0fr; opacity: 0; }
+      22%      { grid-template-rows: 1fr; opacity: 1; }
+      92%      { grid-template-rows: 1fr; opacity: 1; }
+      96%, 100% { grid-template-rows: 0fr; opacity: 0; }
     }
-    @keyframes sceneInsightIn {
-      0%, 31%    { opacity: 0; transform: translateY(4px); }
-      34%        { opacity: 1; transform: translateY(0); }
-      92%        { opacity: 1; transform: translateY(0); }
-      96%, 100%  { opacity: 0; transform: translateY(0); }
+    @keyframes slotInsight {
+      0%, 31%  { grid-template-rows: 0fr; opacity: 0; }
+      34%      { grid-template-rows: 1fr; opacity: 1; }
+      92%      { grid-template-rows: 1fr; opacity: 1; }
+      96%, 100% { grid-template-rows: 0fr; opacity: 0; }
     }
-    @keyframes sceneOutputIn {
-      0%, 42%    { opacity: 0; transform: translateY(4px); }
-      45%        { opacity: 1; transform: translateY(0); }
-      92%        { opacity: 1; transform: translateY(0); }
-      96%, 100%  { opacity: 0; transform: translateY(0); }
+    @keyframes slotOutput {
+      0%, 42%  { grid-template-rows: 0fr; opacity: 0; }
+      45%      { grid-template-rows: 1fr; opacity: 1; }
+      92%      { grid-template-rows: 1fr; opacity: 1; }
+      96%, 100% { grid-template-rows: 0fr; opacity: 0; }
     }
-    /* Insight bubble pulse — the "smart moment" */
+    @keyframes slotAnim1 {
+      0%, 50%  { grid-template-rows: 0fr; opacity: 0; }
+      53%      { grid-template-rows: 1fr; opacity: 1; }
+      92%      { grid-template-rows: 1fr; opacity: 1; }
+      96%, 100% { grid-template-rows: 0fr; opacity: 0; }
+    }
+    @keyframes slotAnim2 {
+      0%, 69%  { grid-template-rows: 0fr; opacity: 0; }
+      72%      { grid-template-rows: 1fr; opacity: 1; }
+      92%      { grid-template-rows: 1fr; opacity: 1; }
+      96%, 100% { grid-template-rows: 0fr; opacity: 0; }
+    }
     @keyframes insightPulse {
-      0%, 31%    { box-shadow: 0 0 0 0 rgba(229, 50, 45, 0); }
-      34%        { box-shadow: 0 0 0 6px rgba(229, 50, 45, 0.18); }
-      42%        { box-shadow: 0 0 0 0 rgba(229, 50, 45, 0); }
-      100%       { box-shadow: 0 0 0 0 rgba(229, 50, 45, 0); }
-    }
-    /* Output bubble pulse during anim1 emergence */
-    @keyframes bubblePulse {
-      0%, 50%    { box-shadow: 0 0 0 0 rgba(229, 50, 45, 0); }
-      53%        { box-shadow: 0 0 0 5px rgba(229, 50, 45, 0.10); }
-      62%        { box-shadow: 0 0 0 0 rgba(229, 50, 45, 0); }
-      100%       { box-shadow: 0 0 0 0 rgba(229, 50, 45, 0); }
+      0%, 31%   { box-shadow: 0 0 0 0 rgba(229, 50, 45, 0); }
+      34%       { box-shadow: 0 0 0 6px rgba(229, 50, 45, 0.18); }
+      42%       { box-shadow: 0 0 0 0 rgba(229, 50, 45, 0); }
+      100%      { box-shadow: 0 0 0 0 rgba(229, 50, 45, 0); }
     }
 
     /* ─── ACTION VISUALIZATIONS (per-agent specific styling) ─── */
@@ -2084,20 +2111,10 @@
     }
 
     /* === ANIMATION 2 — the "deliverable" view === */
-    /* anim1 fades out at 65-69% (8.5–9.0s), anim2 fades in at 69-72% (9.0–9.4s).
-       They share the same vertical space (sequential reveal, not stacked).  */
-    .agent-card .scene-anim1-wrap { /* container only — items inside have their own fade keyframes */ }
-    .agent-card .scene-anim2-wrap {
-      opacity: 0;
-      animation: anim2In 13000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite;
-    }
-    @keyframes anim2In {
-      0%, 69%    { opacity: 0; transform: translateY(-10px) scale(0.85); filter: blur(2px); }
-      72%        { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
-      92%        { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
-      96%, 100%  { opacity: 0; }
-    }
-    /* Anim2 inner items stagger in on top of the anim2 emergence */
+    /* The slot wrapper (.slot-anim2) handles the grow-in via grid-template-rows.
+       Inner items still get a per-item opacity stagger so they don't all
+       appear at once. */
+    /* Anim2 inner items stagger in after the container grows */
     .agent-card .scene-anim2 > * { opacity: 0; }
     .agent-card .scene-anim2 > *:nth-child(1) { animation: anim2Item1 13000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
     .agent-card .scene-anim2 > *:nth-child(2) { animation: anim2Item2 13000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
@@ -2254,13 +2271,9 @@
     }
 
     @media (prefers-reduced-motion: reduce) {
-      .agent-card .scene-user,
-      .agent-card .scene-agent-block,
-      .agent-card .scene-bubble-progress,
+      .agent-card .chat-slot,
       .agent-card .scene-bubble-insight,
-      .agent-card .scene-bubble-output,
       .agent-card .scene-stagger > *,
-      .agent-card .scene-anim2-wrap,
       .agent-card .scene-anim2 > *,
       .agent-card .scene-chart .chart-line,
       .agent-card .scene-chart .chart-marker,
@@ -2271,49 +2284,53 @@
         filter: none;
         box-shadow: none;
       }
+      .agent-card .chat-slot { grid-template-rows: 1fr; }
       .agent-card .scene-chart .chart-line { stroke-dashoffset: 0; }
       .agent-card .scene-multi-row.bull .scene-multi-bar::after { width: 88%; }
       .agent-card .scene-multi-row.base .scene-multi-bar::after { width: 60%; }
       .agent-card .scene-multi-row.bear .scene-multi-bar::after { width: 32%; }
     }
 
-    /* ─── CAROUSEL CHEVRON NAV (desktop hover, mobile touch) ─── */
+    /* ─── CAROUSEL NAV BUTTONS (always-visible, prominent) ─── */
     .agent-fade { position: relative; }
     .agent-nav {
       position: absolute;
-      top: 0; bottom: 0;
-      width: 56px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 44px; height: 44px;
       z-index: 6;
+      border-radius: 999px;
+      background: rgba(245, 242, 234, 0.96);  /* bone */
+      border: 1px solid rgba(229, 50, 45, 0.45);
+      color: #E5322D;
+      cursor: pointer;
+      padding: 0;
       display: flex;
       align-items: center;
       justify-content: center;
-      cursor: pointer;
-      background: transparent;
-      border: 0;
-      padding: 0;
-      opacity: 0;
-      transition: opacity 220ms ease;
-      color: rgba(255, 255, 255, 0.85);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(0,0,0,0.05);
+      transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease;
     }
-    .agent-nav-prev { left: 0; }
-    .agent-nav-next { right: 0; }
-    .agent-fade:hover .agent-nav { opacity: 0.7; }
-    .agent-nav:hover { opacity: 1; }
-    .agent-nav:focus-visible { opacity: 1; outline: none; }
-    .agent-nav .agent-nav-glyph {
-      width: 36px;
-      height: 36px;
-      border-radius: 999px;
-      background: rgba(10, 10, 10, 0.65);
-      border: 1px solid rgba(255, 255, 255, 0.10);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      display: flex; align-items: center; justify-content: center;
+    .agent-nav-prev { left: -8px; }
+    .agent-nav-next { right: -8px; }
+    @media (min-width: 768px) {
+      .agent-nav-prev { left: 6px; }
+      .agent-nav-next { right: 6px; }
     }
-    .agent-nav svg { width: 14px; height: 14px; stroke: currentColor; stroke-width: 2.4; fill: none; stroke-linecap: round; stroke-linejoin: round; }
-    /* Tablet/mobile: hide chevrons (touch swipe handles nav) */
-    @media (max-width: 768px) {
-      .agent-nav { display: none; }
+    .agent-nav:hover {
+      transform: translateY(-50%) scale(1.05);
+      background: #FAF9F5;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(229,50,45,0.30);
+    }
+    .agent-nav:active { transform: translateY(-50%) scale(0.96); }
+    .agent-nav:focus-visible { outline: 2px solid #E5322D; outline-offset: 3px; }
+    .agent-nav svg {
+      width: 20px; height: 20px;
+      stroke: currentColor;
+      stroke-width: 2.4;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
     }
     .agent-card .agent-body {
       padding: 16px 18px 20px;
@@ -4217,38 +4234,83 @@
     //
     // Storyboard scope: only 'pro' has a scene right now. Other slugs fall
     // through to CreatureSprite. After founder approval the rest will follow.
-    // Reusable shell — chat header + 5-bubble "smart consultant" pattern:
-    //   Header       → avatar + agent name (serif oxblood) + "aktif sekarang"
-    //   B1 user      → original question
-    //   B2 ack       → "Aku [verb] dulu" (italic dim, present-tense)
-    //   B3 progress  → concrete number ("12 sumber, BI report")
-    //   B4 insight   → pattern / recommendation ← THE smart moment (oxblood accent + pulse)
-    //   B5 output    → connector ("Siap untuk kamu:") + Animation 1 (data) → Animation 2 (deliverable)
-    // Action items emerge from B5 via .scene-stagger magic-escape.
-    // anim2 takes the same vertical space as Animation 1 (sequential reveal,
-    // not stacked) — Anim1 fades out at ~9s, Anim2 fades in at ~9s.
+    // Reusable shell — chat header (no dot) + WhatsApp-style auto-scroll
+    // chat viewport. Each bubble lives in its own .chat-slot which animates
+    // grid-template-rows from 0fr → 1fr at its scheduled time. As newer
+    // slots grow, the .chat-content (anchored to bottom:0 of the viewport)
+    // pushes earlier slots up. Older content stays rendered, just scrolled
+    // off the top — exactly like WhatsApp.
+    //
+    // Structure per card:
+    //   Header (sticky)       → agent name + "aktif sekarang"
+    //   chat-viewport         → overflow:hidden mask
+    //     chat-content        → bottom-anchored stack of slots
+    //       slot-user         → user bubble (right-aligned)
+    //       slot-ack          → agent's "Aku [verb] dulu" (with avatar)
+    //       slot-progress     → concrete number (continuation, no avatar)
+    //       slot-insight      → pattern / recommendation (oxblood pulse)
+    //       slot-output       → connector
+    //       slot-anim1        → raw data view (memos / tabs / chart / etc.)
+    //       slot-anim2        → the deliverable (oxblood-accent border)
     function SceneShell({ name, user, agentAck, agentProgress, agentInsight, agentOutput, anim1, anim2, slug }) {
       return (
         <>
           <div className="scene-header">
-            <div className="scene-header-avatar" />
             <div className="scene-header-text">
               <div className="scene-header-name">{name}</div>
               <div className="scene-header-status">aktif sekarang</div>
             </div>
           </div>
           <div className={`agent-scene scene-${slug}`}>
-            <div className="scene-user">{user}</div>
-            <div className="scene-agent-block">
-              <div className="scene-avatar" />
-              <div className="scene-agent-bubbles">
-                <div className="scene-bubble scene-bubble-ack">{agentAck}</div>
-                <div className="scene-bubble scene-bubble-progress">{agentProgress}</div>
-                <div className="scene-bubble scene-bubble-insight">{agentInsight}</div>
-                <div className="scene-bubble scene-bubble-output">
-                  {agentOutput}
-                  <div className="scene-anim1-wrap">{anim1}</div>
-                  <div className="scene-anim2-wrap">{anim2}</div>
+            <div className="chat-viewport">
+              <div className="chat-content">
+                <div className="chat-slot slot-user">
+                  <div className="chat-slot-inner">
+                    <div className="scene-user">{user}</div>
+                  </div>
+                </div>
+                <div className="chat-slot slot-ack">
+                  <div className="chat-slot-inner">
+                    <div className="scene-agent-row">
+                      <div className="scene-avatar" />
+                      <div className="scene-bubble scene-bubble-ack">{agentAck}</div>
+                    </div>
+                  </div>
+                </div>
+                <div className="chat-slot slot-progress">
+                  <div className="chat-slot-inner">
+                    <div className="scene-agent-row continuation">
+                      <div className="scene-bubble scene-bubble-progress">{agentProgress}</div>
+                    </div>
+                  </div>
+                </div>
+                <div className="chat-slot slot-insight">
+                  <div className="chat-slot-inner">
+                    <div className="scene-agent-row continuation">
+                      <div className="scene-bubble scene-bubble-insight">{agentInsight}</div>
+                    </div>
+                  </div>
+                </div>
+                <div className="chat-slot slot-output">
+                  <div className="chat-slot-inner">
+                    <div className="scene-agent-row continuation">
+                      <div className="scene-bubble scene-bubble-output">{agentOutput}</div>
+                    </div>
+                  </div>
+                </div>
+                <div className="chat-slot slot-anim1">
+                  <div className="chat-slot-inner">
+                    <div className="scene-agent-row continuation">
+                      <div style={{ flex: 1, minWidth: 0 }}>{anim1}</div>
+                    </div>
+                  </div>
+                </div>
+                <div className="chat-slot slot-anim2">
+                  <div className="chat-slot-inner">
+                    <div className="scene-agent-row continuation">
+                      <div style={{ flex: 1, minWidth: 0 }}>{anim2}</div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -4656,14 +4718,76 @@
     }
 
     function AgentCarousel() {
+      const trackRef = useRef(null);
       const rootRef = useRef(null);
+      const [activeIndex, setActiveIndex] = useState(0);
       const [paused, setPaused] = useState(false);
+      const reducedMotion = useRef(false);
 
-      // Duplicate AGENTS for the seamless infinite loop. The track is
-      // 2× the original width; CSS animates from translateX(0) to
-      // translateX(-50%), which lands on a position visually identical
-      // to translateX(0) thanks to the duplicate — restart is invisible.
-      const trackContent = [...AGENTS, ...AGENTS];
+      // Detect prefers-reduced-motion
+      useEffect(() => {
+        const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+        reducedMotion.current = mq.matches;
+        const onChange = (e) => { reducedMotion.current = e.matches; };
+        mq.addEventListener?.('change', onChange);
+        return () => mq.removeEventListener?.('change', onChange);
+      }, []);
+
+      // Card pitch from live computed style (gap differs by viewport)
+      const getCardPitch = (track) => {
+        const cards = track.querySelectorAll('.agent-card');
+        if (!cards.length) return 0;
+        const cardW = cards[0].getBoundingClientRect().width;
+        const gap = parseFloat(getComputedStyle(track).columnGap) || 14;
+        return cardW + gap;
+      };
+
+      // Apply transform when activeIndex changes
+      useEffect(() => {
+        const track = trackRef.current;
+        if (!track) return;
+        const pitch = getCardPitch(track);
+        track.style.transform = `translate3d(-${activeIndex * pitch}px, 0, 0)`;
+      }, [activeIndex]);
+
+      // Re-apply transform on resize (pitch changes with viewport breakpoints)
+      useEffect(() => {
+        const onResize = () => {
+          const track = trackRef.current;
+          if (!track) return;
+          const pitch = getCardPitch(track);
+          track.style.transform = `translate3d(-${activeIndex * pitch}px, 0, 0)`;
+        };
+        window.addEventListener('resize', onResize);
+        return () => window.removeEventListener('resize', onResize);
+      }, [activeIndex]);
+
+      // Auto-advance every 13s (matches the per-card animation cycle so
+      // each card gets a full thinking-flow before the next slides in).
+      // Pause on hover/focus + reduced-motion.
+      useEffect(() => {
+        if (paused || reducedMotion.current) return;
+        const id = setInterval(() => {
+          setActiveIndex((idx) => (idx + 1) % AGENTS.length);
+        }, 13000);
+        return () => clearInterval(id);
+      }, [paused]);
+
+      const goTo = (i) => setActiveIndex(((i % AGENTS.length) + AGENTS.length) % AGENTS.length);
+      const goNext = () => setActiveIndex((i) => (i + 1) % AGENTS.length);
+      const goPrev = () => setActiveIndex((i) => (i - 1 + AGENTS.length) % AGENTS.length);
+
+      // Touch swipe (mobile)
+      const touchStartX = useRef(null);
+      const onTouchStart = (e) => { touchStartX.current = e.touches[0]?.clientX ?? null; };
+      const onTouchEnd = (e) => {
+        if (touchStartX.current == null) return;
+        const dx = (e.changedTouches[0]?.clientX ?? touchStartX.current) - touchStartX.current;
+        touchStartX.current = null;
+        if (Math.abs(dx) > 40) {
+          if (dx < 0) goNext(); else goPrev();
+        }
+      };
 
       return (
         <div
@@ -4677,28 +4801,47 @@
           onFocus={() => setPaused(true)}
           onBlur={() => setPaused(false)}
         >
-          <div className="agent-fade">
-            <div
-              className={`agent-track agent-track-marquee${paused ? ' is-paused' : ''}`}
-              aria-live="polite"
-            >
-              {trackContent.map((a, i) => (
-                <article
-                  key={`${a.slug}-${i}`}
-                  className="agent-card"
-                  aria-label={`Agent: ${a.name}`}
-                  aria-hidden={i >= AGENTS.length}
-                >
-                  <div className="agent-viz">
-                    <AgentVisual slug={a.slug} index={i % AGENTS.length} />
-                  </div>
-                  <div className="agent-body">
-                    <div className="agent-name">{a.name}</div>
-                    <div className="agent-desc">{a.desc}</div>
-                  </div>
-                </article>
-              ))}
+          <div className="agent-fade-wrap">
+            <button type="button" className="agent-nav agent-nav-prev" onClick={goPrev} aria-label="Agent sebelumnya">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="15 18 9 12 15 6" /></svg>
+            </button>
+            <button type="button" className="agent-nav agent-nav-next" onClick={goNext} aria-label="Agent berikutnya">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="9 6 15 12 9 18" /></svg>
+            </button>
+            <div className="agent-fade" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+              <div ref={trackRef} className="agent-track" aria-live="polite">
+                {AGENTS.map((a, i) => (
+                  <article
+                    key={a.slug}
+                    className={`agent-card${i === activeIndex ? ' is-active' : ''}`}
+                    aria-label={`Agent: ${a.name}`}
+                    data-active={i === activeIndex}
+                  >
+                    <div className="agent-viz">
+                      <AgentVisual slug={a.slug} index={i} />
+                    </div>
+                    <div className="agent-body">
+                      <div className="agent-name">{a.name}</div>
+                      <div className="agent-desc">{a.desc}</div>
+                    </div>
+                  </article>
+                ))}
+              </div>
             </div>
+          </div>
+
+          <div className="agent-dots" role="tablist" aria-label="Pilih agent">
+            {AGENTS.map((a, i) => (
+              <button
+                key={a.slug}
+                type="button"
+                role="tab"
+                aria-label={`Slide ke kartu ${i + 1} — ${a.name}`}
+                aria-current={i === activeIndex}
+                className="agent-dot"
+                onClick={() => goTo(i)}
+              />
+            ))}
           </div>
 
           <p className="agent-tier-line">
@@ -4733,9 +4876,6 @@
             <p className="mt-6 max-w-xl text-white/65 font-body font-light text-sm md:text-base leading-relaxed">
               The wave is coming. The next billion-dollar company won't have 1,000 employees — only 1.
             </p>
-            <button className="mt-10 liquid-glass-strong rounded-full px-6 py-3 text-sm font-medium flex items-center gap-2">
-              Mulai hari ini <ArrowUpRight size={14} stroke={2.2} />
-            </button>
             <AgentCarousel />
           </div>
         </section>
