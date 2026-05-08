@@ -4750,13 +4750,17 @@
     function AgentCarousel() {
       const trackRef = useRef(null);
       const rootRef = useRef(null);
-      const [activeIndex, setActiveIndex] = useState(0);
+      // displayIndex is the position in the 12-slot track [sentinel_last,
+      // ...10 real, sentinel_first]. realIndex (the agent shown) is
+      // displayIndex - 1, clamped to 0-9. Sentinels at 0 and 11 are
+      // identical to last/first real cards — visible only during the
+      // wrap-around transition, then we silently snap back to the real
+      // copy with no transition. Result: seamless infinite carousel.
+      const [displayIndex, setDisplayIndex] = useState(1);
+      const realIndex = ((displayIndex - 1) + AGENTS.length) % AGENTS.length;
       const [paused, setPaused] = useState(false);
       const reducedMotion = useRef(false);
-      // (Animation runs continuously across all 10 cards in sync, like the
-      // DashboardDemo lower on this page — no remount-on-click reset, no
-      // active/inactive pause distinction. activeIndex only controls which
-      // card is centered in the viewport.)
+      const wrapping = useRef(false);
 
       // Detect prefers-reduced-motion
       useEffect(() => {
@@ -4776,40 +4780,84 @@
         return cardW + gap;
       };
 
-      // Apply transform when activeIndex changes
+      // Apply transform when displayIndex changes
       useEffect(() => {
         const track = trackRef.current;
         if (!track) return;
         const pitch = getCardPitch(track);
-        track.style.transform = `translate3d(-${activeIndex * pitch}px, 0, 0)`;
-      }, [activeIndex]);
+        track.style.transform = `translate3d(-${displayIndex * pitch}px, 0, 0)`;
+      }, [displayIndex]);
 
-      // Re-apply transform on resize (pitch changes with viewport breakpoints)
+      // Re-apply on resize
       useEffect(() => {
         const onResize = () => {
           const track = trackRef.current;
           if (!track) return;
           const pitch = getCardPitch(track);
-          track.style.transform = `translate3d(-${activeIndex * pitch}px, 0, 0)`;
+          track.style.transform = `translate3d(-${displayIndex * pitch}px, 0, 0)`;
         };
         window.addEventListener('resize', onResize);
         return () => window.removeEventListener('resize', onResize);
-      }, [activeIndex]);
+      }, [displayIndex]);
 
-      // Auto-advance every 13s (matches the per-card animation cycle so
-      // each card gets a full thinking-flow before the next slides in).
-      // Pause on hover/focus + reduced-motion.
+      // Auto-advance every 13s
       useEffect(() => {
         if (paused || reducedMotion.current) return;
-        const id = setInterval(() => {
-          setActiveIndex((idx) => (idx + 1) % AGENTS.length);
-        }, 13000);
+        const id = setInterval(() => { goNext(); }, 13000);
         return () => clearInterval(id);
       }, [paused]);
 
-      const goTo = (i) => setActiveIndex(((i % AGENTS.length) + AGENTS.length) % AGENTS.length);
-      const goNext = () => setActiveIndex((i) => (i + 1) % AGENTS.length);
-      const goPrev = () => setActiveIndex((i) => (i - 1 + AGENTS.length) % AGENTS.length);
+      // Snap-back after a wrap-around transition completes — disable the
+      // CSS transition, jump from sentinel slot to its real twin, then
+      // re-enable the transition next frame.
+      const snapTo = (newDisplayIdx) => {
+        const track = trackRef.current;
+        if (!track) return;
+        track.style.transition = 'none';
+        setDisplayIndex(newDisplayIdx);
+        // Wait two frames so the transform settles, then restore transition
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            if (track) track.style.transition = '';
+            wrapping.current = false;
+          });
+        });
+      };
+
+      const goNext = () => {
+        if (wrapping.current) return;
+        setDisplayIndex((d) => {
+          // Going past the last real card → animate to sentinel at 11
+          // (which renders AGENTS[0]), then snap to the real AGENTS[0] at slot 1.
+          if (d >= AGENTS.length) {
+            wrapping.current = true;
+            // After the standard 700ms slide animation, snap back
+            setTimeout(() => snapTo(1), 720);
+            return AGENTS.length + 1; // = 11
+          }
+          return d + 1;
+        });
+      };
+
+      const goPrev = () => {
+        if (wrapping.current) return;
+        setDisplayIndex((d) => {
+          // Going before the first real card → animate to sentinel at 0
+          // (which renders AGENTS[last]), then snap to the real AGENTS[last] at slot 10.
+          if (d <= 1) {
+            wrapping.current = true;
+            setTimeout(() => snapTo(AGENTS.length), 720);
+            return 0;
+          }
+          return d - 1;
+        });
+      };
+
+      const goTo = (i) => {
+        // Map a real index 0-9 to displayIndex 1-10. Doesn't wrap (jump-to dot).
+        const target = (((i % AGENTS.length) + AGENTS.length) % AGENTS.length) + 1;
+        setDisplayIndex(target);
+      };
 
       // Touch swipe (mobile)
       const touchStartX = useRef(null);
@@ -4844,24 +4892,32 @@
             </button>
             <div className="agent-fade" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
               <div ref={trackRef} className="agent-track" aria-live="polite">
-                {AGENTS.map((a, i) => (
-                  <article
-                    key={a.slug}
-                    className={`agent-card${i === activeIndex ? ' is-active' : ''}`}
-                    aria-label={`Agent: ${a.name}`}
-                    data-active={i === activeIndex}
-                  >
-                    <div className="agent-viz">
-                      {/* Stable key — never remounts. All 10 cards animate
-                          their 13s loop continuously, in sync. */}
-                      <AgentVisual key={a.slug} slug={a.slug} index={i} />
-                    </div>
-                    <div className="agent-body">
-                      <div className="agent-name">{a.name}</div>
-                      <div className="agent-desc">{a.desc}</div>
-                    </div>
-                  </article>
-                ))}
+                {/* 12-slot track: [last-card-sentinel, ...10 real cards,
+                    first-card-sentinel]. Sentinels are dupes of the
+                    last/first real cards so the wrap-around slide has
+                    something to animate to. After the slide completes,
+                    we silently snap to the real twin (no transition). */}
+                {[AGENTS[AGENTS.length - 1], ...AGENTS, AGENTS[0]].map((a, i) => {
+                  const isSentinel = i === 0 || i === AGENTS.length + 1;
+                  const isActive = i === displayIndex;
+                  return (
+                    <article
+                      key={`slot-${i}`}
+                      className={`agent-card${isActive ? ' is-active' : ''}`}
+                      aria-label={`Agent: ${a.name}`}
+                      aria-hidden={isSentinel}
+                      data-active={isActive}
+                    >
+                      <div className="agent-viz">
+                        <AgentVisual key={`${a.slug}-${i}`} slug={a.slug} index={i} />
+                      </div>
+                      <div className="agent-body">
+                        <div className="agent-name">{a.name}</div>
+                        <div className="agent-desc">{a.desc}</div>
+                      </div>
+                    </article>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -4873,7 +4929,7 @@
                 type="button"
                 role="tab"
                 aria-label={`Slide ke kartu ${i + 1} — ${a.name}`}
-                aria-current={i === activeIndex}
+                aria-current={i === realIndex}
                 className="agent-dot"
                 onClick={() => goTo(i)}
               />
