@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kontak — {business_name}</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<!--# include nav.html -->
+<section class="page-hero">
+  <div class="container">
+    <h1>Hubungi kami</h1>
+    <p class="lede">{contact_lede}</p>
+  </div>
+</section>
+
+<section class="contact-grid">
+  <div class="container">
+    <div class="contact-method">
+      <h3>WhatsApp</h3>
+      <p>Respon cepat, 7 hari seminggu jam {whatsapp_hours}.</p>
+      <a href="https://wa.me/{whatsapp_number}" class="cta">Chat sekarang</a>
+    </div>
+    <div class="contact-method">
+      <h3>Email</h3>
+      <p>Untuk request detail atau dokumen.</p>
+      <a href="mailto:{contact_email}" class="link-cta">{contact_email}</a>
+    </div>
+    <div class="contact-method">
+      <h3>Lokasi</h3>
+      <p>{address_line_1}<br>{address_line_2}</p>
+      <p class="muted">{operating_hours}</p>
+    </div>
+  </div>
+</section>
+
+<!--# include footer.html -->
+</body>
+</html>

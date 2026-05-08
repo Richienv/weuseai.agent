@@ -1,0 +1,14 @@
+<!-- Shared nav fragment. Each page injects this via SSI include or by
+     copy-paste at deploy time. The {active_*} placeholder gets set to
+     "active" on the matching page; others get empty string. -->
+<nav class="site-nav">
+  <div class="container">
+    <a href="index.html" class="brand">{business_name}</a>
+    <div class="links">
+      <a href="index.html" class="{active_home}">Beranda</a>
+      <a href="about.html" class="{active_about}">Tentang</a>
+      <a href="services.html" class="{active_services}">Layanan</a>
+      <a href="contact.html" class="{active_contact}">Kontak</a>
+    </div>
+  </div>
+</nav>

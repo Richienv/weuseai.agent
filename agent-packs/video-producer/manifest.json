@@ -1,8 +1,8 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "video-producer",
-  "version": "1.0.0",
-  "description_id": "Bundle skill + template Video Producer. Script TikTok dan Reels, hashtag research, edit suggestions — output 10 video per hari tanpa kompromi pada hook.",
+  "version": "2.0.0",
+  "description_id": "Bundle skill + template Video Producer v2. Script TikTok dan Reels, hashtag research, sound trend tracking, caption drafting, HyperFrames storyboard spec untuk render off-platform.",
   "skills": [
     {
       "id": "tiktok-script-builder",
@@ -11,6 +11,42 @@
       "templates_used": ["tiktok-script-format.md"],
       "execution": "edge-function",
       "handler_ref": "edge-fn:tiktok-script-handler",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
+      "id": "hyperframes-storyboard",
+      "description_id": "Susun HyperFrames JSON — storyboard per-scene siap di-feed ke Runway/Sora/CapCut. Scene berisi visual_prompt, motion_hint, duration_sec, audio_cue, transition_to_next. Render actual off-platform di Phase 5; di Phase 6+ kemungkinan in-house render.",
+      "description_en": "Build HyperFrames JSON storyboard ready for off-platform render (Runway/Sora/CapCut).",
+      "templates_used": ["hyperframes-storyboard-format.md"],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:hyperframes-storyboard",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
+      "id": "sound-trend-tracker",
+      "description_id": "Surface sound trend per niche dengan trend stage (emerging / peak / decay) berbasis info publik + customer feedback. Bukan scraping — surface what customer can verify di TikTok/Reels Trending tab sendiri.",
+      "description_en": "Surface sound trends per niche with trend stage labels.",
+      "templates_used": ["sound-trend-stages.md"],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:sound-trend-tracker",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
+      "id": "hashtag-research",
+      "description_id": "Research hashtag mix per niche/topic — emerging tags (volume rendah, upside tinggi), peak tags (saturated), branded tags. Output mix yang fit goal customer.",
+      "description_en": "Research hashtag mix per niche with stage labels.",
+      "templates_used": ["hashtag-mix-strategy.md"],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:hashtag-research",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
+      "id": "caption-optimizer",
+      "description_id": "Draft / iterate caption sesuai brand voice + algoritma platform. CTA terselip natural, bukan 'follow us' generik. Length-optimal per platform (TikTok ~150 char, Reels ~125, Shorts ~100).",
+      "description_en": "Draft platform-optimal captions in brand voice.",
+      "templates_used": ["caption-patterns.md"],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:caption-optimizer",
       "enabled_for_tiers": ["pro", "studio"]
     },
     {
@@ -29,6 +65,30 @@
       "kind": "schema-spec",
       "description_id": "Format spec untuk Hermes — instruksi generate JSON script dengan field hook, body, cta, visual_scenes, sound_suggestion, hashtags. Hashtag pattern dan timestamp regex strict.",
       "best_for": "Reference yang Hermes baca saat generate script"
+    },
+    {
+      "id": "hyperframes-storyboard-format.md",
+      "kind": "schema-spec",
+      "description_id": "JSON schema untuk HyperFrames storyboard — array scenes dengan visual_prompt, motion_hint, duration_sec, audio_cue, transition_to_next.",
+      "best_for": "Hermes pakai saat generate storyboard, atau export ke Runway/Sora prompt format"
+    },
+    {
+      "id": "sound-trend-stages.md",
+      "kind": "reference",
+      "description_id": "Penjelasan trend stages (emerging / peak / decay) + decision criteria kapan adopt sound.",
+      "best_for": "Reference framing saat surface sound recommendation"
+    },
+    {
+      "id": "hashtag-mix-strategy.md",
+      "kind": "reference",
+      "description_id": "Strategy mix hashtag — 30/50/20 rule (emerging/peak/branded) sebagai default, plus context-specific variants.",
+      "best_for": "Default strategy yang dipakai hashtag-research skill"
+    },
+    {
+      "id": "caption-patterns.md",
+      "kind": "reference",
+      "description_id": "Caption pattern library — hook openers, CTA variants per platform, length guidelines.",
+      "best_for": "Reference saat draft / iterate caption"
     }
   ],
   "self_extend": true,

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{business_name}</title>
+<meta name="description" content="{meta_description}">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<!--# include nav.html -->
+<header class="hero">
+  <div class="container">
+    <h1>{hero_headline}</h1>
+    <p class="lede">{value_prop}</p>
+    <a href="https://wa.me/{whatsapp_number}?text={whatsapp_default_msg}" class="cta">{cta_label}</a>
+  </div>
+</header>
+
+<section class="trust">
+  <div class="container">
+    <div class="trust-grid">
+      <div><strong>{trust_1_metric}</strong><br><span>{trust_1_label}</span></div>
+      <div><strong>{trust_2_metric}</strong><br><span>{trust_2_label}</span></div>
+      <div><strong>{trust_3_metric}</strong><br><span>{trust_3_label}</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="services-preview">
+  <div class="container">
+    <h2>Yang kami tawarkan</h2>
+    <div class="services-grid">
+      <div class="service-card"><h3>{service_1}</h3><p>{service_1_blurb}</p></div>
+      <div class="service-card"><h3>{service_2}</h3><p>{service_2_blurb}</p></div>
+      <div class="service-card"><h3>{service_3}</h3><p>{service_3_blurb}</p></div>
+    </div>
+    <a href="services.html" class="link-cta">Lihat semua layanan →</a>
+  </div>
+</section>
+
+<section class="cta-bottom">
+  <div class="container">
+    <h2>{closing_headline}</h2>
+    <a href="https://wa.me/{whatsapp_number}" class="cta">{cta_label}</a>
+  </div>
+</section>
+
+<!--# include footer.html -->
+</body>
+</html>

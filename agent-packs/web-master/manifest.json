@@ -1,0 +1,81 @@
+{
+  "$schema": "../_manifest.schema.json",
+  "agent_slug": "web-master",
+  "version": "2.0.0",
+  "description_id": "Bundle skill + template Web Creator. Bikin website komplit (landing, multi-page, blog), deploy ke Vercel, dan sarankan domain Indonesia (Niagahoster, IDwebhost, Hostinger).",
+  "skills": [
+    {
+      "id": "landing-page-builder",
+      "description_id": "Bikin landing page satu halaman dari 5 template (SaaS, agency, course, portfolio, e-commerce). Customer kasih nama bisnis + value prop, output adalah preview URL siap deploy.",
+      "description_en": "Build a single-page landing site from 5 templates. Customer provides business name + value prop; output is a preview URL ready to deploy.",
+      "templates_used": [
+        "landing/saas/v1.html",
+        "landing/agency/v1.html",
+        "landing/course/v1.html",
+        "landing/portfolio/v1.html",
+        "landing/ecommerce/v1.html"
+      ],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:landing-page-builder",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
+      "id": "multi-page-site-builder",
+      "description_id": "Susun multi-page site (home, about, services, contact) dengan navigation dan typography konsisten. Cocok buat UMKM yang butuh presence online tanpa pakai jasa designer.",
+      "description_en": "Compose a multi-page site (home, about, services, contact) with consistent navigation and typography. Suited for SMBs that want an online presence without hiring a designer.",
+      "templates_used": [
+        "multipage/umkm-default/v1"
+      ],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:multi-page-site-builder",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
+      "id": "blog-post-creator",
+      "description_id": "Tulis blog post SEO-optimized buat search Indonesia. Riset keyword search-intent lokal, heading hierarchy, dan CTA yang jelas. Output siap publish.",
+      "description_en": "Write SEO-optimized blog posts for Indonesian search. Local-intent keyword research, heading hierarchy, clear CTA. Publish-ready output.",
+      "templates_used": [
+        "blog/long-form-article/v1.md",
+        "blog/listicle/v1.md",
+        "blog/how-to/v1.md"
+      ],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:blog-post-creator",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
+      "id": "vercel-deploy-orchestrator",
+      "description_id": "Deploy site yang dibikin Web Creator ke Vercel. Setup custom domain hookup kalau customer udah punya. Output URL preview + production-ready.",
+      "description_en": "Deploys Web Creator output to Vercel. Hooks up a custom domain if the customer has one. Returns preview + production URLs.",
+      "templates_used": [],
+      "execution": "external-api",
+      "handler_ref": "external:vercel-deploy",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
+      "id": "domain-advisory",
+      "description_id": "Bandingkan harga + fitur Niagahoster, IDwebhost, dan Hostinger. Rekomendasi tergantung kebutuhan customer (bisnis kecil, e-commerce, multi-domain). Customer beli sendiri di provider pilihan.",
+      "description_en": "Compare price + features across Niagahoster, IDwebhost, Hostinger. Recommendation depends on customer's need profile (small biz, e-commerce, multi-domain). Customer purchases directly with chosen provider.",
+      "templates_used": [
+        "domain-comparison/2026-q2.json"
+      ],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:domain-advisory",
+      "enabled_for_tiers": ["pro", "studio"]
+    }
+  ],
+  "templates": [
+    { "id": "landing/saas/v1.html", "kind": "html", "description_id": "Template SaaS landing — hero + features + pricing + CTA. Indonesian-localized example copy untuk SaaS B2B." },
+    { "id": "landing/agency/v1.html", "kind": "html", "description_id": "Template agency landing — services + portfolio + team + contact. Cocok buat consulting / digital agency." },
+    { "id": "landing/course/v1.html", "kind": "html", "description_id": "Template course landing — outcome-led hero + curriculum + instructor + pricing. Buat kursus online." },
+    { "id": "landing/portfolio/v1.html", "kind": "html", "description_id": "Template portfolio — work samples + about + contact. Cocok buat freelancer atau independent professional." },
+    { "id": "landing/ecommerce/v1.html", "kind": "html", "description_id": "Template e-commerce — featured products + shop + about. Pre-Stripe/Xendit hookup; checkout customer setup sendiri." },
+    { "id": "multipage/umkm-default/v1", "kind": "site-bundle", "description_id": "Multi-page bundle untuk UMKM — home + about + services + contact + WhatsApp CTA. 4 halaman terkoneksi." },
+    { "id": "blog/long-form-article/v1.md", "kind": "markdown", "description_id": "Long-form blog template (1500-2500 kata) — heading hierarchy, intro hook, body sections, FAQ, CTA penutup." },
+    { "id": "blog/listicle/v1.md", "kind": "markdown", "description_id": "Listicle blog template (5/7/10 items) — intro context, item structure dengan example + actionable takeaway, summary." },
+    { "id": "blog/how-to/v1.md", "kind": "markdown", "description_id": "How-to / tutorial blog — outcome statement + prerequisites + step-by-step + troubleshooting + summary." },
+    { "id": "domain-comparison/2026-q2.json", "kind": "fixture", "description_id": "Snapshot harga + fitur Niagahoster, IDwebhost, Hostinger (2026-Q2). Updated quarterly. Includes per-TLD price + customer-support summary + uptime data." }
+  ],
+  "self_extend": true,
+  "extension_dir": "/var/lib/weuseai/customer-grown/"
+}

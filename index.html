@@ -1904,7 +1904,7 @@
       border: 1px solid rgba(255, 255, 255, 0.06);
     }
 
-    /* === Web Master: browser tabs === */
+    /* === Web Creator: browser tabs (deploy preview) === */
     .agent-card .scene-tabs { display: flex; flex-direction: column; gap: 5px; margin-top: 5px; }
     .agent-card .scene-tab {
       display: flex; align-items: center; gap: 8px;
@@ -2010,7 +2010,7 @@
       96%, 100% { opacity: 0; }
     }
 
-    /* === Macro Strategist: 3 scenario bars === */
+    /* === Project Conductor: 3 status bars (done/in-prog/todo) === */
     .agent-card .scene-multi {
       display: flex; flex-direction: column; gap: 7px; margin-top: 6px;
     }
@@ -3656,8 +3656,10 @@
         ],
       },
 
-      // Web Master — Browser window with search bar (founder pivot from
-      // earlier spider-web concept). Minimalist outline, 30-50 dots/frame.
+      // Web Creator (renamed 2026-05-09 from Web Master, scope shifted from
+      // browser automation to site builder + deploy + domain advisor) —
+      // Browser window with search bar sprite. Visual still works as a
+      // deploy-preview metaphor. Slug "web" kept for backwards compat.
       web: {
         frames: [
           [ // f0 — empty browser frame
@@ -3955,10 +3957,12 @@
         ],
       },
 
-      // Macro Strategist — 3 concentric rings (founder pivot from earlier
-      // globe+meridians). Builds outward: center dot → small ring → medium
-      // ring → all 3 rings. Minimalist outline, ~25-50 dots/frame.
-      macro: {
+      // Project Conductor (renamed 2026-05-09 from Macro Strategist) —
+      // 3 concentric rings sprite. Builds outward: center dot → small ring →
+      // medium ring → all 3 rings. Minimalist outline, ~25-50 dots/frame.
+      // Visual still works as kanban orchestration ring; legacy slug "macro"
+      // intentionally left as sprite dict key for backwards compat.
+      project: {
         frames: [
           [ // f0 — center dot only
             "                    ",
@@ -4185,9 +4189,9 @@
       },
 
       // Social Conductor — Expanding concentric squares (broadcast
-      // amplification, network growth). Distinct from Macro's concentric
-      // CIRCLES — Social is concentric SQUARES. Frames: 1 sq → 2 sq →
-      // 3 sq → 2 sq (outer recedes, then cycle restarts at 1).
+      // amplification, network growth). Distinct from Project Conductor's
+      // concentric CIRCLES — Social is concentric SQUARES. Frames:
+      // 1 sq → 2 sq → 3 sq → 2 sq (outer recedes, then cycle restarts).
       social: {
         frames: [
           [ // f0 — 1 small square
@@ -4458,36 +4462,36 @@
       return (
         <SceneShell
           slug="web"
-          name="Web Master"
-          user="Scrape 50 agensi Jakarta"
-          agentAck="Aku buka 3 browser paralel."
-          agentProgress="OLX + LinkedIn + direktori asosiasi."
-          agentInsight="78 ditemukan, dedupe jadi 50 valid."
-          agentOutput="Data ekstrak, siap export:"
+          name="Web Creator"
+          user="Bangun landing page UMKM kuliner"
+          agentAck="Template multi-page Bahasa, siap."
+          agentProgress="Hero + menu + kontak + WhatsApp link."
+          agentInsight="Domain ID-friendly: niagahoster.co.id."
+          agentOutput="Live di Vercel, siap connect domain:"
           anim1={
             <div className="scene-tabs scene-stagger">
               <div className="scene-tab">
                 <span className="tab-dots"><span /><span /><span /></span>
-                <span className="tab-url">agensi-a.co.id/tim</span>
+                <span className="tab-url">index.html</span>
                 <span className="tab-check">✓</span>
               </div>
               <div className="scene-tab">
                 <span className="tab-dots"><span /><span /><span /></span>
-                <span className="tab-url">agensi-b.com/about</span>
+                <span className="tab-url">menu.html</span>
                 <span className="tab-check">✓</span>
               </div>
               <div className="scene-tab">
                 <span className="tab-dots"><span /><span /><span /></span>
-                <span className="tab-url">agensi-c.id/profile</span>
+                <span className="tab-url">contact.html</span>
                 <span className="tab-check">✓</span>
               </div>
             </div>
           }
           anim2={
             <div className="scene-anim2">
-              <div className="anim2-row"><span className="anim2-label">PT Kreatif Studio</span><span className="anim2-num">92</span></div>
-              <div className="anim2-row"><span className="anim2-label">Agency Bali Digital</span><span className="anim2-num">88</span></div>
-              <div className="anim2-row"><span className="anim2-label">Studio Jakarta Co</span><span className="anim2-num">85</span></div>
+              <div className="anim2-row"><span className="anim2-label">vercel deploy</span><span className="anim2-num">live</span></div>
+              <div className="anim2-row"><span className="anim2-label">warung-bunda.id</span><span className="anim2-num">DNS ✓</span></div>
+              <div className="anim2-row"><span className="anim2-label">SSL cert</span><span className="anim2-num">aktif</span></div>
             </div>
           }
         />
@@ -4592,37 +4596,37 @@
       );
     }
 
-    function AgentSceneMacro() {
+    function AgentSceneProject() {
       return (
         <SceneShell
-          slug="macro"
-          name="Macro Strategist"
-          user="BI rate naik, dampak ke saham?"
-          agentAck="Cek konteks: naik 25bps."
-          agentProgress="Historical 2022–2023: efek 2–3 bulan lag."
-          agentInsight="Sektor terdampak: properti, banking."
-          agentOutput="Base / bull / bear:"
+          slug="project"
+          name="Project Conductor"
+          user="Launch produk minggu ini, pecah task-nya"
+          agentAck="Aku breakdown jadi 8 task."
+          agentProgress="Doc Expert handle T&C; Web Creator handle landing."
+          agentInsight="Critical path: deploy + payment integration."
+          agentOutput="Kanban siap, progress monitor aktif:"
           anim1={
             <div className="scene-multi">
               <div className="scene-multi-row bull">
-                <span className="scene-multi-label">bull</span>
+                <span className="scene-multi-label">done</span>
                 <span className="scene-multi-bar" />
               </div>
               <div className="scene-multi-row base">
-                <span className="scene-multi-label">base</span>
+                <span className="scene-multi-label">in-prog</span>
                 <span className="scene-multi-bar" />
               </div>
               <div className="scene-multi-row bear">
-                <span className="scene-multi-label">bear</span>
+                <span className="scene-multi-label">todo</span>
                 <span className="scene-multi-bar" />
               </div>
             </div>
           }
           anim2={
             <div className="scene-anim2">
-              <div className="anim2-row"><span className="anim2-arrow up">↑</span><span className="anim2-label">Banking</span><span className="anim2-num">+5%</span></div>
-              <div className="anim2-row"><span className="anim2-arrow down">↓</span><span className="anim2-label">Properti</span><span className="anim2-num" style={{ color: 'rgba(255,255,255,0.65)' }}>−3%</span></div>
-              <div className="anim2-row"><span className="anim2-arrow flat">→</span><span className="anim2-label">Consumer</span><span className="anim2-meta">netral</span></div>
+              <div className="anim2-row"><span className="anim2-arrow up">↑</span><span className="anim2-label">Web Creator</span><span className="anim2-num">deploy ✓</span></div>
+              <div className="anim2-row"><span className="anim2-arrow flat">→</span><span className="anim2-label">Doc Expert</span><span className="anim2-num">draft 60%</span></div>
+              <div className="anim2-row"><span className="anim2-arrow down">↓</span><span className="anim2-label">Trade Pro</span><span className="anim2-meta">queued</span></div>
             </div>
           }
         />
@@ -4738,7 +4742,7 @@
       doc:        AgentSceneDoc,
       slide:      AgentSceneSlide,
       trade:      AgentSceneTrade,
-      macro:      AgentSceneMacro,
+      project:    AgentSceneProject,
       business:   AgentSceneBusiness,
       video:      AgentSceneVideo,
       social:     AgentSceneSocial,
@@ -4757,14 +4761,14 @@
     const AGENTS = [
       { slug: 'pro',        name: 'The Pro',           desc: 'Briefing pagi, ingat percakapan lintas sesi, jadi pendamping yang ngerti gaya kamu.' },
       { slug: 'researcher', name: 'Deep Researcher',   desc: 'Riset topik kompleks dari ratusan sumber, sintesis jadi laporan siap pakai.' },
-      { slug: 'web',        name: 'Web Master',        desc: 'Otomasi browser — scrape data, isi form, monitor halaman, klik apa pun.' },
-      { slug: 'doc',        name: 'Doc Expert',        desc: 'Bikin laporan, proposal, dan email — sesuai gaya kamu, siap kirim dalam menit.' },
-      { slug: 'slide',      name: 'Slide Master',      desc: 'Dari outline ke deck 12 slide profesional, lengkap dengan grafik dan speaker notes.' },
-      { slug: 'trade',      name: 'Trade Pro',         desc: 'Briefing pasar pagi, alert saham + crypto, ringkas laporan keuangan emiten.' },
-      { slug: 'macro',      name: 'Macro Strategist',  desc: 'Pantau berita ekonomi global, hubungkan dampak ke portofolio kamu.' },
-      { slug: 'business',   name: 'Business Director', desc: 'Tracking metrik, anomaly alert, auto-bikin laporan KPI buat tim kamu.' },
-      { slug: 'video',      name: 'Video Producer',    desc: 'Script TikTok/Reels, saran edit, hashtag research — output 10 video per hari.' },
-      { slug: 'social',     name: 'Social Conductor',  desc: 'Trending topic detection, schedule best-time, auto-balas DM dengan brand voice.' },
+      { slug: 'web',        name: 'Web Creator',       desc: 'Bangun landing page atau multi-page site, deploy ke Vercel, sambungkan domain — dari brief sampai live URL.' },
+      { slug: 'doc',        name: 'Doc Expert',        desc: 'Laporan, proposal, email, plus skripsi-thesis academic mode — siap kirim dalam menit, sesuai gaya kamu.' },
+      { slug: 'slide',      name: 'Slide Master',      desc: 'Outline jadi deck 12 slide. Pilih narrative-arc atau pakai template (skripsi defense, weekly report, training).' },
+      { slug: 'trade',      name: 'Trade Pro',         desc: 'Briefing pasar pagi, alert saham + crypto, kurs IDR-BI, ringkas laporan keuangan emiten, plus Bitget read-only sync.' },
+      { slug: 'project',    name: 'Project Conductor', desc: 'Kanban orchestration: pecah task, route ke specialist agent, monitor progress lintas hari.' },
+      { slug: 'business',   name: 'Business Director', desc: 'Roadmap 5-tahap founder Indonesia (idea → setup → identity → build → sell). Surface PT/CV, OSS, BPJS, compliance reminder.' },
+      { slug: 'video',      name: 'Video Producer',    desc: 'Script TikTok/Reels, hashtag research, sound trend, caption optimizer, plus HyperFrames storyboard untuk render off-platform.' },
+      { slug: 'social',     name: 'Social Conductor',  desc: 'Content calendar lintas platform, draft post dengan voice locked, engagement log + reply draft. Kamu yang submit ke platform.' },
     ];
 
     // Phase 1 placeholder: even-index cards use new-hero, odd use ascii-wave.
@@ -6497,7 +6501,7 @@
           persona: 'Buat eksekutif yang ngatur hidup di banyak platform.',
           inheritFrom: 'Pro',
           outcomes: [
-            '10 agent: Pro 5 + Trade, Macro, Business, Video, Social',
+            '10 agent: Pro 5 + Trade, Project Conductor, Business, Video, Social',
             '8 web app: 4 Pro + Agent Monitoring Dashboard, Business Eagle View, Market Trend Update, Web Creator',
             '1.000–1.500 interaction/bulan',
             'LLM cost masuk subscription (DeepSeek default, bisa upgrade ke Claude/GPT)',

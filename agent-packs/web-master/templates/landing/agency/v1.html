@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{business_name} — {value_prop}</title>
+<meta name="description" content="{meta_description}">
+<style>
+  :root { --bg: #FAF9F5; --ink: #141413; --accent: #0047FF; --muted: rgba(20,20,19,0.6); --border: rgba(20,20,19,0.08); }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--ink); font-family: 'Inter', -apple-system, sans-serif; line-height: 1.55; }
+  a { color: var(--accent); text-decoration: none; }
+  .container { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+  nav { padding: 24px 0; }
+  nav .container { display: flex; justify-content: space-between; align-items: center; }
+  .brand { font-weight: 600; font-size: 18px; }
+  .nav-links { display: flex; gap: 24px; font-size: 14px; }
+  .nav-links a { color: var(--muted); }
+  .hero { padding: 96px 0 80px; }
+  .hero h1 { font-size: 56px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.1; max-width: 720px; }
+  .hero .lede { font-size: 20px; color: var(--muted); max-width: 580px; margin-top: 24px; }
+  .hero .cta { display: inline-block; margin-top: 36px; background: var(--ink); color: var(--bg); padding: 14px 28px; border-radius: 6px; font-weight: 500; }
+  .services { padding: 80px 0; border-top: 1px solid var(--border); }
+  .services h2 { font-size: 32px; font-weight: 600; margin-bottom: 48px; }
+  .services-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 48px; }
+  .service h3 { font-size: 20px; font-weight: 600; margin-bottom: 8px; }
+  .service p { color: var(--muted); font-size: 15px; }
+  .portfolio { padding: 80px 0; background: white; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+  .portfolio h2 { font-size: 32px; font-weight: 600; margin-bottom: 48px; }
+  .portfolio-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+  .portfolio-item { aspect-ratio: 4/3; background: var(--bg); border-radius: 8px; padding: 32px; display: flex; flex-direction: column; justify-content: flex-end; border: 1px solid var(--border); }
+  .portfolio-item .work-title { font-weight: 600; }
+  .portfolio-item .work-meta { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .team { padding: 80px 0; }
+  .team h2 { font-size: 32px; font-weight: 600; margin-bottom: 48px; }
+  .team-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; }
+  .team-member { text-align: center; }
+  .team-member .name { font-weight: 600; margin-top: 12px; }
+  .team-member .role { font-size: 14px; color: var(--muted); }
+  .contact { padding: 100px 0; text-align: center; }
+  .contact h2 { font-size: 40px; font-weight: 600; margin-bottom: 16px; }
+  .contact p { color: var(--muted); font-size: 18px; margin-bottom: 32px; }
+  footer { padding: 48px 0; border-top: 1px solid var(--border); color: var(--muted); font-size: 14px; text-align: center; }
+  @media (max-width: 720px) { .services-grid, .portfolio-grid, .team-grid { grid-template-columns: 1fr; } .hero h1 { font-size: 40px; } }
+</style>
+</head>
+<body>
+<nav>
+  <div class="container">
+    <div class="brand">{business_name}</div>
+    <div class="nav-links"><a href="#services">Layanan</a><a href="#portfolio">Karya</a><a href="#team">Tim</a><a href="#contact">Kontak</a></div>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="container">
+    <h1>{hero_headline}</h1>
+    <p class="lede">{value_prop}</p>
+    <a href="#contact" class="cta">{cta_label}</a>
+  </div>
+</section>
+
+<section class="services" id="services">
+  <div class="container">
+    <h2>Yang kami kerjakan</h2>
+    <div class="services-grid">
+      <div class="service"><h3>{service_1_title}</h3><p>{service_1_body}</p></div>
+      <div class="service"><h3>{service_2_title}</h3><p>{service_2_body}</p></div>
+      <div class="service"><h3>{service_3_title}</h3><p>{service_3_body}</p></div>
+      <div class="service"><h3>{service_4_title}</h3><p>{service_4_body}</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="portfolio" id="portfolio">
+  <div class="container">
+    <h2>Karya terpilih</h2>
+    <div class="portfolio-grid">
+      <div class="portfolio-item"><div class="work-title">{work_1_title}</div><div class="work-meta">{work_1_client} · {work_1_year}</div></div>
+      <div class="portfolio-item"><div class="work-title">{work_2_title}</div><div class="work-meta">{work_2_client} · {work_2_year}</div></div>
+      <div class="portfolio-item"><div class="work-title">{work_3_title}</div><div class="work-meta">{work_3_client} · {work_3_year}</div></div>
+    </div>
+  </div>
+</section>
+
+<section class="team" id="team">
+  <div class="container">
+    <h2>Tim</h2>
+    <div class="team-grid">
+      <div class="team-member"><div class="name">{team_1_name}</div><div class="role">{team_1_role}</div></div>
+      <div class="team-member"><div class="name">{team_2_name}</div><div class="role">{team_2_role}</div></div>
+      <div class="team-member"><div class="name">{team_3_name}</div><div class="role">{team_3_role}</div></div>
+    </div>
+  </div>
+</section>
+
+<section class="contact" id="contact">
+  <div class="container">
+    <h2>{contact_headline}</h2>
+    <p>{contact_body}</p>
+    <a href="{primary_cta_url}" class="cta" style="background:var(--accent);color:white;">{cta_label}</a>
+  </div>
+</section>
+
+<footer><div class="container">© {current_year} {business_name}. Dibuat dengan weuseai.agent.</div></footer>
+</body>
+</html>

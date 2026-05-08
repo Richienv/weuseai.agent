@@ -1,17 +1,32 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "doc-expert",
-  "version": "1.0.0",
-  "description_id": "Bundle skill + template Doc Expert. Bikin laporan, proposal, invoice, dan email — sesuai gaya kamu.",
+  "version": "2.0.0",
+  "description_id": "Bundle skill + template Doc Expert v2. Bikin invoice, plus academic docs (skripsi BAB I-V, thesis, tugas, abstract) dengan citation styles APA/MLA/Chicago — konvensi Indonesia.",
   "skills": [
     {
       "id": "invoice-generator",
-      "description_id": "Bikin invoice profesional dari list item dan info klien. Output HTML siap kirim atau cetak.",
-      "description_en": "Generate professional invoice from itemized client info. Returns send-ready HTML.",
+      "description_id": "Bikin invoice profesional dari list item dan info klien. Output HTML + PDF (Phase 2E-3 pipeline) siap kirim atau cetak.",
+      "description_en": "Generate professional invoice from itemized client info. Returns HTML + PDF (Phase 2E-3 pipeline).",
       "templates_used": ["invoice-pro.html"],
       "execution": "edge-function",
       "handler_ref": "edge-fn:invoice-generator-handler",
       "enabled_for_tiers": ["starter", "pro", "studio"]
+    },
+    {
+      "id": "academic-doc-builder",
+      "description_id": "Bikin dokumen akademik — skripsi (BAB I-V), thesis, tugas kuliah, abstract (Bahasa atau English). Citation styles APA / MLA / Chicago dengan konvensi Indonesia.",
+      "description_en": "Generate academic documents — skripsi (5-chapter BAB I-V structure), thesis, assignments, abstracts (Bahasa or English). Citation styles APA/MLA/Chicago with Indonesian conventions.",
+      "templates_used": [
+        "academic/skripsi-bab-i.md",
+        "academic/skripsi-bab-iii-method.md",
+        "academic/thesis-chapter.md",
+        "academic/assignment.md",
+        "academic/abstract-bilingual.md"
+      ],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:academic-doc-builder",
+      "enabled_for_tiers": ["pro", "studio"]
     },
     {
       "id": "extend-capabilities",
@@ -29,6 +44,36 @@
       "kind": "invoice",
       "description_id": "Invoice profesional dengan PPN 11%, slot NPWP, footer brand weuseai.agent. Fit klien PT/CV (badan usaha) di Indonesia.",
       "best_for": "Klien PT/CV (badan usaha)"
+    },
+    {
+      "id": "academic/skripsi-bab-i.md",
+      "kind": "markdown",
+      "description_id": "Skripsi BAB I (Pendahuluan) — Latar Belakang, Rumusan Masalah, Tujuan, Manfaat, Batasan Masalah, Sistematika Penulisan. Konvensi Indonesia (UI / UGM / ITB / Unair pattern).",
+      "best_for": "Mahasiswa S1 yang sedang nyusun proposal / chapter pertama skripsi"
+    },
+    {
+      "id": "academic/skripsi-bab-iii-method.md",
+      "kind": "markdown",
+      "description_id": "Skripsi BAB III (Metode Penelitian) — jenis penelitian, populasi/sampel, instrumen, teknik analisis. Cocok kuantitatif maupun kualitatif (variant per tipe).",
+      "best_for": "Skripsi quantitative / qualitative method chapter"
+    },
+    {
+      "id": "academic/thesis-chapter.md",
+      "kind": "markdown",
+      "description_id": "Thesis chapter generic — abstract → introduction → literature review → methodology → findings → discussion → conclusion. Format S2.",
+      "best_for": "Thesis / disertasi chapter draft"
+    },
+    {
+      "id": "academic/assignment.md",
+      "kind": "markdown",
+      "description_id": "Tugas kuliah (paper / makalah) — pendahuluan + isi (3-5 sections) + kesimpulan + daftar pustaka. 1500-3000 kata. Heading numbering Indonesian convention.",
+      "best_for": "Makalah tugas kuliah, paper kelas"
+    },
+    {
+      "id": "academic/abstract-bilingual.md",
+      "kind": "markdown",
+      "description_id": "Abstract bilingual (Indonesian + English) — 150-250 kata each, mengikuti struktur Background → Method → Findings → Implication. Plus keywords.",
+      "best_for": "Abstract skripsi/thesis untuk submission jurnal atau sidang"
     }
   ],
   "self_extend": true,
