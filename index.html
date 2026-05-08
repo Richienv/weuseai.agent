@@ -4792,16 +4792,17 @@
           // Smaller cells = denser dot grid = finer silhouette detail.
           // Mobile clamps up via DottedVideo internals (Math.max(cellSize, 5)).
           cellSize={o.cellSize ?? 3}
-          // For inverted cards: high threshold drops the (now-bright)
-          // inverted background so only the dark UI strokes survive as
-          // visible red dots. Combined with contrast 1.4 keeps them punchy
-          // without crushing midtones entirely.
-          threshold={invert ? 0.35 : 0.05}
+          // For inverted cards: threshold drops the (now-bright) inverted
+          // background so only the dark UI strokes survive as visible red
+          // dots. 0.22 keeps a generous amount of midtone detail visible
+          // (vs 0.35 which dropped too much). Contrast 1.4 still polarizes.
+          threshold={invert ? 0.22 : 0.05}
           invert={!!invert}
           contrast={invert ? 1.4 : 1}
           // Slight slow-mo for the inverted cards — feels editorial /
-          // halftone-poster instead of jittery UI capture.
-          playbackRate={invert ? 0.5 : 1}
+          // halftone-poster instead of jittery UI capture. 0.75× is gentle
+          // enough that motion still reads as live, not stalled.
+          playbackRate={invert ? 0.75 : 1}
           className="absolute inset-0 w-full h-full"
           style={{ background: '#050505' }}
         />
