@@ -3377,22 +3377,22 @@
                 border: '1px solid rgba(255, 255, 255, 0.22)',
                 backdropFilter: 'blur(8px)'
               }}>
-              <span style={{ background: '#E5322D', color: '#fff' }} className="rounded-full px-3 py-1 text-[10px] font-mono font-medium uppercase tracking-[0.18em]">New</span>
-              <span className="pr-3 font-mono uppercase tracking-[0.14em] text-[11px] text-white/85">Introducing weuseai.agent</span>
+              <span style={{ background: '#E5322D', color: '#fff' }} className="rounded-full px-3 py-1 text-[10px] font-mono font-medium uppercase tracking-[0.18em]">Hand-built</span>
+              <span className="pr-3 font-mono uppercase tracking-[0.14em] text-[11px] text-white/85">Indonesian-first</span>
             </Mot.div>
 
             <BlurText
-              text="Build Your AI Agent"
-              className="mt-7 md:mt-10 text-[2.75rem] sm:text-5xl md:text-7xl lg:text-[8.5rem] font-heading leading-[0.95] md:leading-[0.92] max-w-[16ch] text-white px-2"
-              style={{ letterSpacing: '-0.05em', fontStyle: 'normal' }}
+              text="10 karyawan digital, di-tune buat kamu."
+              className="mt-7 md:mt-10 text-[2.5rem] sm:text-5xl md:text-6xl lg:text-[7rem] font-heading leading-[0.96] md:leading-[0.94] max-w-[16ch] text-white px-2"
+              style={{ letterSpacing: '-0.045em', fontStyle: 'normal' }}
               delay={100} />
 
             <Mot.p
               initial={{ filter: 'blur(10px)', opacity: 0, y: 20 }}
               animate={{ filter: 'blur(0px)', opacity: 1, y: 0 }}
               transition={{ duration: 0.6, ease: EASE, delay: 0.8 }}
-              className="mt-6 md:mt-8 max-w-[44ch] text-sm md:text-lg font-body font-light leading-[1.5] text-white/85 px-2">
-              8 menit akan mengubah caramu berinteraksi dengan hidup, selamanya.
+              className="mt-6 md:mt-8 max-w-[48ch] text-sm md:text-lg font-body font-light leading-[1.5] text-white/85 px-2">
+              Untuk founder Indonesia yang gak mau ketinggalan AI wave. Hand-built. Out-the-box. 8 menit dari bayar ke kerja.
             </Mot.p>
 
             <Mot.p
@@ -3400,27 +3400,30 @@
               animate={{ filter: 'blur(0px)', opacity: 1, y: 0 }}
               transition={{ duration: 0.6, ease: EASE, delay: 0.95 }}
               className="mt-5 font-mono uppercase tracking-[0.18em] text-[10px] md:text-[11px] text-white/55">
-              Bayar setup sekali. Hosting transparan.
+              Bayar setup sekali · Garansi 14 hari* · Cancel kapan aja
             </Mot.p>
 
             <Mot.div
               initial={{ filter: 'blur(10px)', opacity: 0, y: 20 }}
               animate={{ filter: 'blur(0px)', opacity: 1, y: 0 }}
               transition={{ duration: 0.6, ease: EASE, delay: 1.1 }}
-              className="mt-10 flex items-center gap-4 flex-wrap justify-center">
+              className="mt-10 flex flex-col items-center gap-2">
               <a href="checkout.html" className="rounded-full px-5 py-2.5 text-sm font-medium flex items-center gap-2 no-underline"
                 style={{ background: '#fff', color: '#0a0a0a', border: '1px solid #fff' }}>
-                Start Change Now <ArrowUpRight size={14} stroke={2.2} />
+                Mulai sekarang <ArrowUpRight size={14} stroke={2.2} />
+              </a>
+              <a href="#snk-garansi" className="text-[10px] font-mono tracking-[0.10em] no-underline" style={{ color: '#E5322D' }}>
+                *S&K berlaku — lihat detail
               </a>
             </Mot.div>
 
             <div className="mt-12 md:mt-auto pb-6 md:pb-12 pt-12 md:pt-20 w-full max-w-5xl mx-auto">
               <div className="liquid-glass rounded-2xl md:rounded-3xl p-5 md:p-10 grid grid-cols-2 md:grid-cols-4 gap-5 md:gap-6 text-center">
                 {[
-                  { kind: 'ratio', a: 10, b: 332, label: 'Recommended for Agentic Use' },
-                  { kind: 'plain', n: 40,  suffix: '+', label: 'Growing Specialized Skills' },
-                  { kind: 'plain', n: 12,  suffix: '+', label: 'Agent fine-tuned' },
-                  { kind: 'plain', n: 12,  suffix: '+', label: 'Dedicated Handcrafted App' },
+                  { kind: 'ratio', a: 10, b: 332, label: 'Agen di-fine-tune dari 332 kandidat' },
+                  { kind: 'plain', n: 674, suffix: '',  label: 'Skill bawaan dari Hermes (open-source)' },
+                  { kind: 'plain', n: 40,  suffix: '+', label: 'Skill spesialis Indonesia' },
+                  { kind: 'text',  text: 'VPS', label: 'Dedicated — bukan shared, performance kamu' },
                 ].map((it, i) => (
                   <Mot.div key={it.label}
                     initial={{ opacity: 0, y: 16 }}
@@ -3436,11 +3439,13 @@
                           <span className="text-white/35"> / </span>
                           <CountUp to={it.b} duration={2200} delay={150} />
                         </>
+                      ) : it.kind === 'text' ? (
+                        <span style={{ color: '#E5322D' }}>{it.text}</span>
                       ) : (
                         <CountUp to={it.n} suffix={it.suffix} duration={1800} delay={150 + i * 120} />
                       )}
                     </div>
-                    <div className="mt-2 md:mt-2.5 text-white/55 font-body font-light text-[11px] md:text-sm leading-tight">{it.label}</div>
+                    <div className="mt-2 md:mt-2.5 text-white/55 font-body font-light italic text-[11px] md:text-[13px] leading-tight">{it.label}</div>
                   </Mot.div>
                 ))}
               </div>
@@ -6110,19 +6115,46 @@
             </p>
           </div>
 
-          {/* 2. Price */}
-          <div className="mt-5">
-            {tier.priceStrike && (
-              <div className="text-sm font-body font-light text-white/40 line-through" style={{ textDecorationColor: 'rgba(229,50,45,0.85)', textDecorationThickness: '1.5px' }}>
-                {tier.priceStrike}
-              </div>
-            )}
-            <div className="font-heading text-4xl md:text-5xl text-white" style={{ letterSpacing: '-0.04em', lineHeight: 1 }}>
-              {tier.priceLabel}
+          {/* 2. Price breakdown — setup + hosting + Bulan 1 total + recurring */}
+          <div className="mt-5 flex flex-col gap-2">
+            {/* Setup (one-time, with strikethrough discount) */}
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="text-xs font-body font-light text-white/55">Setup (sekali bayar)</span>
+              <span className="font-heading text-white text-base md:text-lg" style={{ letterSpacing: '-0.02em' }}>
+                {tier.priceStrike && (
+                  <span className="text-xs font-body font-light text-white/35 line-through mr-2" style={{ textDecorationColor: 'rgba(229,50,45,0.75)' }}>
+                    {tier.priceStrike}
+                  </span>
+                )}
+                {tier.priceLabel}
+              </span>
             </div>
-            <div className="mt-1.5 text-xs text-white/50 font-body font-light">
-              {tier.setupAside}
+            {/* Hosting per bulan */}
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="text-xs font-body font-light text-white/55">Hosting per bulan</span>
+              <span className="font-heading text-white text-base md:text-lg" style={{ letterSpacing: '-0.02em' }}>
+                {tier.hostingMonth || 'Rp 99rb'}
+              </span>
             </div>
+            {/* Divider */}
+            <div className="h-px bg-white/10 my-1" />
+            {/* Bulan 1 total */}
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="text-xs font-mono uppercase tracking-[0.10em] text-white/65">Bulan 1</span>
+              <span className="font-heading text-2xl md:text-3xl" style={{ letterSpacing: '-0.03em', color: '#E5322D' }}>
+                {tier.month1Total}
+              </span>
+            </div>
+            {/* Recurring */}
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="text-xs font-body font-light text-white/55">Bulan 2 dst</span>
+              <span className="text-sm font-body text-white/85">
+                {tier.recurringLabel || 'Rp 99rb/bulan'}
+              </span>
+            </div>
+            <p className="mt-2 text-[10px] font-mono uppercase tracking-[0.12em] text-white/45">
+              Diskon launch · Garansi 14 hari · Cancel kapan aja
+            </p>
           </div>
 
           {/* 3. Untuk siapa */}
@@ -6373,12 +6405,16 @@
           priceStrike: 'Rp 699rb',
           setupIdr: 399_000,
           setupAside: 'biaya setup sekali bayar · diskon launch',
+          hostingMonth: 'Rp 99rb',
+          month1Total: 'Rp 498rb',
+          recurringLabel: 'Rp 99rb/bulan',
           persona: 'Buat kamu yang mau coba rasanya didampingi agent.',
           outcomes: [
             '1 agent: Pro Agent',
             'VPS dedicated, bukan shared',
             '10.000 training iteration',
             '200–400 interaction/bulan',
+            'LLM cost masuk subscription (DeepSeek default, bisa upgrade)',
             'Community support',
           ],
           apps: ['Telegram', 'Discord', 'Web'],
@@ -6394,6 +6430,9 @@
           priceStrike: 'Rp 2,5jt',
           setupIdr: 1_290_000,
           setupAside: 'biaya setup sekali bayar · diskon launch',
+          hostingMonth: 'Rp 99rb',
+          month1Total: 'Rp 1,389jt',
+          recurringLabel: 'Rp 99rb/bulan',
           persona: 'Buat freelancer, founder, creator yang butuh agent kerja 24/7.',
           inheritFrom: 'Starter',
           outcomes: [
@@ -6401,6 +6440,7 @@
             '4 web app: Workout, Finance, Task, Project',
             'VPS dedicated 24/7',
             '500–800 interaction/bulan',
+            'LLM cost masuk subscription (DeepSeek default, bisa upgrade)',
             '24/7 support — antrean paling depan',
             'Voice tuning ke gaya kamu',
           ],
@@ -6417,12 +6457,16 @@
           priceStrike: 'Rp 10,9jt',
           setupIdr: 5_900_000,
           setupAside: 'biaya setup sekali bayar · diskon launch',
+          hostingMonth: 'Rp 99rb',
+          month1Total: 'Rp 5,999jt',
+          recurringLabel: 'Rp 99rb/bulan',
           persona: 'Buat eksekutif yang ngatur hidup di banyak platform.',
           inheritFrom: 'Pro',
           outcomes: [
             '10 agent: Pro 5 + Trade, Macro, Business, Video, Social',
             '8 web app: 4 Pro + Agent Monitoring Dashboard, Business Eagle View, Market Trend Update, Web Creator',
             '1.000–1.500 interaction/bulan',
+            'LLM cost masuk subscription (DeepSeek default, bisa upgrade ke Claude/GPT)',
             'Custom integration sesuai kebutuhan',
             '24/7 dedicated support + onboarding privat',
           ],
@@ -6915,10 +6959,10 @@
     // ─────────────────────── STATS ───────────────────────
     function Stats() {
       const items = [
-        { kind: 'ratio', a: 10, b: 332, label: 'Recommended for Agentic Use' },
-        { kind: 'plain', n: 40,  suffix: '+', label: 'Growing Specialized Skills' },
-        { kind: 'plain', n: 12,  suffix: '+', label: 'Agent fine-tuned' },
-        { kind: 'plain', n: 12,  suffix: '+', label: 'Dedicated Handcrafted App' },
+        { kind: 'ratio', a: 10, b: 332, label: 'Agen di-fine-tune dari 332 kandidat' },
+        { kind: 'plain', n: 674, suffix: '',  label: 'Skill bawaan dari Hermes (open-source)' },
+        { kind: 'plain', n: 40,  suffix: '+', label: 'Skill spesialis Indonesia' },
+        { kind: 'text',  text: 'VPS', label: 'Dedicated — bukan shared, performance kamu' },
       ];
       return (
         <section className="relative overflow-hidden py-20 md:py-28 px-5 md:px-6 lg:px-16" style={{ minHeight: 420 }}>
@@ -6942,11 +6986,13 @@
                         <span className="text-white/35"> / </span>
                         <CountUp to={it.b} duration={2200} delay={120} />
                       </>
+                    ) : it.kind === 'text' ? (
+                      <span style={{ color: '#E5322D' }}>{it.text}</span>
                     ) : (
                       <CountUp to={it.n} suffix={it.suffix} duration={1800} delay={120 + i * 120} />
                     )}
                   </div>
-                  <div className="mt-2 md:mt-3 text-white/60 font-body font-light text-[11px] md:text-sm leading-tight">{it.label}</div>
+                  <div className="mt-2 md:mt-3 text-white/60 font-body font-light italic text-[11px] md:text-[13px] leading-tight">{it.label}</div>
                 </Mot.div>
               ))}
             </div>
@@ -7025,6 +7071,32 @@
               <button className="bg-white text-black rounded-full px-5 md:px-6 py-3 text-sm font-medium">
                 Lihat harga
               </button>
+            </div>
+
+            {/* Garansi 14 hari T&C — anchored from the hero "*S&K berlaku" link */}
+            <div id="snk-garansi" className="mt-16 md:mt-24 max-w-2xl w-full text-left">
+              <div className="liquid-glass rounded-2xl p-6 md:p-8">
+                <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-white/45 mb-3">
+                  Syarat & Ketentuan
+                </div>
+                <h3 className="text-xl md:text-2xl font-heading text-white tracking-tight mb-4" style={{ letterSpacing: '-0.02em' }}>
+                  Garansi 14 hari uang kembali — syarat:
+                </h3>
+                <ul className="space-y-2.5 list-none">
+                  {[
+                    'Klaim dalam 14 hari pertama setelah setup selesai',
+                    'Belum pakai self-extension (belum bikin skill custom baru)',
+                    'Refund hanya untuk biaya setup, bukan hosting yang sudah berjalan',
+                    'Klaim via WhatsApp support, proses 3–5 hari kerja',
+                    'Berlaku 1× per akun',
+                  ].map((line, i) => (
+                    <li key={i} className="flex items-start gap-2.5 text-sm font-body font-light leading-relaxed text-white/80">
+                      <span aria-hidden="true" className="mt-[7px] block w-1 h-1 flex-shrink-0 rounded-full" style={{ background: '#E5322D' }} />
+                      <span>{line}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
 
             <div className="mt-20 md:mt-32 pt-6 md:pt-8 border-t border-white/10 w-full flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0 text-xs text-white/40 font-body">
