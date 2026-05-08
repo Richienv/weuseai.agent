@@ -1449,7 +1449,9 @@
     .agent-card .agent-viz {
       position: relative;
       width: 100%;
-      aspect-ratio: 4 / 3;
+      /* Was 4/3. Bumped to 5/6 (portrait) to fit chat header + bubble
+         auto-scroll zone + pin zone (anim1 + anim2 both visible). */
+      aspect-ratio: 5 / 6;
       background-color: #050505;
       overflow: hidden;
     }
@@ -1545,44 +1547,62 @@
       letter-spacing: 0.02em;
     }
 
-    /* === Chat viewport: WhatsApp-style auto-scroll === */
-    /* Newest content always lands at viewport BOTTOM. Older content slides
-       UP and eventually out of view (clipped by overflow:hidden). Achieved
-       by anchoring .chat-content to bottom:0 of .chat-viewport, then
-       growing each .chat-slot's grid-template-rows from 0fr → 1fr at its
-       scheduled time. As more slots grow, content height increases and
-       pushes earlier slots up — same visual logic as a chat app autoscroll. */
+    /* === Two-zone scene layout === */
+    /*   bubble-zone (top, flex:1)  → WhatsApp-style auto-scroll chat:
+     *                                B1-B5 grow in their slots, older
+     *                                content gets pushed up + clipped.
+     *   pin-zone    (bottom, auto)  → Anim1 + Anim2 stack here, both
+     *                                stay visible at end of cycle (no
+     *                                auto-scroll, no clipping). */
     .agent-card .agent-scene {
       position: absolute;
       top: 38px; left: 0; right: 0; bottom: 0;
       z-index: 1;
       font-family: 'Inter', sans-serif;
+      display: grid;
+      grid-template-rows: 1fr auto;
       overflow: hidden;
     }
-    .agent-card .chat-viewport {
-      position: absolute;
-      inset: 0;
+    .agent-card .bubble-zone {
+      position: relative;
       overflow: hidden;
+      min-height: 0;
     }
     .agent-card .chat-content {
       position: absolute;
       bottom: 0;
       left: 0; right: 0;
-      padding: 8px 12px 10px;
+      padding: 8px 12px 6px;
       display: flex;
       flex-direction: column;
       gap: 4px;
     }
+    .agent-card .pin-zone {
+      padding: 7px 12px 9px;
+      border-top: 1px solid rgba(255, 255, 255, 0.07);
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
 
-    /* Each chat-slot animates grid-template-rows from 0fr to 1fr — the
-       row height interpolates from 0 to its natural content height.
-       Inner wrapper is overflow:hidden + min-height:0 so content clips
-       cleanly during the grow. */
+    /* chat-slot — bubble-zone grow animation (older slots get pushed up
+       by newer slots growing below, into a fixed-height overflow:hidden
+       parent → effectively "scrolls up out of view"). */
     .agent-card .chat-slot {
       display: grid;
       grid-template-rows: 0fr;
     }
     .agent-card .chat-slot > .chat-slot-inner {
+      overflow: hidden;
+      min-height: 0;
+    }
+    /* pin-slot — pin-zone grow animation. Same grid mechanic but inside
+       a non-scrolling parent → both anims simply stack and stay visible. */
+    .agent-card .pin-slot {
+      display: grid;
+      grid-template-rows: 0fr;
+    }
+    .agent-card .pin-slot > .pin-slot-inner {
       overflow: hidden;
       min-height: 0;
     }
@@ -1705,8 +1725,8 @@
     .agent-card .slot-progress { animation: slotProgress 13000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
     .agent-card .slot-insight  { animation: slotInsight  13000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
     .agent-card .slot-output   { animation: slotOutput   13000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
-    .agent-card .slot-anim1    { animation: slotAnim1    13000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
-    .agent-card .slot-anim2    { animation: slotAnim2    13000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
+    .agent-card .pin-anim1     { animation: pinAnim1     13000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
+    .agent-card .pin-anim2     { animation: pinAnim2     13000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
     /* Insight bubble pulse — the "smart moment" */
     .agent-card .scene-bubble-insight {
       animation: insightPulse 13000ms ease-out infinite;
@@ -1742,13 +1762,16 @@
       92%      { grid-template-rows: 1fr; opacity: 1; }
       96%, 100% { grid-template-rows: 0fr; opacity: 0; }
     }
-    @keyframes slotAnim1 {
+    /* Pin-zone slots — anim1 emerges 6.5s, anim2 emerges 9.0s. Both
+       hold simultaneously from 9.0s → end of cycle (no fade-out of
+       anim1 when anim2 arrives). */
+    @keyframes pinAnim1 {
       0%, 50%  { grid-template-rows: 0fr; opacity: 0; }
       53%      { grid-template-rows: 1fr; opacity: 1; }
       92%      { grid-template-rows: 1fr; opacity: 1; }
       96%, 100% { grid-template-rows: 0fr; opacity: 0; }
     }
-    @keyframes slotAnim2 {
+    @keyframes pinAnim2 {
       0%, 69%  { grid-template-rows: 0fr; opacity: 0; }
       72%      { grid-template-rows: 1fr; opacity: 1; }
       92%      { grid-template-rows: 1fr; opacity: 1; }
@@ -2272,6 +2295,7 @@
 
     @media (prefers-reduced-motion: reduce) {
       .agent-card .chat-slot,
+      .agent-card .pin-slot,
       .agent-card .scene-bubble-insight,
       .agent-card .scene-stagger > *,
       .agent-card .scene-anim2 > *,
@@ -2284,7 +2308,8 @@
         filter: none;
         box-shadow: none;
       }
-      .agent-card .chat-slot { grid-template-rows: 1fr; }
+      .agent-card .chat-slot,
+      .agent-card .pin-slot { grid-template-rows: 1fr; }
       .agent-card .scene-chart .chart-line { stroke-dashoffset: 0; }
       .agent-card .scene-multi-row.bull .scene-multi-bar::after { width: 88%; }
       .agent-card .scene-multi-row.base .scene-multi-bar::after { width: 60%; }
@@ -4262,7 +4287,10 @@
             </div>
           </div>
           <div className={`agent-scene scene-${slug}`}>
-            <div className="chat-viewport">
+            {/* Bubble zone — auto-scrolling chat viewport. As newer bubbles
+                grow, older ones get pushed up + clipped by overflow:hidden.
+                Latest bubble always anchored to bottom of zone. */}
+            <div className="bubble-zone">
               <div className="chat-content">
                 <div className="chat-slot slot-user">
                   <div className="chat-slot-inner">
@@ -4298,20 +4326,17 @@
                     </div>
                   </div>
                 </div>
-                <div className="chat-slot slot-anim1">
-                  <div className="chat-slot-inner">
-                    <div className="scene-agent-row continuation">
-                      <div style={{ flex: 1, minWidth: 0 }}>{anim1}</div>
-                    </div>
-                  </div>
-                </div>
-                <div className="chat-slot slot-anim2">
-                  <div className="chat-slot-inner">
-                    <div className="scene-agent-row continuation">
-                      <div style={{ flex: 1, minWidth: 0 }}>{anim2}</div>
-                    </div>
-                  </div>
-                </div>
+              </div>
+            </div>
+            {/* Pin zone — anim1 + anim2 stack here, both stay visible at the
+                end of the cycle (no auto-scroll). anim1 grows in first,
+                anim2 grows below it. */}
+            <div className="pin-zone">
+              <div className="pin-slot pin-anim1">
+                <div className="pin-slot-inner">{anim1}</div>
+              </div>
+              <div className="pin-slot pin-anim2">
+                <div className="pin-slot-inner">{anim2}</div>
               </div>
             </div>
           </div>
@@ -4723,6 +4748,14 @@
       const [activeIndex, setActiveIndex] = useState(0);
       const [paused, setPaused] = useState(false);
       const reducedMotion = useRef(false);
+      // Bumped whenever activeIndex changes. Used as part of the active
+      // card's React key so its AgentVisual subtree remounts → all CSS
+      // animations restart from frame 0. Without this, the new active
+      // card resumes from whatever paused mid-state it was in (since the
+      // CSS pause rule freezes the play-head, not resets it), causing a
+      // frozen mid-frame UX gap before the next loop wraps around.
+      const [cycleKey, setCycleKey] = useState(0);
+      useEffect(() => { setCycleKey(k => k + 1); }, [activeIndex]);
 
       // Detect prefers-reduced-motion
       useEffect(() => {
@@ -4818,7 +4851,15 @@
                     data-active={i === activeIndex}
                   >
                     <div className="agent-viz">
-                      <AgentVisual slug={a.slug} index={i} />
+                      {/* Active card gets a fresh key per cycle → remount →
+                          CSS animations restart at frame 0. Inactive cards
+                          keep a stable key so they don't churn. Result: 2
+                          remounts per click (old active + new active). */}
+                      <AgentVisual
+                        key={i === activeIndex ? `${a.slug}-active-${cycleKey}` : `${a.slug}-idle`}
+                        slug={a.slug}
+                        index={i}
+                      />
                     </div>
                     <div className="agent-body">
                       <div className="agent-name">{a.name}</div>
