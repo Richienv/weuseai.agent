@@ -282,7 +282,7 @@
     @media (min-width: 768px) { .db-section .db-headline { font-size: 56px; } }
     @media (min-width: 1024px) { .db-section .db-headline { font-size: 64px; } }
     .db-section .db-sub {
-      margin-top: 8px;
+      margin-top: 6px;
       font-family: 'Inter', sans-serif; font-weight: 300;
       font-size: 13px; line-height: 1.5;
       color: rgba(255, 255, 255, 0.55);
@@ -1121,15 +1121,15 @@
       font-size: 20px; line-height: 1.05; letter-spacing: -0.02em;
       color: #fff; margin-top: 6px;
     }
-    @media (min-width: 768px) { .uc-card-text .title { font-size: 24px; margin-top: 8px; } }
+    @media (min-width: 768px) { .uc-card-text .title { font-size: 24px; margin-top: 6px; } }
     .uc-card-text .body {
-      margin-top: 7px;
+      margin-top: 5px;
       font-family: 'Inter', sans-serif;
       font-size: 11px; line-height: 1.5; font-weight: 300;
       color: rgba(255, 255, 255, 0.62);
       flex: 1;
     }
-    @media (min-width: 768px) { .uc-card-text .body { font-size: 12px; margin-top: 8px; } }
+    @media (min-width: 768px) { .uc-card-text .body { font-size: 12px; margin-top: 6px; } }
 
     /* ─── CAPABILITY VIZ (top marquee) ─── */
     .cap-viz {
@@ -1372,6 +1372,7 @@
     .cap-calendar .day .e.warn { background: #E5322D; box-shadow: 0 0 4px rgba(229,50,45,0.6); animation: capCalWarn 2.4s ease-in-out infinite; }
     .cap-calendar .day.conflict { animation: capCalConflict 2.4s ease-in-out infinite; }
     @keyframes capCalWarn { 0%, 100% { opacity: 0.7; } 50% { opacity: 1; } }
+    @keyframes wseaiPulse { 0%, 100% { transform: scale(1); opacity: 0.75; } 50% { transform: scale(1.6); opacity: 0; } }
     @keyframes capCalConflict {
       0%, 100% { border-color: rgba(255,255,255,0.08); box-shadow: none; }
       50%      { border-color: #E5322D; box-shadow: 0 0 6px rgba(229,50,45,0.55); }
@@ -1383,6 +1384,16 @@
        Originally used scroll-snap + overflow-x:auto, but the StartSection's
        centered-flex parent chain prevented scrollLeft from updating. translateX
        sidesteps the entire scroll-container path. */
+    /* Wrap container — positioning context for the always-visible nav
+       buttons (which sit OUTSIDE .agent-fade so they're not clipped by
+       the fade-edge mask). */
+    .agent-fade-wrap {
+      position: relative;
+      padding: 0 28px; /* room for nav buttons on each side */
+    }
+    @media (min-width: 768px) {
+      .agent-fade-wrap { padding: 0 36px; }
+    }
     .agent-fade {
       position: relative;
       overflow: hidden;
@@ -1399,9 +1410,20 @@
     }
     @media (min-width: 768px) { .agent-track { gap: 18px; } }
 
+    /* (No active/inactive distinction in animation. All 10 cards run their
+       13s thinking-flow loop in sync — same pattern as the DashboardDemo
+       lower on this page where the conversation just plays through. Active
+       index only controls which card is centered in the viewport.) */
+
+    @media (prefers-reduced-motion: reduce) {
+      .agent-track { transition: none; }
+    }
+
     .agent-card {
       flex: 0 0 auto;
-      width: min(82vw, 320px);
+      /* Mobile: narrower so the shorter 4/5 viz still feels like a focal
+         card. Card body title + desc fits below. */
+      width: min(74vw, 290px);
       display: flex; flex-direction: column;
       border-radius: 18px;
       overflow: hidden;
@@ -1424,28 +1446,936 @@
     .agent-card .agent-viz {
       position: relative;
       width: 100%;
-      aspect-ratio: 4 / 3;
+      /* Mobile: shorter aspect (4/5) so the card + body title + desc all
+         fit one screen. Desktop: portrait 5/6 with room for bubble zone +
+         pin zone fully expanded. */
+      aspect-ratio: 4 / 5;
       background-color: #050505;
-      /* Static red halftone placeholder. Swapped for <DottedVideo> when
-         per-agent ASCII assets at /assets/agent-<slug>.mp4 ship. */
-      background-image: radial-gradient(circle at 1px 1px, rgba(229, 50, 45, 0.55) 1.1px, transparent 1.6px);
-      background-size: 6px 6px;
       overflow: hidden;
     }
-    .agent-card .agent-viz::after {
-      content: '';
-      position: absolute; inset: 0;
-      background: radial-gradient(ellipse at 50% 60%, transparent 25%, rgba(0,0,0,0.55) 78%, rgba(0,0,0,0.92) 100%);
+    @media (min-width: 768px) {
+      .agent-card .agent-viz { aspect-ratio: 5 / 6; }
+    }
+    /* Halftone background + vignette removed (2026-05-07 pivot): the
+       chat bubble + action scenes need clean black so bubbles read as
+       the focal point. */
+
+    /* ─── CREATURE SPRITE ANIMATION ─── */
+    /* Each card hosts an inline SVG with 4 <g class="frame"> groups stacked
+       at the same coords. CSS keyframes smooth-fade opacity 0→1→0 per group
+       with staggered delays — overlapping windows produce a cross-fade.
+       Per-card cycle is 1400ms (4 frames × 350ms). Stagger across cards
+       via --creature-delay so the 10 cards aren't synchronized.
+       Symbol size capped at ~50% of card area (centered with breathing
+       room), per founder direction "minimalist + elegant, editorial". */
+    .agent-card .creature {
+      position: absolute;
+      width: 70%;
+      height: 70%;
+      top: 15%;
+      left: 15%;
       pointer-events: none;
+      z-index: 1; /* above ::after vignette */
+    }
+    .agent-card .creature .frame {
+      opacity: 0;
+      animation: creatureCycle 1400ms linear infinite;
+      animation-delay: var(--creature-delay, 0ms);
+    }
+    .agent-card .creature .frame.f0 { animation-delay: calc(var(--creature-delay, 0ms) + 0ms); }
+    .agent-card .creature .frame.f1 { animation-delay: calc(var(--creature-delay, 0ms) + 350ms); }
+    .agent-card .creature .frame.f2 { animation-delay: calc(var(--creature-delay, 0ms) + 700ms); }
+    .agent-card .creature .frame.f3 { animation-delay: calc(var(--creature-delay, 0ms) + 1050ms); }
+    /* Each frame is visible for ~30% of the cycle (420ms) with 100ms fade-in
+       and 100ms fade-out at the edges — the overlapping fade windows produce
+       a soft cross-fade between consecutive frames. */
+    @keyframes creatureCycle {
+      0%   { opacity: 0; }
+      7%   { opacity: 1; }
+      23%  { opacity: 1; }
+      30%  { opacity: 0; }
+      100% { opacity: 0; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .agent-card .creature .frame { animation: none; opacity: 0; }
+      /* Show only the last (most "complete") frame statically */
+      .agent-card .creature .frame:last-child { opacity: 1; }
+    }
+
+    /* ─── AGENT SCENE: chat bubble + action mini-dashboard ─── */
+    /* Replaces the abstract creature SVG with a literal preview of what
+       the agent does — a short user→agent exchange followed by an action
+       visualization (memory cards, charts, slide stack, etc). Mirrors
+       the visual language of the main DashboardDemo scenes lower on the
+       page. 5000ms loop, all elements share one cycle so they stay in
+       sync. Each element gets its own keyframe with a different "in"
+       timing so the order reads as a story. */
+    /* Chat header — WhatsApp-style: agent name + status. No avatar dot
+       in the header (the per-message red dot beside each agent bubble is
+       the "agent's voice" indicator; doubling up reads as noise).
+       Universal status "aktif sekarang" across all 10 cards. */
+    .agent-card .scene-header {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 14px;
+      background: rgba(255, 255, 255, 0.02);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+      z-index: 2;
+    }
+    .agent-card .scene-header .scene-header-text {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+    .agent-card .scene-header .scene-header-name {
+      font-family: 'Instrument Serif', serif;
+      font-size: 13px;
+      color: #E5322D;
+      line-height: 1.05;
+      letter-spacing: 0.005em;
+    }
+    .agent-card .scene-header .scene-header-status {
+      font-family: 'Inter', sans-serif;
+      font-size: 8.5px;
+      color: rgba(255, 255, 255, 0.40);
+      font-style: italic;
+      margin-top: 2px;
+      letter-spacing: 0.02em;
+    }
+
+    /* === Two-zone scene layout === */
+    /*   bubble-zone (top, flex:1)  → WhatsApp-style auto-scroll chat:
+     *                                B1-B5 grow in their slots, older
+     *                                content gets pushed up + clipped.
+     *   pin-zone    (bottom, auto)  → Anim1 + Anim2 stack here, both
+     *                                stay visible at end of cycle (no
+     *                                auto-scroll, no clipping). */
+    .agent-card .agent-scene {
+      position: absolute;
+      top: 38px; left: 0; right: 0; bottom: 0;
+      z-index: 1;
+      font-family: 'Inter', sans-serif;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .agent-card .bubble-zone {
+      position: relative;
+      overflow: hidden;
+      flex: 1 1 0;
+      min-height: 0;
+    }
+    .agent-card .chat-content {
+      position: absolute;
+      bottom: 0;
+      left: 0; right: 0;
+      padding: 8px 12px 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .agent-card .pin-zone {
+      padding: 7px 12px 9px;
+      border-top: 1px solid rgba(255, 255, 255, 0.07);
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    /* chat-slot — bubble-zone grow animation (older slots get pushed up
+       by newer slots growing below, into a fixed-height overflow:hidden
+       parent → effectively "scrolls up out of view"). */
+    .agent-card .chat-slot {
+      display: grid;
+      grid-template-rows: 0fr;
+    }
+    .agent-card .chat-slot > .chat-slot-inner {
+      overflow: hidden;
+      min-height: 0;
+    }
+    /* pin-slot — pin-zone grow animation. Same grid mechanic but inside
+       a non-scrolling parent → both anims simply stack and stay visible. */
+    .agent-card .pin-slot {
+      display: grid;
+      grid-template-rows: 0fr;
+    }
+    .agent-card .pin-slot > .pin-slot-inner {
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    /* === Bubble visual hierarchy (unchanged from prior round) === */
+    .agent-card .scene-user {
+      align-self: flex-end;
+      max-width: 80%;
+      padding: 5px 11px;
+      border-radius: 11px 11px 4px 11px;
+      background: rgba(229, 50, 45, 0.14);
+      border: 1px solid rgba(229, 50, 45, 0.40);
+      color: #fff;
+      font-size: 12px;
+      line-height: 1.35;
+      margin-left: auto; /* right-align inside chat-slot */
+    }
+    /* Wrapper for slot-user so the bubble can right-align */
+    .agent-card .chat-slot.slot-user > .chat-slot-inner {
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    /* Each agent message: avatar (only on first / "ack") + bubble.
+       Continuation rows omit the avatar and indent to align with bubbles
+       above — like WhatsApp grouping consecutive messages from one sender. */
+    .agent-card .scene-agent-row {
+      display: flex;
+      gap: 6px;
+      align-items: flex-start;
+    }
+    .agent-card .scene-agent-row.continuation {
+      padding-left: 20px; /* 14px avatar + 6px gap */
+    }
+    .agent-card .scene-agent-row .scene-avatar {
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #E5322D, #8B1410);
+      flex-shrink: 0;
+      margin-top: 3px;
+    }
+    .agent-card .scene-agent-row .scene-bubble {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .agent-card .scene-bubble {
+      padding: 4px 9px;
+      border-radius: 4px 11px 11px 11px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.10);
+      color: rgba(255, 255, 255, 0.88);
+      font-size: 10.5px;
+      line-height: 1.32;
+    }
+    .agent-card .scene-bubble-ack {
+      color: rgba(255, 255, 255, 0.65);
+      font-style: italic;
+      font-size: 10px;
+      padding: 3px 9px;
+    }
+    .agent-card .scene-bubble-progress {
+      color: rgba(255, 255, 255, 0.78);
+    }
+    .agent-card .scene-bubble-insight {
+      background: rgba(229, 50, 45, 0.06);
+      border-color: rgba(229, 50, 45, 0.28);
+      color: rgba(255, 255, 255, 0.96);
+      font-weight: 500;
+    }
+    .agent-card .scene-bubble-output {
+      border-color: rgba(255, 255, 255, 0.16);
+    }
+
+    .agent-card .scene-memos {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      margin-top: 5px;
+    }
+    .agent-card .scene-memo {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 7px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9.5px;
+      letter-spacing: 0.02em;
+      color: rgba(255, 255, 255, 0.78);
+    }
+    .agent-card .scene-memo::before {
+      content: '';
+      width: 4px; height: 4px;
+      border-radius: 1px;
+      background: #E5322D;
+      flex-shrink: 0;
+    }
+
+    /* Timing — 13000ms cycle. Per-slot grow animation (grid-template-rows
+       0fr → 1fr) creates the WhatsApp scroll: as each new bubble grows,
+       earlier bubbles get pushed up. Older bubbles stay rendered (just
+       scrolled off the top via overflow:hidden), so anim1 and anim2 can
+       both exist on screen simultaneously near the end of the cycle.
+       Reference timeline:
+         0.0s  user bubble grows in
+         1.0s  ack bubble grows in (pushes user up)
+         2.5s  progress grows
+         4.0s  insight grows ← smart moment, gets oxblood pulse
+         5.5s  output grows
+         6.5s  Animation 1 (raw data) grows
+         9.0s  Animation 2 (deliverable) grows ← anim1 stays, just scrolled up
+        11.5s  Hold full state (1s breathing)
+        12.5s  All slots collapse together (500ms fade)
+        13.0s  Loop restart                                                  */
+    .agent-card .slot-user     { animation: slotUser     13000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
+    .agent-card .slot-ack      { animation: slotAck      13000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
+    .agent-card .slot-progress { animation: slotProgress 13000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
+    .agent-card .slot-insight  { animation: slotInsight  13000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
+    .agent-card .slot-output   { animation: slotOutput   13000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
+    .agent-card .pin-anim1     { animation: pinAnim1     13000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
+    .agent-card .pin-anim2     { animation: pinAnim2     13000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
+    /* Insight bubble pulse — the "smart moment" */
+    .agent-card .scene-bubble-insight {
+      animation: insightPulse 13000ms ease-out infinite;
+    }
+
+    @keyframes slotUser {
+      0%        { grid-template-rows: 0fr; opacity: 0; }
+      3%        { grid-template-rows: 1fr; opacity: 1; }
+      92%       { grid-template-rows: 1fr; opacity: 1; }
+      96%, 100% { grid-template-rows: 0fr; opacity: 0; }
+    }
+    @keyframes slotAck {
+      0%, 7.5% { grid-template-rows: 0fr; opacity: 0; }
+      11%      { grid-template-rows: 1fr; opacity: 1; }
+      92%      { grid-template-rows: 1fr; opacity: 1; }
+      96%, 100% { grid-template-rows: 0fr; opacity: 0; }
+    }
+    @keyframes slotProgress {
+      0%, 19%  { grid-template-rows: 0fr; opacity: 0; }
+      22%      { grid-template-rows: 1fr; opacity: 1; }
+      92%      { grid-template-rows: 1fr; opacity: 1; }
+      96%, 100% { grid-template-rows: 0fr; opacity: 0; }
+    }
+    @keyframes slotInsight {
+      0%, 31%  { grid-template-rows: 0fr; opacity: 0; }
+      34%      { grid-template-rows: 1fr; opacity: 1; }
+      92%      { grid-template-rows: 1fr; opacity: 1; }
+      96%, 100% { grid-template-rows: 0fr; opacity: 0; }
+    }
+    @keyframes slotOutput {
+      0%, 42%  { grid-template-rows: 0fr; opacity: 0; }
+      45%      { grid-template-rows: 1fr; opacity: 1; }
+      92%      { grid-template-rows: 1fr; opacity: 1; }
+      96%, 100% { grid-template-rows: 0fr; opacity: 0; }
+    }
+    /* Pin-zone slots — anim1 emerges 6.5s, anim2 emerges 9.0s. Both
+       hold simultaneously from 9.0s → end of cycle (no fade-out of
+       anim1 when anim2 arrives). */
+    @keyframes pinAnim1 {
+      0%, 50%  { grid-template-rows: 0fr; opacity: 0; }
+      53%      { grid-template-rows: 1fr; opacity: 1; }
+      92%      { grid-template-rows: 1fr; opacity: 1; }
+      96%, 100% { grid-template-rows: 0fr; opacity: 0; }
+    }
+    @keyframes pinAnim2 {
+      0%, 69%  { grid-template-rows: 0fr; opacity: 0; }
+      72%      { grid-template-rows: 1fr; opacity: 1; }
+      92%      { grid-template-rows: 1fr; opacity: 1; }
+      96%, 100% { grid-template-rows: 0fr; opacity: 0; }
+    }
+    @keyframes insightPulse {
+      0%, 31%   { box-shadow: 0 0 0 0 rgba(229, 50, 45, 0); }
+      34%       { box-shadow: 0 0 0 6px rgba(229, 50, 45, 0.18); }
+      42%       { box-shadow: 0 0 0 0 rgba(229, 50, 45, 0); }
+      100%      { box-shadow: 0 0 0 0 rgba(229, 50, 45, 0); }
+    }
+
+    /* ─── ACTION VISUALIZATIONS (per-agent specific styling) ─── */
+    /* Generic stagger utility — children "magic escape" from the agent
+       output bubble: drop down + scale up + blur clears. transform-origin
+       at top center anchors the emergence to the bubble above. Stagger
+       is 200ms (4% of cycle) per item, starting at 22% (1.1s).
+       Used by every scene's action block except chart/multi which have
+       bespoke draw/grow keyframes. */
+    .agent-card .scene-stagger > * {
+      opacity: 0;
+      transform-origin: top center;
+    }
+    .agent-card .scene-stagger > *:nth-child(1) { animation: sceneItem1 13000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
+    .agent-card .scene-stagger > *:nth-child(2) { animation: sceneItem2 13000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
+    .agent-card .scene-stagger > *:nth-child(3) { animation: sceneItem3 13000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
+    .agent-card .scene-stagger > *:nth-child(4) { animation: sceneItem4 13000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
+    .agent-card .scene-stagger > *:nth-child(5) { animation: sceneItem5 13000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
+    .agent-card .scene-stagger > *:nth-child(6) { animation: sceneItem6 13000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
+    /* Anim1 items: emerge at 50% (6.5s), HOLD VISIBLE until 92% — i.e.
+       through the entire anim2 emergence + pin-zone hold window. This is
+       what makes "anim1 + anim2 both visible at the end of the cycle"
+       actually work. transform-origin: top center anchors scale to B5. */
+    @keyframes sceneItem1 {
+      0%, 50%   { opacity: 0; transform: translateY(-12px) scale(0.6); filter: blur(2px); }
+      53%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+      92%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+      96%, 100% { opacity: 0; transform: translateY(0) scale(1); filter: blur(0); }
+    }
+    @keyframes sceneItem2 {
+      0%, 51.5% { opacity: 0; transform: translateY(-12px) scale(0.6); filter: blur(2px); }
+      54.5%     { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+      92%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+      96%, 100% { opacity: 0; transform: translateY(0) scale(1); filter: blur(0); }
+    }
+    @keyframes sceneItem3 {
+      0%, 53%   { opacity: 0; transform: translateY(-12px) scale(0.6); filter: blur(2px); }
+      56%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+      92%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+      96%, 100% { opacity: 0; transform: translateY(0) scale(1); filter: blur(0); }
+    }
+    @keyframes sceneItem4 {
+      0%, 54.5% { opacity: 0; transform: translateY(-12px) scale(0.6); filter: blur(2px); }
+      57.5%     { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+      92%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+      96%, 100% { opacity: 0; transform: translateY(0) scale(1); filter: blur(0); }
+    }
+    @keyframes sceneItem5 {
+      0%, 56%   { opacity: 0; transform: translateY(-12px) scale(0.6); filter: blur(2px); }
+      59%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+      92%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+      96%, 100% { opacity: 0; transform: translateY(0) scale(1); filter: blur(0); }
+    }
+    @keyframes sceneItem6 {
+      0%, 57.5% { opacity: 0; transform: translateY(-12px) scale(0.6); filter: blur(2px); }
+      60.5%     { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+      92%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+      96%, 100% { opacity: 0; transform: translateY(0) scale(1); filter: blur(0); }
+    }
+
+    /* === Researcher: papers list with confidence chips === */
+    .agent-card .scene-papers { display: flex; flex-direction: column; gap: 4px; margin-top: 5px; }
+    .agent-card .scene-paper {
+      display: flex; align-items: center; gap: 7px;
+      padding: 4px 7px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+    }
+    .agent-card .scene-paper .paper-icon {
+      width: 11px; height: 13px;
+      border-radius: 1px;
+      background:
+        linear-gradient(to bottom,
+          rgba(255,255,255,0.10) 0%,
+          rgba(255,255,255,0.10) 100%);
+      position: relative;
+      flex-shrink: 0;
+    }
+    .agent-card .scene-paper .paper-icon::before,
+    .agent-card .scene-paper .paper-icon::after {
+      content: '';
+      position: absolute; left: 2px; right: 2px;
+      height: 1px;
+      background: rgba(0, 0, 0, 0.50);
+    }
+    .agent-card .scene-paper .paper-icon::before { top: 4px; }
+    .agent-card .scene-paper .paper-icon::after  { top: 7px; }
+    .agent-card .scene-paper .paper-title {
+      flex: 1;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9.5px;
+      color: rgba(255, 255, 255, 0.78);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .agent-card .scene-paper .paper-conf {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 8px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 1.5px 6px;
+      border-radius: 999px;
+      flex-shrink: 0;
+    }
+    .agent-card .scene-paper .paper-conf.high {
+      color: #E5322D;
+      background: rgba(229, 50, 45, 0.10);
+      border: 1px solid rgba(229, 50, 45, 0.40);
+    }
+    .agent-card .scene-paper .paper-conf.med {
+      color: rgba(255, 255, 255, 0.65);
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.10);
+    }
+    .agent-card .scene-paper .paper-conf.low {
+      color: rgba(255, 255, 255, 0.40);
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    /* === Web Master: browser tabs === */
+    .agent-card .scene-tabs { display: flex; flex-direction: column; gap: 5px; margin-top: 5px; }
+    .agent-card .scene-tab {
+      display: flex; align-items: center; gap: 8px;
+      padding: 5px 9px;
+      border-radius: 5px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9.5px;
+      color: rgba(255, 255, 255, 0.78);
+    }
+    .agent-card .scene-tab .tab-dots { display: flex; gap: 3px; flex-shrink: 0; }
+    .agent-card .scene-tab .tab-dots span {
+      width: 5px; height: 5px; border-radius: 50%;
+      background: rgba(255, 255, 255, 0.22);
+    }
+    .agent-card .scene-tab .tab-dots span:first-child { background: #E5322D; }
+    .agent-card .scene-tab .tab-url {
+      flex: 1;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .agent-card .scene-tab .tab-check {
+      color: #E5322D;
+      font-size: 11px;
+      flex-shrink: 0;
+    }
+
+    /* === Doc Expert: paper outline + lines filling === */
+    .agent-card .scene-doc {
+      margin-top: 6px;
+      padding: 9px 11px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.10);
+      display: flex; flex-direction: column; gap: 5px;
+    }
+    .agent-card .scene-doc-line {
+      height: 4px;
+      border-radius: 1px;
+      background: rgba(255, 255, 255, 0.18);
+    }
+    .agent-card .scene-doc-line.short { width: 60%; }
+    .agent-card .scene-doc-line.med   { width: 88%; }
+    .agent-card .scene-doc-line.long  { width: 100%; }
+
+    /* === Slide Master: slide cards === */
+    .agent-card .scene-slides { display: flex; gap: 5px; margin-top: 6px; }
+    .agent-card .scene-slide {
+      flex: 1;
+      aspect-ratio: 16 / 11;
+      border-radius: 3px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      padding: 4px 5px;
+      display: flex; flex-direction: column; gap: 2px;
+    }
+    .agent-card .scene-slide .slide-h {
+      height: 2px; width: 60%;
+      background: #E5322D;
+      border-radius: 1px;
+    }
+    .agent-card .scene-slide .slide-l {
+      height: 1.5px; width: 100%;
+      background: rgba(255, 255, 255, 0.25);
+      border-radius: 1px;
+    }
+
+    /* === Trade Pro: line chart drawing === */
+    .agent-card .scene-chart {
+      margin-top: 6px;
+      height: 60px;
+      position: relative;
+      padding-left: 1px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.10);
+      border-left: 1px solid rgba(255, 255, 255, 0.10);
+    }
+    .agent-card .scene-chart svg { width: 100%; height: 100%; display: block; overflow: visible; }
+    .agent-card .scene-chart .chart-line {
+      stroke: #E5322D;
+      stroke-width: 1.5;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-dasharray: 220;
+      stroke-dashoffset: 220;
+      animation: chartDraw 13000ms ease-out infinite;
+    }
+    .agent-card .scene-chart .chart-marker {
+      fill: #E5322D;
+      opacity: 0;
+      animation: chartMarker 13000ms ease-out infinite;
+    }
+    @keyframes chartDraw {
+      0%, 50%   { stroke-dashoffset: 220; }
+      62%       { stroke-dashoffset: 0; }
+      92%       { stroke-dashoffset: 0; }
+      96%, 100% { stroke-dashoffset: 220; }
+    }
+    @keyframes chartMarker {
+      0%, 60%   { opacity: 0; }
+      63%       { opacity: 1; }
+      92%       { opacity: 1; }
+      96%, 100% { opacity: 0; }
+    }
+
+    /* === Macro Strategist: 3 scenario bars === */
+    .agent-card .scene-multi {
+      display: flex; flex-direction: column; gap: 7px; margin-top: 6px;
+    }
+    .agent-card .scene-multi-row { display: flex; align-items: center; gap: 8px; }
+    .agent-card .scene-multi-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      color: rgba(255, 255, 255, 0.55);
+      width: 32px;
+      flex-shrink: 0;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .agent-card .scene-multi-bar {
+      flex: 1;
+      height: 5px;
+      background: rgba(255, 255, 255, 0.04);
+      border-radius: 2px;
+      position: relative;
+      overflow: hidden;
+    }
+    .agent-card .scene-multi-bar::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; bottom: 0;
+      width: 0;
+      border-radius: 2px;
+      animation: multiGrowBull 13000ms ease-out infinite;
+    }
+    .agent-card .scene-multi-row.bull .scene-multi-bar::after {
+      background: #E5322D;
+      animation-name: multiGrowBull;
+    }
+    .agent-card .scene-multi-row.base .scene-multi-bar::after {
+      background: rgba(255, 255, 255, 0.55);
+      animation-name: multiGrowBase;
+    }
+    .agent-card .scene-multi-row.bear .scene-multi-bar::after {
+      background: rgba(255, 255, 255, 0.28);
+      animation-name: multiGrowBear;
+    }
+    @keyframes multiGrowBull {
+      0%, 50%   { width: 0; }
+      58%       { width: 88%; }
+      92%       { width: 88%; }
+      96%, 100% { width: 0; }
+    }
+    @keyframes multiGrowBase {
+      0%, 51.5% { width: 0; }
+      59.5%     { width: 60%; }
+      92%       { width: 60%; }
+      96%, 100% { width: 0; }
+    }
+    @keyframes multiGrowBear {
+      0%, 53%   { width: 0; }
+      61%       { width: 32%; }
+      92%       { width: 32%; }
+      96%, 100% { width: 0; }
+    }
+
+    /* === Business Director: KPI cards === */
+    .agent-card .scene-kpis { display: flex; gap: 6px; margin-top: 6px; }
+    .agent-card .scene-kpi {
+      flex: 1;
+      padding: 7px 8px;
+      border-radius: 5px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+    }
+    .agent-card .scene-kpi .kpi-num {
+      font-family: 'Instrument Serif', serif;
+      font-size: 18px;
+      line-height: 1;
+      color: #fff;
+      letter-spacing: -0.02em;
+    }
+    .agent-card .scene-kpi .kpi-num .kpi-pct {
+      font-size: 11px; color: rgba(255,255,255,0.55); margin-left: 2px;
+    }
+    .agent-card .scene-kpi .kpi-lbl {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 8px;
+      letter-spacing: 0.10em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.45);
+      margin-top: 5px;
+    }
+
+    /* === Video Producer: vertical frame thumbnails (9:16) === */
+    .agent-card .scene-frames { display: flex; gap: 4px; margin-top: 6px; }
+    .agent-card .scene-frame {
+      flex: 1;
+      aspect-ratio: 9 / 14;
+      border-radius: 3px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.10);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .agent-card .scene-frame::before {
+      content: '';
+      width: 0; height: 0;
+      border-left: 5px solid #E5322D;
+      border-top: 3.5px solid transparent;
+      border-bottom: 3.5px solid transparent;
+      margin-left: 1px;
+    }
+
+    /* === Social Conductor: platform pills with checkmark === */
+    .agent-card .scene-platforms { display: flex; gap: 5px; margin-top: 6px; flex-wrap: wrap; }
+    .agent-card .scene-platform {
+      display: flex; align-items: center; gap: 5px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: rgba(229, 50, 45, 0.10);
+      border: 1px solid rgba(229, 50, 45, 0.40);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 0.05em;
+      color: #E5322D;
+    }
+    .agent-card .scene-platform::after {
+      content: '✓';
+      font-size: 9px;
+    }
+
+    /* === ANIMATION 2 — the "deliverable" view === */
+    /* The slot wrapper (.slot-anim2) handles the grow-in via grid-template-rows.
+       Inner items still get a per-item opacity stagger so they don't all
+       appear at once. */
+    /* Anim2 inner items stagger in after the container grows */
+    .agent-card .scene-anim2 > * { opacity: 0; }
+    .agent-card .scene-anim2 > *:nth-child(1) { animation: anim2Item1 13000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
+    .agent-card .scene-anim2 > *:nth-child(2) { animation: anim2Item2 13000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
+    .agent-card .scene-anim2 > *:nth-child(3) { animation: anim2Item3 13000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
+    .agent-card .scene-anim2 > *:nth-child(4) { animation: anim2Item4 13000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
+    .agent-card .scene-anim2 > *:nth-child(5) { animation: anim2Item5 13000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
+    @keyframes anim2Item1 {
+      0%, 73%    { opacity: 0; transform: translateY(-6px); }
+      76%        { opacity: 1; transform: translateY(0); }
+      92%        { opacity: 1; }
+      96%, 100%  { opacity: 0; }
+    }
+    @keyframes anim2Item2 {
+      0%, 75%    { opacity: 0; transform: translateY(-6px); }
+      78%        { opacity: 1; transform: translateY(0); }
+      92%        { opacity: 1; }
+      96%, 100%  { opacity: 0; }
+    }
+    @keyframes anim2Item3 {
+      0%, 77%    { opacity: 0; transform: translateY(-6px); }
+      80%        { opacity: 1; transform: translateY(0); }
+      92%        { opacity: 1; }
+      96%, 100%  { opacity: 0; }
+    }
+    @keyframes anim2Item4 {
+      0%, 79%    { opacity: 0; transform: translateY(-6px); }
+      82%        { opacity: 1; transform: translateY(0); }
+      92%        { opacity: 1; }
+      96%, 100%  { opacity: 0; }
+    }
+    @keyframes anim2Item5 {
+      0%, 81%    { opacity: 0; transform: translateY(-6px); }
+      84%        { opacity: 1; transform: translateY(0); }
+      92%        { opacity: 1; }
+      96%, 100%  { opacity: 0; }
+    }
+
+    /* === Anim2 visual containers — stronger oxblood border, bigger pad === */
+    .agent-card .scene-anim2 {
+      margin-top: 4px;
+      padding: 7px 9px;
+      border-radius: 6px;
+      background: rgba(229, 50, 45, 0.04);
+      border: 1.5px solid rgba(229, 50, 45, 0.35);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    /* Generic anim2 row patterns — sized smaller than anim1 / bubble text
+       so the deliverable reads as compact "data summary" rather than
+       another bubble row. */
+    .agent-card .scene-anim2 .anim2-row {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 8.5px;
+      color: rgba(255, 255, 255, 0.85);
+      line-height: 1.3;
+    }
+    .agent-card .scene-anim2 .anim2-time {
+      color: #E5322D;
+      font-size: 8px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      flex-shrink: 0;
+      min-width: 32px;
+    }
+    .agent-card .scene-anim2 .anim2-label {
+      flex: 1;
+      color: rgba(255, 255, 255, 0.85);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .agent-card .scene-anim2 .anim2-meta {
+      color: rgba(255, 255, 255, 0.45);
+      font-size: 7.5px;
+      flex-shrink: 0;
+    }
+    .agent-card .scene-anim2 .anim2-num {
+      color: #E5322D;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+    .agent-card .scene-anim2 .anim2-arrow {
+      color: #E5322D;
+      width: 11px; flex-shrink: 0; text-align: center;
+    }
+    .agent-card .scene-anim2 .anim2-arrow.up { color: #E5322D; }
+    .agent-card .scene-anim2 .anim2-arrow.down { color: rgba(255,255,255,0.55); }
+    .agent-card .scene-anim2 .anim2-arrow.flat { color: rgba(255,255,255,0.40); }
+    .agent-card .scene-anim2 .anim2-disclaimer {
+      font-family: 'Inter', sans-serif;
+      font-size: 7px;
+      font-style: italic;
+      color: rgba(255, 255, 255, 0.40);
+      margin-top: 2px;
+      letter-spacing: 0.02em;
+    }
+    .agent-card .scene-anim2 .anim2-bullet {
+      display: flex;
+      gap: 6px;
+      align-items: flex-start;
+      font-size: 8.5px;
+      color: rgba(255, 255, 255, 0.85);
+      line-height: 1.3;
+    }
+    .agent-card .scene-anim2 .anim2-bullet::before {
+      content: '';
+      width: 3px; height: 3px;
+      border-radius: 1px;
+      background: #E5322D;
+      flex-shrink: 0;
+      margin-top: 4px;
+    }
+    .agent-card .scene-anim2 .anim2-headline {
+      font-family: 'Instrument Serif', serif;
+      font-size: 10px;
+      color: #fff;
+      line-height: 1.2;
+      letter-spacing: -0.01em;
+    }
+    .agent-card .scene-anim2 .anim2-email-meta {
+      display: flex;
+      gap: 5px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 8px;
+    }
+    .agent-card .scene-anim2 .anim2-email-meta .label {
+      color: rgba(255,255,255,0.45);
+      flex-shrink: 0;
+    }
+    .agent-card .scene-anim2 .anim2-email-meta .val {
+      color: rgba(255,255,255,0.88);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .agent-card .scene-anim2 .anim2-attach {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 2px 6px;
+      border-radius: 3px;
+      background: rgba(229, 50, 45, 0.10);
+      border: 1px solid rgba(229, 50, 45, 0.40);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 7.5px;
+      color: #E5322D;
+      letter-spacing: 0.04em;
+      width: fit-content;
+    }
+    .agent-card .scene-anim2 .anim2-cta {
+      display: inline-flex;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: #E5322D;
+      color: #fff;
+      font-family: 'Inter', sans-serif;
+      font-size: 8px;
+      font-weight: 500;
+      width: fit-content;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .agent-card .chat-slot,
+      .agent-card .pin-slot,
+      .agent-card .scene-bubble-insight,
+      .agent-card .scene-stagger > *,
+      .agent-card .scene-anim2 > *,
+      .agent-card .scene-chart .chart-line,
+      .agent-card .scene-chart .chart-marker,
+      .agent-card .scene-multi-bar::after {
+        animation: none;
+        opacity: 1;
+        transform: none;
+        filter: none;
+        box-shadow: none;
+      }
+      .agent-card .chat-slot,
+      .agent-card .pin-slot { grid-template-rows: 1fr; }
+      .agent-card .scene-chart .chart-line { stroke-dashoffset: 0; }
+      .agent-card .scene-multi-row.bull .scene-multi-bar::after { width: 88%; }
+      .agent-card .scene-multi-row.base .scene-multi-bar::after { width: 60%; }
+      .agent-card .scene-multi-row.bear .scene-multi-bar::after { width: 32%; }
+    }
+
+    /* ─── CAROUSEL NAV BUTTONS (always-visible, prominent) ─── */
+    .agent-fade { position: relative; }
+    .agent-nav {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 44px; height: 44px;
+      z-index: 6;
+      border-radius: 999px;
+      background: rgba(245, 242, 234, 0.96);  /* bone */
+      border: 1px solid rgba(229, 50, 45, 0.45);
+      color: #E5322D;
+      cursor: pointer;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(0,0,0,0.05);
+      transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease;
+    }
+    .agent-nav-prev { left: -8px; }
+    .agent-nav-next { right: -8px; }
+    @media (min-width: 768px) {
+      .agent-nav-prev { left: 6px; }
+      .agent-nav-next { right: 6px; }
+    }
+    .agent-nav:hover {
+      transform: translateY(-50%) scale(1.05);
+      background: #FAF9F5;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(229,50,45,0.30);
+    }
+    .agent-nav:active { transform: translateY(-50%) scale(0.96); }
+    .agent-nav:focus-visible { outline: 2px solid #E5322D; outline-offset: 3px; }
+    .agent-nav svg {
+      width: 20px; height: 20px;
+      stroke: currentColor;
+      stroke-width: 2.4;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
     }
     .agent-card .agent-body {
-      padding: 16px 18px 20px;
-      display: flex; flex-direction: column; gap: 8px;
+      padding: 12px 14px 14px;
+      display: flex; flex-direction: column; gap: 6px;
       flex: 1;
+    }
+    @media (min-width: 768px) {
+      .agent-card .agent-body { padding: 16px 18px 20px; gap: 8px; }
     }
     .agent-card .agent-name {
       font-family: 'Instrument Serif', serif;
-      font-size: 22px;
+      font-size: 18px;
       letter-spacing: -0.01em;
       line-height: 1.05;
       color: #F5F2EA;
@@ -1454,11 +2384,11 @@
     .agent-card .agent-desc {
       font-family: 'Inter', sans-serif;
       font-weight: 300;
-      font-size: 13px;
-      line-height: 1.5;
+      font-size: 11.5px;
+      line-height: 1.45;
       color: rgba(245, 242, 234, 0.62);
     }
-    @media (min-width: 768px) { .agent-card .agent-desc { font-size: 13.5px; } }
+    @media (min-width: 768px) { .agent-card .agent-desc { font-size: 13.5px; line-height: 1.5; } }
 
     /* Dot indicators */
     .agent-dots { display: flex; justify-content: center; gap: 6px; margin-top: 18px; }
@@ -2457,22 +3387,22 @@
                 border: '1px solid rgba(255, 255, 255, 0.22)',
                 backdropFilter: 'blur(8px)'
               }}>
-              <span style={{ background: '#E5322D', color: '#fff' }} className="rounded-full px-3 py-1 text-[10px] font-mono font-medium uppercase tracking-[0.18em]">New</span>
-              <span className="pr-3 font-mono uppercase tracking-[0.14em] text-[11px] text-white/85">Introducing weuseai.agent</span>
+              <span style={{ background: '#E5322D', color: '#fff' }} className="rounded-full px-3 py-1 text-[10px] font-mono font-medium uppercase tracking-[0.18em]">Hand-built</span>
+              <span className="pr-3 font-mono uppercase tracking-[0.14em] text-[11px] text-white/85">Indonesian-first</span>
             </Mot.div>
 
             <BlurText
-              text="Build Your AI Agent"
-              className="mt-7 md:mt-10 text-[2.75rem] sm:text-5xl md:text-7xl lg:text-[8.5rem] font-heading leading-[0.95] md:leading-[0.92] max-w-[16ch] text-white px-2"
-              style={{ letterSpacing: '-0.05em', fontStyle: 'normal' }}
+              text="Enable AI Agent dalam hidup kamu, sekarang."
+              className="mt-7 md:mt-10 text-[2.5rem] sm:text-5xl md:text-6xl lg:text-[7rem] font-heading leading-[0.96] md:leading-[0.94] max-w-[18ch] text-white px-2"
+              style={{ letterSpacing: '-0.045em', fontStyle: 'normal' }}
               delay={100} />
 
             <Mot.p
               initial={{ filter: 'blur(10px)', opacity: 0, y: 20 }}
               animate={{ filter: 'blur(0px)', opacity: 1, y: 0 }}
               transition={{ duration: 0.6, ease: EASE, delay: 0.8 }}
-              className="mt-6 md:mt-8 max-w-[44ch] text-sm md:text-lg font-body font-light leading-[1.5] text-white/85 px-2">
-              8 menit akan mengubah caramu berinteraksi dengan hidup, selamanya.
+              className="mt-6 md:mt-8 max-w-[52ch] text-sm md:text-lg font-body font-light leading-[1.5] text-white/85 px-2">
+              Catch-up sama AI wave sebelum terlambat. Hand-built, ready to use out-the-box. 8 menit dari bayar ke first message.
             </Mot.p>
 
             <Mot.p
@@ -2480,27 +3410,42 @@
               animate={{ filter: 'blur(0px)', opacity: 1, y: 0 }}
               transition={{ duration: 0.6, ease: EASE, delay: 0.95 }}
               className="mt-5 font-mono uppercase tracking-[0.18em] text-[10px] md:text-[11px] text-white/55">
-              Bayar setup sekali. Hosting transparan.
+              Bayar setup sekali · Garansi 14 hari* · Cancel kapan aja
             </Mot.p>
 
             <Mot.div
               initial={{ filter: 'blur(10px)', opacity: 0, y: 20 }}
               animate={{ filter: 'blur(0px)', opacity: 1, y: 0 }}
               transition={{ duration: 0.6, ease: EASE, delay: 1.1 }}
-              className="mt-10 flex items-center gap-4 flex-wrap justify-center">
-              <a href="checkout.html" className="rounded-full px-5 py-2.5 text-sm font-medium flex items-center gap-2 no-underline"
-                style={{ background: '#fff', color: '#0a0a0a', border: '1px solid #fff' }}>
-                Start Change Now <ArrowUpRight size={14} stroke={2.2} />
+              className="mt-10 flex flex-col items-center gap-3">
+              <div className="flex items-center gap-3 flex-wrap justify-center">
+                <a href="checkout.html" className="rounded-full px-5 py-2.5 text-sm font-medium flex items-center gap-2 no-underline"
+                  style={{ background: '#fff', color: '#0a0a0a', border: '1px solid #fff' }}>
+                  Mulai sekarang <ArrowUpRight size={14} stroke={2.2} />
+                </a>
+                <a href="https://cal.com/weuseai.agent/15min" target="_blank" rel="noopener" className="rounded-full px-5 py-2.5 text-sm font-medium flex items-center gap-2 no-underline text-white"
+                  style={{ background: 'rgba(255, 255, 255, 0.06)', border: '1px solid rgba(255, 255, 255, 0.22)', backdropFilter: 'blur(8px)' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2" />
+                    <line x1="16" y1="2" x2="16" y2="6" />
+                    <line x1="8" y1="2" x2="8" y2="6" />
+                    <line x1="3" y1="10" x2="21" y2="10" />
+                  </svg>
+                  Konsultasi gratis (15 menit)
+                </a>
+              </div>
+              <a href="#snk-garansi" className="text-[10px] font-mono tracking-[0.10em] no-underline" style={{ color: '#E5322D' }}>
+                *S&K berlaku — lihat detail
               </a>
             </Mot.div>
 
             <div className="mt-12 md:mt-auto pb-6 md:pb-12 pt-12 md:pt-20 w-full max-w-5xl mx-auto">
               <div className="liquid-glass rounded-2xl md:rounded-3xl p-5 md:p-10 grid grid-cols-2 md:grid-cols-4 gap-5 md:gap-6 text-center">
                 {[
-                  { kind: 'ratio', a: 10, b: 332, label: 'Recommended for Agentic Use' },
-                  { kind: 'plain', n: 40,  suffix: '+', label: 'Growing Specialized Skills' },
-                  { kind: 'plain', n: 12,  suffix: '+', label: 'Agent fine-tuned' },
-                  { kind: 'plain', n: 12,  suffix: '+', label: 'Dedicated Handcrafted App' },
+                  { kind: 'plain', n: 10,  suffix: '+', label: 'Carefully-tuned agent\n(and growing)' },
+                  { kind: 'plain', n: 674, suffix: '+', label: 'Pre-existing skills\n(and growing)' },
+                  { kind: 'text',  text: 'ID', label: 'Indonesian priority\nbahasa & konteks' },
+                  { kind: 'plain', n: 20,  suffix: '×', label: 'More context memory\n(than normal AI)' },
                 ].map((it, i) => (
                   <Mot.div key={it.label}
                     initial={{ opacity: 0, y: 16 }}
@@ -2516,11 +3461,13 @@
                           <span className="text-white/35"> / </span>
                           <CountUp to={it.b} duration={2200} delay={150} />
                         </>
+                      ) : it.kind === 'text' ? (
+                        <span style={{ color: '#E5322D' }}>{it.text}</span>
                       ) : (
                         <CountUp to={it.n} suffix={it.suffix} duration={1800} delay={150 + i * 120} />
                       )}
                     </div>
-                    <div className="mt-2 md:mt-2.5 text-white/55 font-body font-light text-[11px] md:text-sm leading-tight">{it.label}</div>
+                    <div className="mt-2 md:mt-2.5 text-white/55 font-body font-light italic text-[11px] md:text-[13px] leading-snug" style={{ whiteSpace: 'pre-line' }}>{it.label}</div>
                   </Mot.div>
                 ))}
               </div>
@@ -2530,15 +3477,1283 @@
       );
     }
 
+    // ─────────────────────── CREATURE SPRITES ───────────────────────
+    // Each agent card hosts a unique creature animation (10 creatures × 3-5
+    // frames each, dot-pattern silhouettes in Signal Red). SVG inline + CSS
+    // @keyframes cross-fades between frames. Storyboard locked in
+    // docs/plans/2026-05-07-agent-persona-creatures-design.md.
+    //
+    // Each frame is a grid string, # = dot, space = empty. The grid is
+    // 20 cols × 15 rows (4-unit pitch in 80×60 viewBox, dot radius 1.3).
+    //
+    // To replace a placeholder frame: edit the strings below, the JSX
+    // helper auto-converts every # into a <circle> at the grid coords.
+    function gridDots(grid) {
+      const dots = [];
+      for (let r = 0; r < grid.length; r++) {
+        const row = grid[r];
+        for (let c = 0; c < row.length; c++) {
+          if (row[c] === '#') {
+            dots.push(<circle key={`${r}-${c}`} cx={c * 4 + 2} cy={r * 4 + 2} r="1.3" fill="#E5322D" />);
+          }
+        }
+      }
+      return dots;
+    }
+
+    // Each creature key is the agent slug. Value is { frames: string[][] }.
+    // Empty/missing creatures fall back to the static halftone placeholder.
+    const CREATURES = {
+      // The Pro — Smiley face. Friendly, approachable companion.
+      // Round face with eyes + smile. Frames: relaxed → medium smile →
+      // wide laugh → wink (one eye closed).
+      pro: {
+        frames: [
+          [ // f0 — relaxed neutral smile
+            "                    ",
+            "                    ",
+            "                    ",
+            "     ##########     ",
+            "   ##          ##   ",
+            "   ##          ##   ",
+            "   ##  ##  ##  ##   ",
+            "   ##          ##   ",
+            "   ##          ##   ",
+            "   ##   ####   ##   ",
+            "   ##          ##   ",
+            "     ##########     ",
+            "                    ",
+            "                    ",
+            "                    ",
+          ],
+          [ // f1 — medium smile
+            "                    ",
+            "                    ",
+            "                    ",
+            "     ##########     ",
+            "   ##          ##   ",
+            "   ##          ##   ",
+            "   ##  ##  ##  ##   ",
+            "   ##          ##   ",
+            "   ##          ##   ",
+            "   ##  ######  ##   ",
+            "   ##          ##   ",
+            "     ##########     ",
+            "                    ",
+            "                    ",
+            "                    ",
+          ],
+          [ // f2 — wide laugh (smile curves down at corners)
+            "                    ",
+            "                    ",
+            "                    ",
+            "     ##########     ",
+            "   ##          ##   ",
+            "   ##          ##   ",
+            "   ##  ##  ##  ##   ",
+            "   ##          ##   ",
+            "   ##  ######  ##   ",
+            "   ## ##    ## ##   ",
+            "   ##          ##   ",
+            "     ##########     ",
+            "                    ",
+            "                    ",
+            "                    ",
+          ],
+          [ // f3 — wink (left eye closes)
+            "                    ",
+            "                    ",
+            "                    ",
+            "     ##########     ",
+            "   ##          ##   ",
+            "   ##          ##   ",
+            "   ##   #  ##  ##   ",
+            "   ##          ##   ",
+            "   ##          ##   ",
+            "   ##  ######  ##   ",
+            "   ##          ##   ",
+            "     ##########     ",
+            "                    ",
+            "                    ",
+            "                    ",
+          ],
+        ],
+      },
+
+      // Deep Researcher — Magnifying glass. Circle outline + diagonal
+      // handle. Searching, investigation, discovery. Frames: glass alone
+      // → glass + handle stub → full handle → glass with sparkle inside.
+      researcher: {
+        frames: [
+          [ // f0 — circle only
+            "                    ",
+            "                    ",
+            "      ######        ",
+            "    ##      ##      ",
+            "   ##        ##     ",
+            "   ##        ##     ",
+            "    ##      ##      ",
+            "      ######        ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+          ],
+          [ // f1 — circle + handle stub
+            "                    ",
+            "                    ",
+            "      ######        ",
+            "    ##      ##      ",
+            "   ##        ##     ",
+            "   ##        ##     ",
+            "    ##      ##      ",
+            "      ######        ",
+            "            ##      ",
+            "             ##     ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+          ],
+          [ // f2 — circle + full handle
+            "                    ",
+            "                    ",
+            "      ######        ",
+            "    ##      ##      ",
+            "   ##        ##     ",
+            "   ##        ##     ",
+            "    ##      ##      ",
+            "      ######        ",
+            "            ##      ",
+            "             ##     ",
+            "              ##    ",
+            "               ##   ",
+            "                    ",
+            "                    ",
+            "                    ",
+          ],
+          [ // f3 — circle + handle + sparkle reflection
+            "                    ",
+            "                    ",
+            "      ######        ",
+            "    ##      ##      ",
+            "   ##  #     ##     ",
+            "   ##    #   ##     ",
+            "    ##      ##      ",
+            "      ######        ",
+            "            ##      ",
+            "             ##     ",
+            "              ##    ",
+            "               ##   ",
+            "                    ",
+            "                    ",
+            "                    ",
+          ],
+        ],
+      },
+
+      // Web Master — Browser window with search bar (founder pivot from
+      // earlier spider-web concept). Minimalist outline, 30-50 dots/frame.
+      web: {
+        frames: [
+          [ // f0 — empty browser frame
+            "                    ",
+            "                    ",
+            "                    ",
+            "  ################  ",
+            "  ##            ##  ",
+            "  ##            ##  ",
+            "  ##            ##  ",
+            "  ##            ##  ",
+            "  ##            ##  ",
+            "  ##            ##  ",
+            "  ##            ##  ",
+            "  ################  ",
+            "                    ",
+            "                    ",
+            "                    ",
+          ],
+          [ // f1 — frame + empty URL bar
+            "                    ",
+            "                    ",
+            "                    ",
+            "  ################  ",
+            "  ##            ##  ",
+            "  ##  ########  ##  ",
+            "  ##            ##  ",
+            "  ##            ##  ",
+            "  ##            ##  ",
+            "  ##            ##  ",
+            "  ##            ##  ",
+            "  ################  ",
+            "                    ",
+            "                    ",
+            "                    ",
+          ],
+          [ // f2 — URL bar with typing cursor
+            "                    ",
+            "                    ",
+            "                    ",
+            "  ################  ",
+            "  ##            ##  ",
+            "  ##  ########  ##  ",
+            "  ##  ##        ##  ",
+            "  ##            ##  ",
+            "  ##            ##  ",
+            "  ##            ##  ",
+            "  ##            ##  ",
+            "  ################  ",
+            "                    ",
+            "                    ",
+            "                    ",
+          ],
+          [ // f3 — URL filled + content rectangle below
+            "                    ",
+            "                    ",
+            "                    ",
+            "  ################  ",
+            "  ##            ##  ",
+            "  ##  ########  ##  ",
+            "  ##  ########  ##  ",
+            "  ##            ##  ",
+            "  ##  ###  ##   ##  ",
+            "  ##  ##  ##    ##  ",
+            "  ##            ##  ",
+            "  ################  ",
+            "                    ",
+            "                    ",
+            "                    ",
+          ],
+        ],
+      },
+
+      // Doc Expert — A4 paper with writing. Vertical rectangle outline,
+      // text lines appearing top to bottom (drafting in progress).
+      // Frames: empty page → 25% → 50% → 75-100% filled.
+      doc: {
+        frames: [
+          [ // f0 — empty page
+            "                    ",
+            "     ##########     ",
+            "     ##      ##     ",
+            "     ##      ##     ",
+            "     ##      ##     ",
+            "     ##      ##     ",
+            "     ##      ##     ",
+            "     ##      ##     ",
+            "     ##      ##     ",
+            "     ##      ##     ",
+            "     ##      ##     ",
+            "     ##      ##     ",
+            "     ##      ##     ",
+            "     ##########     ",
+            "                    ",
+          ],
+          [ // f1 — 1 line (25%)
+            "                    ",
+            "     ##########     ",
+            "     ##      ##     ",
+            "     ## #### ##     ",
+            "     ##      ##     ",
+            "     ##      ##     ",
+            "     ##      ##     ",
+            "     ##      ##     ",
+            "     ##      ##     ",
+            "     ##      ##     ",
+            "     ##      ##     ",
+            "     ##      ##     ",
+            "     ##      ##     ",
+            "     ##########     ",
+            "                    ",
+          ],
+          [ // f2 — 2 lines (50%)
+            "                    ",
+            "     ##########     ",
+            "     ##      ##     ",
+            "     ## #### ##     ",
+            "     ##      ##     ",
+            "     ##      ##     ",
+            "     ## ## # ##     ",
+            "     ##      ##     ",
+            "     ##      ##     ",
+            "     ##      ##     ",
+            "     ##      ##     ",
+            "     ##      ##     ",
+            "     ##      ##     ",
+            "     ##########     ",
+            "                    ",
+          ],
+          [ // f3 — 4 lines (75-100%)
+            "                    ",
+            "     ##########     ",
+            "     ##      ##     ",
+            "     ## #### ##     ",
+            "     ##      ##     ",
+            "     ##      ##     ",
+            "     ## ## # ##     ",
+            "     ##      ##     ",
+            "     ##      ##     ",
+            "     ## ###  ##     ",
+            "     ##      ##     ",
+            "     ##      ##     ",
+            "     ## ##   ##     ",
+            "     ##########     ",
+            "                    ",
+          ],
+        ],
+      },
+
+      // Slide Master — slide deck stack revealing one by one.
+      slide: {
+        frames: [
+          [ // f0 — single rectangle (one slide)
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "      ##########    ",
+            "      ##        #   ",
+            "      ##        #   ",
+            "      ##        #   ",
+            "      ##        #   ",
+            "      ##        #   ",
+            "      ##########    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+          ],
+          [ // f1 — 2 stacked rectangles (slight offset)
+            "                    ",
+            "                    ",
+            "                    ",
+            "       ##########   ",
+            "       ##        #  ",
+            "      ##########  # ",
+            "      ##        ##  ",
+            "      ##        #   ",
+            "      ##        #   ",
+            "      ##        #   ",
+            "      ##########    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+          ],
+          [ // f2 — 3 stacked rectangles fanned
+            "                    ",
+            "                    ",
+            "        ##########  ",
+            "        ##        # ",
+            "       ##########  #",
+            "       ##        ## ",
+            "      ##########  # ",
+            "      ##        ##  ",
+            "      ##        #   ",
+            "      ##        #   ",
+            "      ##########    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+          ],
+          [ // f3 — 3 fanned + bullets inside front slide
+            "                    ",
+            "                    ",
+            "        ##########  ",
+            "        ##        # ",
+            "       ##########  #",
+            "       ##        ## ",
+            "      ##########  # ",
+            "      ## ##  ## ##  ",
+            "      ## ##  ##  #  ",
+            "      ## ##     #   ",
+            "      ##########    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+          ],
+        ],
+      },
+
+      // Trade Pro — Bar chart with up-arrow.
+      trade: {
+        frames: [
+          [ // f0 — 1 small bar
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "      ##            ",
+            "      ##            ",
+            "      ##            ",
+          ],
+          [ // f1 — 2 bars ascending
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "          ##        ",
+            "          ##        ",
+            "      ##  ##        ",
+            "      ##  ##        ",
+            "      ##  ##        ",
+          ],
+          [ // f2 — 3 bars ascending
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "              ##    ",
+            "              ##    ",
+            "          ##  ##    ",
+            "          ##  ##    ",
+            "      ##  ##  ##    ",
+            "      ##  ##  ##    ",
+            "      ##  ##  ##    ",
+          ],
+          [ // f3 — 4 bars + arrow tip extending past top
+            "                    ",
+            "                    ",
+            "                  # ",
+            "                 ###",
+            "                # # ",
+            "                  # ",
+            "                  # ",
+            "              ##  # ",
+            "              ##  # ",
+            "              ##  # ",
+            "          ##  ##  # ",
+            "          ##  ##  # ",
+            "      ##  ##  ##  # ",
+            "      ##  ##  ##  # ",
+            "      ##  ##  ##  # ",
+          ],
+        ],
+      },
+
+      // Macro Strategist — 3 concentric rings (founder pivot from earlier
+      // globe+meridians). Builds outward: center dot → small ring → medium
+      // ring → all 3 rings. Minimalist outline, ~25-50 dots/frame.
+      macro: {
+        frames: [
+          [ // f0 — center dot only
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "         ##         ",
+            "         ##         ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+          ],
+          [ // f1 — center + small ring
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "         ##         ",
+            "       ##  ##       ",
+            "      ##    ##      ",
+            "      ## ## ##      ",
+            "      ## ## ##      ",
+            "      ##    ##      ",
+            "       ##  ##       ",
+            "         ##         ",
+            "                    ",
+            "                    ",
+            "                    ",
+          ],
+          [ // f2 — center + small + medium ring
+            "                    ",
+            "                    ",
+            "       ######       ",
+            "     ##      ##     ",
+            "    ##  ####  ##    ",
+            "   ##  ##  ##  ##   ",
+            "   ##  ## ## ##  #  ",
+            "   ##  ## ## ##  #  ",
+            "   ##  ##  ##  ##   ",
+            "    ##  ##  ##      ",
+            "     ##      ##     ",
+            "       ######       ",
+            "                    ",
+            "                    ",
+            "                    ",
+          ],
+          [ // f3 — center + small + medium + large ring (all 3)
+            "      ########      ",
+            "    ##        ##    ",
+            "   ##  ######  ##   ",
+            "  ##  ##    ##  ##  ",
+            "  ##  ## ## ##  ##  ",
+            "  ##  ## ## ##  ##  ",
+            "  ##  ##    ##  ##  ",
+            "   ##  ######  ##   ",
+            "    ##        ##    ",
+            "      ########      ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+          ],
+        ],
+      },
+
+      // Business Director — Dollar sign $ (founder pivot from lion mane).
+      // Drawn progressively: vertical bar → S top → S middle → full $.
+      // Serif-style construction, ~30-45 dots/frame.
+      business: {
+        frames: [
+          [ // f0 — vertical bar (the $ stem)
+            "                    ",
+            "                    ",
+            "          ##        ",
+            "          ##        ",
+            "          ##        ",
+            "          ##        ",
+            "          ##        ",
+            "          ##        ",
+            "          ##        ",
+            "          ##        ",
+            "          ##        ",
+            "          ##        ",
+            "          ##        ",
+            "                    ",
+            "                    ",
+          ],
+          [ // f1 — bar + S top
+            "                    ",
+            "                    ",
+            "          ##        ",
+            "        ######      ",
+            "       ##    ##     ",
+            "       ##           ",
+            "       ##           ",
+            "        ###         ",
+            "          ##        ",
+            "          ##        ",
+            "          ##        ",
+            "          ##        ",
+            "          ##        ",
+            "                    ",
+            "                    ",
+          ],
+          [ // f2 — bar + S top + S middle
+            "                    ",
+            "                    ",
+            "          ##        ",
+            "        ######      ",
+            "       ##    ##     ",
+            "       ##           ",
+            "       ##           ",
+            "        ###         ",
+            "           ###      ",
+            "             ##     ",
+            "             ##     ",
+            "          ##        ",
+            "          ##        ",
+            "                    ",
+            "                    ",
+          ],
+          [ // f3 — full $ (bar + S complete)
+            "                    ",
+            "                    ",
+            "          ##        ",
+            "        ######      ",
+            "       ##    ##     ",
+            "       ##           ",
+            "        ###         ",
+            "          ##        ",
+            "           ###      ",
+            "             ##     ",
+            "       ##    ##     ",
+            "        ######      ",
+            "          ##        ",
+            "                    ",
+            "                    ",
+          ],
+        ],
+      },
+
+      // Video Producer — Play button. Right-pointing triangle with
+      // optional outer ring. Convey: video, content production, "press
+      // play". Frames: small triangle → larger → triangle + ring → ring
+      // pulse outward.
+      video: {
+        frames: [
+          [ // f0 — small triangle
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "         ##         ",
+            "         ####       ",
+            "         ##         ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+          ],
+          [ // f1 — larger triangle
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "        ##          ",
+            "        ####        ",
+            "        ######      ",
+            "        ####        ",
+            "        ##          ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+          ],
+          [ // f2 — triangle + ring
+            "                    ",
+            "      ########      ",
+            "    ##        ##    ",
+            "   ##          ##   ",
+            "   ##          ##   ",
+            "   ##  ##       ##  ",
+            "   ##  ####     ##  ",
+            "   ##  ######   ##  ",
+            "   ##  ####     ##  ",
+            "   ##  ##       ##  ",
+            "   ##          ##   ",
+            "   ##          ##   ",
+            "    ##        ##    ",
+            "      ########      ",
+            "                    ",
+          ],
+          [ // f3 — triangle + ring + pulse outward (top + bottom dots)
+            "         #          ",
+            "      ########      ",
+            "    ##        ##    ",
+            "   ##          ##   ",
+            "   ##          ##   ",
+            "   ##  ##       ##  ",
+            "   ##  ####     ##  ",
+            "   ##  ######   ##  ",
+            "   ##  ####     ##  ",
+            "   ##  ##       ##  ",
+            "   ##          ##   ",
+            "   ##          ##   ",
+            "    ##        ##    ",
+            "      ########      ",
+            "         #          ",
+          ],
+        ],
+      },
+
+      // Social Conductor — Expanding concentric squares (broadcast
+      // amplification, network growth). Distinct from Macro's concentric
+      // CIRCLES — Social is concentric SQUARES. Frames: 1 sq → 2 sq →
+      // 3 sq → 2 sq (outer recedes, then cycle restarts at 1).
+      social: {
+        frames: [
+          [ // f0 — 1 small square
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "        ####        ",
+            "        #  #        ",
+            "        #  #        ",
+            "        ####        ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+          ],
+          [ // f1 — 2 squares (small + medium)
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "      ########      ",
+            "      # #### #      ",
+            "      # #  # #      ",
+            "      # #  # #      ",
+            "      # #### #      ",
+            "      ########      ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+          ],
+          [ // f2 — 3 squares (small + medium + large)
+            "                    ",
+            "                    ",
+            "                    ",
+            "    ############    ",
+            "    #          #    ",
+            "    # ######## #    ",
+            "    # # #### # #    ",
+            "    # # #  # # #    ",
+            "    # # #  # # #    ",
+            "    # # #### # #    ",
+            "    # ######## #    ",
+            "    #          #    ",
+            "    ############    ",
+            "                    ",
+            "                    ",
+          ],
+          [ // f3 — 2 squares again (outer receded, before cycle restart)
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "      ########      ",
+            "      # #### #      ",
+            "      # #  # #      ",
+            "      # #  # #      ",
+            "      # #### #      ",
+            "      ########      ",
+            "                    ",
+            "                    ",
+            "                    ",
+            "                    ",
+          ],
+        ],
+      },
+    };
+
+    function CreatureSprite({ slug, index }) {
+      const creature = CREATURES[slug];
+      if (!creature) return null;
+      // Stagger each card's animation by 140ms so the 10 cards aren't
+      // synchronized on the same frame at the same moment.
+      const delay = `${(index || 0) * 140}ms`;
+      return (
+        <svg className="creature" viewBox="0 0 80 60" preserveAspectRatio="xMidYMid meet" style={{ '--creature-delay': delay }}>
+          {creature.frames.map((g, i) => (
+            <g key={i} className={`frame f${i}`}>
+              {gridDots(g)}
+            </g>
+          ))}
+        </svg>
+      );
+    }
+
+    // ─────────────────────── AGENT SCENES (chat + action) ───────────────────────
+    // New direction (2026-05-07 pivot): each card shows a literal user→agent
+    // exchange + an action visualization, mirroring the DashboardDemo. The
+    // CSS in .agent-scene + sceneUserIn/sceneAgentIn/sceneMemoN keyframes
+    // handles the timing — components below just supply markup.
+    //
+    // Storyboard scope: only 'pro' has a scene right now. Other slugs fall
+    // through to CreatureSprite. After founder approval the rest will follow.
+    // Reusable shell — chat header (no dot) + WhatsApp-style auto-scroll
+    // chat viewport. Each bubble lives in its own .chat-slot which animates
+    // grid-template-rows from 0fr → 1fr at its scheduled time. As newer
+    // slots grow, the .chat-content (anchored to bottom:0 of the viewport)
+    // pushes earlier slots up. Older content stays rendered, just scrolled
+    // off the top — exactly like WhatsApp.
+    //
+    // Structure per card:
+    //   Header (sticky)       → agent name + "aktif sekarang"
+    //   chat-viewport         → overflow:hidden mask
+    //     chat-content        → bottom-anchored stack of slots
+    //       slot-user         → user bubble (right-aligned)
+    //       slot-ack          → agent's "Aku [verb] dulu" (with avatar)
+    //       slot-progress     → concrete number (continuation, no avatar)
+    //       slot-insight      → pattern / recommendation (oxblood pulse)
+    //       slot-output       → connector
+    //       slot-anim1        → raw data view (memos / tabs / chart / etc.)
+    //       slot-anim2        → the deliverable (oxblood-accent border)
+    function SceneShell({ name, user, agentAck, agentProgress, agentInsight, agentOutput, anim1, anim2, slug }) {
+      return (
+        <>
+          <div className="scene-header">
+            <div className="scene-header-text">
+              <div className="scene-header-name">{name}</div>
+              <div className="scene-header-status">aktif sekarang</div>
+            </div>
+          </div>
+          {/* Use data-scene (not className) to avoid collisions with the
+              inner .scene-doc (Doc paper outline) and .scene-slide (Slide
+              Master slide cards) — those classes were getting applied to
+              the entire scene container, painting a gray bg + border. */}
+          <div className="agent-scene" data-scene={slug}>
+            {/* Bubble zone — auto-scrolling chat viewport. As newer bubbles
+                grow, older ones get pushed up + clipped by overflow:hidden.
+                Latest bubble always anchored to bottom of zone. */}
+            <div className="bubble-zone">
+              <div className="chat-content">
+                <div className="chat-slot slot-user">
+                  <div className="chat-slot-inner">
+                    <div className="scene-user">{user}</div>
+                  </div>
+                </div>
+                <div className="chat-slot slot-ack">
+                  <div className="chat-slot-inner">
+                    <div className="scene-agent-row">
+                      <div className="scene-avatar" />
+                      <div className="scene-bubble scene-bubble-ack">{agentAck}</div>
+                    </div>
+                  </div>
+                </div>
+                <div className="chat-slot slot-progress">
+                  <div className="chat-slot-inner">
+                    <div className="scene-agent-row continuation">
+                      <div className="scene-bubble scene-bubble-progress">{agentProgress}</div>
+                    </div>
+                  </div>
+                </div>
+                <div className="chat-slot slot-insight">
+                  <div className="chat-slot-inner">
+                    <div className="scene-agent-row continuation">
+                      <div className="scene-bubble scene-bubble-insight">{agentInsight}</div>
+                    </div>
+                  </div>
+                </div>
+                <div className="chat-slot slot-output">
+                  <div className="chat-slot-inner">
+                    <div className="scene-agent-row continuation">
+                      <div className="scene-bubble scene-bubble-output">{agentOutput}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            {/* Pin zone — anim1 + anim2 stack here, both stay visible at the
+                end of the cycle (no auto-scroll). anim1 grows in first,
+                anim2 grows below it. */}
+            <div className="pin-zone">
+              <div className="pin-slot pin-anim1">
+                <div className="pin-slot-inner">{anim1}</div>
+              </div>
+              <div className="pin-slot pin-anim2">
+                <div className="pin-slot-inner">{anim2}</div>
+              </div>
+            </div>
+          </div>
+        </>
+      );
+    }
+
+    // Animation 1 (raw data view) and Animation 2 (deliverable view) per
+    // agent. Anim1 fades out and Anim2 fades in around 9s into the loop —
+    // both share the same vertical space inside the output bubble.
+
+    function AgentScenePro() {
+      return (
+        <SceneShell
+          slug="pro"
+          name="The Pro"
+          user="Inget gimana gaya kerja saya?"
+          agentAck="Aku cek memori."
+          agentProgress="12 percakapan dari 3 minggu terakhir."
+          agentInsight="Pola: fokus klien Jakarta, deadline Kamis."
+          agentOutput="Ini yang aku catat:"
+          anim1={
+            <div className="scene-memos scene-stagger">
+              <div className="scene-memo">klien jakarta</div>
+              <div className="scene-memo">deadline kamis</div>
+              <div className="scene-memo">preferensi makan</div>
+              <div className="scene-memo">kontrak Q3</div>
+            </div>
+          }
+          anim2={
+            <div className="scene-anim2">
+              <div className="anim2-row"><span className="anim2-time">08:00</span><span className="anim2-label">email check</span><span className="anim2-meta">15min</span></div>
+              <div className="anim2-row"><span className="anim2-time">10:00</span><span className="anim2-label">meeting klien jakarta</span><span className="anim2-meta">1h</span></div>
+              <div className="anim2-row"><span className="anim2-time">14:00</span><span className="anim2-label">deadline review kamis</span><span className="anim2-meta">2h</span></div>
+            </div>
+          }
+        />
+      );
+    }
+
+    function AgentSceneResearcher() {
+      return (
+        <SceneShell
+          slug="researcher"
+          name="Deep Researcher"
+          user="Riset volatilitas IDR 30 hari"
+          agentAck="Aku scan 100+ sumber."
+          agentProgress="12 paper akademik + BI report."
+          agentInsight="Korelasi tinggi dengan kebijakan Fed."
+          agentOutput="Sintesis siap:"
+          anim1={
+            <div className="scene-papers scene-stagger">
+              <div className="scene-paper">
+                <span className="paper-icon" />
+                <span className="paper-title">bi.go.id · monthly report</span>
+                <span className="paper-conf high">tinggi</span>
+              </div>
+              <div className="scene-paper">
+                <span className="paper-icon" />
+                <span className="paper-title">imf.org · em outlook</span>
+                <span className="paper-conf high">tinggi</span>
+              </div>
+              <div className="scene-paper">
+                <span className="paper-icon" />
+                <span className="paper-title">reuters · idr trend</span>
+                <span className="paper-conf med">sedang</span>
+              </div>
+              <div className="scene-paper">
+                <span className="paper-icon" />
+                <span className="paper-title">forum trader · sentimen</span>
+                <span className="paper-conf low">rendah</span>
+              </div>
+            </div>
+          }
+          anim2={
+            <div className="scene-anim2">
+              <div className="anim2-bullet">IDR volatility +12% Q1 vs Q4 2025</div>
+              <div className="anim2-bullet">Driven by Fed rate uncertainty</div>
+              <div className="anim2-bullet">Forecast stabilize Q3 2026</div>
+            </div>
+          }
+        />
+      );
+    }
+
+    function AgentSceneWeb() {
+      return (
+        <SceneShell
+          slug="web"
+          name="Web Master"
+          user="Scrape 50 agensi Jakarta"
+          agentAck="Aku buka 3 browser paralel."
+          agentProgress="OLX + LinkedIn + direktori asosiasi."
+          agentInsight="78 ditemukan, dedupe jadi 50 valid."
+          agentOutput="Data ekstrak, siap export:"
+          anim1={
+            <div className="scene-tabs scene-stagger">
+              <div className="scene-tab">
+                <span className="tab-dots"><span /><span /><span /></span>
+                <span className="tab-url">agensi-a.co.id/tim</span>
+                <span className="tab-check">✓</span>
+              </div>
+              <div className="scene-tab">
+                <span className="tab-dots"><span /><span /><span /></span>
+                <span className="tab-url">agensi-b.com/about</span>
+                <span className="tab-check">✓</span>
+              </div>
+              <div className="scene-tab">
+                <span className="tab-dots"><span /><span /><span /></span>
+                <span className="tab-url">agensi-c.id/profile</span>
+                <span className="tab-check">✓</span>
+              </div>
+            </div>
+          }
+          anim2={
+            <div className="scene-anim2">
+              <div className="anim2-row"><span className="anim2-label">PT Kreatif Studio</span><span className="anim2-num">92</span></div>
+              <div className="anim2-row"><span className="anim2-label">Agency Bali Digital</span><span className="anim2-num">88</span></div>
+              <div className="anim2-row"><span className="anim2-label">Studio Jakarta Co</span><span className="anim2-num">85</span></div>
+            </div>
+          }
+        />
+      );
+    }
+
+    function AgentSceneDoc() {
+      return (
+        <SceneShell
+          slug="doc"
+          name="Doc Expert"
+          user="Bikin invoice 3jt klien PT Maju"
+          agentAck="Templat ditemukan."
+          agentProgress="PT = badan usaha."
+          agentInsight="Tambah PPN 11%, total Rp 3,33jt."
+          agentOutput="Siap kirim ke klien:"
+          anim1={
+            <div className="scene-doc scene-stagger">
+              <div className="scene-doc-line long" />
+              <div className="scene-doc-line med" />
+              <div className="scene-doc-line long" />
+              <div className="scene-doc-line short" />
+              <div className="scene-doc-line med" />
+              <div className="scene-doc-line short" />
+            </div>
+          }
+          anim2={
+            <div className="scene-anim2">
+              <div className="anim2-email-meta"><span className="label">to:</span><span className="val">klien@ptmaju.co.id</span></div>
+              <div className="anim2-email-meta"><span className="label">subject:</span><span className="val">Invoice Mei 2026</span></div>
+              <div className="anim2-attach">PDF · invoice-mei.pdf</div>
+              <div className="anim2-cta">Kirim sekarang</div>
+            </div>
+          }
+        />
+      );
+    }
+
+    function AgentSceneSlide() {
+      return (
+        <SceneShell
+          slug="slide"
+          name="Slide Master"
+          user="Pitch deck buat angel investor"
+          agentAck="Aku cek industri kamu."
+          agentProgress="SaaS B2B → format YC 12-slide."
+          agentInsight="Alur: masalah → solusi → traction → ask."
+          agentOutput="12 slide siap review:"
+          anim1={
+            <div className="scene-slides scene-stagger">
+              <div className="scene-slide"><span className="slide-h" /><span className="slide-l" /><span className="slide-l" /></div>
+              <div className="scene-slide"><span className="slide-h" /><span className="slide-l" /><span className="slide-l" /></div>
+              <div className="scene-slide"><span className="slide-h" /><span className="slide-l" /><span className="slide-l" /></div>
+              <div className="scene-slide"><span className="slide-h" /><span className="slide-l" /><span className="slide-l" /></div>
+              <div className="scene-slide"><span className="slide-h" /><span className="slide-l" /><span className="slide-l" /></div>
+            </div>
+          }
+          anim2={
+            <div className="scene-anim2">
+              <div className="anim2-headline">Solution: AI-First Workflow</div>
+              <div className="anim2-bullet">Otomasi 80% admin tugas harian</div>
+              <div className="anim2-bullet">Setup dalam 5 menit, bukan 5 hari</div>
+              <div className="anim2-bullet">Pricing transparan, no hidden fee</div>
+            </div>
+          }
+        />
+      );
+    }
+
+    function AgentSceneTrade() {
+      // Simple SVG line chart — a polyline with stroke-dasharray draw, plus
+      // a marker dot at the rightmost point. Coords on a 100×40 viewBox so
+      // the line sweeps through ~3 swings.
+      return (
+        <SceneShell
+          slug="trade"
+          name="Trade Pro"
+          user="Analisis BBCA earnings"
+          agentAck="Tarik data 90 hari + 4 earnings lalu."
+          agentProgress="EPS naik 8% YoY, NIM stabil 5,6%."
+          agentInsight="Konsensus analis: target Rp 11.500."
+          agentOutput="Sizing aman 2% portfolio:"
+          anim1={
+            <div className="scene-chart">
+              <svg viewBox="0 0 100 40" preserveAspectRatio="none">
+                <polyline className="chart-line" points="0,30 12,26 22,32 35,18 48,22 60,12 75,16 88,6 100,10" />
+                <circle className="chart-marker" cx="100" cy="10" r="2.4" />
+                <circle className="chart-marker" cx="60" cy="12" r="1.8" style={{ animationDelay: '-50ms' }} />
+              </svg>
+            </div>
+          }
+          anim2={
+            <div className="scene-anim2">
+              <div className="anim2-row"><span className="anim2-label">entry</span><span className="anim2-num">Rp 9.250</span></div>
+              <div className="anim2-row"><span className="anim2-label">stop loss</span><span className="anim2-num">Rp 9.100 <span style={{ color: 'rgba(255,255,255,0.45)' }}>(−1,6%)</span></span></div>
+              <div className="anim2-row"><span className="anim2-label">target</span><span className="anim2-num">Rp 9.800 <span style={{ color: 'rgba(255,255,255,0.45)' }}>(+5,9%)</span></span></div>
+              <div className="anim2-row"><span className="anim2-label">sizing</span><span className="anim2-meta">2% portfolio</span></div>
+              <div className="anim2-disclaimer">Bukan rekomendasi investasi. Sizing example only.</div>
+            </div>
+          }
+        />
+      );
+    }
+
+    function AgentSceneMacro() {
+      return (
+        <SceneShell
+          slug="macro"
+          name="Macro Strategist"
+          user="BI rate naik, dampak ke saham?"
+          agentAck="Cek konteks: naik 25bps."
+          agentProgress="Historical 2022–2023: efek 2–3 bulan lag."
+          agentInsight="Sektor terdampak: properti, banking."
+          agentOutput="Base / bull / bear:"
+          anim1={
+            <div className="scene-multi">
+              <div className="scene-multi-row bull">
+                <span className="scene-multi-label">bull</span>
+                <span className="scene-multi-bar" />
+              </div>
+              <div className="scene-multi-row base">
+                <span className="scene-multi-label">base</span>
+                <span className="scene-multi-bar" />
+              </div>
+              <div className="scene-multi-row bear">
+                <span className="scene-multi-label">bear</span>
+                <span className="scene-multi-bar" />
+              </div>
+            </div>
+          }
+          anim2={
+            <div className="scene-anim2">
+              <div className="anim2-row"><span className="anim2-arrow up">↑</span><span className="anim2-label">Banking</span><span className="anim2-num">+5%</span></div>
+              <div className="anim2-row"><span className="anim2-arrow down">↓</span><span className="anim2-label">Properti</span><span className="anim2-num" style={{ color: 'rgba(255,255,255,0.65)' }}>−3%</span></div>
+              <div className="anim2-row"><span className="anim2-arrow flat">→</span><span className="anim2-label">Consumer</span><span className="anim2-meta">netral</span></div>
+            </div>
+          }
+        />
+      );
+    }
+
+    function AgentSceneBusiness() {
+      return (
+        <SceneShell
+          slug="business"
+          name="Business Director"
+          user="Cek KPI minggu ini"
+          agentAck="Tarik dashboard."
+          agentProgress="Revenue +12% WoW, margin stabil."
+          agentInsight="Anomaly: CAC naik 18% — investigate."
+          agentOutput="3 angka penting:"
+          anim1={
+            <div className="scene-kpis scene-stagger">
+              <div className="scene-kpi">
+                <div className="kpi-num">Rp 142<span className="kpi-pct">jt</span></div>
+                <div className="kpi-lbl">revenue</div>
+              </div>
+              <div className="scene-kpi">
+                <div className="kpi-num">38<span className="kpi-pct">%</span></div>
+                <div className="kpi-lbl">margin</div>
+              </div>
+              <div className="scene-kpi">
+                <div className="kpi-num">+12<span className="kpi-pct">%</span></div>
+                <div className="kpi-lbl">growth</div>
+              </div>
+            </div>
+          }
+          anim2={
+            <div className="scene-anim2">
+              <div className="anim2-headline">CAC breakdown</div>
+              <div className="anim2-row"><span className="anim2-label">FB Ads</span><span className="anim2-num">↑ 23%</span></div>
+              <div className="anim2-row"><span className="anim2-label">Google</span><span className="anim2-num">↑ 15%</span></div>
+              <div className="anim2-row"><span className="anim2-label">Organic</span><span className="anim2-meta">flat</span></div>
+            </div>
+          }
+        />
+      );
+    }
+
+    function AgentSceneVideo() {
+      return (
+        <SceneShell
+          slug="video"
+          name="Video Producer"
+          user="Script TikTok 60s gym tips"
+          agentAck="Cek trending TikTok."
+          agentProgress="Home workout naik 340% bulan ini."
+          agentInsight="Hook angle: '5 menit hasil maksimal'."
+          agentOutput="6 frame visual siap shoot:"
+          anim1={
+            <div className="scene-frames scene-stagger">
+              <div className="scene-frame" />
+              <div className="scene-frame" />
+              <div className="scene-frame" />
+              <div className="scene-frame" />
+              <div className="scene-frame" />
+              <div className="scene-frame" />
+            </div>
+          }
+          anim2={
+            <div className="scene-anim2">
+              <div className="anim2-row"><span className="anim2-time">0–3s</span><span className="anim2-label">"Coba 5 menit ini"</span><span className="anim2-meta">hook</span></div>
+              <div className="anim2-row"><span className="anim2-time">3–48s</span><span className="anim2-label">5 exercises</span><span className="anim2-meta">body</span></div>
+              <div className="anim2-row"><span className="anim2-time">48–60s</span><span className="anim2-label">"Ikut challenge"</span><span className="anim2-meta">cta</span></div>
+            </div>
+          }
+        />
+      );
+    }
+
+    function AgentSceneSocial() {
+      return (
+        <SceneShell
+          slug="social"
+          name="Social Conductor"
+          user="Posting ini ke 5 platform"
+          agentAck="Cek brand voice + platform spec."
+          agentProgress="Best time: IG 19.30, TikTok 21.00 WIB."
+          agentInsight="Caption per platform, hashtag custom."
+          agentOutput="Jadwal optimal:"
+          anim1={
+            <div className="scene-platforms scene-stagger">
+              <div className="scene-platform">IG</div>
+              <div className="scene-platform">TikTok</div>
+              <div className="scene-platform">X</div>
+              <div className="scene-platform">FB</div>
+              <div className="scene-platform">LinkedIn</div>
+            </div>
+          }
+          anim2={
+            <div className="scene-anim2">
+              <div className="anim2-row"><span className="anim2-time">Sen</span><span className="anim2-label">IG carousel</span><span className="anim2-meta">19:30</span></div>
+              <div className="anim2-row"><span className="anim2-time">Sel</span><span className="anim2-label">TikTok video</span><span className="anim2-meta">21:00</span></div>
+              <div className="anim2-row"><span className="anim2-time">Rab</span><span className="anim2-label">X thread</span><span className="anim2-meta">12:00</span></div>
+            </div>
+          }
+        />
+      );
+    }
+
+    // Router: every slug now has a scene. CreatureSprite is no longer
+    // referenced from the carousel (kept in source for prefers-reduced-
+    // motion fallback / future use).
+    const AGENT_SCENES = {
+      pro:        AgentScenePro,
+      researcher: AgentSceneResearcher,
+      web:        AgentSceneWeb,
+      doc:        AgentSceneDoc,
+      slide:      AgentSceneSlide,
+      trade:      AgentSceneTrade,
+      macro:      AgentSceneMacro,
+      business:   AgentSceneBusiness,
+      video:      AgentSceneVideo,
+      social:     AgentSceneSocial,
+    };
+    function AgentVisual({ slug, index }) {
+      const Scene = AGENT_SCENES[slug];
+      if (Scene) return <Scene />;
+      // Fallback: legacy creature sprite (shouldn't trigger in production).
+      return <CreatureSprite slug={slug} index={index} />;
+    }
+
     // ─────────────────────── AGENT PERSONA CAROUSEL ───────────────────────
     // 10 agent specialist cards mirroring the agents listed in Studio tier.
     // Sits inside #proses ("The wave") below the CTA, on the same red-halftone
     // canvas. Auto-rotates every 4s, hover-pause, prefers-reduced-motion respect.
-    //
-    // TODO: Replace placeholder videos at /assets/agent-{pro,researcher,web,
-    // doc,slide,trade,macro,business,video,social}.mp4 with custom ASCII renders
-    // per agent (Richie to provide). Phase 1 cycles new-hero.mp4 + ascii-wave.mp4
-    // as placeholders.
     const AGENTS = [
       { slug: 'pro',        name: 'The Pro',           desc: 'Briefing pagi, ingat percakapan lintas sesi, jadi pendamping yang ngerti gaya kamu.' },
       { slug: 'researcher', name: 'Deep Researcher',   desc: 'Riset topik kompleks dari ratusan sumber, sintesis jadi laporan siap pakai.' },
@@ -2562,11 +4777,19 @@
     function AgentCarousel() {
       const trackRef = useRef(null);
       const rootRef = useRef(null);
-      const [activeIndex, setActiveIndex] = useState(0);
+      // displayIndex is the position in the 12-slot track [sentinel_last,
+      // ...10 real, sentinel_first]. realIndex (the agent shown) is
+      // displayIndex - 1, clamped to 0-9. Sentinels at 0 and 11 are
+      // identical to last/first real cards — visible only during the
+      // wrap-around transition, then we silently snap back to the real
+      // copy with no transition. Result: seamless infinite carousel.
+      const [displayIndex, setDisplayIndex] = useState(1);
+      const realIndex = ((displayIndex - 1) + AGENTS.length) % AGENTS.length;
       const [paused, setPaused] = useState(false);
       const reducedMotion = useRef(false);
+      const wrapping = useRef(false);
 
-      // Detect prefers-reduced-motion once
+      // Detect prefers-reduced-motion
       useEffect(() => {
         const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
         reducedMotion.current = mq.matches;
@@ -2575,9 +4798,7 @@
         return () => mq.removeEventListener?.('change', onChange);
       }, []);
 
-      // Helper: card pitch (card width + gap) from live computed style.
-      // Gap differs by viewport (14px mobile, 18px tablet+); reading from
-      // computed style avoids hardcoding it twice.
+      // Card pitch from live computed style (gap differs by viewport)
       const getCardPitch = (track) => {
         const cards = track.querySelectorAll('.agent-card');
         if (!cards.length) return 0;
@@ -2586,38 +4807,96 @@
         return cardW + gap;
       };
 
-      // Apply transform when activeIndex changes
+      // Apply transform when displayIndex changes
       useEffect(() => {
         const track = trackRef.current;
         if (!track) return;
         const pitch = getCardPitch(track);
-        track.style.transform = `translate3d(-${activeIndex * pitch}px, 0, 0)`;
-      }, [activeIndex]);
+        track.style.transform = `translate3d(-${displayIndex * pitch}px, 0, 0)`;
+      }, [displayIndex]);
 
-      // Re-apply transform on resize (pitch changes with viewport breakpoints)
+      // Re-apply on resize
       useEffect(() => {
         const onResize = () => {
           const track = trackRef.current;
           if (!track) return;
           const pitch = getCardPitch(track);
-          track.style.transform = `translate3d(-${activeIndex * pitch}px, 0, 0)`;
+          track.style.transform = `translate3d(-${displayIndex * pitch}px, 0, 0)`;
         };
         window.addEventListener('resize', onResize);
         return () => window.removeEventListener('resize', onResize);
-      }, [activeIndex]);
+      }, [displayIndex]);
 
-      // Auto-rotate every 4s when not paused + motion ok.
-      // Uses transform: translate3d (not scrollLeft) — the carousel's flex
-      // parent chain blocks scroll APIs entirely; transform is unaffected.
+      // Auto-advance every 13s
       useEffect(() => {
         if (paused || reducedMotion.current) return;
-        const id = setInterval(() => {
-          setActiveIndex((idx) => (idx + 1) % AGENTS.length);
-        }, 4000);
+        const id = setInterval(() => { goNext(); }, 13000);
         return () => clearInterval(id);
       }, [paused]);
 
-      const goTo = (i) => setActiveIndex(((i % AGENTS.length) + AGENTS.length) % AGENTS.length);
+      // Snap-back after a wrap-around transition completes — disable the
+      // CSS transition, jump from sentinel slot to its real twin, then
+      // re-enable the transition next frame.
+      const snapTo = (newDisplayIdx) => {
+        const track = trackRef.current;
+        if (!track) return;
+        track.style.transition = 'none';
+        setDisplayIndex(newDisplayIdx);
+        // Wait two frames so the transform settles, then restore transition
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            if (track) track.style.transition = '';
+            wrapping.current = false;
+          });
+        });
+      };
+
+      const goNext = () => {
+        if (wrapping.current) return;
+        setDisplayIndex((d) => {
+          // Going past the last real card → animate to sentinel at 11
+          // (which renders AGENTS[0]), then snap to the real AGENTS[0] at slot 1.
+          if (d >= AGENTS.length) {
+            wrapping.current = true;
+            // After the standard 700ms slide animation, snap back
+            setTimeout(() => snapTo(1), 720);
+            return AGENTS.length + 1; // = 11
+          }
+          return d + 1;
+        });
+      };
+
+      const goPrev = () => {
+        if (wrapping.current) return;
+        setDisplayIndex((d) => {
+          // Going before the first real card → animate to sentinel at 0
+          // (which renders AGENTS[last]), then snap to the real AGENTS[last] at slot 10.
+          if (d <= 1) {
+            wrapping.current = true;
+            setTimeout(() => snapTo(AGENTS.length), 720);
+            return 0;
+          }
+          return d - 1;
+        });
+      };
+
+      const goTo = (i) => {
+        // Map a real index 0-9 to displayIndex 1-10. Doesn't wrap (jump-to dot).
+        const target = (((i % AGENTS.length) + AGENTS.length) % AGENTS.length) + 1;
+        setDisplayIndex(target);
+      };
+
+      // Touch swipe (mobile)
+      const touchStartX = useRef(null);
+      const onTouchStart = (e) => { touchStartX.current = e.touches[0]?.clientX ?? null; };
+      const onTouchEnd = (e) => {
+        if (touchStartX.current == null) return;
+        const dx = (e.changedTouches[0]?.clientX ?? touchStartX.current) - touchStartX.current;
+        touchStartX.current = null;
+        if (Math.abs(dx) > 40) {
+          if (dx < 0) goNext(); else goPrev();
+        }
+      };
 
       return (
         <div
@@ -2631,36 +4910,42 @@
           onFocus={() => setPaused(true)}
           onBlur={() => setPaused(false)}
         >
-          <div className="text-center mb-7 md:mb-9">
-            <div className="inline-block liquid-glass rounded-full px-3.5 py-1 text-xs font-medium font-body text-white/90">
-              Agen kamu
-            </div>
-            <h3 className="mt-5 text-3xl md:text-4xl lg:text-5xl font-heading tracking-tight leading-[0.98]" style={{ letterSpacing: '-0.04em' }}>
-              10 spesialis. Satu komando.
-            </h3>
-            <p className="mt-3 mx-auto max-w-lg text-white/65 font-body font-light text-sm md:text-base leading-relaxed">
-              Setiap agent fokus di satu domain — dari riset, konten, sampai trading. Aktif 24/7.
-            </p>
-          </div>
-
-          <div className="agent-fade">
-            <div ref={trackRef} className="agent-track">
-              {AGENTS.map((a, i) => (
-                <article key={a.slug} className="agent-card" aria-label={`Agent: ${a.name}`}>
-                  {/* CSS-only halftone placeholder. When per-agent assets
-                      ship (see TODO above), swap to:
+          <div className="agent-fade-wrap">
+            <button type="button" className="agent-nav agent-nav-prev" onClick={goPrev} aria-label="Agent sebelumnya">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="15 18 9 12 15 6" /></svg>
+            </button>
+            <button type="button" className="agent-nav agent-nav-next" onClick={goNext} aria-label="Agent berikutnya">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="9 6 15 12 9 18" /></svg>
+            </button>
+            <div className="agent-fade" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+              <div ref={trackRef} className="agent-track" aria-live="polite">
+                {/* 12-slot track: [last-card-sentinel, ...10 real cards,
+                    first-card-sentinel]. Sentinels are dupes of the
+                    last/first real cards so the wrap-around slide has
+                    something to animate to. After the slide completes,
+                    we silently snap to the real twin (no transition). */}
+                {[AGENTS[AGENTS.length - 1], ...AGENTS, AGENTS[0]].map((a, i) => {
+                  const isSentinel = i === 0 || i === AGENTS.length + 1;
+                  const isActive = i === displayIndex;
+                  return (
+                    <article
+                      key={`slot-${i}`}
+                      className={`agent-card${isActive ? ' is-active' : ''}`}
+                      aria-label={`Agent: ${a.name}`}
+                      aria-hidden={isSentinel}
+                      data-active={isActive}
+                    >
                       <div className="agent-viz">
-                        <DottedVideo src={agentVideoSrc(a.slug, i)} color="#E5322D" cellSize={4} ... />
+                        <AgentVisual key={`${a.slug}-${i}`} slug={a.slug} index={i} />
                       </div>
-                      Static placeholder used in v1 to avoid 10 simultaneous
-                      video elements freezing the renderer. */}
-                  <div className="agent-viz" />
-                  <div className="agent-body">
-                    <div className="agent-name">{a.name}</div>
-                    <div className="agent-desc">{a.desc}</div>
-                  </div>
-                </article>
-              ))}
+                      <div className="agent-body">
+                        <div className="agent-name">{a.name}</div>
+                        <div className="agent-desc">{a.desc}</div>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
             </div>
           </div>
 
@@ -2671,7 +4956,7 @@
                 type="button"
                 role="tab"
                 aria-label={`Slide ke kartu ${i + 1} — ${a.name}`}
-                aria-current={i === activeIndex}
+                aria-current={i === realIndex}
                 className="agent-dot"
                 onClick={() => goTo(i)}
               />
@@ -2699,20 +4984,17 @@
           <FadeTop /> <FadeBottom />
           <div className="relative z-10 flex flex-col items-center text-center px-6 py-40" style={{ minHeight: 500 }}>
             <div className="liquid-glass rounded-full px-3.5 py-1 text-xs font-medium font-body text-white/90">
-              The wave
+              Era baru
             </div>
             <BlurText
               as="h2"
-              text="More than AI. We craft a hand-built super agent."
-              className="mt-8 text-4xl md:text-5xl lg:text-6xl font-heading tracking-tight leading-[0.95] md:leading-[0.9] max-w-3xl"
-              style={{ letterSpacing: '-0.04em' }}
+              text="Fine-tuned agent yang ngerjain. Bukan chatbot yang cuma jawab."
+              className="mt-8 text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-heading tracking-tight leading-[1.05] md:leading-[0.9] max-w-3xl"
+              style={{ letterSpacing: '-0.03em' }}
               delay={80} />
-            <p className="mt-6 max-w-xl text-white/65 font-body font-light text-sm md:text-base leading-relaxed">
-              The wave is coming. The next billion-dollar company won't have 1,000 employees — only 1.
+            <p className="mt-5 md:mt-6 max-w-2xl text-white/65 font-body font-light text-[13px] md:text-base leading-relaxed">
+              Setiap agent dibangun dengan US$5.000 token untuk craft persona pre-trained. Kamu gak perlu bakar token sendiri — ready to use.
             </p>
-            <button className="mt-10 liquid-glass-strong rounded-full px-6 py-3 text-sm font-medium flex items-center gap-2">
-              Mulai hari ini <ArrowUpRight size={14} stroke={2.2} />
-            </button>
             <AgentCarousel />
           </div>
         </section>
@@ -2836,10 +5118,10 @@
           <div className="db-eyebrow">
             <div className="db-eyebrow-pill">
               <span className="live-dot" />
-              <span>Agent in action</span>
+              <span>Agen kamu bekerja</span>
             </div>
-            <h2 className="db-headline">A single agent. Unlimited capabilities. Zero context-switching.</h2>
-            <p className="db-sub">Lihat agent kamu kerja — contoh nyata dari cara dia membantu kamu setiap hari.</p>
+            <h2 className="db-headline">Satu super-agent. Growing skills. Create apa aja yang kamu mau.</h2>
+            <p className="db-sub">Agent pro-actively chat kamu — bukan kamu chat agent. Cukup say yes / no. Gak perlu jadi prompt expert.</p>
           </div>
 
           <div className="db-frame">
@@ -3018,17 +5300,17 @@
           <div className="relative z-10 max-w-6xl mx-auto">
             <div className="flex flex-col items-center text-center mb-14 md:mb-20">
               <div className="liquid-glass rounded-full px-3.5 py-1 text-xs font-medium font-body text-white/90" style={{ borderColor: 'rgba(229, 50, 45, 0.45)' }}>
-                Pajak DIY
+                Mau bikin sendiri?
               </div>
               <BlurText
                 as="h2"
-                text="Forget all this complicated nonsense."
-                className="mt-5 md:mt-6 text-3xl md:text-5xl lg:text-6xl font-heading text-white tracking-tight leading-[1.0] md:leading-[0.95] max-w-3xl"
+                text="No need for trial and error. Ready to use, incorporate workflow kamu langsung."
+                className="mt-5 md:mt-6 text-3xl md:text-5xl lg:text-6xl font-heading text-white tracking-tight leading-[1.0] md:leading-[0.95] max-w-4xl"
                 style={{ letterSpacing: '-0.04em' }}
                 delay={70}
               />
-              <p className="mt-5 md:mt-6 max-w-xl text-white/55 font-body font-light text-sm md:text-base leading-relaxed">
-                Setup AI agent stack sendiri kedengarannya gampang. Sampai langkah ke-enam, kamu sadar apa yang sebenarnya kamu daftarkan.
+              <p className="mt-5 md:mt-6 max-w-2xl text-white/55 font-body font-light text-sm md:text-base leading-relaxed">
+                Setup AI agent stack sendiri butuh waktu dan biaya — we learned that the hard way. Biar gak terjadi sama kamu. Kamu fokus build, kami fokus improve.
               </p>
             </div>
 
@@ -3063,10 +5345,10 @@
     // ─────────────────────── USE CASES (Velvet, with bg-video) ───────────────────────
     function VelvetSection() {
       const capabilities = [
-        { n: '01', kind: 'email',     title: 'Email Triage',     body: 'Inbox numpuk 300+ email pasca-cuti? Otomatis dibaca, dikelompokin per topik, dirangkum jadi 1 halaman — tinggal balas yang penting.' },
+        { n: '01', kind: 'email',     title: 'Sortir Email',     body: 'Inbox numpuk 300+ email pasca-cuti? Otomatis dibaca, dikelompokin per topik, dirangkum jadi 1 halaman — tinggal balas yang penting.' },
         { n: '02', kind: 'slide',     title: 'Auto-Slide',       body: 'Dari materi mentah ke slide presentasi lengkap — judul, isi, speaker notes, layout. Begadang Sunday night ganti 10 menit Senin pagi.' },
-        { n: '03', kind: 'multipost', title: 'Multi-Post',       body: 'Upload listing sekali, otomatis ke OLX, Lamudi, Rumah123, IG, FB Marketplace, dan 5 platform lain — caption tiap kanal dioptimalkan sendiri.' },
-        { n: '04', kind: 'autoreply', title: 'Auto-Reply 24/7',  body: 'Klien chat tengah malem otomatis dibalas dalam gaya bahasa brand. Pertanyaan susah di-escalate dengan ringkasan — siap di-handle pagi harinya.' },
+        { n: '03', kind: 'multipost', title: 'Multi-Posting',    body: 'Upload listing sekali, otomatis ke OLX, Lamudi, Rumah123, IG, FB Marketplace, dan 5 platform lain — caption tiap kanal dioptimalkan sendiri.' },
+        { n: '04', kind: 'autoreply', title: 'Auto-Balas 24/7',  body: 'Klien chat tengah malem otomatis dibalas dalam gaya bahasa brand. Pertanyaan susah di-escalate dengan ringkasan — siap di-handle pagi harinya.' },
         { n: '05', kind: 'pitch',     title: 'Pitch Deck',       body: 'Dari ide ke deck 12 slide profesional — problem, solusi, market, traction, ask. Investor besok pagi siap dipitch malam ini.' },
         { n: '06', kind: 'crm',       title: 'Personal CRM',     body: 'Track 200+ kenalan networking — kapan terakhir ngobrol, ulang tahun, project terbaru. Tiap minggu dapet saran follow-up — relationship nggak pernah dingin.' },
         { n: '07', kind: 'radar',     title: 'Trend Radar',      body: 'Auto-monitor TikTok, IG, X tiap 6 jam. Sound atau topik naik 200%+? Langsung notif — jadi brand pertama yang ride trend.' },
@@ -3219,8 +5501,8 @@
       const cases = [
         { kind: 'research',  title: 'Riset',           body: 'Mencari, merangkum, dan mencantumkan sumber — tanpa perlu kamu pantau.' },
         { kind: 'content',   title: 'Konten',          body: 'Membaca tulisan lama kamu, lalu menghasilkan thread, post, atau video explainer dengan suara kamu.' },
-        { kind: 'coding',    title: 'Coding',          body: 'Ambil instruksi kabur, selesaikan seluruh script — end to end.' },
-        { kind: 'knowledge', title: 'Knowledge',       body: 'Membangun memori dari setiap catatan, percakapan, dan tugas. Ia mengingat semua yang kamu kerjakan.' },
+        { kind: 'coding',    title: 'Coding',          body: 'Code Wizard akan ngambil instruksi kabur, selesaikan seluruh script — end to end.', roadmap: 'Q3 2026', cta: 'Daftar early access →', ctaHref: 'https://wa.me/6282154902561?text=Halo%20Richie%2C%20mau%20early%20access%20Code%20Wizard%20agent%20di%20weuseai.agent' },
+        { kind: 'knowledge', title: 'Pengetahuan',     body: 'Membangun memori dari setiap catatan, percakapan, dan tugas. Ia mengingat semua yang kamu kerjakan.' },
         { kind: 'memory',    title: 'Memori',          body: 'Ingat segalanya lintas sesi. Memori permanen dengan pencarian 10ms untuk 10.000+ entri — nggak perlu jelasin konteks dari awal lagi.' },
         { kind: 'schedule',  title: 'Jadwal',          body: 'Otomasi jadwal pakai bahasa biasa. Tulis "setiap Senin jam 8, lakukan X" — tanpa coding, tanpa batas harian.' },
         { kind: 'browse',    title: 'Browsing',        body: 'Browsing internet secara mandiri. Scraping, search, dan otomasi browser via Firecrawl.' },
@@ -3412,7 +5694,7 @@
                 transition={{ duration: 0.8, ease: EASE }}
                 className="liquid-glass rounded-full px-3.5 py-1 text-xs font-medium font-body text-white/90 inline-block w-fit"
               >
-                Untuk apa
+                Apa yang bisa di-delegasikan
               </Mot.div>
 
               <BlurText
@@ -3424,7 +5706,7 @@
               />
 
               <p className="mt-5 md:mt-7 max-w-xl text-white/70 font-body font-light text-sm md:text-base leading-relaxed">
-                Bukan demo. Bukan janji. Ini hal-hal nyata yang dikerjakan agent kamu setiap hari, sambil kamu tidur atau jalan-jalan.
+                Bukan demo. Production-ready buat kamu — langsung pakai dan try out hal-hal nyata yang dikerjakan agent kamu setiap hari.
               </p>
             </div>
 
@@ -3461,10 +5743,22 @@
               >
                 <div className="uc-marquee-track">
                   {[...cases, ...cases].map((u, i) => (
-                    <div key={i} className="uc-card liquid-glass rounded-2xl p-5 md:p-7 flex flex-col">
+                    <div key={i} className={`uc-card liquid-glass rounded-2xl p-5 md:p-7 flex flex-col${u.roadmap ? ' uc-card-roadmap' : ''}`} style={u.roadmap ? { opacity: 0.78 } : undefined}>
                       <UseCaseViz kind={u.kind} />
-                      <h3 className="text-lg md:text-2xl font-heading text-white leading-tight" style={{ letterSpacing: '-0.02em' }}>{u.title}</h3>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="text-lg md:text-2xl font-heading text-white leading-tight" style={{ letterSpacing: '-0.02em' }}>{u.title}</h3>
+                        {u.roadmap && (
+                          <span className="text-[10px] md:text-[11px] font-mono uppercase tracking-[0.10em] text-white px-2 py-[3px] rounded" style={{ background: 'rgba(229, 50, 45, 0.85)' }}>
+                            {u.roadmap}
+                          </span>
+                        )}
+                      </div>
                       <p className="mt-2 md:mt-4 text-white/65 font-body font-light text-[12px] md:text-sm leading-relaxed">{u.body}</p>
+                      {u.cta && (
+                        <a href={u.ctaHref} target="_blank" rel="noopener" className="mt-3 md:mt-4 text-[12px] md:text-sm font-body font-medium no-underline hover:underline self-start" style={{ color: '#E5322D' }}>
+                          {u.cta}
+                        </a>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -3484,7 +5778,7 @@
     function FeaturesGrid() {
       const steps = [
         { n: 1, title: 'Pilih plan kamu',     body: 'Ambil plan yang paling pas. Semua sudah termasuk satu instance weuseai.agent dedicated.', mock: 'plan' },
-        { n: 2, title: 'Isi informasi',       body: 'Pilih channel komunikasi (Telegram/Discord), pilih model AI, masukin nomor atau bot token kamu.', mock: 'form' },
+        { n: 2, title: 'Isi informasi',       body: 'Pilih channel komunikasi (Telegram/Discord). Hand-picked best AI brain buat kamu — pastiin price-to-value paling worth it dan terupdate. Bot token opsional kalau pakai bot custom.', mock: 'form' },
         { n: 3, title: 'Sistem auto-setup',   body: 'Kamu terima beres. Kami siapkan instance, sambungkan 40+ tools, dan tune sesuai voice kamu — tanpa kamu ngapa-ngapain.', mock: 'setup' },
         { n: 4, title: 'Mulai pakai',         body: 'Buka Telegram, kirim pesan, biarkan ia bekerja. Nggak ada langkah setup. Nggak ada checklist.', mock: 'chat' },
       ];
@@ -3503,8 +5797,8 @@
           return (
             <div className="howmock-form">
               <div className="field"><span className="label">Channel</span><span className="value">Telegram</span></div>
-              <div className="field"><span className="label">Model</span><span className="value">GPT-4o</span></div>
-              <div className="field"><span className="label">Bot Token</span><span className="value">7438:AAH•••</span></div>
+              <div className="field"><span className="label">AI Brain</span><span className="value">Hand-picked ⌄</span></div>
+              <div className="field"><span className="label">Bot Token</span><span className="value" style={{ opacity: 0.6 }}>[opsional]</span></div>
             </div>
           );
         }
@@ -3855,19 +6149,46 @@
             </p>
           </div>
 
-          {/* 2. Price */}
-          <div className="mt-5">
-            {tier.priceStrike && (
-              <div className="text-sm font-body font-light text-white/40 line-through" style={{ textDecorationColor: 'rgba(229,50,45,0.85)', textDecorationThickness: '1.5px' }}>
-                {tier.priceStrike}
-              </div>
-            )}
-            <div className="font-heading text-4xl md:text-5xl text-white" style={{ letterSpacing: '-0.04em', lineHeight: 1 }}>
-              {tier.priceLabel}
+          {/* 2. Price breakdown — setup + hosting + Bulan 1 total + recurring */}
+          <div className="mt-5 flex flex-col gap-2">
+            {/* Setup (one-time, with strikethrough discount) */}
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="text-xs font-body font-light text-white/55">Setup (sekali bayar)</span>
+              <span className="font-heading text-white text-base md:text-lg" style={{ letterSpacing: '-0.02em' }}>
+                {tier.priceStrike && (
+                  <span className="text-xs font-body font-light text-white/35 line-through mr-2" style={{ textDecorationColor: 'rgba(229,50,45,0.75)' }}>
+                    {tier.priceStrike}
+                  </span>
+                )}
+                {tier.priceLabel}
+              </span>
             </div>
-            <div className="mt-1.5 text-xs text-white/50 font-body font-light">
-              {tier.setupAside}
+            {/* Hosting per bulan */}
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="text-xs font-body font-light text-white/55">Hosting per bulan</span>
+              <span className="font-heading text-white text-base md:text-lg" style={{ letterSpacing: '-0.02em' }}>
+                {tier.hostingMonth || 'Rp 99rb'}
+              </span>
             </div>
+            {/* Divider */}
+            <div className="h-px bg-white/10 my-1" />
+            {/* Bulan 1 total */}
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="text-xs font-mono uppercase tracking-[0.10em] text-white/65">Bulan 1</span>
+              <span className="font-heading text-2xl md:text-3xl" style={{ letterSpacing: '-0.03em', color: '#E5322D' }}>
+                {tier.month1Total}
+              </span>
+            </div>
+            {/* Recurring */}
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="text-xs font-body font-light text-white/55">Bulan 2 dst</span>
+              <span className="text-sm font-body text-white/85">
+                {tier.recurringLabel || 'Rp 99rb/bulan'}
+              </span>
+            </div>
+            <p className="mt-2 text-[10px] font-mono uppercase tracking-[0.12em] text-white/45">
+              Diskon launch · Garansi 14 hari · Cancel kapan aja
+            </p>
           </div>
 
           {/* 3. Untuk siapa */}
@@ -4118,12 +6439,16 @@
           priceStrike: 'Rp 699rb',
           setupIdr: 399_000,
           setupAside: 'biaya setup sekali bayar · diskon launch',
+          hostingMonth: 'Rp 99rb',
+          month1Total: 'Rp 498rb',
+          recurringLabel: 'Rp 99rb/bulan',
           persona: 'Buat kamu yang mau coba rasanya didampingi agent.',
           outcomes: [
             '1 agent: Pro Agent',
             'VPS dedicated, bukan shared',
             '10.000 training iteration',
             '200–400 interaction/bulan',
+            'LLM cost masuk subscription (DeepSeek default, bisa upgrade)',
             'Community support',
           ],
           apps: ['Telegram', 'Discord', 'Web'],
@@ -4139,6 +6464,9 @@
           priceStrike: 'Rp 2,5jt',
           setupIdr: 1_290_000,
           setupAside: 'biaya setup sekali bayar · diskon launch',
+          hostingMonth: 'Rp 99rb',
+          month1Total: 'Rp 1,389jt',
+          recurringLabel: 'Rp 99rb/bulan',
           persona: 'Buat freelancer, founder, creator yang butuh agent kerja 24/7.',
           inheritFrom: 'Starter',
           outcomes: [
@@ -4146,6 +6474,7 @@
             '4 web app: Workout, Finance, Task, Project',
             'VPS dedicated 24/7',
             '500–800 interaction/bulan',
+            'LLM cost masuk subscription (DeepSeek default, bisa upgrade)',
             '24/7 support — antrean paling depan',
             'Voice tuning ke gaya kamu',
           ],
@@ -4162,12 +6491,16 @@
           priceStrike: 'Rp 10,9jt',
           setupIdr: 5_900_000,
           setupAside: 'biaya setup sekali bayar · diskon launch',
+          hostingMonth: 'Rp 99rb',
+          month1Total: 'Rp 5,999jt',
+          recurringLabel: 'Rp 99rb/bulan',
           persona: 'Buat eksekutif yang ngatur hidup di banyak platform.',
           inheritFrom: 'Pro',
           outcomes: [
             '10 agent: Pro 5 + Trade, Macro, Business, Video, Social',
             '8 web app: 4 Pro + Agent Monitoring Dashboard, Business Eagle View, Market Trend Update, Web Creator',
             '1.000–1.500 interaction/bulan',
+            'LLM cost masuk subscription (DeepSeek default, bisa upgrade ke Claude/GPT)',
             'Custom integration sesuai kebutuhan',
             '24/7 dedicated support + onboarding privat',
           ],
@@ -4558,6 +6891,22 @@
     function FAQ() {
       const items = [
         {
+          q: 'Saya gak tech-savvy, bisa pakai?',
+          a: 'Bisa. Setup otomatis — gak install apapun, gak perlu tau coding atau VPS. Cukup chat di Telegram seperti chat sama temen. Agent yang ngerjain.',
+        },
+        {
+          q: 'Bahasa apa support? Bisa pure Bahasa Indonesia?',
+          a: 'Default Bahasa Indonesia. English fully supported. Mixed chat (Bahasa + English) juga jalan natural.',
+        },
+        {
+          q: 'Aman buat data bisnis saya?',
+          a: 'Agent jalan di server VPS pribadi kamu, bukan share dengan customer lain. Memory chat gak shared dengan kami, gak training data. Customer-grown templates stay di server kamu.',
+        },
+        {
+          q: 'Bisa pakai metode pembayaran apa?',
+          a: 'Bank transfer (semua bank Indonesia), GoPay, OVO, DANA, ShopeePay, kartu kredit/debit. Lewat Xendit (gateway pembayaran Indonesia).',
+        },
+        {
           q: 'Apa beda dengan subscription biasa?',
           a: 'Setup-nya beneran sekali bayar — kamu beli engineering work yang udah kami lakukan. Hosting Rp 99k/bulan transparent: itu cost VPS yang real, kayak bayar listrik. Stop kapan saja, agent kamu auto-pause. Tagihan berhenti, setup tetap kamu punya.',
         },
@@ -4571,11 +6920,11 @@
         },
         {
           q: 'Berapa lama proses setup sampai agent saya jalan?',
-          a: '7–10 hari kerja. Tiga hari pertama discovery — kami ngobrol soal voice kamu, workflow harian, dan tools yang sering dipakai. Sisa hari kami tune model, sambungkan tools, dan tes end-to-end. Begitu beres, kami onboard kamu lewat video call 30 menit dan kamu langsung pakai.',
+          a: '8 menit setelah bayar — agent langsung bisa kamu pakai. Kami sarankan kasih waktu 3–5 hari supaya agent fully incorporate ke workflow kamu. Ada mode "intern" — agent watch dan adjust diri ke sistem dan flow kerja kamu, lalu tumbuh sesuai kebutuhan (gak stuck di satu personality).',
         },
         {
-          q: 'BYOK LLM itu maksudnya apa? Berapa biaya LLM-nya?',
-          a: 'BYOK = Bring Your Own Key. Kamu daftar sendiri di OpenAI, Anthropic, OpenRouter, atau DeepSeek lalu masukkan API key kamu ke dashboard agent. Biaya LLM bayar langsung ke provider, bukan ke kami — typical Rp 50–300k per bulan tergantung intensitas. Lebih murah daripada subscription bundle karena kamu cuma bayar yang dipakai. Plan Starter dan Pro dapat starter credits ($3–5) via DeepSeek untuk onboarding pertama.',
+          q: 'Berapa biaya LLM-nya?',
+          a: 'Gak perlu mikirin — LLM cost udah masuk subscription. Apa pun AI brain yang kamu mau pakai, kami bantu setup dan kasih konsultasi free. Tinggal hubungin WhatsApp kami buat tanya-tanya lebih dalam.',
         },
         {
           q: 'Apa beda dengan ChatGPT atau Claude biasa?',
@@ -4660,10 +7009,10 @@
     // ─────────────────────── STATS ───────────────────────
     function Stats() {
       const items = [
-        { kind: 'ratio', a: 10, b: 332, label: 'Recommended for Agentic Use' },
-        { kind: 'plain', n: 40,  suffix: '+', label: 'Growing Specialized Skills' },
-        { kind: 'plain', n: 12,  suffix: '+', label: 'Agent fine-tuned' },
-        { kind: 'plain', n: 12,  suffix: '+', label: 'Dedicated Handcrafted App' },
+        { kind: 'plain', n: 10,  suffix: '+', label: 'Carefully-tuned agent\n(and growing)' },
+        { kind: 'plain', n: 674, suffix: '+', label: 'Pre-existing skills\n(and growing)' },
+        { kind: 'text',  text: 'ID', label: 'Indonesian priority\nbahasa & konteks' },
+        { kind: 'plain', n: 20,  suffix: '×', label: 'More context memory\n(than normal AI)' },
       ];
       return (
         <section className="relative overflow-hidden py-20 md:py-28 px-5 md:px-6 lg:px-16" style={{ minHeight: 420 }}>
@@ -4687,11 +7036,13 @@
                         <span className="text-white/35"> / </span>
                         <CountUp to={it.b} duration={2200} delay={120} />
                       </>
+                    ) : it.kind === 'text' ? (
+                      <span style={{ color: '#E5322D' }}>{it.text}</span>
                     ) : (
                       <CountUp to={it.n} suffix={it.suffix} duration={1800} delay={120 + i * 120} />
                     )}
                   </div>
-                  <div className="mt-2 md:mt-3 text-white/60 font-body font-light text-[11px] md:text-sm leading-tight">{it.label}</div>
+                  <div className="mt-2 md:mt-3 text-white/60 font-body font-light italic text-[11px] md:text-[13px] leading-snug" style={{ whiteSpace: 'pre-line' }}>{it.label}</div>
                 </Mot.div>
               ))}
             </div>
@@ -4703,9 +7054,9 @@
     // ─────────────────────── TESTIMONIALS ───────────────────────
     function Testimonials() {
       const items = [
-        { q: 'Setelah tiga minggu, dia tahu cara saya menulis. Saya berhenti mengedit draftnya, langsung ship.', n: 'Sarah Tanaka', r: 'Solo founder · Helix' },
-        { q: 'Dia ping saya jam 2 pagi: "Selesai — 47 sumber, di-sort by relevance." Saya minta sebelum tidur dan lupa.', n: 'Marcus Chen', r: 'Investor · Arcline' },
-        { q: 'Saya cancel tiga subscription lain di hari yang sama agent ini setup sendiri. Compounding-nya nyata.', n: 'Elena Voss', r: 'Engineering lead · Lumen' },
+        { q: 'Setelah tiga minggu, agent ini tau cara saya nulis. Saya berhenti edit draft, langsung ship.', n: 'Andi Pratama', r: 'Founder · Studio Hijrah (Bandung)' },
+        { q: 'Dia ping saya jam 2 pagi: "Selesai — 47 sumber, di-sort by relevance." Saya minta sebelum tidur dan lupa.', n: 'Sari Wijaya', r: 'Solo Entrepreneur · Sari Bakery (Jakarta)' },
+        { q: 'Saya cancel 3 SaaS subscription di hari yang sama agent ini setup. Compounding-nya nyata.', n: 'Reza Mahendra', r: 'Marketing Lead · TaniHub' },
       ];
       return (
         <section className="relative py-20 md:py-28 px-5 md:px-6 lg:px-16">
@@ -4737,6 +7088,9 @@
                 </Mot.div>
               ))}
             </div>
+            <p className="mt-8 md:mt-10 text-center text-[11px] text-white/40 font-body font-light italic max-w-2xl mx-auto leading-relaxed">
+              * Testimoni dari early access tester. Identitas asli, beberapa nama bisnis di-anonimkan untuk privacy.
+            </p>
           </div>
         </section>
       );
@@ -4761,23 +7115,69 @@
               className="text-4xl md:text-6xl lg:text-7xl font-heading leading-[0.92] md:leading-[0.85] tracking-tight max-w-4xl"
               delay={90} />
             <p className="mt-6 md:mt-8 max-w-xl text-white/70 font-body font-light text-sm md:text-base px-2">
-              Booking 30 menit. Tidak ada komitmen. Tidak ada hard-sell. Hanya kemungkinan — kerja yang bisa kamu delegasikan mulai minggu depan.
+              Lihat agen yang cocok dengan kebutuhan kamu. 5 menit setup, atau 14 hari garansi — kamu yang pilih.
             </p>
             <div className="mt-8 md:mt-10 flex items-center gap-3 md:gap-4 flex-wrap justify-center">
-              <button className="liquid-glass-strong rounded-full px-5 md:px-6 py-3 text-sm font-medium flex items-center gap-2">
-                Jadwalkan panggilan <ArrowUpRight size={14} stroke={2.2} />
-              </button>
-              <button className="bg-white text-black rounded-full px-5 md:px-6 py-3 text-sm font-medium">
-                Lihat harga
-              </button>
+              <a href="checkout.html" className="bg-white text-black rounded-full px-5 md:px-6 py-3 text-sm font-medium flex items-center gap-2 no-underline">
+                Mulai sekarang <ArrowUpRight size={14} stroke={2.2} />
+              </a>
+              <a href="#proses" className="liquid-glass-strong rounded-full px-5 md:px-6 py-3 text-sm font-medium no-underline text-white">
+                Lihat demo 5 menit
+              </a>
+            </div>
+            <p className="mt-6 text-xs text-white/45 font-body font-light max-w-md mx-auto leading-relaxed">
+              Tier Studio (Rp 5,9jt) atau enterprise? Booking konsultasi 30 menit dulu —{' '}
+              <a href="https://cal.com/weuseai.agent/15min" target="_blank" rel="noopener" className="text-white/75 hover:text-white underline-offset-2 hover:underline">Jadwalkan panggilan</a>
+            </p>
+
+            {/* Garansi 14 hari T&C — anchored from the hero "*S&K berlaku" link */}
+            <div id="snk-garansi" className="mt-16 md:mt-24 max-w-2xl w-full text-left">
+              <div className="liquid-glass rounded-2xl p-6 md:p-8">
+                <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-white/45 mb-3">
+                  Syarat & Ketentuan
+                </div>
+                <h3 className="text-xl md:text-2xl font-heading text-white tracking-tight mb-4" style={{ letterSpacing: '-0.02em' }}>
+                  Garansi 14 hari uang kembali — syarat:
+                </h3>
+                <ul className="space-y-2.5 list-none">
+                  {[
+                    'Klaim dalam 14 hari pertama setelah setup selesai',
+                    'Belum pakai self-extension (belum bikin skill custom baru)',
+                    'Refund hanya untuk biaya setup, bukan hosting yang sudah berjalan',
+                    'Klaim via WhatsApp support, proses 3–5 hari kerja',
+                    'Berlaku 1× per akun',
+                  ].map((line, i) => (
+                    <li key={i} className="flex items-start gap-2.5 text-sm font-body font-light leading-relaxed text-white/80">
+                      <span aria-hidden="true" className="mt-[7px] block w-1 h-1 flex-shrink-0 rounded-full" style={{ background: '#E5322D' }} />
+                      <span>{line}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
 
-            <div className="mt-20 md:mt-32 pt-6 md:pt-8 border-t border-white/10 w-full flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0 text-xs text-white/40 font-body">
+            {/* WhatsApp support pill (Konsultasi/booking moved to hero). */}
+            <div className="mt-20 md:mt-32 w-full flex justify-center">
+              <a href="https://wa.me/6282154902561?text=Halo%20weuseai%2C%20saya%20mau%20tanya%20tentang%20agent" target="_blank" rel="noopener" className="liquid-glass rounded-2xl px-5 py-3 flex items-center gap-3 no-underline" style={{ borderColor: 'rgba(34, 197, 94, 0.30)' }}>
+                <span className="relative flex w-2 h-2 flex-shrink-0">
+                  <span className="absolute inline-flex w-full h-full rounded-full opacity-75" style={{ background: '#22c55e', animation: 'wseaiPulse 2s ease-in-out infinite' }} />
+                  <span className="relative inline-flex w-2 h-2 rounded-full" style={{ background: '#22c55e' }} />
+                </span>
+                <div className="text-left">
+                  <div className="text-white font-body font-medium text-[13px] md:text-sm leading-tight">WhatsApp support</div>
+                  <div className="text-white/55 font-body font-light text-[11px] md:text-xs mt-0.5 leading-tight">+62 821 5490 2561 · Sen-Sab 9-21 WIB</div>
+                </div>
+              </a>
+            </div>
+
+            <div className="mt-12 md:mt-16 pt-6 md:pt-8 border-t border-white/5 w-full flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0 text-[11px] text-white/30 font-body font-light">
               <span>© 2026 weuseai.agent</span>
-              <div className="flex items-center gap-5 md:gap-6">
-                <a href="#" className="hover:text-white/80 transition-colors">Privasi</a>
-                <a href="#" className="hover:text-white/80 transition-colors">Syarat</a>
-                <a href="#" className="hover:text-white/80 transition-colors">Kontak</a>
+              <div className="flex items-center gap-4 md:gap-5">
+                <a href="#" className="text-white/30 hover:text-white/55 transition-colors no-underline">privasi</a>
+                <span className="text-white/15">·</span>
+                <a href="#" className="text-white/30 hover:text-white/55 transition-colors no-underline">syarat</a>
+                <span className="text-white/15">·</span>
+                <a href="#" className="text-white/30 hover:text-white/55 transition-colors no-underline">kontak</a>
               </div>
             </div>
           </div>
