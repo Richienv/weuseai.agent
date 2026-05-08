@@ -1,0 +1,210 @@
+// Manifest validator for per-agent bundles (Phase 2E-1.5).
+//
+// Spec: docs/plans/2026-05-08-workflow-library-pivot-to-hermes-native.md
+//
+// Validates agent-packs/<slug>/manifest.json against the locked schema.
+// Used at:
+//   1. Test time — drift check that every shipped manifest passes validation
+//   2. Provisioning — setup-script.ts validates before copying to VPS
+//   3. Future: customer-grown manifest updates (when extend-capabilities
+//      writes new entries, validate before persisting)
+//
+// Pure module — no Deno-only / Node-only imports. Reuses the
+// parameter-validator subset from _shared/parameter-validator.ts.
+
+import {
+  validateAgainstSchema,
+  type ValidateResult,
+} from './parameter-validator.ts'
+
+// ─── manifest types ────────────────────────────────────────────────────
+
+export type ManifestSkill = {
+  id: string
+  description_id: string
+  description_en?: string
+  templates_used?: string[]
+  execution: 'edge-function' | 'hermes-skill' | 'composite' | 'external-api'
+  handler_ref: string
+  tier: 'starter' | 'pro' | 'studio'
+}
+
+export type ManifestTemplate = {
+  id: string
+  kind: string
+  description_id: string
+  best_for?: string
+  source?: 'bundled' | 'customer-grown'
+  generated_at?: string
+}
+
+export type Manifest = {
+  agent_slug: string
+  version: string
+  description_id: string
+  skills: ManifestSkill[]
+  templates: ManifestTemplate[]
+  self_extend: boolean
+  extension_dir: string
+}
+
+// ─── known persona slugs (must match soul-md-template.ts) ──────────────
+
+export const KNOWN_PERSONA_SLUGS = [
+  'the-pro',
+  'deep-researcher',
+  'web-master',
+  'doc-expert',
+  'slide-master',
+  'trade-pro',
+  'macro-strategist',
+  'business-director',
+  'video-producer',
+  'social-conductor',
+] as const
+
+// ─── inline schema (mirrors agent-packs/_manifest.schema.json) ─────────
+//
+// Inlined so the validator works without disk reads. A drift test in
+// tests/manifest-validator.spec.ts asserts equality with the .json file.
+
+export const MANIFEST_SCHEMA = {
+  type: 'object',
+  required: [
+    'agent_slug',
+    'version',
+    'description_id',
+    'skills',
+    'templates',
+    'self_extend',
+    'extension_dir',
+  ],
+  properties: {
+    agent_slug: { type: 'string', minLength: 1 },
+    version: { type: 'string', pattern: '^\\d+\\.\\d+\\.\\d+$' },
+    description_id: { type: 'string', minLength: 10, maxLength: 500 },
+    skills: {
+      type: 'array',
+      minItems: 1,
+      items: {
+        type: 'object',
+        required: ['id', 'description_id', 'execution', 'handler_ref', 'tier'],
+        properties: {
+          id: { type: 'string', pattern: '^[a-z][a-z0-9-]+$' },
+          description_id: { type: 'string', minLength: 10, maxLength: 500 },
+          description_en: { type: 'string', minLength: 10, maxLength: 500 },
+          templates_used: { type: 'array', items: { type: 'string' } },
+          execution: {
+            type: 'string',
+            enum: ['edge-function', 'hermes-skill', 'composite', 'external-api'],
+          },
+          handler_ref: {
+            type: 'string',
+            pattern: '^(edge-fn|hermes-skill|external|composite):[a-z0-9-]+$',
+          },
+          tier: { type: 'string', enum: ['starter', 'pro', 'studio'] },
+        },
+      },
+    },
+    templates: {
+      type: 'array',
+      items: {
+        type: 'object',
+        required: ['id', 'kind', 'description_id'],
+        properties: {
+          id: { type: 'string', minLength: 1 },
+          kind: { type: 'string', minLength: 1 },
+          description_id: { type: 'string', minLength: 10, maxLength: 500 },
+          best_for: { type: 'string' },
+          source: { type: 'string', enum: ['bundled', 'customer-grown'] },
+          generated_at: { type: 'string' },
+        },
+      },
+    },
+    self_extend: { type: 'boolean' },
+    extension_dir: { type: 'string', pattern: '^/' },
+  },
+} as const
+
+// ─── validator ─────────────────────────────────────────────────────────
+
+export type ManifestValidateOk = { ok: true; manifest: Manifest }
+export type ManifestValidateErr = { ok: false; errors: string[] }
+export type ManifestValidateResult = ManifestValidateOk | ManifestValidateErr
+
+/**
+ * Validate a parsed manifest object. Performs schema validation +
+ * cross-field invariants:
+ *   - agent_slug must be a known persona slug
+ *   - every skill.templates_used reference must exist in templates[]
+ *   - extension_dir must be absolute path
+ */
+export function validateManifest(input: unknown): ManifestValidateResult {
+  // Discard $schema field if present (it's reference metadata, not part
+  // of the runtime manifest contract).
+  const stripped = stripSchemaField(input)
+
+  const schemaResult: ValidateResult = validateAgainstSchema(
+    stripped,
+    MANIFEST_SCHEMA as Record<string, unknown>,
+  )
+  if (!schemaResult.ok) {
+    return { ok: false, errors: schemaResult.errors }
+  }
+
+  const m = schemaResult.value as Manifest
+
+  // Cross-field invariants
+  const errors: string[] = []
+
+  if (!(KNOWN_PERSONA_SLUGS as readonly string[]).includes(m.agent_slug)) {
+    errors.push(
+      `agent_slug "${m.agent_slug}" is not a known persona — must be one of ${KNOWN_PERSONA_SLUGS.join(', ')}`,
+    )
+  }
+
+  // templates_used must reference real template ids
+  const templateIds = new Set(m.templates.map((t) => t.id))
+  for (let i = 0; i < m.skills.length; i++) {
+    const skill = m.skills[i]
+    for (const used of skill.templates_used ?? []) {
+      if (!templateIds.has(used)) {
+        errors.push(
+          `skills[${i}] (${skill.id}) references unknown template "${used}". Templates available: ${[...templateIds].join(', ') || '(none)'}`,
+        )
+      }
+    }
+  }
+
+  // skill.id must be unique within skills[]
+  const skillIds = new Set<string>()
+  for (let i = 0; i < m.skills.length; i++) {
+    if (skillIds.has(m.skills[i].id)) {
+      errors.push(`skills[${i}] duplicate id "${m.skills[i].id}"`)
+    }
+    skillIds.add(m.skills[i].id)
+  }
+
+  // template.id must be unique within templates[]
+  const tIds = new Set<string>()
+  for (let i = 0; i < m.templates.length; i++) {
+    if (tIds.has(m.templates[i].id)) {
+      errors.push(`templates[${i}] duplicate id "${m.templates[i].id}"`)
+    }
+    tIds.add(m.templates[i].id)
+  }
+
+  if (errors.length > 0) return { ok: false, errors }
+  return { ok: true, manifest: m }
+}
+
+function stripSchemaField(input: unknown): unknown {
+  if (typeof input !== 'object' || input === null || Array.isArray(input)) {
+    return input
+  }
+  const obj = input as Record<string, unknown>
+  if (!('$schema' in obj)) return obj
+  const { $schema: _ignored, ...rest } = obj
+  void _ignored
+  return rest
+}

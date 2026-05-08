@@ -1,0 +1,36 @@
+{
+  "$schema": "../_manifest.schema.json",
+  "agent_slug": "doc-expert",
+  "version": "1.0.0",
+  "description_id": "Bundle skill + template Doc Expert. Bikin laporan, proposal, invoice, dan email — sesuai gaya kamu.",
+  "skills": [
+    {
+      "id": "invoice-generator",
+      "description_id": "Bikin invoice profesional dari list item dan info klien. Output HTML siap kirim atau cetak.",
+      "description_en": "Generate professional invoice from itemized client info. Returns send-ready HTML.",
+      "templates_used": ["invoice-pro.html"],
+      "execution": "edge-function",
+      "handler_ref": "edge-fn:invoice-generator-handler",
+      "tier": "starter"
+    },
+    {
+      "id": "extend-capabilities",
+      "description_id": "Generate template baru saat customer minta sesuatu yang belum ada di inventory. Pakai LLM customer (BYOK), simpan ke /var/lib/weuseai/customer-grown/, daftarkan di local manifest.",
+      "description_en": "Generate a new template at runtime when the customer asks for something not in inventory. Uses customer's BYOK LLM, persists to /var/lib/weuseai/customer-grown/, registers in local manifest.",
+      "templates_used": [],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:extend-capabilities",
+      "tier": "starter"
+    }
+  ],
+  "templates": [
+    {
+      "id": "invoice-pro.html",
+      "kind": "invoice",
+      "description_id": "Invoice profesional dengan PPN 11%, slot NPWP, footer brand weuseai.agent. Fit klien PT/CV (badan usaha) di Indonesia.",
+      "best_for": "Klien PT/CV (badan usaha)"
+    }
+  ],
+  "self_extend": true,
+  "extension_dir": "/var/lib/weuseai/customer-grown/"
+}

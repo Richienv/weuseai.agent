@@ -36,7 +36,34 @@ export type SetupScriptParams = {
    * proceed unconditionally so the shell of the agent is ready.
    */
   openRouterKey?: string
+  /**
+   * Phase 2E-1.5 (Hermes-native bundle): which agent persona this VPS
+   * runs. Defaults to 'the-pro' if absent (matches Phase 2C-1 default
+   * persona). The bundle for this slug ships as `bundleTarBase64`.
+   */
+  agentSlug?: string
+  /**
+   * Phase 2E-1.5: base64-encoded tar.gz of the agent-pack bundle
+   * directory contents. Caller (customer-flow.ts) tars
+   * `agent-packs/<agentSlug>/` + `agent-packs/_shared/` and base64s.
+   *
+   * Optional: when absent, the bundle install step is skipped (back-
+   * compat with Phase 1/2A flows that don't ship a bundle). When set,
+   * the script extracts to /home/weuseai/.hermes/ on the VPS, creates
+   * /var/lib/weuseai/customer-grown/, and writes WEUSEAI_AGENT_SLUG +
+   * WEUSEAI_WORKFLOW_EXECUTE_URL to .env so Hermes skills can call out.
+   */
+  bundleTarBase64?: string
+  /**
+   * URL of the workflow-execute Edge Function. Hermes skills POST to
+   * this for deterministic handler invocation. Written to .env as
+   * WEUSEAI_WORKFLOW_EXECUTE_URL. Defaults to the production URL.
+   */
+  workflowExecuteUrl?: string
 }
+
+const DEFAULT_WORKFLOW_EXECUTE_URL =
+  'https://gtjgsligllbjcisiyrah.supabase.co/functions/v1/workflow-execute'
 
 const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1'
 const OPENROUTER_DEFAULT_MODEL = 'deepseek/deepseek-chat'
@@ -184,6 +211,20 @@ function llmEnvLines(p: SetupScriptParams): string[] {
   ]
 }
 
+function workflowEnvLines(p: SetupScriptParams): string[] {
+  // Phase 2E-1.5: agent bundle env. Hermes skills read these to know
+  // which bundle is theirs + where to POST workflow-execute calls.
+  // Skipped when no bundle is shipped (back-compat with Phase 1/2A).
+  if (!p.bundleTarBase64) return []
+  const slug = p.agentSlug ?? 'the-pro'
+  const url = p.workflowExecuteUrl ?? DEFAULT_WORKFLOW_EXECUTE_URL
+  return [
+    `WEUSEAI_AGENT_SLUG=${slug}`,
+    `WEUSEAI_CUSTOMER_ID=${p.customerId}`,
+    `WEUSEAI_WORKFLOW_EXECUTE_URL=${url}`,
+  ]
+}
+
 /** Single-quote escape for embedding in bash -c '…'. */
 function shSingleQuote(s: string): string {
   return s.replace(/'/g, `'\\''`)
@@ -209,7 +250,11 @@ export function buildSetupScript(p: SetupScriptParams): string {
         `TELEGRAM_REACTIONS=true`,
       ]
     : []
-  const allEnvLines = [...telegramEnvLines, ...llmEnvLines(p)]
+  const allEnvLines = [
+    ...telegramEnvLines,
+    ...llmEnvLines(p),
+    ...workflowEnvLines(p),
+  ]
 
   // Halo block — fires FIRST so customer sees life immediately.
   const haloJson = telegramJson(p.telegramAllowedUserIds ?? '', LIVENESS_PING_TEXT)
@@ -264,6 +309,37 @@ su - weuseai -c '${HERMES} cron add --schedule "0 0 * * *" --prompt "${shSingleQ
 
   // .env file content (heredoc-safe — no special chars in our values)
   const envFileBody = allEnvLines.join('\n')
+
+  // Agent-pack bundle install block (Phase 2E-1.5). Empty string when
+  // caller didn't supply a bundle (back-compat with Phase 1/2A flows).
+  const bundleInstallBlock = p.bundleTarBase64
+    ? `
+log "Installing agent-pack bundle (${p.agentSlug ?? 'the-pro'})..."
+sudo -u weuseai mkdir -p /home/weuseai/.hermes/agent-pack
+echo '${p.bundleTarBase64}' | base64 -d | tar -xz -C /home/weuseai/.hermes/agent-pack >> "$LOG" 2>&1
+chown -R weuseai:weuseai /home/weuseai/.hermes/agent-pack
+
+# Symlink each SKILL.md under skills/ into the Hermes-native skills dir
+# so the upstream skill loader picks them up alongside daily-news.
+if [ -d /home/weuseai/.hermes/agent-pack/skills ]; then
+  for skill_dir in /home/weuseai/.hermes/agent-pack/skills/*/; do
+    skill_name=$(basename "$skill_dir")
+    sudo -u weuseai mkdir -p "/home/weuseai/.hermes/skills/$skill_name"
+    sudo -u weuseai cp "$skill_dir/SKILL.md" "/home/weuseai/.hermes/skills/$skill_name/SKILL.md" 2>> "$LOG" || log "⚠ skill copy failed for $skill_name"
+  done
+  log "✓ Bundle skills installed"
+fi
+
+# Customer-grown extension directory — empty at provision; populated by
+# extend-capabilities skill at runtime as customer requests new templates.
+mkdir -p /var/lib/weuseai/customer-grown/templates /var/lib/weuseai/customer-grown/skills
+touch /var/lib/weuseai/customer-grown/extension-log.jsonl
+chown -R weuseai:weuseai /var/lib/weuseai
+log "✓ Customer-grown extension area initialized"
+`
+    : `
+log "No agent-pack bundle supplied; running with Phase 1/2A baseline (daily-news only)"
+`
 
   // Skills + persona writes
   return `#!/bin/bash
@@ -323,6 +399,19 @@ chown weuseai:weuseai /home/weuseai/.hermes/SOUL.md
 cat > /home/weuseai/.hermes/skills/daily-news-briefing-bahasa/SKILL.md <<'WEUSEAI_SKILL_EOF'
 ${DAILY_NEWS_SKILL_MD}WEUSEAI_SKILL_EOF
 chown -R weuseai:weuseai /home/weuseai/.hermes
+
+# ─── 6b. Agent-pack bundle (Phase 2E-1.5, Hermes-native) ───────────────
+#
+# When the caller ships a base64-tar of the agent's bundle, decode +
+# extract to /home/weuseai/.hermes/agent-pack/. Hermes' skill loader
+# discovers SKILL.md files under skills/ at startup; this writes them
+# into the canonical Hermes path PLUS keeps the manifest + templates at
+# the agent-pack/ root for runtime introspection.
+#
+# Also initializes the customer-grown directory under /var/lib/weuseai/
+# — the persistence area for templates the agent generates at runtime
+# via the extend-capabilities skill.
+${bundleInstallBlock}
 
 # ─── 7. Hermes install (slow — 3-6 min) ────────────────────────────────
 log "Installing Hermes (this takes 3-6 min)..."

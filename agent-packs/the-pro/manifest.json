@@ -1,0 +1,42 @@
+{
+  "$schema": "../_manifest.schema.json",
+  "agent_slug": "the-pro",
+  "version": "1.0.0",
+  "description_id": "Bundle skill + template The Pro. Briefing pagi, ingatan lintas sesi, pendamping kerja harian.",
+  "skills": [
+    {
+      "id": "daily-briefing",
+      "description_id": "Rangkum kalender, email penting, dan headline berita pagi jadi satu briefing markdown. Default ke timezone Asia/Jakarta.",
+      "description_en": "Aggregates calendar + email + news into a single morning briefing. Defaults to Asia/Jakarta timezone.",
+      "templates_used": ["mocks/calendar/typical-day.json", "mocks/gmail/typical-day.json"],
+      "execution": "edge-function",
+      "handler_ref": "edge-fn:daily-briefing-handler",
+      "tier": "starter"
+    },
+    {
+      "id": "extend-capabilities",
+      "description_id": "Generate skill atau template baru saat customer minta sesuatu yang belum ada di inventory.",
+      "description_en": "Generate a new skill or template at runtime when the customer asks for something not in inventory.",
+      "templates_used": [],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:extend-capabilities",
+      "tier": "starter"
+    }
+  ],
+  "templates": [
+    {
+      "id": "mocks/calendar/typical-day.json",
+      "kind": "fixture",
+      "description_id": "Mock calendar fixture (5 events: 4 meetings + 1 personal). Phase 2C-2 wires real Google Calendar MCP — this fixture proves the pattern.",
+      "best_for": "Demo + integration testing"
+    },
+    {
+      "id": "mocks/gmail/typical-day.json",
+      "kind": "fixture",
+      "description_id": "Mock Gmail fixture (10 emails: 3 important + 5 noise + 2 follow-up).",
+      "best_for": "Demo + integration testing"
+    }
+  ],
+  "self_extend": true,
+  "extension_dir": "/var/lib/weuseai/customer-grown/"
+}
