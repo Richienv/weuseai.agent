@@ -303,3 +303,38 @@ After implementation:
 - `hermes_v0_13_0_strategic_shifts.md` — Hermes v0.13.0 native kanban (powers Project Conductor).
 - `autobrowse_phase4_potential.md` — Web Creator multipliers for Phase 4.
 - `video_producer_capabilities_2026.md` — HyperFrames roadmap (Phase 4-1).
+
+---
+
+## Progress log
+
+| Day | Date | Commit | Scope shipped |
+|---|---|---|---|
+| 1 | 2026-05-09 | `0982c74` | Spec doc + branch off main (`ffa46bc`) |
+| 2 | 2026-05-09 | `1a08e28` | Web Master → Web Creator REPLACE (5 skills, 10 templates inc. UMKM multipage). Doc Expert academic-doc-builder EXPAND (skripsi/thesis/abstract templates). Manifests bumped 2.0.0. |
+| 3 | 2026-05-09 | `8718000` | Slide Master template library EXPAND (template-deck-builder skill, 6 deck templates, tier moved Pro+ → Starter+). Trade Pro IDR/BI EXPAND (idr-bi-rate-watcher skill) + Bitget read-only external skill. |
+| 4 | 2026-05-09 | `9f06167` | Project Conductor REPLACE+RENAME from macro-strategist (4 skills, native Hermes kanban orchestration, tier Studio → Pro+). Validator KNOWN_PERSONA_SLUGS updated. |
+| 5 | 2026-05-09 | `8b3d344` | Business Director scoped MVP REPLACE (5-stage Indonesian-founder roadmap, 4 skills + 4 templates, tier Studio only). Video Producer EXPAND (HyperFrames stub + sound/hashtag/caption skills, 4 new SKILL.md + 4 templates). Social Conductor EXPAND Option B (calendar + engagement DB, NO scraping; 6 skills + 8 templates). Drift test extended: 32/32 passing across 9 pilot personas. |
+| 6 | 2026-05-09 | _pending_ | index.html marketing copy refresh (AGENTS array all 10 entries, scene cards Web Creator + Project Conductor, sprite dict slug `macro` → `project`, Studio tier outcomes line). Tier-change SQL migration: N/A (tier eligibility lives in manifest `enabled_for_tiers` JSON, not DB; already shipped via Day 2-5 manifest commits). |
+| 7 | 2026-05-09 | _pending_ | Open PR with diff summary + before/after marketing copy. |
+
+### Tier policy at v2.0 launch (encoded in manifests, not SQL)
+
+| Persona | enabled_for_tiers | Notes |
+|---|---|---|
+| The Pro | pro+, studio | unchanged |
+| Deep Researcher | pro+, studio | unchanged |
+| Web Creator (was Web Master) | pro+, studio | unchanged tier; scope replaced |
+| Doc Expert | starter, pro, studio | starter+ (academic mode pro+) |
+| Slide Master | starter, pro, studio | **moved Pro+ → Starter+** |
+| Trade Pro | pro+, studio | unchanged tier; idr-bi + bitget added |
+| Project Conductor (was Macro Strategist) | pro, studio | **moved Studio-only → Pro+** |
+| Business Director | studio | scoped MVP, Studio-only |
+| Video Producer | pro, studio | HyperFrames stub + skill expansion |
+| Social Conductor | pro, studio | Option B scope (no scraping) |
+
+### Drift / regression sweeps
+
+- `tests/manifest-validator.spec.ts`: **32/32 passing** at HEAD `8b3d344`.
+- All 9 pilot manifests pass schema validation, handler_ref allow-list, and template FK checks.
+- Tier eligibility translation (legacy `tier` → `enabled_for_tiers`) preserved with deprecation warnings; Phase 3 will hard-remove translation.

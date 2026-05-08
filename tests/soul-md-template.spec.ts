@@ -20,7 +20,7 @@ import {
   __INTERNAL_BUSINESS_DIRECTOR_SCAFFOLD,
   __INTERNAL_DEEP_RESEARCHER_SCAFFOLD,
   __INTERNAL_DOC_EXPERT_SCAFFOLD,
-  __INTERNAL_MACRO_STRATEGIST_SCAFFOLD,
+  __INTERNAL_PROJECT_CONDUCTOR_SCAFFOLD,
   __INTERNAL_SLIDE_MASTER_SCAFFOLD,
   __INTERNAL_SOCIAL_CONDUCTOR_SCAFFOLD,
   __INTERNAL_THE_PRO_SCAFFOLD,
@@ -343,6 +343,7 @@ test('drift check: /agent-packs/the-pro/SOUL.md matches inlined scaffold', () =>
 test('PERSONA_SLUGS includes all 10 personas', () => {
   // Sanity — keeps the exported tuple in sync with the persona registry.
   // All 10 personas locked 2026-05-07 (Day 1 + Day 2 Batches A and B).
+  // Persona v2 (2026-05-09): macro-strategist renamed → project-conductor.
   for (const slug of [
     'the-pro',
     'deep-researcher',
@@ -350,7 +351,7 @@ test('PERSONA_SLUGS includes all 10 personas', () => {
     'doc-expert',
     'slide-master',
     'trade-pro',
-    'macro-strategist',
+    'project-conductor',
     'business-director',
     'video-producer',
     'social-conductor',
@@ -395,7 +396,9 @@ test('drift check: /agent-packs/deep-researcher/SOUL.md matches inlined scaffold
 
 // ─── Web Master ──
 
-test('render: personaSlug="web-master" produces Web Master scaffold', () => {
+test('render: personaSlug="web-master" produces Web Creator scaffold', () => {
+  // Folder slug 'web-master' kept for backwards compat; display name +
+  // scope rewrite to Web Creator (persona v2 REPLACE, 2026-05-09).
   const out = renderSoulMd({
     customerName: 'Sarah Tanaka',
     expectationsClean: sanitizedSample,
@@ -403,12 +406,12 @@ test('render: personaSlug="web-master" produces Web Master scaffold', () => {
   })
   assert.match(
     out,
-    /I am Web Master, a specialist agent built for Sarah Tanaka/,
+    /I am Web Creator, a specialist agent built for Sarah Tanaka/,
   )
-  // Locked 3-word tone signature
-  assert.match(out, /precise, instrumental, dan defensive/)
-  // Persona-specific defensive limit
-  assert.match(out, /Respect robots\.txt/)
+  // Locked v2 3-word tone signature
+  assert.match(out, /practical, deploy-ready, dan Indonesian-context-aware/)
+  // Persona-specific scope keyword
+  assert.match(out, /deploy ke Vercel/)
 })
 
 test('drift check: /agent-packs/web-master/SOUL.md matches inlined scaffold', () => {
@@ -516,33 +519,33 @@ test('drift check: /agent-packs/trade-pro/SOUL.md matches inlined scaffold', () 
 
 // ─── Day 2 Batch B: 4 specialist personas (added 2026-05-07) ──────────
 
-// ─── Macro Strategist ──
+// ─── Project Conductor (renamed 2026-05-09 from Macro Strategist) ──
 
-test('render: personaSlug="macro-strategist" produces Macro Strategist scaffold', () => {
+test('render: personaSlug="project-conductor" produces Project Conductor scaffold', () => {
   const out = renderSoulMd({
     customerName: 'Sarah Tanaka',
     expectationsClean: sanitizedSample,
-    personaSlug: 'macro-strategist',
+    personaSlug: 'project-conductor',
   })
   assert.match(
     out,
-    /I am Macro Strategist, a specialist agent built for Sarah Tanaka/,
+    /I am Project Conductor, a specialist agent built for Sarah Tanaka/,
   )
-  // Locked 3-word tone signature
-  assert.match(out, /systemic, news-anchored, dan scenario-led/)
-  // Persona-specific scenario framing
-  assert.match(out, /scenario tree weekly: base case .* bull case .* bear case/)
+  // Locked v2 3-word tone signature
+  assert.match(out, /orchestrating, big-picture, decisive/)
+  // Persona-specific kanban orchestration framing
+  assert.match(out, /Hermes v0\.13\.0 native kanban/)
 })
 
-test('drift check: /agent-packs/macro-strategist/SOUL.md matches inlined scaffold', () => {
+test('drift check: /agent-packs/project-conductor/SOUL.md matches inlined scaffold', () => {
   const onDisk = readFileSync(
-    resolve(REPO_ROOT, 'agent-packs/macro-strategist/SOUL.md'),
+    resolve(REPO_ROOT, 'agent-packs/project-conductor/SOUL.md'),
     'utf8',
   )
   assert.equal(
     onDisk,
-    __INTERNAL_MACRO_STRATEGIST_SCAFFOLD,
-    'agent-packs/macro-strategist/SOUL.md drifted from MACRO_STRATEGIST_SCAFFOLD',
+    __INTERNAL_PROJECT_CONDUCTOR_SCAFFOLD,
+    'agent-packs/project-conductor/SOUL.md drifted from PROJECT_CONDUCTOR_SCAFFOLD',
   )
 })
 
@@ -558,10 +561,10 @@ test('render: personaSlug="business-director" produces Business Director scaffol
     out,
     /I am Business Director, a specialist agent built for Sarah Tanaka/,
   )
-  // Locked 3-word tone signature
-  assert.match(out, /metric-driven, anomaly-sensitive, dan brief/)
-  // Persona-specific anomaly categorization
-  assert.match(out, /"investigate" .* "monitor" .* "noise"/)
+  // Locked v2 3-word tone signature
+  assert.match(out, /experienced-cofounder, decisive, Indonesia-savvy/)
+  // Persona-specific 5-stage roadmap framing (Indonesian-founder MVP)
+  assert.match(out, /Idea.*Setup.*Identity.*Build.*Sell/s)
 })
 
 test('drift check: /agent-packs/business-director/SOUL.md matches inlined scaffold', () => {
@@ -618,8 +621,8 @@ test('render: personaSlug="social-conductor" produces Social Conductor scaffold'
     out,
     /I am Social Conductor, a specialist agent built for Sarah Tanaka/,
   )
-  // Locked 3-word tone signature
-  assert.match(out, /brand-aware, timing-aware, dan tone-matched/)
+  // Locked v2 3-word tone signature (Option B: planning-first, no scraping)
+  assert.match(out, /brand-aware, planning-first, dan voice-locked/)
   // Persona-specific voice-fit scoring
   assert.match(out, /voice-fit score \(high, medium, low\)/)
 })
