@@ -4766,12 +4766,12 @@
     //      red↔black swap + strong contrast (3.0) drops the bright BG and
     //      lets the dark text/icons punch through as a printed-halftone
     //      silhouette.
-    // Per-slug overrides for cards whose source video is naturally busier
-    // (lots of small UI elements) — bumping cellSize coarsens the halftone
-    // so the silhouette reads as a shape, not a wall of detail.
+    // Per-slug overrides — any DottedVideo prop can be set per-agent.
+    // Useful when a source video is naturally busier (cellSize ↑) or when
+    // a card needs more polarization / a deeper BG to feel distinct.
     const AGENT_VISUAL_OVERRIDES = {
-      calendar: { cellSize: 5 },
-      trade:    { cellSize: 5 },
+      calendar: { cellSize: 5, contrast: 1.85, bg: '#B82420' },
+      trade:    { cellSize: 5, contrast: 1.85, bg: '#B82420' },
     };
 
     function AgentVisual({ video, slug, invert }) {
@@ -4782,7 +4782,7 @@
       //   - Pure #000 dots (sharper edges than the previous #0a0a0a)
       //   - Vibrant #ED3530 BG (slightly brighter than brand red so the
       //     contrast against pure black feels more "printed-poster")
-      //   - 0.75× playback for editorial slow-mo
+      //   - 0.85× playback for editorial slow-mo (still feels live)
       // The Pro keeps its red-on-near-black look (high contrast already
       // baked into the source video).
       return (
@@ -4796,12 +4796,12 @@
           // Contrast 1.5 polarizes bright UI → full black dots, midtones
           // squeeze a touch smaller. Just enough punch without crushing
           // detail or making the card feel darker overall.
-          contrast={invert ? 1.5 : 1}
+          contrast={o.contrast ?? (invert ? 1.5 : 1)}
           // Slight slow-mo for the inverted cards — feels editorial /
           // halftone-poster instead of jittery UI capture.
-          playbackRate={invert ? 0.75 : 1}
+          playbackRate={invert ? 0.85 : 1}
           className="absolute inset-0 w-full h-full"
-          style={{ background: invert ? '#ED3530' : '#050505' }}
+          style={{ background: invert ? (o.bg ?? '#ED3530') : '#050505' }}
         />
       );
     }
