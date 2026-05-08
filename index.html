@@ -3134,6 +3134,173 @@
       );
     }
 
+    // ─────────────────────── ASCII VIDEO (character-density halftone) ───────────────────────
+    // Sibling to DottedVideo. Same outer shape (wrapper div + hidden video +
+    // canvas), same IntersectionObserver gating, same playbackRate prop.
+    // Instead of drawing a circle per cell whose radius scales with luminance,
+    // we sample the cell's average luminance and look up a character from a
+    // density-ordered string ' .\'-:+*#%@' (light → dark). The character is
+    // drawn via fillText at the cell center using a monospace stack
+    // (JetBrains Mono / IBM Plex Mono / Menlo). Reads as a terminal-style
+    // ASCII-art rendition of the source video.
+    //
+    // Treatment 1 of the carousel A/B: all 9 cards render brand red on
+    // near-black (no polarity swap — ASCII has its own visual language and
+    // doesn't need the red↔black inversion the dotted version uses).
+    function AsciiVideo({ src, color = '#E5322D', cellSize = 6, gamma = 1, contrast = 1, playbackRate = 1, chars = ' .\'-:+*#%@', className = '', style = {} }) {
+      const wrapRef = useRef(null);
+      const videoRef = useRef(null);
+      const canvasRef = useRef(null);
+
+      useEffect(() => {
+        const wrap = wrapRef.current;
+        const video = videoRef.current;
+        const canvas = canvasRef.current;
+        if (!wrap || !video || !canvas) return;
+        try { video.playbackRate = playbackRate; } catch (e) {}
+        const sample = document.createElement('canvas');
+        const sampleCtx = sample.getContext('2d', { willReadFrequently: true });
+        const ctx = canvas.getContext('2d');
+
+        // Mobile / data-saver tier — slightly bigger cells (perf), slower refresh.
+        // ASCII glyphs need a touch more room than dots to read crisply, so the
+        // mobile floor is 8 (vs 5 for DottedVideo).
+        const isMobile = window.matchMedia('(max-width: 767px)').matches;
+        const saveData = !!(navigator.connection && navigator.connection.saveData);
+        const effectiveCell = isMobile || saveData ? Math.max(cellSize, 8) : cellSize;
+        const frameModulo = isMobile || saveData ? 3 : 2; // ~20fps mobile, ~30fps desktop
+        const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        const dpr = 1;
+        let mounted = true;
+        let raf = 0;
+        let inView = false;
+        let frame = 0;
+        let drewOnce = false;
+
+        const fontStack = `${effectiveCell}px 'JetBrains Mono', 'IBM Plex Mono', Menlo, monospace`;
+        const charsLen = chars.length;
+        const lastIdx = charsLen - 1;
+
+        const resize = () => {
+          const r = wrap.getBoundingClientRect();
+          canvas.width = Math.max(1, Math.floor(r.width * dpr));
+          canvas.height = Math.max(1, Math.floor(r.height * dpr));
+          drewOnce = false; // re-render after resize
+        };
+        resize();
+        const ro = new ResizeObserver(resize);
+        ro.observe(wrap);
+
+        const draw = () => {
+          if (video.readyState < 2) return;
+          const w = canvas.width, h = canvas.height;
+          const cell = Math.max(2, effectiveCell * dpr);
+          const cols = Math.ceil(w / cell);
+          const rows = Math.ceil(h / cell);
+          if (sample.width !== cols) sample.width = cols;
+          if (sample.height !== rows) sample.height = rows;
+
+          const vw = video.videoWidth, vh = video.videoHeight;
+          if (!vw || !vh) return;
+          const scale = Math.max(cols / vw, rows / vh);
+          const dw = vw * scale, dh = vh * scale;
+          const dx = (cols - dw) / 2, dy = (rows - dh) / 2;
+          sampleCtx.drawImage(video, dx, dy, dw, dh);
+          const data = sampleCtx.getImageData(0, 0, cols, rows).data;
+
+          ctx.clearRect(0, 0, w, h);
+          ctx.fillStyle = color;
+          ctx.font = fontStack;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          const half = cell / 2;
+          for (let y = 0; y < rows; y++) {
+            for (let x = 0; x < cols; x++) {
+              const i = (y * cols + x) * 4;
+              const lum = (0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]) / 255;
+              let v = lum;
+              if (gamma !== 1) v = Math.pow(v, gamma);
+              if (contrast !== 1) {
+                v = (v - 0.5) * contrast + 0.5;
+                if (v < 0) v = 0; else if (v > 1) v = 1;
+              }
+              const idx = Math.floor(v * lastIdx + 0.0001);
+              const ch = chars[idx > lastIdx ? lastIdx : (idx < 0 ? 0 : idx)];
+              if (ch === ' ') continue; // skip blanks for ~20% perf win
+              ctx.fillText(ch, x * cell + half, y * cell + half);
+            }
+          }
+          drewOnce = true;
+        };
+
+        const tick = () => {
+          if (!mounted) return;
+          raf = requestAnimationFrame(tick);
+          if (!inView) return;
+          if (reducedMotion) {
+            // Single-frame render — pause video and draw once when it has data.
+            if (!drewOnce) {
+              try { video.pause(); } catch (e) {}
+              draw();
+            }
+            return;
+          }
+          if ((frame++ % frameModulo) !== 0) return;
+          draw();
+        };
+
+        const io = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((e) => {
+              inView = e.isIntersecting;
+              if (inView) {
+                if (reducedMotion) {
+                  // Need at least 1 frame loaded to draw the still — kick play
+                  // briefly then pause inside tick.
+                  try { video.playbackRate = playbackRate; } catch (err) {}
+                  const p = video.play();
+                  if (p && p.catch) p.catch(() => {});
+                } else {
+                  try { video.playbackRate = playbackRate; } catch (err) {}
+                  const p = video.play();
+                  if (p && p.catch) p.catch(() => {});
+                }
+              } else {
+                video.pause();
+              }
+            });
+          },
+          { rootMargin: '200px' }
+        );
+        io.observe(wrap);
+
+        if (!raf) raf = requestAnimationFrame(tick);
+
+        return () => {
+          mounted = false;
+          ro.disconnect();
+          io.disconnect();
+          cancelAnimationFrame(raf);
+        };
+      }, [src, color, cellSize, gamma, contrast, playbackRate, chars]);
+
+      return (
+        <div ref={wrapRef} className={className} style={style}>
+          <video
+            ref={videoRef}
+            src={src}
+            loop muted playsInline
+            preload="metadata"
+            crossOrigin="anonymous"
+            aria-hidden="true"
+            style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none' }}
+          />
+          <canvas ref={canvasRef} aria-hidden="true" style={{ width: '100%', height: '100%', display: 'block' }} />
+        </div>
+      );
+    }
+
     // ─────────────────────── UNICORN STUDIO EMBED ───────────────────────
     // Lazy-loads the unicornStudio.js lib once per page; (re-)initializes
     // any [data-us-project] divs on mount.
@@ -4750,58 +4917,47 @@
       );
     }
 
-    // Pivot 2026-05-09: every agent card now renders a hand-built mp4
-    // through the DottedVideo halftone canvas. Chat-bubble + animation
-    // scenes (AgentScene*) are kept in source as reference but no longer
-    // routed from the carousel.
+    // Treatment 1 (ASCII halftone) — A/B variant 2026-05-09. Every agent
+    // card renders a hand-built mp4 through the AsciiVideo character-density
+    // canvas instead of DottedVideo's circles. Chat-bubble + animation scenes
+    // (AgentScene*) are kept in source as reference but no longer routed from
+    // the carousel.
     //
-    // Two polarities:
-    //   1. Default (The Pro only) — red dots on near-black, big dots where
-    //      the source is bright. Source video has high contrast already, so
-    //      this reads cleanly.
-    //   2. Inverted (the other 8) — solid red card with BLACK dots forming
-    //      the dark subject of the source video. Source videos here are
-    //      mostly bright UI screenshots (88-98% pixels in the top band),
-    //      which would render as a solid red mush in default polarity. The
-    //      red↔black swap + strong contrast (3.0) drops the bright BG and
-    //      lets the dark text/icons punch through as a printed-halftone
-    //      silhouette.
-    // Per-slug overrides — any DottedVideo prop can be set per-agent.
-    // Useful when a source video is naturally busier (cellSize ↑) or when
-    // a card needs more polarization / a deeper BG to feel distinct.
+    // Treatment-1 design rules:
+    //   - All 9 cards use the SAME polarity: brand red `#E5322D` on near-black
+    //     `#050505`. No red↔black swap. ASCII has its own visual language and
+    //     reads as a terminal printout regardless of source brightness, so the
+    //     polarity flip used in the dotted version isn't needed.
+    //   - Density string ' .\'-:+*#%@' maps light→dark luminance.
+    //   - Monospace stack: JetBrains Mono → IBM Plex Mono → Menlo.
+    //   - cellSize 6px desktop, ≥8px mobile (clamped inside AsciiVideo).
+    //   - 0.85× playback on the 8 specialists for editorial slow-mo, 1.0×
+    //     on The Pro (matches the control's pacing).
+    //
+    // Per-slug overrides — any AsciiVideo prop can be set per-agent. Useful
+    // when a source video is naturally busier (cellSize ↑) or when a card
+    // needs different contrast / a custom density string.
     const AGENT_VISUAL_OVERRIDES = {
-      calendar: { cellSize: 5, contrast: 1.85, bg: '#B82420' },
-      trade:    { cellSize: 5, contrast: 1.85, bg: '#B82420' },
+      calendar: { cellSize: 8, contrast: 1.85 },
+      trade:    { cellSize: 8, contrast: 1.85 },
     };
 
     function AgentVisual({ video, slug, invert }) {
       const o = AGENT_VISUAL_OVERRIDES[slug] || {};
-      // 8 specialist cards: PURE-BLACK dots on a vibrant red BG — the
-      // polarity that read best in earlier tests (most UI detail visible).
-      // Visual punch comes from:
-      //   - Pure #000 dots (sharper edges than the previous #0a0a0a)
-      //   - Vibrant #ED3530 BG (slightly brighter than brand red so the
-      //     contrast against pure black feels more "printed-poster")
-      //   - 0.85× playback for editorial slow-mo (still feels live)
-      // The Pro keeps its red-on-near-black look (high contrast already
-      // baked into the source video).
+      // The Pro card runs at native speed (1.0×); the 8 specialists run at
+      // 0.85× for editorial slow-mo. The `invert` prop is kept on the
+      // signature for API compatibility with the carousel but no longer
+      // drives a polarity swap in this treatment.
+      const isPro = slug === 'pro';
       return (
-        <DottedVideo
+        <AsciiVideo
           src={`/assets/agent-${video || slug}.mp4`}
-          color={invert ? '#000000' : '#E5322D'}
-          // Smaller cells = denser dot grid = finer silhouette detail.
-          // Mobile clamps up via DottedVideo internals (Math.max(cellSize, 5)).
-          cellSize={o.cellSize ?? 3}
-          threshold={0.05}
-          // Contrast 1.5 polarizes bright UI → full black dots, midtones
-          // squeeze a touch smaller. Just enough punch without crushing
-          // detail or making the card feel darker overall.
-          contrast={o.contrast ?? (invert ? 1.5 : 1)}
-          // Slight slow-mo for the inverted cards — feels editorial /
-          // halftone-poster instead of jittery UI capture.
-          playbackRate={invert ? 0.85 : 1}
+          color="#E5322D"
+          cellSize={o.cellSize ?? 6}
+          contrast={o.contrast ?? 1.5}
+          playbackRate={isPro ? 1 : 0.85}
           className="absolute inset-0 w-full h-full"
-          style={{ background: invert ? (o.bg ?? '#ED3530') : '#050505' }}
+          style={{ background: '#050505' }}
         />
       );
     }
@@ -4810,9 +4966,9 @@
     // 9 agent specialist cards. Sits inside #proses ("The wave") below the
     // CTA, on the same red-halftone canvas. Auto-rotates every 13s, hover-
     // pause, prefers-reduced-motion respect.
-    // Each agent is represented by a hand-built m4v rendered through the
-    // DottedVideo halftone canvas (matching the section background). The
-    // `video` field maps to /assets/agent-{video}.m4v.
+    // Each agent is represented by a hand-built mp4 rendered through the
+    // AsciiVideo character-density canvas (Treatment 1 of the carousel A/B).
+    // The `video` field maps to /assets/agent-{video}.mp4.
     const AGENTS = [
       { slug: 'pro',         video: 'pro',         name: 'The Pro',           desc: 'Briefing pagi, ingat percakapan lintas sesi, jadi pendamping yang ngerti gaya kamu.' },
       { slug: 'researcher',  video: 'researcher',  name: 'Deep Researcher',   desc: 'Riset topik kompleks dari ratusan sumber, sintesis jadi laporan siap pakai.' },
