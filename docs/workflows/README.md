@@ -113,21 +113,37 @@ No central sync — each customer's library evolves independently.
 ## Operational prereqs (founder runs)
 
 ```sh
-# Apply migration (slimmed — no pgvector)
+# 1. Apply migration (slimmed — no pgvector)
 supabase db push --linked
 
-# Deploy 5 Edge Functions (workflow-discover dropped)
+# 2. Create Storage buckets — TWO needed:
+#   - workflow-outputs:   handler outputs (e.g. invoice HTML signed URLs)
+#   - workflow-templates: mock fixtures for daily-briefing pilot
+supabase storage create workflow-outputs   --public false
+supabase storage create workflow-templates --public false
+
+# 3. Upload daily-briefing mock fixtures into the workflow-templates bucket.
+#    Without these, daily-briefing returns warnings + empty sections instead
+#    of the calendar/email content. Path 3 demo depends on them being there.
+#    CLI form (Phase 2E-2 may automate this in customer-flow):
+supabase storage cp ./agent-packs/the-pro/templates/mocks/calendar/typical-day.json \
+  ss:///workflow-templates/mocks/calendar/typical-day.json
+supabase storage cp ./agent-packs/the-pro/templates/mocks/calendar/empty.json \
+  ss:///workflow-templates/mocks/calendar/empty.json
+supabase storage cp ./agent-packs/the-pro/templates/mocks/gmail/typical-day.json \
+  ss:///workflow-templates/mocks/gmail/typical-day.json
+supabase storage cp ./agent-packs/the-pro/templates/mocks/gmail/empty.json \
+  ss:///workflow-templates/mocks/gmail/empty.json
+
+# 4. Deploy 5 Edge Functions (workflow-discover dropped)
 supabase functions deploy workflow-list workflow-execute \
   invoice-generator-handler daily-briefing-handler tiktok-script-handler \
   --project-ref gtjgsligllbjcisiyrah
 
-# Storage bucket
-supabase storage create workflow-outputs --public false
-
-# Seed workflow rows
+# 5. Seed workflow rows
 SUPABASE_URL=$STAGING_URL \
 SUPABASE_SERVICE_ROLE_KEY=$STAGING_SERVICE_KEY \
-  tsx scripts/register-workflow.ts
+  tsx scripts/register-workflow.ts --all
 
 # customer-flow.ts integration (Phase 2E-2 work):
 #   tar agent-packs/<slug>/ + agent-packs/_shared/, base64 encode,

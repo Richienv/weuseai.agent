@@ -11,10 +11,9 @@
  * Usage:
  *   SUPABASE_URL=...
  *   SUPABASE_SERVICE_ROLE_KEY=...
- *   tsx scripts/register-workflow.ts [slug]
- *
- * Without args: register all 3 pilot workflows.
- * With slug: register only that one.
+ *   tsx scripts/register-workflow.ts            # register all 3 pilots
+ *   tsx scripts/register-workflow.ts --all      # same as above (explicit)
+ *   tsx scripts/register-workflow.ts <slug>     # register only that one
  *
  * Idempotent: UPSERTs by slug.
  */
@@ -158,7 +157,9 @@ async function main() {
     process.exit(1)
   }
 
-  const filterSlug = process.argv[2]
+  const arg = process.argv[2]
+  // `--all` is explicit-equivalent to no arg; both register every pilot.
+  const filterSlug = arg && arg !== '--all' ? arg : undefined
   const seedsToProcess = filterSlug
     ? PILOTS.filter((p) => p.slug === filterSlug)
     : PILOTS

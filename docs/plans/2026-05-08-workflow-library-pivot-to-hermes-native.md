@@ -226,25 +226,32 @@ Customer asks "what should I focus on this week?" — no skill matches a determi
 ## Operational prereqs (founder runs)
 
 ```sh
-# Apply slimmed migration (no pgvector)
+# 1. Apply slimmed migration (no pgvector)
 supabase db push --linked
 
-# Deploy 5 Edge Functions (workflow-discover removed)
+# 2. Create both Storage buckets
+supabase storage create workflow-outputs   --public false
+supabase storage create workflow-templates --public false
+
+# 3. Upload daily-briefing mock fixtures (Path 3 demo depends on these)
+supabase storage cp ./agent-packs/the-pro/templates/mocks/calendar/typical-day.json \
+  ss:///workflow-templates/mocks/calendar/typical-day.json
+supabase storage cp ./agent-packs/the-pro/templates/mocks/calendar/empty.json \
+  ss:///workflow-templates/mocks/calendar/empty.json
+supabase storage cp ./agent-packs/the-pro/templates/mocks/gmail/typical-day.json \
+  ss:///workflow-templates/mocks/gmail/typical-day.json
+supabase storage cp ./agent-packs/the-pro/templates/mocks/gmail/empty.json \
+  ss:///workflow-templates/mocks/gmail/empty.json
+
+# 4. Deploy 5 Edge Functions (workflow-discover dropped vs PR #2)
 supabase functions deploy workflow-list workflow-execute \
   invoice-generator-handler daily-briefing-handler tiktok-script-handler \
   --project-ref gtjgsligllbjcisiyrah
 
-# Storage bucket for invoice HTML output
-supabase storage create workflow-outputs --public false
-
-# Storage bucket for daily-briefing fixtures (or upload to a static path)
-supabase storage create workflow-templates --public false
-# Upload mock fixtures from agent-packs/the-pro/templates/mocks/
-
-# Seed all 3 workflow rows (no embedding, plain INSERT)
+# 5. Seed all 3 workflow rows (no embedding pipeline; plain UPSERT)
 SUPABASE_URL=$STAGING_URL \
 SUPABASE_SERVICE_ROLE_KEY=$STAGING_SERVICE_KEY \
-  tsx scripts/register-workflow.ts
+  tsx scripts/register-workflow.ts --all
 
 # customer-flow.ts integration (Phase 2E-2): tar agent-packs/<slug>/ + agent-packs/_shared/,
 # base64 encode, pass as bundleTarBase64 to buildSetupScript()
