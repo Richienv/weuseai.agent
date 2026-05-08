@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{business_name} — {value_prop}</title>
+<meta name="description" content="{meta_description}">
+<style>
+  :root { --bg: #FAF9F5; --ink: #141413; --accent: #0047FF; --muted: rgba(20,20,19,0.6); --border: rgba(20,20,19,0.08); }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--ink); font-family: 'Inter', -apple-system, sans-serif; line-height: 1.55; }
+  a { color: var(--accent); text-decoration: none; }
+  .container { max-width: 880px; margin: 0 auto; padding: 0 24px; }
+  nav { padding: 24px 0; border-bottom: 1px solid var(--border); }
+  nav .container { display: flex; justify-content: space-between; align-items: center; }
+  .brand { font-weight: 600; }
+  .nav-cta { background: var(--ink); color: var(--bg); padding: 10px 18px; border-radius: 6px; font-size: 14px; }
+  .hero { padding: 96px 0 80px; text-align: center; }
+  .hero .badge { display: inline-block; background: var(--accent); color: white; padding: 6px 14px; border-radius: 100px; font-size: 13px; font-weight: 500; margin-bottom: 20px; }
+  .hero h1 { font-size: 48px; font-weight: 600; line-height: 1.15; margin-bottom: 20px; }
+  .hero .outcome { font-size: 19px; color: var(--muted); max-width: 580px; margin: 0 auto 32px; }
+  .hero .cta { background: var(--accent); color: white; padding: 16px 32px; border-radius: 8px; font-weight: 500; display: inline-block; }
+  .hero .price-tag { color: var(--muted); margin-top: 16px; font-size: 14px; }
+  .curriculum { padding: 80px 0; background: white; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+  .curriculum h2 { font-size: 32px; font-weight: 600; margin-bottom: 36px; }
+  .module { padding: 24px 0; border-bottom: 1px solid var(--border); }
+  .module:last-child { border-bottom: 0; }
+  .module-num { color: var(--muted); font-size: 13px; font-weight: 500; }
+  .module h3 { font-size: 19px; font-weight: 600; margin: 4px 0 6px; }
+  .module p { color: var(--muted); font-size: 15px; }
+  .instructor { padding: 80px 0; }
+  .instructor h2 { font-size: 32px; font-weight: 600; margin-bottom: 24px; }
+  .instructor-card { display: grid; grid-template-columns: 80px 1fr; gap: 24px; align-items: start; }
+  .instructor-photo { width: 80px; height: 80px; background: var(--border); border-radius: 50%; }
+  .instructor .name { font-weight: 600; font-size: 18px; }
+  .instructor .credentials { color: var(--muted); font-size: 14px; margin: 4px 0 12px; }
+  .instructor .bio { color: var(--ink); font-size: 15px; }
+  .pricing { padding: 100px 0; text-align: center; }
+  .pricing h2 { font-size: 36px; font-weight: 600; margin-bottom: 12px; }
+  .pricing .subtitle { color: var(--muted); margin-bottom: 32px; }
+  .price-card { display: inline-block; padding: 36px 40px; border: 1px solid var(--border); border-radius: 12px; background: white; }
+  .price-card .amount { font-size: 44px; font-weight: 600; }
+  .price-card .period { color: var(--muted); font-size: 14px; }
+  .price-card .features { list-style: none; text-align: left; margin: 20px 0; }
+  .price-card .features li { padding: 6px 0; font-size: 14px; }
+  footer { padding: 48px 0; border-top: 1px solid var(--border); color: var(--muted); font-size: 14px; text-align: center; }
+</style>
+</head>
+<body>
+<nav>
+  <div class="container">
+    <div class="brand">{business_name}</div>
+    <a href="#enroll" class="nav-cta">{cta_label}</a>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="container">
+    <div class="badge">{course_badge}</div>
+    <h1>{hero_headline}</h1>
+    <p class="outcome">{outcome_statement}</p>
+    <a href="#enroll" class="cta">{cta_label}</a>
+    <div class="price-tag">{price_tag_line}</div>
+  </div>
+</section>
+
+<section class="curriculum">
+  <div class="container">
+    <h2>Yang kamu pelajari</h2>
+    <div class="module"><div class="module-num">Modul 01</div><h3>{module_1_title}</h3><p>{module_1_body}</p></div>
+    <div class="module"><div class="module-num">Modul 02</div><h3>{module_2_title}</h3><p>{module_2_body}</p></div>
+    <div class="module"><div class="module-num">Modul 03</div><h3>{module_3_title}</h3><p>{module_3_body}</p></div>
+    <div class="module"><div class="module-num">Modul 04</div><h3>{module_4_title}</h3><p>{module_4_body}</p></div>
+  </div>
+</section>
+
+<section class="instructor">
+  <div class="container">
+    <h2>Instruktur</h2>
+    <div class="instructor-card">
+      <div class="instructor-photo"></div>
+      <div>
+        <div class="name">{instructor_name}</div>
+        <div class="credentials">{instructor_credentials}</div>
+        <div class="bio">{instructor_bio}</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="pricing" id="enroll">
+  <div class="container">
+    <h2>Daftar sekarang</h2>
+    <p class="subtitle">{pricing_subtitle}</p>
+    <div class="price-card">
+      <div class="amount">{course_price}</div>
+      <div class="period">{price_period}</div>
+      <ul class="features">
+        <li>{feature_1}</li>
+        <li>{feature_2}</li>
+        <li>{feature_3}</li>
+      </ul>
+      <a href="{enroll_url}" class="cta" style="display:block;text-align:center;background:var(--accent);color:white;padding:14px;border-radius:6px;">{cta_label}</a>
+    </div>
+  </div>
+</section>
+
+<footer><div class="container">© {current_year} {business_name}. Dibuat dengan weuseai.agent.</div></footer>
+</body>
+</html>

@@ -1,0 +1,83 @@
+{
+  "snapshot_date": "2026-04-01",
+  "snapshot_quarter": "2026-Q2",
+  "currency": "IDR",
+  "providers": [
+    {
+      "name": "Niagahoster",
+      "url": "https://niagahoster.co.id/domain",
+      "tlds": {
+        ".com": { "first_year_idr": 159000, "renewal_idr": 199000, "free_with_hosting": true },
+        ".id":  { "first_year_idr": 220000, "renewal_idr": 250000, "free_with_hosting": false },
+        ".co.id": { "first_year_idr": 195000, "renewal_idr": 220000, "free_with_hosting": false },
+        ".my.id": { "first_year_idr": 50000,  "renewal_idr": 60000,  "free_with_hosting": false },
+        ".net": { "first_year_idr": 175000, "renewal_idr": 210000, "free_with_hosting": true }
+      },
+      "support": {
+        "channels": ["whatsapp", "live-chat", "email", "phone"],
+        "languages": ["bahasa-indonesia", "english"],
+        "hours": "24/7",
+        "rating_local": 4.6,
+        "notes": "WhatsApp-primary support is responsive (usually <5 min). Local CS team trained on common DNS / migration scenarios."
+      },
+      "uptime_sla": "99.9%",
+      "free_ssl": true,
+      "auto_dns_to_vercel": "documented",
+      "transfer_policy": "free outbound transfer; small fee inbound",
+      "best_for": ["small-biz", "first-time domain owners", "customers who value Bahasa support"]
+    },
+    {
+      "name": "IDwebhost",
+      "url": "https://idwebhost.com/domain",
+      "tlds": {
+        ".com": { "first_year_idr": 145000, "renewal_idr": 195000, "free_with_hosting": true },
+        ".id":  { "first_year_idr": 215000, "renewal_idr": 245000, "free_with_hosting": false },
+        ".co.id": { "first_year_idr": 190000, "renewal_idr": 215000, "free_with_hosting": false },
+        ".my.id": { "first_year_idr": 45000,  "renewal_idr": 55000,  "free_with_hosting": false },
+        ".net": { "first_year_idr": 165000, "renewal_idr": 200000, "free_with_hosting": true }
+      },
+      "support": {
+        "channels": ["live-chat", "email", "phone"],
+        "languages": ["bahasa-indonesia"],
+        "hours": "office-hours weekdays, limited weekend",
+        "rating_local": 4.2,
+        "notes": "Solid Bahasa support during business hours. After-hours resolution slower. Phone line available but typically <40 min hold."
+      },
+      "uptime_sla": "99.9%",
+      "free_ssl": true,
+      "auto_dns_to_vercel": "manual-only",
+      "transfer_policy": "free outbound transfer",
+      "best_for": ["small-biz on tight budget", "customers comfortable with manual DNS"]
+    },
+    {
+      "name": "Hostinger",
+      "url": "https://hostinger.co.id/domain",
+      "tlds": {
+        ".com": { "first_year_idr": 129000, "renewal_idr": 220000, "free_with_hosting": true },
+        ".id":  { "first_year_idr": 230000, "renewal_idr": 260000, "free_with_hosting": false },
+        ".co.id": { "first_year_idr": 200000, "renewal_idr": 240000, "free_with_hosting": false },
+        ".my.id": { "first_year_idr": 55000,  "renewal_idr": 70000,  "free_with_hosting": false },
+        ".net": { "first_year_idr": 145000, "renewal_idr": 215000, "free_with_hosting": true }
+      },
+      "support": {
+        "channels": ["live-chat", "email"],
+        "languages": ["bahasa-indonesia", "english", "spanish"],
+        "hours": "24/7",
+        "rating_local": 4.3,
+        "notes": "Multi-language live chat. Bahasa CS rotates with English+Spanish. Avg response time <3 min. Free email hosting bundled."
+      },
+      "uptime_sla": "99.9%",
+      "free_ssl": true,
+      "auto_dns_to_vercel": "documented",
+      "transfer_policy": "free outbound transfer",
+      "best_for": ["price-sensitive", "customers who want bundled email hosting", "international + local mix"]
+    }
+  ],
+  "scoring_priority_logic": {
+    "lowest-price": "compare first_year_idr for the requested TLD; tie-break on renewal_idr",
+    "best-support": "rank rating_local DESC; tie-break on local-language coverage + 24/7 hours",
+    "fastest-uptime": "all 3 are 99.9%; tie-break on documented post-incident communication track record",
+    "ease-of-use": "rank auto_dns_to_vercel='documented' first; tie-break on dashboard-clarity heuristic"
+  },
+  "notes": "Snapshot updated quarterly. Prices fluctuate with promo cycles — confirm at provider checkout. Indonesian .id / .co.id require KTP / NPWP per PANDI rules; flag this when recommending those TLDs."
+}

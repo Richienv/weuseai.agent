@@ -392,7 +392,7 @@ test('validate: enabled_for_tiers as empty array rejected (minItems 1)', () => {
 
 // ─── manifest references real handlers (sanity) ────────────────────────
 
-test('every pilot manifest skill handler_ref points to a known edge function or hermes-skill', () => {
+test('every pilot manifest skill handler_ref points to a known edge function, hermes-skill, or external endpoint', () => {
   const knownEdgeFns = new Set([
     'invoice-generator-handler',
     'daily-briefing-handler',
@@ -400,9 +400,26 @@ test('every pilot manifest skill handler_ref points to a known edge function or 
     'workflow-execute',
     'workflow-list',
   ])
-  const knownHermesSkills = new Set(['extend-capabilities'])
+  // Persona v2 (2026-05-09): added the per-persona Hermes skills
+  // shipped under each agent's skills/<id>/SKILL.md. Drift between
+  // manifest declarations and on-disk SKILL.md files is caught by a
+  // separate drift test.
+  const knownHermesSkills = new Set([
+    'extend-capabilities',
+    // Web Creator (v2)
+    'landing-page-builder',
+    'multi-page-site-builder',
+    'blog-post-creator',
+    'domain-advisory',
+    // Doc Expert (v2)
+    'academic-doc-builder',
+  ])
+  // External (third-party REST APIs called from Hermes on the VPS).
+  const knownExternal = new Set(['vercel-deploy'])
 
-  for (const slug of ['doc-expert', 'the-pro', 'video-producer']) {
+  // Pilot manifests covered by the live-smoke test path. v2 added
+  // web-master (Web Creator).
+  for (const slug of ['doc-expert', 'the-pro', 'video-producer', 'web-master']) {
     const m = readJson(`agent-packs/${slug}/manifest.json`) as Manifest
     for (const skill of m.skills) {
       const colonIdx = skill.handler_ref.indexOf(':')
@@ -417,6 +434,11 @@ test('every pilot manifest skill handler_ref points to a known edge function or 
         assert.ok(
           knownHermesSkills.has(name),
           `${slug}/${skill.id}: handler_ref hermes-skill:${name} not in known set`,
+        )
+      } else if (kind === 'external') {
+        assert.ok(
+          knownExternal.has(name),
+          `${slug}/${skill.id}: handler_ref external:${name} not in known set`,
         )
       }
     }
