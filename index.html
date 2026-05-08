@@ -1421,7 +1421,9 @@
 
     .agent-card {
       flex: 0 0 auto;
-      width: min(82vw, 320px);
+      /* Mobile: narrower so the shorter 4/5 viz still feels like a focal
+         card. Card body title + desc fits below. */
+      width: min(74vw, 290px);
       display: flex; flex-direction: column;
       border-radius: 18px;
       overflow: hidden;
@@ -1444,11 +1446,15 @@
     .agent-card .agent-viz {
       position: relative;
       width: 100%;
-      /* Was 4/3. Bumped to 5/6 (portrait) to fit chat header + bubble
-         auto-scroll zone + pin zone (anim1 + anim2 both visible). */
-      aspect-ratio: 5 / 6;
+      /* Mobile: shorter aspect (4/5) so the card + body title + desc all
+         fit one screen. Desktop: portrait 5/6 with room for bubble zone +
+         pin zone fully expanded. */
+      aspect-ratio: 4 / 5;
       background-color: #050505;
       overflow: hidden;
+    }
+    @media (min-width: 768px) {
+      .agent-card .agent-viz { aspect-ratio: 5 / 6; }
     }
     /* Halftone background + vignette removed (2026-05-07 pivot): the
        chat bubble + action scenes need clean black so bubbles read as
@@ -2360,13 +2366,16 @@
       stroke-linejoin: round;
     }
     .agent-card .agent-body {
-      padding: 16px 18px 20px;
-      display: flex; flex-direction: column; gap: 8px;
+      padding: 12px 14px 14px;
+      display: flex; flex-direction: column; gap: 6px;
       flex: 1;
+    }
+    @media (min-width: 768px) {
+      .agent-card .agent-body { padding: 16px 18px 20px; gap: 8px; }
     }
     .agent-card .agent-name {
       font-family: 'Instrument Serif', serif;
-      font-size: 22px;
+      font-size: 18px;
       letter-spacing: -0.01em;
       line-height: 1.05;
       color: #F5F2EA;
@@ -2375,11 +2384,11 @@
     .agent-card .agent-desc {
       font-family: 'Inter', sans-serif;
       font-weight: 300;
-      font-size: 13px;
-      line-height: 1.5;
+      font-size: 11.5px;
+      line-height: 1.45;
       color: rgba(245, 242, 234, 0.62);
     }
-    @media (min-width: 768px) { .agent-card .agent-desc { font-size: 13.5px; } }
+    @media (min-width: 768px) { .agent-card .agent-desc { font-size: 13.5px; line-height: 1.5; } }
 
     /* Dot indicators */
     .agent-dots { display: flex; justify-content: center; gap: 6px; margin-top: 18px; }
@@ -3408,11 +3417,23 @@
               initial={{ filter: 'blur(10px)', opacity: 0, y: 20 }}
               animate={{ filter: 'blur(0px)', opacity: 1, y: 0 }}
               transition={{ duration: 0.6, ease: EASE, delay: 1.1 }}
-              className="mt-10 flex flex-col items-center gap-2">
-              <a href="checkout.html" className="rounded-full px-5 py-2.5 text-sm font-medium flex items-center gap-2 no-underline"
-                style={{ background: '#fff', color: '#0a0a0a', border: '1px solid #fff' }}>
-                Mulai sekarang <ArrowUpRight size={14} stroke={2.2} />
-              </a>
+              className="mt-10 flex flex-col items-center gap-3">
+              <div className="flex items-center gap-3 flex-wrap justify-center">
+                <a href="checkout.html" className="rounded-full px-5 py-2.5 text-sm font-medium flex items-center gap-2 no-underline"
+                  style={{ background: '#fff', color: '#0a0a0a', border: '1px solid #fff' }}>
+                  Mulai sekarang <ArrowUpRight size={14} stroke={2.2} />
+                </a>
+                <a href="https://cal.com/weuseai/15min" target="_blank" rel="noopener" className="rounded-full px-5 py-2.5 text-sm font-medium flex items-center gap-2 no-underline text-white"
+                  style={{ background: 'rgba(255, 255, 255, 0.06)', border: '1px solid rgba(255, 255, 255, 0.22)', backdropFilter: 'blur(8px)' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2" />
+                    <line x1="16" y1="2" x2="16" y2="6" />
+                    <line x1="8" y1="2" x2="8" y2="6" />
+                    <line x1="3" y1="10" x2="21" y2="10" />
+                  </svg>
+                  Konsultasi gratis (15 menit)
+                </a>
+              </div>
               <a href="#snk-garansi" className="text-[10px] font-mono tracking-[0.10em] no-underline" style={{ color: '#E5322D' }}>
                 *S&K berlaku — lihat detail
               </a>
@@ -3421,10 +3442,10 @@
             <div className="mt-12 md:mt-auto pb-6 md:pb-12 pt-12 md:pt-20 w-full max-w-5xl mx-auto">
               <div className="liquid-glass rounded-2xl md:rounded-3xl p-5 md:p-10 grid grid-cols-2 md:grid-cols-4 gap-5 md:gap-6 text-center">
                 {[
-                  { kind: 'plain', n: 10,  suffix: '+', label: '(and growing) carefully-tuned agent' },
-                  { kind: 'plain', n: 674, suffix: '+', label: '(and growing) pre-existing skills' },
-                  { kind: 'text',  text: 'ID', label: 'Indonesian priority — bahasa & konteks' },
-                  { kind: 'plain', n: 20,  suffix: '×', label: 'More context memory (than normal AI)' },
+                  { kind: 'plain', n: 10,  suffix: '+', label: 'Carefully-tuned agent\n(and growing)' },
+                  { kind: 'plain', n: 674, suffix: '+', label: 'Pre-existing skills\n(and growing)' },
+                  { kind: 'text',  text: 'ID', label: 'Indonesian priority\nbahasa & konteks' },
+                  { kind: 'plain', n: 20,  suffix: '×', label: 'More context memory\n(than normal AI)' },
                 ].map((it, i) => (
                   <Mot.div key={it.label}
                     initial={{ opacity: 0, y: 16 }}
@@ -3446,7 +3467,7 @@
                         <CountUp to={it.n} suffix={it.suffix} duration={1800} delay={150 + i * 120} />
                       )}
                     </div>
-                    <div className="mt-2 md:mt-2.5 text-white/55 font-body font-light italic text-[11px] md:text-[13px] leading-tight">{it.label}</div>
+                    <div className="mt-2 md:mt-2.5 text-white/55 font-body font-light italic text-[11px] md:text-[13px] leading-snug" style={{ whiteSpace: 'pre-line' }}>{it.label}</div>
                   </Mot.div>
                 ))}
               </div>
@@ -4968,10 +4989,10 @@
             <BlurText
               as="h2"
               text="Fine-tuned agent yang ngerjain. Bukan chatbot yang cuma jawab."
-              className="mt-8 text-4xl md:text-5xl lg:text-6xl font-heading tracking-tight leading-[0.95] md:leading-[0.9] max-w-3xl"
-              style={{ letterSpacing: '-0.04em' }}
+              className="mt-8 text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-heading tracking-tight leading-[1.05] md:leading-[0.9] max-w-3xl"
+              style={{ letterSpacing: '-0.03em' }}
               delay={80} />
-            <p className="mt-6 max-w-2xl text-white/65 font-body font-light text-sm md:text-base leading-relaxed">
+            <p className="mt-5 md:mt-6 max-w-2xl text-white/65 font-body font-light text-[13px] md:text-base leading-relaxed">
               Setiap agent dibangun dengan US$5.000 token untuk craft persona pre-trained. Kamu gak perlu bakar token sendiri — ready to use.
             </p>
             <AgentCarousel />
@@ -6988,10 +7009,10 @@
     // ─────────────────────── STATS ───────────────────────
     function Stats() {
       const items = [
-        { kind: 'plain', n: 10,  suffix: '+', label: '(and growing) carefully-tuned agent' },
-        { kind: 'plain', n: 674, suffix: '+', label: '(and growing) pre-existing skills' },
-        { kind: 'text',  text: 'ID', label: 'Indonesian priority — bahasa & konteks' },
-        { kind: 'plain', n: 20,  suffix: '×', label: 'More context memory (than normal AI)' },
+        { kind: 'plain', n: 10,  suffix: '+', label: 'Carefully-tuned agent\n(and growing)' },
+        { kind: 'plain', n: 674, suffix: '+', label: 'Pre-existing skills\n(and growing)' },
+        { kind: 'text',  text: 'ID', label: 'Indonesian priority\nbahasa & konteks' },
+        { kind: 'plain', n: 20,  suffix: '×', label: 'More context memory\n(than normal AI)' },
       ];
       return (
         <section className="relative overflow-hidden py-20 md:py-28 px-5 md:px-6 lg:px-16" style={{ minHeight: 420 }}>
@@ -7021,7 +7042,7 @@
                       <CountUp to={it.n} suffix={it.suffix} duration={1800} delay={120 + i * 120} />
                     )}
                   </div>
-                  <div className="mt-2 md:mt-3 text-white/60 font-body font-light italic text-[11px] md:text-[13px] leading-tight">{it.label}</div>
+                  <div className="mt-2 md:mt-3 text-white/60 font-body font-light italic text-[11px] md:text-[13px] leading-snug" style={{ whiteSpace: 'pre-line' }}>{it.label}</div>
                 </Mot.div>
               ))}
             </div>
@@ -7135,9 +7156,8 @@
               </div>
             </div>
 
-            {/* Support pills — WhatsApp + 15-min booking. Two parallel
-                ways to reach the team for "tanya-tanya lebih dalam". */}
-            <div className="mt-20 md:mt-32 w-full flex flex-col sm:flex-row items-center justify-center gap-3 md:gap-4">
+            {/* WhatsApp support pill (Konsultasi/booking moved to hero). */}
+            <div className="mt-20 md:mt-32 w-full flex justify-center">
               <a href="https://wa.me/6281234567890" target="_blank" rel="noopener" className="liquid-glass rounded-2xl px-5 py-3 flex items-center gap-3 no-underline" style={{ borderColor: 'rgba(34, 197, 94, 0.30)' }}>
                 <span className="relative flex w-2 h-2 flex-shrink-0">
                   <span className="absolute inline-flex w-full h-full rounded-full opacity-75" style={{ background: '#22c55e', animation: 'wseaiPulse 2s ease-in-out infinite' }} />
@@ -7146,20 +7166,6 @@
                 <div className="text-left">
                   <div className="text-white font-body font-medium text-[13px] md:text-sm leading-tight">WhatsApp support</div>
                   <div className="text-white/55 font-body font-light text-[11px] md:text-xs mt-0.5 leading-tight">+62 812 3456 7890 · Online 9–21 WIB</div>
-                </div>
-              </a>
-              <a href="https://cal.com/weuseai/15min" target="_blank" rel="noopener" className="liquid-glass rounded-2xl px-5 py-3 flex items-center gap-3 no-underline" style={{ borderColor: 'rgba(229, 50, 45, 0.35)' }}>
-                <span className="flex w-7 h-7 rounded-full items-center justify-center flex-shrink-0" style={{ background: 'rgba(229, 50, 45, 0.18)', border: '1px solid rgba(229, 50, 45, 0.55)' }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E5322D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="4" width="18" height="18" rx="2" />
-                    <line x1="16" y1="2" x2="16" y2="6" />
-                    <line x1="8" y1="2" x2="8" y2="6" />
-                    <line x1="3" y1="10" x2="21" y2="10" />
-                  </svg>
-                </span>
-                <div className="text-left">
-                  <div className="text-white font-body font-medium text-[13px] md:text-sm leading-tight">Konsultasi gratis</div>
-                  <div className="text-white/55 font-body font-light text-[11px] md:text-xs mt-0.5 leading-tight">Book 15 menit · tanya apa pun</div>
                 </div>
               </a>
             </div>
