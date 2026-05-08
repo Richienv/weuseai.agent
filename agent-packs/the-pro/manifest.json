@@ -11,7 +11,7 @@
       "templates_used": ["mocks/calendar/typical-day.json", "mocks/gmail/typical-day.json"],
       "execution": "edge-function",
       "handler_ref": "edge-fn:daily-briefing-handler",
-      "tier": "starter"
+      "enabled_for_tiers": ["starter", "pro", "studio"]
     },
     {
       "id": "extend-capabilities",
@@ -20,7 +20,7 @@
       "templates_used": [],
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:extend-capabilities",
-      "tier": "starter"
+      "enabled_for_tiers": ["starter", "pro", "studio"]
     }
   ],
   "templates": [

@@ -1,6 +1,6 @@
 # Phase 2E-2: Bundle Delivery + Live VPS Integration — Spec (2026-05-08)
 
-> **Status:** DRAFT 2026-05-08 — awaiting founder review before implementation.
+> **Status:** APPROVED 2026-05-08 (founder). All 4 founder-positions + 5 sub-questions + 3 architectural calls locked. Implementation in progress on `feat/hermes-vps-integration`.
 > **Branch:** `feat/hermes-vps-integration` (off main at `7f9ed98`).
 > **Builds on:** `docs/plans/2026-05-08-workflow-library-pivot-to-hermes-native.md` (Phase 2E-1, merged in `7f9ed98`).
 
@@ -70,6 +70,18 @@ customer-flow.ts
 - Storage download fails on VPS boot → keep minimal bootstrap, retry on next boot, customer can still chat (with limited skill set).
 - Tier gate misconfig → skill simply doesn't register; Hermes moves on.
 - Self-extension generation fails → customer sees "lagi ada glitch, coba lagi sebentar?" persona-voiced apology.
+
+### SLA floor: bootstrap bundle = minimum guaranteed capability
+
+**The inline ~50KB bootstrap is the contract floor.** Even with zero connectivity to Storage post-provision, the customer is guaranteed:
+
+- **The Pro persona** (`SOUL.md` from `agent-packs/the-pro/`)
+- **`extend-capabilities` skill** (the self-extension scaffold)
+- **Base manifest** (advertises the bootstrap content + `self_extend: true`)
+
+Anything beyond that — Doc Expert's `invoice-generator` skill, The Pro's `daily-briefing`, Video Producer's `tiktok-script`, customer's chosen-persona scaffold if not The Pro — is a **bonus** layered on top via successful Storage pull.
+
+This floor is non-negotiable: the inline bootstrap must always work (tested via drift check). Storage outages degrade the experience but never break it. `bundle_pull_attempts` failures are tracked but never propagate to customer-facing errors.
 
 ---
 
@@ -288,9 +300,15 @@ log "✓ Bundle install complete ($SLUG@$VERSION)"
 
 ---
 
-## Tier gate (`enabled_for_tiers` field)
+## Tier gate (`enabled_for_tiers` field — full migration)
 
-`manifest.json` skill schema gets a new optional field:
+**Locked decision (2026-05-08):** drop the `tier` field entirely; `enabled_for_tiers` is the canonical tier-eligibility declaration. Reasons:
+
+- Two fields with overlapping semantics = confusion + bugs over time.
+- Explicit array is more flexible (e.g. a future skill could be `["starter", "studio"]` skipping pro — niche but possible).
+- All 3 pilot manifests get migrated in this PR (drift tests still pass post-migration).
+
+`manifest.json` skill schema:
 
 ```json
 {
@@ -298,14 +316,33 @@ log "✓ Bundle install complete ($SLUG@$VERSION)"
   "description_id": "...",
   "execution": "edge-function",
   "handler_ref": "edge-fn:market-snapshot-handler",
-  "tier": "pro",                            // backward-compat (deprecate?)
-  "enabled_for_tiers": ["pro", "studio"]   // NEW — auth gate at boot
+  "enabled_for_tiers": ["pro", "studio"]
 }
 ```
 
-**Backward compat:** when `enabled_for_tiers` is absent, fall back to interpreting `tier` as "this tier and above" (the existing semantic from 2E-1). When both present, `enabled_for_tiers` wins.
+### Backward-compat translation layer (deprecation path)
 
-**Manifest validator update:** allow `enabled_for_tiers` as an optional array of `WORKFLOW_TIERS`. Test that boot-time tier filter respects it.
+The validator continues to accept the old `tier` field for one phase (2E-2) with a `console.warn` deprecation notice. Translation rule:
+
+| Legacy `tier` | Translated `enabled_for_tiers` |
+|---|---|
+| `"starter"` | `["starter", "pro", "studio"]` |
+| `"pro"`     | `["pro", "studio"]` |
+| `"studio"`  | `["studio"]` |
+
+When BOTH fields are present, `enabled_for_tiers` wins (no translation applied; deprecation warning still emitted for the spurious `tier`).
+
+Phase 3 removes the translation layer entirely; manifests using `tier` will fail validation.
+
+### Migration scope (in this PR)
+
+- All 3 pilot manifests (`agent-packs/{doc-expert,the-pro,video-producer}/manifest.json`) get migrated from `tier: "starter"` (or `"pro"`) to explicit `enabled_for_tiers` arrays.
+- `manifest-validator.ts`: schema accepts both fields, translation layer documented inline, validator emits deprecation warning when only `tier` is present.
+- Tests:
+  - Old `tier: "pro"` translates to `enabled_for_tiers: ["pro", "studio"]`.
+  - New `enabled_for_tiers: ["pro", "studio"]` passes through unchanged.
+  - Both present → `enabled_for_tiers` wins, deprecation warning emitted for `tier`.
+  - Drift checks pass for all 3 migrated pilot manifests.
 
 **Tier upgrade flow** (Phase 2E-2 acceptance criterion):
 1. Customer in DB → tier flips from `starter` to `pro` (today: webhook from Xendit on subscription upgrade; Phase 2E-2 doesn't ship the upgrade flow itself, just its reception).
@@ -355,7 +392,21 @@ The 4 levels in the spec doc, but **only L1 in 2E-2:**
 
 End-to-end: provision a real VPS via existing `services/test-idcloudhost` infrastructure + customer-flow path, run smoke test, tear down.
 
-**Test customer:** spin a new dedicated test customer specifically for 2E-2 smoke. Email pattern `phase2e2-smoke+<YYYYMMDD>@weuseai.example`. Mark via email pattern recognition (no schema change needed). Tear down after smoke passes.
+**Test customer:** **use founder's existing customer record** (`e282ce25-764d-4d88-b592-d4ef2c6cc360`, tier `pro`) — same one used in 2E-1 verification. Spin a fresh VPS attached to that customer per smoke run. Don't create a new customer record per smoke run.
+
+### Smoke test gating policy (locked)
+
+**Run smoke tests only at milestone events**, not per-commit:
+
+| Milestone | Smoke runs | Cost |
+|---|---|---|
+| Mid-phase checkpoint (Day 3 end) | 1 | ~\$0.50 |
+| Pre-PR checkpoint (Day 5 end) | 1 | ~\$0.50 |
+| **Total per Phase 2E-2** | **2** | **~\$1-2** |
+
+Per-commit smoke runs are too expensive + premature. Gate via the milestone schedule above.
+
+**TTL cleanup script** (`scripts/cleanup-orphan-vms.ts`) is a separate utility — runs manually pre-smoke OR nightly via cron later. Deletes any IDCloudHost VPS attached to founder's CID that's older than 1 day AND has matching tag pattern (e.g. `weuseai-smoke-2e2`).
 
 **Smoke script** lives at `tests/_e2e-bundle-pull-smoke.mts` (mirroring `tests/_e2e-ssh-real.mts` from Phase 1). Marked with leading underscore so it's not picked up by `npm test` — runs only when explicitly invoked:
 
@@ -368,9 +419,9 @@ IDCLOUDHOST_API_KEY=$IDCH_KEY \
 ```
 
 **Smoke steps:**
-1. Insert test customer + subscription (`tier: pro`, `status: active`) → returns `cid`.
+1. Use founder's existing customer (`e282ce25-764d-4d88-b592-d4ef2c6cc360`) — already has `tier: pro` + `status: active`. No new customer record created.
 2. Tar agent-packs/doc-expert + agent-packs/_shared → upload via `bundle-publish` for version `1.0.0`.
-3. Spawn IDCloudHost VPS via existing flow.
+3. Spawn IDCloudHost VPS tagged `weuseai-smoke-2e2-<YYYYMMDD>` (so cleanup script can identify).
 4. SSH in, build setup-script with bootstrap `bundleTarBase64` + `agentSlug=doc-expert` + `bundleVersion=1.0.0` + `tier=pro`.
 5. Wait for Hermes boot + bundle-pull to complete (poll `/var/lib/weuseai/bundle/doc-expert/1.0.0/.installed-version` over SSH, max 5 min).
 6. Send chat via Telegram bot: "Bikin invoice 3jt buat PT Maju, due 21 Mei."
@@ -380,6 +431,49 @@ IDCLOUDHOST_API_KEY=$IDCH_KEY \
 10. Tear down: delete VPS, delete test customer, delete `bundle_pull_attempts` rows for this CID.
 
 **Cleanup safety:** if smoke fails between steps 3-8, the VPS sticks around. Add a TTL cleanup script (`scripts/cleanup-stale-test-vps.ts`) that deletes any VPS older than 1 day with email matching `phase2e2-smoke+*@weuseai.example`. Run weekly via cron OR manually before each smoke run.
+
+---
+
+## Operations runbook — tier upgrade manual flow (2E-2 only)
+
+Phase 2E-2 ships the *infrastructure* for tier upgrades to be instant (skills installed, gated by `enabled_for_tiers`). What it does NOT yet ship is the *automation* path (`customer-tier-bump` Edge Function called from a Xendit upgrade webhook). That arrives in Phase 2E-3.
+
+For 2E-2, tier upgrades are a manual SSH operation. Use this runbook when a customer pays for an upgrade in staging:
+
+```sh
+# 1. Update the customer's tier in Supabase
+psql "$STAGING_DB_URL" -c "
+  update subscriptions
+  set tier = 'pro'
+  where customer_id = '<cid>' and status = 'active';
+"
+
+# 2. SSH into the customer's VPS (use whatever bastion / direct path the
+#    team has — for staging, founder's existing key)
+ssh root@<vps-ip>
+
+# 3. Edit the .env to update WEUSEAI_TIER
+sed -i 's/^WEUSEAI_TIER=.*/WEUSEAI_TIER=pro/' /home/weuseai/.hermes/.env
+
+# 4. Restart Hermes (ExecStartPre re-runs bundle-pull, which re-evaluates
+#    the tier filter against the freshly-updated .env)
+systemctl restart hermes-agent
+
+# 5. Verify in /var/log/weuseai-bundle-pull.log:
+#    - Bundle pull skipped (already installed at pinned version)
+#    - Skills filtered: previously-disabled pro-tier skills now installed
+#      to ~/.hermes/skills/
+journalctl -u hermes-agent -n 50 | grep "Installing\|Skipping"
+```
+
+This runbook is acceptable while we have ≤5 customers in staging. **Do not productize** — the manual SSH step is a critical-path fragility once we have real customers. Phase 2E-3 replaces this entirely with a `customer-tier-bump` Edge Function that:
+
+1. Validates Xendit webhook signature.
+2. Updates `subscriptions.tier`.
+3. SSHes in (via stored key) + updates `.env` + restarts Hermes.
+4. Records timing telemetry for "tier-flip-to-active duration".
+
+Until 2E-3 ships, this manual flow is the documented path. Add an entry to NEXT.md flagging the runbook + the 2E-3 deferred work.
 
 ---
 
@@ -520,19 +614,20 @@ Rationale:
 
 ---
 
-## Open questions for founder review (small, locking before implementation)
+## Open questions — resolved 2026-05-08
 
-The 4 founder positions are locked. The 5 open questions I've recommended answers for above are mostly mechanical; flag if any feel wrong:
+All 5 sub-questions locked + 3 architectural calls resolved by founder:
 
-| # | My recommendation | Confirm? |
-|---|---|---|
-| Q1 | `bundles/<slug>/<version>.tar.gz` (slug-prefixed flat tarballs) | □ |
-| Q2 | Pre-built `agent-packs/_bootstrap-bundle.tar.gz` + base64 at provision time | □ |
-| Q3 | `services/provisioning/src/bundle-pull-script.ts` generator (mirrors setup-script.ts) | □ |
-| Q4 | Dedicated test customer per smoke run, IDCloudHost spin/tear, TTL cleanup | □ |
-| Q5 | `bundle_pull_attempts` table (1 row per attempt) | □ |
-
-Reply with "all picks" or specific overrides.
+| # | Decision |
+|---|---|
+| Q1 (storage layout) | ✅ `bundles/<slug>/<version>.tar.gz` (slug-prefixed flat tarballs) |
+| Q2 (bootstrap embed) | ✅ Pre-built `agent-packs/_bootstrap-bundle.tar.gz` via CI + base64 at provision time + drift check |
+| Q3 (boot script) | ✅ `services/provisioning/src/bundle-pull-script.ts` generator pattern (mirrors `setup-script.ts`) |
+| Q4 (smoke test infra) | ✅ Founder's existing CID + fresh VPS per smoke run; gated to **2 runs per Phase 2E-2** (mid-phase + pre-PR); `scripts/cleanup-orphan-vms.ts` separate utility |
+| Q5 (failure telemetry) | ✅ `bundle_pull_attempts` table |
+| Call 1 (tier field) | ✅ **Drop `tier` field entirely**; `enabled_for_tiers` is canonical; one-phase backward-compat translation layer with deprecation warning |
+| Call 2 (tier flip restart) | ✅ Manual SSH + edit `.env` + `systemctl restart hermes-agent` for 2E-2; runbook documented above; `customer-tier-bump` Edge Function lands in 2E-3 |
+| Call 3 (Hermes graceful boot) | ✅ Bootstrap = SLA floor; bundle-pull `ExecStartPre` exits 0 on Storage failure → Hermes boots with whatever's installed; degraded chat over boot-failure |
 
 ---
 

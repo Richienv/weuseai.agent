@@ -19,6 +19,8 @@ import {
 
 // ─── manifest types ────────────────────────────────────────────────────
 
+export type SkillTier = 'starter' | 'pro' | 'studio'
+
 export type ManifestSkill = {
   id: string
   description_id: string
@@ -26,7 +28,55 @@ export type ManifestSkill = {
   templates_used?: string[]
   execution: 'edge-function' | 'hermes-skill' | 'composite' | 'external-api'
   handler_ref: string
-  tier: 'starter' | 'pro' | 'studio'
+  /**
+   * @deprecated 2026-05-08 (Phase 2E-2). Use `enabled_for_tiers` instead.
+   * Translation: starter → ['starter','pro','studio']; pro → ['pro','studio'];
+   * studio → ['studio']. Validator emits console.warn when only `tier` is
+   * present. Phase 3 will reject manifests using legacy `tier`.
+   */
+  tier?: SkillTier
+  /**
+   * Phase 2E-2: canonical tier eligibility. Bundle-pull-script filters
+   * skills by intersecting customer's tier with this array. When absent
+   * AND `tier` is present, validator translates and emits a deprecation
+   * warning. When BOTH present, `enabled_for_tiers` wins.
+   */
+  enabled_for_tiers?: SkillTier[]
+}
+
+/**
+ * Translate legacy `tier` field → canonical `enabled_for_tiers` array.
+ * `tier: "starter"` means "starter and above" → ['starter','pro','studio'].
+ * Used by validateManifest's translation layer + bundle-pull-script at boot.
+ *
+ * Exported so the boot script can apply identical translation when reading
+ * legacy manifests from disk (defense-in-depth — even if validator missed
+ * a manifest, the runtime translation gives the same result).
+ */
+export function tierToEnabledForTiers(tier: SkillTier): SkillTier[] {
+  switch (tier) {
+    case 'starter':
+      return ['starter', 'pro', 'studio']
+    case 'pro':
+      return ['pro', 'studio']
+    case 'studio':
+      return ['studio']
+  }
+}
+
+/**
+ * Resolve a skill's effective enabled_for_tiers, applying the legacy
+ * translation when needed. Returns null if neither field is present
+ * (caller treats as validation error).
+ */
+export function resolveEnabledForTiers(skill: ManifestSkill): SkillTier[] | null {
+  if (skill.enabled_for_tiers && skill.enabled_for_tiers.length > 0) {
+    return skill.enabled_for_tiers
+  }
+  if (skill.tier) {
+    return tierToEnabledForTiers(skill.tier)
+  }
+  return null
 }
 
 export type ManifestTemplate = {
@@ -88,7 +138,12 @@ export const MANIFEST_SCHEMA = {
       minItems: 1,
       items: {
         type: 'object',
-        required: ['id', 'description_id', 'execution', 'handler_ref', 'tier'],
+        // `tier` and `enabled_for_tiers` BOTH optional at the schema layer.
+        // Cross-field invariant in validateManifest enforces "at least one
+        // present"; translation layer converts legacy `tier` → array.
+        // Phase 2E-2 deprecates `tier`; Phase 3 will remove the legacy
+        // schema acceptance entirely.
+        required: ['id', 'description_id', 'execution', 'handler_ref'],
         properties: {
           id: { type: 'string', pattern: '^[a-z][a-z0-9-]+$' },
           description_id: { type: 'string', minLength: 10, maxLength: 500 },
@@ -103,6 +158,11 @@ export const MANIFEST_SCHEMA = {
             pattern: '^(edge-fn|hermes-skill|external|composite):[a-z0-9-]+$',
           },
           tier: { type: 'string', enum: ['starter', 'pro', 'studio'] },
+          enabled_for_tiers: {
+            type: 'array',
+            minItems: 1,
+            items: { type: 'string', enum: ['starter', 'pro', 'studio'] },
+          },
         },
       },
     },
@@ -183,6 +243,33 @@ export function validateManifest(input: unknown): ManifestValidateResult {
       errors.push(`skills[${i}] duplicate id "${m.skills[i].id}"`)
     }
     skillIds.add(m.skills[i].id)
+  }
+
+  // Cross-field tier check: each skill must declare tier eligibility via
+  // either `tier` (legacy) or `enabled_for_tiers` (canonical). Translation
+  // layer + deprecation warning emitted for legacy callers.
+  for (let i = 0; i < m.skills.length; i++) {
+    const skill = m.skills[i]
+    const hasNew = Array.isArray(skill.enabled_for_tiers) && skill.enabled_for_tiers.length > 0
+    const hasLegacy = typeof skill.tier === 'string' && skill.tier.length > 0
+    if (!hasNew && !hasLegacy) {
+      errors.push(
+        `skills[${i}] (${skill.id}): must declare tier eligibility via "enabled_for_tiers" (canonical) or "tier" (legacy, deprecated)`,
+      )
+      continue
+    }
+    if (hasLegacy && !hasNew) {
+      console.warn(
+        `[manifest-validator] DEPRECATED: skills[${i}] (${skill.id}) uses legacy "tier" field. ` +
+          `Migrate to "enabled_for_tiers": ${JSON.stringify(tierToEnabledForTiers(skill.tier as SkillTier))}. ` +
+          `Phase 3 will remove translation support.`,
+      )
+    } else if (hasLegacy && hasNew) {
+      console.warn(
+        `[manifest-validator] skills[${i}] (${skill.id}) has BOTH "tier" and "enabled_for_tiers". ` +
+          `"enabled_for_tiers" wins; remove the legacy "tier" field to silence this warning.`,
+      )
+    }
   }
 
   // template.id must be unique within templates[]

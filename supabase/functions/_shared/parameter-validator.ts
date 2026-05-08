@@ -58,6 +58,14 @@ function validateNode(
     value = schema.default
   }
 
+  // Undefined value with no default = treat as "field absent". The
+  // caller's required-field check in validateObject is the gate for
+  // missing-required; type validation should not fire on undefined for
+  // optional fields (e.g. ManifestSkill.tier post-2E-2 migration).
+  if (value === undefined) {
+    return undefined
+  }
+
   const type = schema.type as string | undefined
 
   if (type === 'string') {

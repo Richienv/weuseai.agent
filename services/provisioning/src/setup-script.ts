@@ -17,6 +17,8 @@
  * so the calling Express service can verify completion.
  */
 
+import { buildBundlePullScript } from './bundle-pull-script.js'
+
 export type Tier = 'starter' | 'pro' | 'studio'
 
 export type SetupScriptParams = {
@@ -341,6 +343,33 @@ log "✓ Customer-grown extension area initialized"
 log "No agent-pack bundle supplied; running with Phase 1/2A baseline (daily-news only)"
 `
 
+  // Phase 2E-2: weuseai-bundle-pull boot script + Hermes systemd
+  // ExecStartPre integration. Only emitted when a bundle was shipped
+  // (back-compat: Phase 1/2A customers don't get this).
+  const bundlePullScript = buildBundlePullScript({
+    customerId: p.customerId,
+  })
+  // base64-encode to keep heredoc-safe (no quote-escape pitfalls).
+  const bundlePullScriptB64 = Buffer.from(bundlePullScript, 'utf8').toString('base64')
+  const bundlePullInstallBlock = p.bundleTarBase64
+    ? `
+log "Installing weuseai-bundle-pull at /usr/local/bin/..."
+echo '${bundlePullScriptB64}' | base64 -d > /usr/local/bin/weuseai-bundle-pull
+chmod 0755 /usr/local/bin/weuseai-bundle-pull
+
+log "Adding ExecStartPre=/usr/local/bin/weuseai-bundle-pull to Hermes systemd unit..."
+# Hermes' \`gateway install --system\` writes the unit at gateway-install
+# time (step 8 below). We use a drop-in override here so the boot script
+# stays in place even if the unit is re-installed later.
+mkdir -p /etc/systemd/system/hermes-gateway.service.d
+cat > /etc/systemd/system/hermes-gateway.service.d/10-bundle-pull.conf <<'WEUSEAI_DROPIN_EOF'
+[Service]
+ExecStartPre=/usr/local/bin/weuseai-bundle-pull
+WEUSEAI_DROPIN_EOF
+log "✓ bundle-pull installed"
+`
+    : ''
+
   // Skills + persona writes
   return `#!/bin/bash
 # weuseai.agent — VPS setup script (run via SSH from the provisioning service).
@@ -412,6 +441,15 @@ chown -R weuseai:weuseai /home/weuseai/.hermes
 # — the persistence area for templates the agent generates at runtime
 # via the extend-capabilities skill.
 ${bundleInstallBlock}
+
+# ─── 6c. weuseai-bundle-pull script (Phase 2E-2) ────────────────────────
+#
+# Install the bundle-pull script at /usr/local/bin/weuseai-bundle-pull.
+# This is the script that runs as Hermes systemd ExecStartPre on every
+# boot — pulls the per-agent bundle from Storage, applies tier filter,
+# copies SKILL.md files into Hermes' discovery path. Graceful failure
+# (always exits 0) preserves the bootstrap-bundle SLA floor.
+${bundlePullInstallBlock}
 
 # ─── 7. Hermes install (slow — 3-6 min) ────────────────────────────────
 log "Installing Hermes (this takes 3-6 min)..."

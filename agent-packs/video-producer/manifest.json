@@ -11,7 +11,7 @@
       "templates_used": ["tiktok-script-format.md"],
       "execution": "edge-function",
       "handler_ref": "edge-fn:tiktok-script-handler",
-      "tier": "pro"
+      "enabled_for_tiers": ["pro", "studio"]
     },
     {
       "id": "extend-capabilities",
@@ -20,7 +20,7 @@
       "templates_used": [],
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:extend-capabilities",
-      "tier": "pro"
+      "enabled_for_tiers": ["pro", "studio"]
     }
   ],
   "templates": [
