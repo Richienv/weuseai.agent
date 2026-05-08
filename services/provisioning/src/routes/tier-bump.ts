@@ -136,7 +136,14 @@ export function defaultRunSsh(args: {
 function writePrivateKeyTmpfile(pem: string): { path: string; cleanup: () => void } {
   const dir = mkdtempSync(join(tmpdir(), 'weuseai-fleet-'))
   const path = join(dir, 'id_fleet')
-  writeFileSync(path, pem, { encoding: 'utf8' })
+  // OpenSSH requires PEM keys to end with a newline after `-----END ...-----`.
+  // Shell capture (`PEM=$(cat keyfile)`) strips trailing newlines, so by the
+  // time the key reaches us via env var it may be missing the terminator.
+  // Without the trailing \n, ssh -i fails with "invalid format" and falls
+  // back to password auth (which BatchMode=yes blocks → exit 255). Append
+  // a newline if missing.
+  const normalised = pem.endsWith('\n') ? pem : pem + '\n'
+  writeFileSync(path, normalised, { encoding: 'utf8' })
   chmodSync(path, 0o600)
   return {
     path,
