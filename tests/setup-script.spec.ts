@@ -95,12 +95,16 @@ test('script: writes daily-news skill SKILL.md', () => {
   assert.match(s, /Selamat pagi/, 'greeting')
 })
 
-test('script: runs Hermes install.sh as weuseai (pinned to upstream main)', () => {
+test('script: runs Hermes install.sh as weuseai (pinned via HERMES_VERSION env)', () => {
   const s = buildSetupScript(baseParams)
+  // Phase 2E-3: install.sh is invoked under `su - weuseai -c ...` with
+  // HERMES_VERSION env-prefixed on BOTH curl and bash so upstream picks
+  // up the pin if the install.sh script honours it. The default lock is
+  // v0.13.0 (founder Q7).
   assert.match(
     s,
-    /su - weuseai -c ['"][^'"]*curl -fsSL https:\/\/raw\.githubusercontent\.com\/NousResearch\/hermes-agent\/main\/scripts\/install\.sh \| bash/,
-    'install.sh as weuseai',
+    /su - weuseai -c ['"]HERMES_VERSION=v0\.13\.0 curl -fsSL https:\/\/raw\.githubusercontent\.com\/NousResearch\/hermes-agent\/main\/scripts\/install\.sh \| HERMES_VERSION=v0\.13\.0 bash/,
+    'install.sh pinned via HERMES_VERSION env',
   )
 })
 
@@ -180,7 +184,9 @@ test('script: uses OpenRouter env for ALL tiers (Phase 2A — single key per cus
   })
   assert.match(s, /OPENAI_API_KEY=sk-or-v1-customer-key/, 'OpenRouter key as OPENAI_API_KEY (Hermes is OpenAI-compatible)')
   assert.match(s, /OPENAI_BASE_URL=https:\/\/openrouter\.ai\/api\/v1/, 'OpenRouter base URL')
-  assert.match(s, /OPENAI_MODEL=deepseek\/deepseek-chat/, 'default model')
+  // Phase 2E-3 lock (founder, 2026-05-08): single global default
+  // deepseek/deepseek-v4-pro across all tiers. Replaces deepseek-chat.
+  assert.match(s, /OPENAI_MODEL=deepseek\/deepseek-v4-pro/, 'default model = deepseek-v4-pro')
 })
 
 test('script: NO DeepSeek-direct or proxy-token env (Phase 2A removes both)', () => {
@@ -325,4 +331,56 @@ test('script (2E-2): Telegram still wires correctly with bundle present', () => 
   assert.match(s, /Installing agent-pack bundle/)
   assert.match(s, /api\.telegram\.org\/bot12345:abc\/sendMessage/)
   assert.match(s, /gateway install --system --run-as-user weuseai/)
+})
+
+// ─── Phase 2E-3 ──────────────────────────────────────────────────────────
+
+test('script (2E-3): pins Hermes to v0.13.0 by default', () => {
+  const s = buildSetupScript({ ...baseParams })
+  // Both env-prefix forms present (belt + suspenders for upstream
+  // honour — see comment block in setup-script.ts at the install step).
+  assert.match(s, /HERMES_VERSION=v0\.13\.0 curl/)
+  assert.match(s, /HERMES_VERSION=v0\.13\.0 bash/)
+  assert.match(s, /pinned to v0\.13\.0/)
+})
+
+test('script (2E-3): hermesVersion override propagates to install command', () => {
+  const s = buildSetupScript({ ...baseParams, hermesVersion: 'v0.14.0' })
+  assert.match(s, /HERMES_VERSION=v0\.14\.0 curl/)
+  assert.match(s, /HERMES_VERSION=v0\.14\.0 bash/)
+  assert.doesNotMatch(s, /HERMES_VERSION=v0\.13\.0/)
+})
+
+test('script (2E-3): installs fleet SSH pubkey when provided (idempotency-guarded)', () => {
+  const fakePubkey = 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI fake-fleet-key weuseai-fleet'
+  const s = buildSetupScript({
+    ...baseParams,
+    fleetSshPubkey: fakePubkey,
+  })
+  // The pubkey appears verbatim, JSON-quoted (heredoc-safe).
+  assert.match(s, new RegExp(`FLEET_KEY=.*${fakePubkey.split(' ')[1]}`))
+  // The grep idempotency guard is present.
+  assert.match(s, /grep -qF.*authorized_keys/)
+  // The append uses tee -a (not >, which would clobber).
+  assert.match(s, /tee -a \/home\/weuseai\/\.ssh\/authorized_keys/)
+  // Mode 0600 + 0700 set on .ssh + authorized_keys.
+  assert.match(s, /chmod 0700 \/home\/weuseai\/\.ssh/)
+  assert.match(s, /chmod 0600 \/home\/weuseai\/\.ssh\/authorized_keys/)
+})
+
+test('script (2E-3): omits fleet pubkey block entirely when not supplied (back-compat)', () => {
+  const s = buildSetupScript({ ...baseParams })
+  assert.doesNotMatch(s, /authorized_keys/)
+  assert.doesNotMatch(s, /Fleet SSH pubkey/)
+})
+
+test('script (2E-3): JSON-stringifies the pubkey to handle special chars safely', () => {
+  // Pubkeys can contain quotes/backslashes if someone misformats them.
+  // JSON.stringify protects the bash heredoc from quote-injection.
+  const oddKey = 'ssh-rsa AAAA"weird\'comment with $vars and "quotes"'
+  const s = buildSetupScript({ ...baseParams, fleetSshPubkey: oddKey })
+  // Should appear as a JSON-stringified literal — double quotes inside
+  // the value get backslash-escaped; single quotes don't (per JSON spec).
+  // Also confirm the raw literal '$vars' is preserved (not shell-expanded).
+  assert.match(s, /FLEET_KEY="ssh-rsa AAAA\\"weird'comment with \$vars and \\"quotes\\""/)
 })

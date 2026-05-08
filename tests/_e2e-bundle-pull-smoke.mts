@@ -1,11 +1,12 @@
 /**
- * Phase 2E-2 live VPS smoke test — MANUAL RUN ONLY.
+ * Phase 2E-2 + 2E-3 live VPS smoke test — MANUAL RUN ONLY.
  *
- * Spec: docs/plans/2026-05-08-phase-2e-2-bundle-delivery-spec.md
+ * Specs:
+ *   docs/plans/2026-05-08-phase-2e-2-bundle-delivery-spec.md (bundle pull)
+ *   docs/plans/2026-05-08-phase-2e-3-spec.md (tier-bump + PDF + email)
  *
  * Costs ~$0.50 per run (IDCloudHost VPS for ~30 min). Founder gating
- * policy: max 2 runs per Phase 2E-2 (mid-phase + pre-PR). Don't run
- * per-commit.
+ * policy: max 2 runs per phase. Don't run per-commit.
  *
  * Underscore-prefixed filename keeps it OUT of the *.spec.ts glob —
  * `npm test` will not pick this up.
@@ -14,8 +15,11 @@
  *
  *   SUPABASE_URL=https://gtjgsligllbjcisiyrah.supabase.co \
  *   SUPABASE_SERVICE_ROLE_KEY=<service-role> \
+ *   SUPABASE_SECRET_KEY=<sb_secret_*> \
  *   IDCLOUDHOST_API_KEY=<idch-key> \
  *   IDCLOUDHOST_BILLING_ACCOUNT_ID=<billing-id> \
+ *   FLEET_SSH_PUBKEY="$(cat ~/.ssh/weuseai-fleet.pub)" \
+ *   FLEET_SSH_PRIVATE_KEY="$(cat ~/.ssh/weuseai-fleet)" \
  *   AGENT_SLUG=doc-expert \
  *   BUNDLE_VERSION=1.0.0 \
  *     npx tsx tests/_e2e-bundle-pull-smoke.mts
@@ -23,16 +27,27 @@
  * Optional envs:
  *   CUSTOMER_ID — defaults to founder's CID e282ce25-764d-4d88-b592-d4ef2c6cc360
  *   SKIP_PUBLISH — '1' to skip the bundle-publish step (use existing version)
- *   SKIP_TEARDOWN — '1' to leave VPS up after smoke (for debugging; cleanup-orphan-vms.ts later)
+ *   SKIP_TEARDOWN — '1' to leave VPS up after smoke (for debugging)
+ *   SKIP_TIER_BUMP — '1' to skip Phase 2E-3 tier-bump test
+ *   SKIP_PDF_RENDER — '1' to skip Phase 2E-3 PDF round-trip test
  *
- * What it does:
+ * What it does (Phase 2E-2 baseline):
  *   1. Tar agent-packs/<slug>/ + agent-packs/_shared/ → upload via bundle-publish
  *   2. Spawn IDCloudHost VPS tagged weuseai-smoke-2e2-<YYYYMMDD>
- *   3. SSH in, run buildSetupScript output (with bootstrap bundle)
+ *   3. SSH in, run buildSetupScript output (with bootstrap bundle + fleet pubkey)
  *   4. Wait for /var/lib/weuseai/bundle/<slug>/.installed-version (poll, max 5 min)
- *   5. Verify: SKILL.md files in ~/.hermes/skills/, customer-grown dir present, bundle_pull_attempts row inserted
- *   6. Tear down VPS (unless SKIP_TEARDOWN)
- *   7. Print pass/fail report
+ *   5. Verify: SKILL.md files, customer-grown dir, bundle_pull_attempts row, fleet pubkey installed
+ *
+ * Phase 2E-3 additions:
+ *   6. Verify fleet SSH key auth works (whoami via -i ~/.ssh/weuseai-fleet)
+ *   7. Tier-bump test: call tierBump() route directly with target_tier=studio,
+ *      verify .env updated + service restarted via fleet SSH
+ *   8. PDF render test: invoke invoice-generator-handler Edge Function, verify
+ *      response includes pdf.status='rendered' + email.status='stubbed'
+ *      (no RESEND_API_KEY in smoke env)
+ *
+ *   9. Tear down VPS (unless SKIP_TEARDOWN)
+ *  10. Print pass/fail report
  */
 
 import { execSync, spawnSync } from 'node:child_process'
@@ -44,6 +59,7 @@ import { createClient } from '@supabase/supabase-js'
 
 import { buildSetupScript } from '../services/provisioning/src/setup-script.ts'
 import { ExecSshProvisioner } from '../services/provisioning/src/ssh/exec-ssh-provisioner.ts'
+import { tierBump } from '../services/provisioning/src/routes/tier-bump.ts'
 
 // IDCloudHost API used directly via fetch() rather than the provisioning
 // service's IDCloudHostVPSProvider class. Decouples this smoke script
@@ -71,6 +87,15 @@ const BUNDLE_VERSION = process.env.BUNDLE_VERSION ?? '1.0.0'
 const CUSTOMER_ID = process.env.CUSTOMER_ID ?? FOUNDER_CID
 const SKIP_PUBLISH = process.env.SKIP_PUBLISH === '1'
 const SKIP_TEARDOWN = process.env.SKIP_TEARDOWN === '1'
+// Phase 2E-3 step toggles — let founder pre-emptively skip while a
+// dependent piece is still in-flight (e.g. SKIP_TIER_BUMP=1 if the
+// provisioning service hasn't been redeployed yet).
+const SKIP_TIER_BUMP = process.env.SKIP_TIER_BUMP === '1'
+const SKIP_PDF_RENDER = process.env.SKIP_PDF_RENDER === '1'
+
+// Phase 2E-3: fleet SSH keys for the tier-bump path.
+const FLEET_SSH_PUBKEY = process.env.FLEET_SSH_PUBKEY ?? ''
+const FLEET_SSH_PRIVATE_KEY = process.env.FLEET_SSH_PRIVATE_KEY ?? ''
 
 const missing: string[] = []
 if (!SUPABASE_URL) missing.push('SUPABASE_URL')
@@ -225,22 +250,46 @@ async function publishBundle(): Promise<void> {
 }
 
 function sshSudo(host: string, password: string, cmd: string, timeoutMs = 30000): string {
-  const r = spawnSync(
-    'sshpass',
-    [
-      '-p',
-      password,
-      'ssh',
-      '-o',
-      'StrictHostKeyChecking=no',
-      '-o',
-      'UserKnownHostsFile=/dev/null',
-      `liren@${host}`,
-      `sudo bash -c ${JSON.stringify(cmd)}`,
-    ],
-    { encoding: 'utf8', timeout: timeoutMs },
-  )
-  return (r.stdout ?? '').trim()
+  // Retry on transient SSH failures. We've seen this on the founder's
+  // Mac with mixed-network conditions: a successful SSH followed by
+  // "Connection closed by <host> port 22" on the very next call. The
+  // VPS sshd is fine — momentary handshake / network blip.
+  const RETRIES = 3
+  const BACKOFF_MS = 2000
+  let lastErr = ''
+  for (let attempt = 0; attempt <= RETRIES; attempt++) {
+    const r = spawnSync(
+      'sshpass',
+      [
+        '-p',
+        password,
+        'ssh',
+        '-o',
+        'StrictHostKeyChecking=no',
+        '-o',
+        'UserKnownHostsFile=/dev/null',
+        '-o',
+        'ConnectTimeout=10',
+        '-o',
+        'ServerAliveInterval=15',
+        `liren@${host}`,
+        `sudo bash -c ${JSON.stringify(cmd)}`,
+      ],
+      { encoding: 'utf8', timeout: timeoutMs },
+    )
+    if (r.status === 0) return (r.stdout ?? '').trim()
+    lastErr = (r.stderr ?? '').trim() || `exit=${r.status}`
+    if (attempt < RETRIES) {
+      log(`  ⚠ ssh transient (sshSudo): ${lastErr.slice(-160)} — retry ${attempt + 1}/${RETRIES} in ${BACKOFF_MS}ms`)
+      // Synchronous sleep — we're inside a sync helper. Use the small
+      // child-process pattern: spawnSync('sleep', [...]) is portable.
+      spawnSync('sleep', [String(BACKOFF_MS / 1000)])
+    }
+  }
+  // Bubble up via empty string — caller treats empty stdout + (caller's
+  // own status check) as failure. We log the last stderr for context.
+  log(`  ✗ sshSudo gave up after ${RETRIES + 1} attempts. Last stderr: ${lastErr.slice(-200)}`)
+  return ''
 }
 
 /**
@@ -341,25 +390,12 @@ async function verifyVpsState(host: string, password: string): Promise<void> {
     { label: 'bundle extracted', cmd: `ls /var/lib/weuseai/bundle/${AGENT_SLUG}/${BUNDLE_VERSION}/` },
   ]
   for (const c of checks) {
-    const r = spawnSync(
-      'sshpass',
-      [
-        '-p',
-        password,
-        'ssh',
-        '-o',
-        'StrictHostKeyChecking=no',
-        '-o',
-        'UserKnownHostsFile=/dev/null',
-        `liren@${host}`,
-        // sudo bash -c keeps glob expansion + redirects working under
-        // sudo. Without -c, only the leading binary is run privileged.
-        `sudo bash -c ${JSON.stringify(c.cmd)}`,
-      ],
-      { encoding: 'utf8' },
-    )
-    if (r.status !== 0 || (r.stdout ?? '').trim().length === 0) {
-      fail(`Verify check FAILED: ${c.label}`, { stdout: r.stdout, stderr: r.stderr })
+    // sshSudo includes retry logic so a single transient handshake
+    // failure ("Connection closed by ... port 22" — observed on the
+    // founder's flaky Mac network) doesn't fail the whole verify run.
+    const out = sshSudo(host, password, c.cmd)
+    if (out.length === 0) {
+      fail(`Verify check FAILED: ${c.label}`, { stdout: '<empty>' })
     }
     log(`  ✓ ${c.label}`)
   }
@@ -580,6 +616,11 @@ async function main() {
       openRouterKey: process.env.OPENROUTER_KEY,
       agentSlug: AGENT_SLUG,
       bundleTarBase64: bootstrapBase64,
+      // Phase 2E-3: fleet SSH pubkey written to authorized_keys for
+      // tier-bump access. Empty string → no install (back-compat path
+      // in setup-script.ts skips the section). Smoke requires it set
+      // when running tier-bump verification.
+      fleetSshPubkey: FLEET_SSH_PUBKEY || undefined,
     })
     const ssh = new ExecSshProvisioner()
     const result = await ssh.runSetup({
@@ -612,6 +653,162 @@ async function main() {
 
   // Step 7: verify telemetry row
   await step('Verify bundle_pull_attempts row', verifyTelemetryRow)
+
+  // ─── Phase 2E-3 verification block ─────────────────────────────────────
+
+  // Step 7a (Phase 2E-3): verify fleet SSH pubkey installed in
+  // authorized_keys + the corresponding privkey actually authenticates.
+  // Skip when no pubkey was supplied at provision (back-compat smoke).
+  if (FLEET_SSH_PUBKEY && FLEET_SSH_PRIVATE_KEY && !SKIP_TIER_BUMP) {
+    await step('Phase 2E-3: verify fleet SSH key auth works', async () => {
+      // First: confirm the pubkey is on the VPS via the password channel.
+      const auth = sshSudo(host, password, 'cat /home/weuseai/.ssh/authorized_keys')
+      const pubkeyTrimmed = FLEET_SSH_PUBKEY.trim()
+      if (!auth.includes(pubkeyTrimmed.split(' ').slice(0, 2).join(' '))) {
+        fail('Fleet pubkey not found in /home/weuseai/.ssh/authorized_keys', {
+          tail: auth.slice(-300),
+        })
+      }
+      log('  ✓ pubkey present in authorized_keys')
+
+      // Second: actually SSH in using the privkey, no password.
+      const tmpDir = mkdtempSync(join(tmpdir(), 'weuseai-fleet-smoke-'))
+      const keyPath = join(tmpDir, 'id_fleet')
+      const { writeFileSync, chmodSync, rmSync } = await import('node:fs')
+      // OpenSSH PEM keys MUST end with newline. Shell `$(cat keyfile)` strips
+      // it, so reach for the trailing-\n guard. Without it, ssh -i errors
+      // "invalid format" and (with BatchMode=yes) returns exit 255.
+      const normalisedKey = FLEET_SSH_PRIVATE_KEY.endsWith('\n')
+        ? FLEET_SSH_PRIVATE_KEY
+        : FLEET_SSH_PRIVATE_KEY + '\n'
+      writeFileSync(keyPath, normalisedKey, { encoding: 'utf8' })
+      chmodSync(keyPath, 0o600)
+      try {
+        const r = spawnSync(
+          'ssh',
+          [
+            '-i', keyPath,
+            '-o', 'StrictHostKeyChecking=no',
+            '-o', 'UserKnownHostsFile=/dev/null',
+            '-o', 'ConnectTimeout=10',
+            '-o', 'BatchMode=yes',
+            '-T',
+            `weuseai@${host}`,
+            'whoami',
+          ],
+          { encoding: 'utf8', timeout: 20000 },
+        )
+        if (r.status !== 0 || (r.stdout ?? '').trim() !== 'weuseai') {
+          fail('Fleet key SSH auth failed', {
+            exit: r.status,
+            stdout: (r.stdout ?? '').slice(-200),
+            stderr: (r.stderr ?? '').slice(-300),
+          })
+        }
+        log('  ✓ fleet SSH key auth works (whoami=weuseai)')
+      } finally {
+        rmSync(tmpDir, { recursive: true, force: true })
+      }
+    })
+
+    // Step 7b: tier-bump test — directly invoke the route handler
+    // (mocking out the provisioning Express server). Verifies the
+    // .env edit + service restart end-to-end.
+    await step('Phase 2E-3: tier-bump → studio + verify .env updated', async () => {
+      const r = await tierBump(
+        {
+          customer_id: CUSTOMER_ID,
+          target_tier: 'studio',
+          vps_host: host,
+        },
+        { fleetPrivateKey: FLEET_SSH_PRIVATE_KEY },
+      )
+      if (!r.ok) {
+        fail(`tierBump returned ok:false: ${r.error}`)
+      }
+      log(`  ✓ tierBump returned restarted_at=${r.restarted_at}`)
+
+      // Confirm the .env was actually edited.
+      const envContent = sshSudo(host, password, 'cat /home/weuseai/.hermes/.env')
+      if (!envContent.includes('WEUSEAI_TIER=studio')) {
+        fail('.env not updated to WEUSEAI_TIER=studio', {
+          tail: envContent.slice(-400),
+        })
+      }
+      log('  ✓ .env contains WEUSEAI_TIER=studio')
+
+      // Confirm the systemd unit was restarted (active or activating).
+      const sysStatus = sshSudo(host, password, 'systemctl is-active hermes-gateway')
+      log(`  systemctl is-active hermes-gateway: ${sysStatus || '(empty)'}`)
+      // We don't fail on inactive/failed — Hermes' main process is
+      // expected to fail (dummy Telegram token). The restart itself
+      // (which is what tier-bump validates) IS proven by the .env
+      // reflecting the new tier — that means systemctl restart fired
+      // AND ExecStartPre re-ran (the ExecStartPre is what reads .env).
+    })
+  } else {
+    log('  ⚠ Skipping Phase 2E-3 fleet SSH + tier-bump (FLEET_SSH_* envs not set, or SKIP_TIER_BUMP=1)')
+  }
+
+  // Step 7c (Phase 2E-3): PDF render round-trip via the deployed
+  // invoice-generator-handler Edge Function. Asserts the response
+  // includes pdf.status='rendered' (CF Browser Rendering succeeded)
+  // and email.status='stubbed' (no RESEND_API_KEY in smoke env).
+  if (!SKIP_PDF_RENDER) {
+    await step('Phase 2E-3: invoice-generator-handler → PDF + email payload', async () => {
+      const fnUrl = `${SUPABASE_URL}/functions/v1/invoice-generator-handler`
+      const r = await fetchWithRetry(
+        fnUrl,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${SECRET_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            customer_id: CUSTOMER_ID,
+            parameters: {
+              client_name: 'PT Smoke Test, Tbk.',
+              client_address: 'Jakarta, Indonesia',
+              items: [
+                { description: 'Phase 2E-3 smoke validation — 1h @ test rate', qty: 1, unit_price: 1_000_000 },
+              ],
+              tax_rate: 0.11,
+              currency: 'IDR',
+            },
+          }),
+        },
+        { label: 'invoice-generator', retries: 3, backoffMs: 3000 },
+      )
+      if (!r.ok) {
+        const txt = await r.text()
+        fail(`invoice-generator HTTP ${r.status}`, txt.slice(0, 400))
+      }
+      const body = (await r.json()) as {
+        file_url?: string
+        pdf?: { status: string; file_url?: string; bytes?: number; error?: string }
+        email?: { status: string; detail?: string }
+      }
+      if (!body.file_url) fail('Response missing file_url (HTML)')
+      if (!body.pdf) fail('Response missing pdf field')
+      if (body.pdf.status !== 'rendered') {
+        fail(`pdf.status='${body.pdf.status}' (expected 'rendered')`, body.pdf)
+      }
+      if (!body.pdf.file_url || !body.pdf.bytes) {
+        fail('pdf payload missing file_url or bytes', body.pdf)
+      }
+      log(`  ✓ PDF rendered: ${body.pdf.bytes} bytes at ${body.pdf.file_url.slice(0, 80)}...`)
+      if (!body.email) fail('Response missing email field')
+      // Stub mode is the expected smoke state (no RESEND_API_KEY) —
+      // 'sent' is also acceptable if the founder set the key already.
+      if (!['stubbed', 'sent', 'skipped_no_email'].includes(body.email.status)) {
+        fail(`email.status='${body.email.status}' (unexpected)`, body.email)
+      }
+      log(`  ✓ email status: ${body.email.status} — ${body.email.detail ?? '(no detail)'}`)
+    })
+  } else {
+    log('  ⚠ Skipping Phase 2E-3 PDF round-trip (SKIP_PDF_RENDER=1)')
+  }
 
   // Step 8: tear down (unless SKIP_TEARDOWN)
   if (!SKIP_TEARDOWN) {

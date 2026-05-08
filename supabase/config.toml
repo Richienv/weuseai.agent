@@ -104,3 +104,20 @@ verify_jwt = false
 
 [functions.bundle-pull-record]
 verify_jwt = false
+
+# Phase 2E-3 additions. Both use the JWT-role admin auth pattern (see
+# docs/security/jwt-role-pattern.md + supabase/functions/_shared/admin-auth.ts).
+#
+#   - pdf-render          → admin only (service-role bearer); renders
+#                            HTML → PDF via Cloudflare Browser Rendering,
+#                            uploads to pdf-renders bucket, returns
+#                            30-day signed URL.
+#   - customer-tier-bump  → admin only (service-role bearer); resolves
+#                            customer → updates tier in DB → calls
+#                            provisioning service /tier-bump (SSH) →
+#                            audits + nudges. Triggered by xendit-webhook.
+[functions.pdf-render]
+verify_jwt = false
+
+[functions.customer-tier-bump]
+verify_jwt = false

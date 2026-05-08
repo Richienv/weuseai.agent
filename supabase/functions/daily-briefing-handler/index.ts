@@ -20,6 +20,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
 
 import { handleCors, withCors } from '../_shared/cors.ts'
+import { isServiceRoleCaller } from '../_shared/admin-auth.ts'
 import {
   buildDailyBriefing,
   todayInJakarta,
@@ -89,6 +90,12 @@ Deno.serve(async (req) => {
 
   if (req.method !== 'POST') {
     return withCors(req, new Response(JSON.stringify({ error: 'method_not_allowed' }), { status: 405 }))
+  }
+
+  // Phase 2E-3: admin-only. Called by workflow-execute server-side. See
+  // docs/security/jwt-role-pattern.md.
+  if (!isServiceRoleCaller(req)) {
+    return withCors(req, new Response(JSON.stringify({ error: 'unauthorized' }), { status: 401 }))
   }
 
   let body: { customer_id: string; parameters: DailyBriefingInput }

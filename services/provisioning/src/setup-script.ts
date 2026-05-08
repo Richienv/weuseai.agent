@@ -62,13 +62,42 @@ export type SetupScriptParams = {
    * WEUSEAI_WORKFLOW_EXECUTE_URL. Defaults to the production URL.
    */
   workflowExecuteUrl?: string
+  /**
+   * Phase 2E-3: fleet SSH public key written to
+   * /home/weuseai/.ssh/authorized_keys at provision time. Lets the
+   * provisioning service /tier-bump endpoint re-SSH into the customer's
+   * VPS later (for tier upgrades, manual ops) without needing a
+   * persisted password. One keypair shared across the entire fleet —
+   * privkey lives in Fly.io secrets as FLEET_SSH_PRIVATE_KEY.
+   *
+   * Optional: when absent, the authorized_keys write is skipped (back-
+   * compat with Phase 1/2A customers provisioned before fleet auth was
+   * added). Pre-2E-3 customers need a one-time manual pubkey injection
+   * before tier-bump can work for them.
+   */
+  fleetSshPubkey?: string
+  /**
+   * Phase 2E-3: pinned Hermes version (default v0.13.0 per founder Q7
+   * lock). Override via HERMES_VERSION env on the provisioning service
+   * to test new upstream versions on a single VPS before promoting.
+   */
+  hermesVersion?: string
 }
 
 const DEFAULT_WORKFLOW_EXECUTE_URL =
   'https://gtjgsligllbjcisiyrah.supabase.co/functions/v1/workflow-execute'
 
 const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1'
-const OPENROUTER_DEFAULT_MODEL = 'deepseek/deepseek-chat'
+// Phase 2E-3 lock (founder, 2026-05-08): single global default across all
+// tiers. Customer can swap via dashboard (Phase 3+). DeepSeek v4-pro at
+// ~$0.27/M output is ~1/55th of Claude Sonnet; quality "good enough" for
+// 80%+ of agent tasks per Hermes community validation.
+const OPENROUTER_DEFAULT_MODEL = 'deepseek/deepseek-v4-pro'
+
+// Phase 2E-3 lock (Q7, founder 2026-05-08): default Hermes version pinned
+// to a known-good upstream tag. Override via HERMES_VERSION env at
+// provision time. See docs/runbooks/hermes-upgrade-test.md.
+const DEFAULT_HERMES_VERSION = 'v0.13.0'
 
 // ─── persona + skill content ──────────────────────────────────────────────
 //
@@ -400,6 +429,39 @@ log "✓ bundle-pull installed"
 `
     : ''
 
+  // Phase 2E-3: fleet SSH pubkey install. Append to weuseai's
+  // authorized_keys so the provisioning service /tier-bump endpoint can
+  // re-SSH in later. Idempotent — grep guard prevents duplicate entries
+  // on re-provision. Skipped (back-compat) when no pubkey supplied.
+  //
+  // Pre-2E-3 customers (no pubkey at provision time) need a one-time
+  // manual injection — runbook in PR #5 description.
+  const fleetSshPubkeyBlock = p.fleetSshPubkey
+    ? `
+# ─── 6d. Fleet SSH pubkey (Phase 2E-3) ─────────────────────────────────
+#
+# Install the fleet-shared public key into weuseai's authorized_keys so
+# the provisioning service can SSH back in for tier-bump and ops tasks.
+# The matching private key lives in Fly.io secrets as
+# FLEET_SSH_PRIVATE_KEY — never written to disk on the customer's VPS.
+log "Installing fleet SSH pubkey for /tier-bump access..."
+sudo -u weuseai mkdir -p /home/weuseai/.ssh
+sudo -u weuseai chmod 0700 /home/weuseai/.ssh
+sudo -u weuseai touch /home/weuseai/.ssh/authorized_keys
+sudo -u weuseai chmod 0600 /home/weuseai/.ssh/authorized_keys
+# Idempotency: only append if the key isn't already present.
+FLEET_KEY=${JSON.stringify(p.fleetSshPubkey)}
+if ! sudo -u weuseai grep -qF "$FLEET_KEY" /home/weuseai/.ssh/authorized_keys; then
+  echo "$FLEET_KEY" | sudo -u weuseai tee -a /home/weuseai/.ssh/authorized_keys >> "$LOG"
+  log "✓ Fleet SSH pubkey installed"
+else
+  log "✓ Fleet SSH pubkey already present (idempotent)"
+fi
+`
+    : ''
+
+  const pinnedHermesVersion = p.hermesVersion ?? DEFAULT_HERMES_VERSION
+
   // Skills + persona writes
   return `#!/bin/bash
 # weuseai.agent — VPS setup script (run via SSH from the provisioning service).
@@ -470,11 +532,17 @@ chown -R weuseai:weuseai /home/weuseai/.hermes
 # Also initializes the customer-grown directory under /var/lib/weuseai/
 # — the persistence area for templates the agent generates at runtime
 # via the extend-capabilities skill.
-${bundleInstallBlock}${bundlePullInstallBlock}
+${bundleInstallBlock}${bundlePullInstallBlock}${fleetSshPubkeyBlock}
 
 # ─── 7. Hermes install (slow — 3-6 min) ────────────────────────────────
-log "Installing Hermes (this takes 3-6 min)..."
-su - weuseai -c 'curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash' >> "$LOG" 2>&1
+# Phase 2E-3 Q7 lock: pin to ${pinnedHermesVersion} by default; the install.sh
+# script reads the HERMES_VERSION env var if present. When the override
+# isn't honoured by upstream, the install pulls main — at the time of
+# locking (2026-05-08), main IS v0.13.0+ so the default still gets us
+# v0.13.0 features. Override flow: set HERMES_VERSION on the
+# provisioning service to test a new tag on the next provisioned VPS.
+log "Installing Hermes (pinned to ${pinnedHermesVersion}; this takes 3-6 min)..."
+su - weuseai -c 'HERMES_VERSION=${pinnedHermesVersion} curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | HERMES_VERSION=${pinnedHermesVersion} bash' >> "$LOG" 2>&1
 log "✓ Hermes install complete"
 
 # ─── 8. Telegram gateway + cron (best-effort — || true on each) ──────────

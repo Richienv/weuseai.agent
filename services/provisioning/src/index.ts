@@ -16,9 +16,11 @@ import { ExecSshProvisioner } from './ssh/exec-ssh-provisioner.js'
 import { MockSshProvisioner } from './ssh/mock-ssh-provisioner.js'
 import { OpenRouterKeyMinter } from './llm/openrouter-minter.js'
 import { MockLlmKeyMinter } from './llm/mock-minter.js'
+import { tierBump, type TierBumpRouteRequest } from './routes/tier-bump.js'
 
 const PORT = Number(process.env.PORT ?? 8080)
 const AUTH_TOKEN = process.env.PROVISIONING_AUTH_TOKEN
+const FLEET_SSH_PRIVATE_KEY = process.env.FLEET_SSH_PRIVATE_KEY ?? ''
 
 if (!AUTH_TOKEN) {
   console.error('Missing PROVISIONING_AUTH_TOKEN')
@@ -94,6 +96,32 @@ app.post('/tear-down', async (req, res) => {
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
     res.status(500).json({ error: msg })
+  }
+})
+
+// Phase 2E-3: tier-bump. Called by Supabase customer-tier-bump Edge
+// Function on Xendit-paid upgrades. SSH into the customer's VPS using
+// the fleet SSH key, sed .env, restart hermes-gateway. The drop-in's
+// ExecStartPre re-runs and applies the new tier filter.
+app.post('/tier-bump', async (req, res) => {
+  const body = req.body as Partial<TierBumpRouteRequest>
+  try {
+    const result = await tierBump(
+      {
+        customer_id: body.customer_id ?? '',
+        target_tier: body.target_tier as TierBumpRouteRequest['target_tier'],
+        vps_host: body.vps_host ?? '',
+      },
+      { fleetPrivateKey: FLEET_SSH_PRIVATE_KEY },
+    )
+    if (!result.ok) {
+      return res.status(502).json({ ok: false, error: result.error })
+    }
+    res.json({ ok: true, restarted_at: result.restarted_at })
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    console.error('tier-bump failed:', msg)
+    res.status(500).json({ ok: false, error: msg })
   }
 })
 
