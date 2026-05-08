@@ -167,11 +167,16 @@ supabase functions deploy bundle-publish bundle-fetch bundle-pull-record \
   --project-ref gtjgsligllbjcisiyrah
 
 # 9. Publish the per-agent bundle (used at customer first boot via bundle-fetch).
-#    Done via the bundle-publish Edge Function with service-role bearer:
+#    Done via the bundle-publish Edge Function. Caller sends EITHER the
+#    legacy service_role JWT OR the new sb_secret_* token — both pass the
+#    role-claim check on the function side (see Edge Function admin auth
+#    section below). We pass the new SUPABASE_SECRET_KEY here as that's
+#    what /Volumes/.../velorah/.env.local has after the project was
+#    migrated to the new key system.
 SUPABASE_URL=$STAGING_URL \
-SUPABASE_SERVICE_ROLE_KEY=$STAGING_SERVICE_KEY \
+SUPABASE_SECRET_KEY=$STAGING_SECRET_KEY \
   curl -X POST "$STAGING_URL/functions/v1/bundle-publish" \
-    -H "Authorization: Bearer $STAGING_SERVICE_KEY" \
+    -H "Authorization: Bearer $STAGING_SECRET_KEY" \
     -H "Content-Type: application/json" \
     -d "$(jq -n \
       --arg agent doc-expert \
@@ -196,7 +201,7 @@ psql "$STAGING_DB_URL" -c "
 "
 ```
 
-**No new Supabase secrets required for 2E-2.** Bundle delivery uses the existing service-role key for admin uploads (bundle-publish) and customer_id UUIDs for customer reads (bundle-fetch + bundle-pull-record). Customer's BYOK OpenRouter key on the VPS still pays for any LLM work the agent does.
+**No new Supabase secrets required for 2E-2.** Bundle delivery uses the existing service-role secret for admin uploads (bundle-publish — see "Edge Function admin auth" below for the JWT-role pattern) and customer_id UUIDs for customer reads (bundle-fetch + bundle-pull-record). Customer's BYOK OpenRouter key on the VPS still pays for any LLM work the agent does.
 
 ### Live VPS smoke test (manual run, costs ~\$0.50)
 
@@ -230,6 +235,57 @@ IDCLOUDHOST_API_KEY=<key> tsx scripts/cleanup-orphan-vms.ts
 ```
 
 Deletes any IDCloudHost VPS named `weuseai-smoke-*` older than 24h (override via `TTL_HOURS=N`). Safe to run nightly via cron.
+
+Pass `--include-ips` to also release orphan Floating IPs (unassigned + past 30-min grace window). Recommended cron pattern:
+
+```sh
+# /etc/cron.d/weuseai-cleanup — nightly, dry-run first 7 days, then live
+0 3 * * * weuseai cd /path/to/velorah && IDCLOUDHOST_API_KEY=... \
+  tsx scripts/cleanup-orphan-vms.ts --include-ips --dry-run >> /var/log/weuseai-cleanup.log 2>&1
+```
+
+Pair `--include-ips` with `--dry-run` first — Floating IP releases are harder to roll back than VM deletes. See `docs/risks-known.md` for the leak pattern that motivated the flag.
+
+---
+
+## Edge Function admin auth — the JWT-role pattern (locked 2026-05-08)
+
+Any Edge Function that is **admin-only** (server-to-server, never customer-callable) must gate on the **role claim of the gateway-issued JWT**, NOT on raw equality between the bearer string and `Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')`.
+
+**Why.** Supabase's new key system (rolled out per-project starting 2026-Q2) splits keys into `sb_publishable_*` (anon-equivalent) and `sb_secret_*` (service-role equivalent). The gateway accepts EITHER format and synthesizes a fresh signed JWT with the proper `role` claim before forwarding the request. This means:
+
+- The bearer string the function receives is NOT the bearer string the caller sent (rewritten gateway-side).
+- The runtime value of `SUPABASE_SERVICE_ROLE_KEY` env may be the new `sb_secret_*` (41 chars) while the legacy JWT (219 chars) still works at the gateway.
+- A `token === SERVICE_KEY` check fails for ALL valid callers once the project migrates.
+
+**The pattern (use this verbatim).**
+
+```ts
+function decodeJwtPayload(token: string): Record<string, unknown> | null {
+  const parts = token.split('.')
+  if (parts.length !== 3) return null
+  try {
+    const b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/')
+    const padded = b64 + '='.repeat((4 - (b64.length % 4)) % 4)
+    return JSON.parse(atob(padded))
+  } catch {
+    return null
+  }
+}
+
+function isAdminCaller(req: Request): boolean {
+  const auth = req.headers.get('authorization') ?? ''
+  if (!auth.startsWith('Bearer ')) return false
+  const token = auth.slice(7).trim()
+  if (!token) return false
+  const payload = decodeJwtPayload(token)
+  return payload?.role === 'service_role'
+}
+```
+
+**Trust boundary.** With `verify_jwt = false` in `config.toml`, the platform DOESN'T reject unauth requests — but it still authenticates whatever bearer IS sent and rewrites it into a signed JWT before the function sees it. So the role claim is trustworthy. The unauth path (no bearer at all) reaches the function with an empty token, which `decodeJwtPayload` returns null for → admin gate denies. Anonymous callers (publishable / anon JWT) get a JWT with `role: anon` → admin gate denies.
+
+**Customer-side functions** (anything callable from the dashboard) should NOT use this pattern — they typically gate on `customer_id + active subscription`, not bearer role. See `bundle-fetch` / `bundle-pull-record` for examples.
 
 ---
 
