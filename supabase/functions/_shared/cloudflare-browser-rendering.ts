@@ -66,30 +66,29 @@ export async function renderPdfViaCloudflare(
 
   const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/browser-rendering/pdf`
 
-  // CF Browser Rendering /pdf body shape:
-  //   {
-  //     html: '...',
-  //     viewport: { width, height },        // optional
-  //     pdf?: {                             // optional rendering opts
-  //       format: 'A4' | 'Letter',
-  //       margin: { top, right, bottom, left }
-  //     }
-  //   }
+  // CF Browser Rendering /pdf endpoint accepts a narrow set of top-level
+  // keys: html, url, viewport, gotoOptions, screenshotOptions,
+  // emulateMediaType, addStyleTag, addScriptTag, etc.
   //
-  // We pass `format` + uniform margins. Other PDF tunables (header/
-  // footer, page numbers, scale) deferred — invoice template doesn't
-  // need them.
+  // It does NOT accept page-level options like format/margin/
+  // printBackground (verified 2026-05-08 — returns HTTP 400
+  // "unrecognized_keys"). The endpoint always renders to its default
+  // A4 page format.
+  //
+  // The only reliable knobs:
+  //   - viewport: hints at the layout area (we pass A4@96dpi by default).
+  //   - addStyleTag: lets us inject @page CSS to set custom margins per
+  //     CSS Paged Media spec (ignore opts.format / opts.margin if non-
+  //     default needed; otherwise rely on browser defaults).
+  //
+  // We accept opts.format/opts.margin in the type contract so the
+  // handler stays format-agnostic, but for now they're effectively
+  // ignored by CF — defaulting to A4 with browser-default margins.
+  // If we need tighter control, swap the renderer (the abstraction in
+  // pdf-render-handler.ts makes this a 30-LOC change).
   const body = {
     html,
-    pdf: {
-      format: opts.format,
-      margin: {
-        top: opts.margin,
-        right: opts.margin,
-        bottom: opts.margin,
-        left: opts.margin,
-      },
-    },
+    viewport: { width: 794, height: 1123 },  // A4 @ 96dpi
   }
 
   let r: Response

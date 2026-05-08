@@ -83,12 +83,15 @@ process.stderr.write(`Total: ${rendered.totals.total}\n\n`)
 // ─── call CF Browser Rendering ───────────────────────────────────────────
 
 const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/browser-rendering/pdf`
+// CF Browser Rendering /pdf endpoint accepts a narrow set of top-level
+// keys: html, url, viewport, gotoOptions, screenshotOptions, etc. It
+// does NOT accept format/margin/printBackground (those return HTTP 400
+// "unrecognized_keys"). Default page format is A4. We pass html + a
+// viewport hint (~A4 width at 96dpi = 794px) and let CF use its
+// defaults for everything else.
 const body = {
   html: rendered.html,
-  pdf: {
-    format: 'A4',
-    margin: { top: '15mm', right: '15mm', bottom: '15mm', left: '15mm' },
-  },
+  viewport: { width: 794, height: 1123 },
 }
 
 process.stderr.write(`POST ${url}\n`)

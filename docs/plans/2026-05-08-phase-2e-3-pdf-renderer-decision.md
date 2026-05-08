@@ -1,9 +1,9 @@
-# Phase 2E-3 sub-spec: PDF renderer choice (LOCKED 2026-05-08, verification pending)
+# Phase 2E-3 sub-spec: PDF renderer choice (LOCKED + VERIFIED 2026-05-08)
 
 > **Decision (locked):** Cloudflare Browser Rendering.
-> **Verification gate:** before Day 2 implementation, render the existing invoice template HTML via the live API and visually confirm Bahasa text + Rupiah formatting + special chars render correctly. Time-boxed to <2 hours per founder direction.
+> **Verification (passed 2026-05-08):** rendered the live invoice template via CF API, programmatically inspected the resulting 35KB PDF — Bahasa text, Rupiah formatting (`Rp 8.900.000` with `.` thousands separator), em-dashes, curly quotes, math totals all preserved correctly. Producer: Skia/PDF m126 (HeadlessChrome 126).
 
-This doc captures (a) why we chose CF Browser Rendering, (b) the verification protocol, (c) the fallback decision tree if verification fails.
+This doc captures (a) why we chose CF Browser Rendering, (b) the verification protocol + result, (c) the fallback decision tree if a future regression breaks rendering.
 
 ---
 
@@ -118,6 +118,15 @@ The handler abstraction means most of the code is renderer-agnostic. Whether ver
 
 ---
 
+## API shape gotcha (caught during verification)
+
+CF Browser Rendering's `/pdf` endpoint accepts a narrow set of top-level keys: `html`, `url`, `viewport`, `gotoOptions`, `screenshotOptions`, `emulateMediaType`, `addStyleTag`, `addScriptTag`, etc. It does **NOT** accept page-level options like `format`, `margin`, `printBackground`, or a nested `pdf` config object — those return `HTTP 400 "unrecognized_keys"`.
+
+Practical consequence: the endpoint always renders at the browser default (A4 page, default browser print margins). For the invoice template that's fine; if a future template needs custom page size, inject `@page` CSS via `addStyleTag` instead of trying API-level params.
+
+`cloudflare-browser-rendering.ts` accepts `format` + `margin` in the type contract for handler parity, but they're effectively ignored against this endpoint. Documented inline.
+
 ## History
 
-- **2026-05-08:** founder locks CF Browser Rendering pending Q1 verification gate. Sub-spec doc created. CF API call code scaffolded; awaiting CF API token + verification render to confirm before Day 2.
+- **2026-05-08:** founder locks CF Browser Rendering pending Q1 verification gate. Sub-spec doc created.
+- **2026-05-08 (later same day):** verification PASSED. 35KB PDF, all checklist items confirmed via `pdftotext` extraction. CF Browser Rendering locked as the renderer. Day 2 implementation proceeds.
