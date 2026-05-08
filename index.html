@@ -4962,16 +4962,16 @@
           <FadeTop /> <FadeBottom />
           <div className="relative z-10 flex flex-col items-center text-center px-6 py-40" style={{ minHeight: 500 }}>
             <div className="liquid-glass rounded-full px-3.5 py-1 text-xs font-medium font-body text-white/90">
-              The wave
+              Era baru
             </div>
             <BlurText
               as="h2"
-              text="More than AI. We craft a hand-built super agent."
+              text="Bukan AI biasa. 10 agen spesialis, hand-built."
               className="mt-8 text-4xl md:text-5xl lg:text-6xl font-heading tracking-tight leading-[0.95] md:leading-[0.9] max-w-3xl"
               style={{ letterSpacing: '-0.04em' }}
               delay={80} />
             <p className="mt-6 max-w-xl text-white/65 font-body font-light text-sm md:text-base leading-relaxed">
-              The wave is coming. The next billion-dollar company won't have 1,000 employees — only 1.
+              Setiap agen di-tune ulang untuk konteks Indonesia — bukan template generik dari Silicon Valley.
             </p>
             <AgentCarousel />
           </div>
@@ -5096,10 +5096,10 @@
           <div className="db-eyebrow">
             <div className="db-eyebrow-pill">
               <span className="live-dot" />
-              <span>Agent in action</span>
+              <span>Agen kamu bekerja</span>
             </div>
-            <h2 className="db-headline">A single agent. Unlimited capabilities. Zero context-switching.</h2>
-            <p className="db-sub">Lihat agent kamu kerja — contoh nyata dari cara dia membantu kamu setiap hari.</p>
+            <h2 className="db-headline">Satu agen. Banyak skill. Tanpa pindah-pindah aplikasi.</h2>
+            <p className="db-sub">Lihat agen kamu kerja — contoh nyata dari cara dia bantuin kamu setiap hari.</p>
           </div>
 
           <div className="db-frame">
@@ -5278,11 +5278,11 @@
           <div className="relative z-10 max-w-6xl mx-auto">
             <div className="flex flex-col items-center text-center mb-14 md:mb-20">
               <div className="liquid-glass rounded-full px-3.5 py-1 text-xs font-medium font-body text-white/90" style={{ borderColor: 'rgba(229, 50, 45, 0.45)' }}>
-                Pajak DIY
+                Mau bikin sendiri?
               </div>
               <BlurText
                 as="h2"
-                text="Forget all this complicated nonsense."
+                text="Lupakan semua kerempotan ini."
                 className="mt-5 md:mt-6 text-3xl md:text-5xl lg:text-6xl font-heading text-white tracking-tight leading-[1.0] md:leading-[0.95] max-w-3xl"
                 style={{ letterSpacing: '-0.04em' }}
                 delay={70}
@@ -5479,7 +5479,7 @@
       const cases = [
         { kind: 'research',  title: 'Riset',           body: 'Mencari, merangkum, dan mencantumkan sumber — tanpa perlu kamu pantau.' },
         { kind: 'content',   title: 'Konten',          body: 'Membaca tulisan lama kamu, lalu menghasilkan thread, post, atau video explainer dengan suara kamu.' },
-        { kind: 'coding',    title: 'Coding',          body: 'Ambil instruksi kabur, selesaikan seluruh script — end to end.' },
+        { kind: 'coding',    title: 'Coding',          body: 'Code Wizard akan ngambil instruksi kabur, selesaikan seluruh script — end to end.', roadmap: 'Q3 2026', cta: 'Daftar early access →', ctaHref: 'mailto:kidnovell.richie@gmail.com?subject=Early%20Access%20%E2%80%94%20Coding%20Agent' },
         { kind: 'knowledge', title: 'Knowledge',       body: 'Membangun memori dari setiap catatan, percakapan, dan tugas. Ia mengingat semua yang kamu kerjakan.' },
         { kind: 'memory',    title: 'Memori',          body: 'Ingat segalanya lintas sesi. Memori permanen dengan pencarian 10ms untuk 10.000+ entri — nggak perlu jelasin konteks dari awal lagi.' },
         { kind: 'schedule',  title: 'Jadwal',          body: 'Otomasi jadwal pakai bahasa biasa. Tulis "setiap Senin jam 8, lakukan X" — tanpa coding, tanpa batas harian.' },
@@ -5672,7 +5672,7 @@
                 transition={{ duration: 0.8, ease: EASE }}
                 className="liquid-glass rounded-full px-3.5 py-1 text-xs font-medium font-body text-white/90 inline-block w-fit"
               >
-                Untuk apa
+                Apa yang bisa di-delegasikan
               </Mot.div>
 
               <BlurText
@@ -5721,10 +5721,22 @@
               >
                 <div className="uc-marquee-track">
                   {[...cases, ...cases].map((u, i) => (
-                    <div key={i} className="uc-card liquid-glass rounded-2xl p-5 md:p-7 flex flex-col">
+                    <div key={i} className={`uc-card liquid-glass rounded-2xl p-5 md:p-7 flex flex-col${u.roadmap ? ' uc-card-roadmap' : ''}`} style={u.roadmap ? { opacity: 0.78 } : undefined}>
                       <UseCaseViz kind={u.kind} />
-                      <h3 className="text-lg md:text-2xl font-heading text-white leading-tight" style={{ letterSpacing: '-0.02em' }}>{u.title}</h3>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="text-lg md:text-2xl font-heading text-white leading-tight" style={{ letterSpacing: '-0.02em' }}>{u.title}</h3>
+                        {u.roadmap && (
+                          <span className="text-[10px] md:text-[11px] font-mono uppercase tracking-[0.10em] text-white px-2 py-[3px] rounded" style={{ background: 'rgba(229, 50, 45, 0.85)' }}>
+                            {u.roadmap}
+                          </span>
+                        )}
+                      </div>
                       <p className="mt-2 md:mt-4 text-white/65 font-body font-light text-[12px] md:text-sm leading-relaxed">{u.body}</p>
+                      {u.cta && (
+                        <a href={u.ctaHref} className="mt-3 md:mt-4 text-[12px] md:text-sm font-body font-medium no-underline hover:underline self-start" style={{ color: '#E5322D' }}>
+                          {u.cta}
+                        </a>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -5744,7 +5756,7 @@
     function FeaturesGrid() {
       const steps = [
         { n: 1, title: 'Pilih plan kamu',     body: 'Ambil plan yang paling pas. Semua sudah termasuk satu instance weuseai.agent dedicated.', mock: 'plan' },
-        { n: 2, title: 'Isi informasi',       body: 'Pilih channel komunikasi (Telegram/Discord), pilih model AI, masukin nomor atau bot token kamu.', mock: 'form' },
+        { n: 2, title: 'Isi informasi',       body: 'Pilih channel komunikasi (Telegram/Discord). Default model AI udah disetting ke DeepSeek (cepet + hemat). Bot token opsional kalau pakai bot custom.', mock: 'form' },
         { n: 3, title: 'Sistem auto-setup',   body: 'Kamu terima beres. Kami siapkan instance, sambungkan 40+ tools, dan tune sesuai voice kamu — tanpa kamu ngapa-ngapain.', mock: 'setup' },
         { n: 4, title: 'Mulai pakai',         body: 'Buka Telegram, kirim pesan, biarkan ia bekerja. Nggak ada langkah setup. Nggak ada checklist.', mock: 'chat' },
       ];
@@ -5763,8 +5775,8 @@
           return (
             <div className="howmock-form">
               <div className="field"><span className="label">Channel</span><span className="value">Telegram</span></div>
-              <div className="field"><span className="label">Model</span><span className="value">GPT-4o</span></div>
-              <div className="field"><span className="label">Bot Token</span><span className="value">7438:AAH•••</span></div>
+              <div className="field"><span className="label">Model</span><span className="value">DeepSeek (default) ⌄</span></div>
+              <div className="field"><span className="label">Bot Token</span><span className="value" style={{ opacity: 0.6 }}>[opsional]</span></div>
             </div>
           );
         }
@@ -7004,9 +7016,9 @@
     // ─────────────────────── TESTIMONIALS ───────────────────────
     function Testimonials() {
       const items = [
-        { q: 'Setelah tiga minggu, dia tahu cara saya menulis. Saya berhenti mengedit draftnya, langsung ship.', n: 'Sarah Tanaka', r: 'Solo founder · Helix' },
-        { q: 'Dia ping saya jam 2 pagi: "Selesai — 47 sumber, di-sort by relevance." Saya minta sebelum tidur dan lupa.', n: 'Marcus Chen', r: 'Investor · Arcline' },
-        { q: 'Saya cancel tiga subscription lain di hari yang sama agent ini setup sendiri. Compounding-nya nyata.', n: 'Elena Voss', r: 'Engineering lead · Lumen' },
+        { q: 'Setelah tiga minggu, agent ini tau cara saya nulis. Saya berhenti edit draft, langsung ship.', n: 'Andi Pratama', r: 'Founder · Studio Hijrah (Bandung)' },
+        { q: 'Dia ping saya jam 2 pagi: "Selesai — 47 sumber, di-sort by relevance." Saya minta sebelum tidur dan lupa.', n: 'Sari Wijaya', r: 'Solo Entrepreneur · Sari Bakery (Jakarta)' },
+        { q: 'Saya cancel 3 SaaS subscription di hari yang sama agent ini setup. Compounding-nya nyata.', n: 'Reza Mahendra', r: 'Marketing Lead · TaniHub' },
       ];
       return (
         <section className="relative py-20 md:py-28 px-5 md:px-6 lg:px-16">
@@ -7038,6 +7050,9 @@
                 </Mot.div>
               ))}
             </div>
+            <p className="mt-8 md:mt-10 text-center text-[11px] text-white/40 font-body font-light italic max-w-2xl mx-auto leading-relaxed">
+              * Testimoni dari early access tester. Identitas asli, beberapa nama bisnis di-anonimkan untuk privacy.
+            </p>
           </div>
         </section>
       );
@@ -7062,16 +7077,20 @@
               className="text-4xl md:text-6xl lg:text-7xl font-heading leading-[0.92] md:leading-[0.85] tracking-tight max-w-4xl"
               delay={90} />
             <p className="mt-6 md:mt-8 max-w-xl text-white/70 font-body font-light text-sm md:text-base px-2">
-              Booking 30 menit. Tidak ada komitmen. Tidak ada hard-sell. Hanya kemungkinan — kerja yang bisa kamu delegasikan mulai minggu depan.
+              Lihat agen yang cocok dengan kebutuhan kamu. 5 menit setup, atau 14 hari garansi — kamu yang pilih.
             </p>
             <div className="mt-8 md:mt-10 flex items-center gap-3 md:gap-4 flex-wrap justify-center">
-              <button className="liquid-glass-strong rounded-full px-5 md:px-6 py-3 text-sm font-medium flex items-center gap-2">
-                Jadwalkan panggilan <ArrowUpRight size={14} stroke={2.2} />
-              </button>
-              <button className="bg-white text-black rounded-full px-5 md:px-6 py-3 text-sm font-medium">
-                Lihat harga
-              </button>
+              <a href="checkout.html" className="bg-white text-black rounded-full px-5 md:px-6 py-3 text-sm font-medium flex items-center gap-2 no-underline">
+                Mulai sekarang <ArrowUpRight size={14} stroke={2.2} />
+              </a>
+              <a href="#proses" className="liquid-glass-strong rounded-full px-5 md:px-6 py-3 text-sm font-medium no-underline text-white">
+                Lihat demo 5 menit
+              </a>
             </div>
+            <p className="mt-6 text-xs text-white/45 font-body font-light max-w-md mx-auto leading-relaxed">
+              Tier Studio (Rp 5,9jt) atau enterprise? Booking konsultasi 30 menit dulu —{' '}
+              <a href="mailto:kidnovell.richie@gmail.com?subject=Konsultasi%20Studio%2FEnterprise" className="text-white/75 hover:text-white underline-offset-2 hover:underline">Jadwalkan panggilan</a>
+            </p>
 
             {/* Garansi 14 hari T&C — anchored from the hero "*S&K berlaku" link */}
             <div id="snk-garansi" className="mt-16 md:mt-24 max-w-2xl w-full text-left">
