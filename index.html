@@ -1372,6 +1372,7 @@
     .cap-calendar .day .e.warn { background: #E5322D; box-shadow: 0 0 4px rgba(229,50,45,0.6); animation: capCalWarn 2.4s ease-in-out infinite; }
     .cap-calendar .day.conflict { animation: capCalConflict 2.4s ease-in-out infinite; }
     @keyframes capCalWarn { 0%, 100% { opacity: 0.7; } 50% { opacity: 1; } }
+    @keyframes wseaiPulse { 0%, 100% { transform: scale(1); opacity: 0.75; } 50% { transform: scale(1.6); opacity: 0; } }
     @keyframes capCalConflict {
       0%, 100% { border-color: rgba(255,255,255,0.08); box-shadow: none; }
       50%      { border-color: #E5322D; box-shadow: 0 0 6px rgba(229,50,45,0.55); }
@@ -5323,10 +5324,10 @@
     // ─────────────────────── USE CASES (Velvet, with bg-video) ───────────────────────
     function VelvetSection() {
       const capabilities = [
-        { n: '01', kind: 'email',     title: 'Email Triage',     body: 'Inbox numpuk 300+ email pasca-cuti? Otomatis dibaca, dikelompokin per topik, dirangkum jadi 1 halaman — tinggal balas yang penting.' },
+        { n: '01', kind: 'email',     title: 'Sortir Email',     body: 'Inbox numpuk 300+ email pasca-cuti? Otomatis dibaca, dikelompokin per topik, dirangkum jadi 1 halaman — tinggal balas yang penting.' },
         { n: '02', kind: 'slide',     title: 'Auto-Slide',       body: 'Dari materi mentah ke slide presentasi lengkap — judul, isi, speaker notes, layout. Begadang Sunday night ganti 10 menit Senin pagi.' },
-        { n: '03', kind: 'multipost', title: 'Multi-Post',       body: 'Upload listing sekali, otomatis ke OLX, Lamudi, Rumah123, IG, FB Marketplace, dan 5 platform lain — caption tiap kanal dioptimalkan sendiri.' },
-        { n: '04', kind: 'autoreply', title: 'Auto-Reply 24/7',  body: 'Klien chat tengah malem otomatis dibalas dalam gaya bahasa brand. Pertanyaan susah di-escalate dengan ringkasan — siap di-handle pagi harinya.' },
+        { n: '03', kind: 'multipost', title: 'Multi-Posting',    body: 'Upload listing sekali, otomatis ke OLX, Lamudi, Rumah123, IG, FB Marketplace, dan 5 platform lain — caption tiap kanal dioptimalkan sendiri.' },
+        { n: '04', kind: 'autoreply', title: 'Auto-Balas 24/7',  body: 'Klien chat tengah malem otomatis dibalas dalam gaya bahasa brand. Pertanyaan susah di-escalate dengan ringkasan — siap di-handle pagi harinya.' },
         { n: '05', kind: 'pitch',     title: 'Pitch Deck',       body: 'Dari ide ke deck 12 slide profesional — problem, solusi, market, traction, ask. Investor besok pagi siap dipitch malam ini.' },
         { n: '06', kind: 'crm',       title: 'Personal CRM',     body: 'Track 200+ kenalan networking — kapan terakhir ngobrol, ulang tahun, project terbaru. Tiap minggu dapet saran follow-up — relationship nggak pernah dingin.' },
         { n: '07', kind: 'radar',     title: 'Trend Radar',      body: 'Auto-monitor TikTok, IG, X tiap 6 jam. Sound atau topik naik 200%+? Langsung notif — jadi brand pertama yang ride trend.' },
@@ -5480,7 +5481,7 @@
         { kind: 'research',  title: 'Riset',           body: 'Mencari, merangkum, dan mencantumkan sumber — tanpa perlu kamu pantau.' },
         { kind: 'content',   title: 'Konten',          body: 'Membaca tulisan lama kamu, lalu menghasilkan thread, post, atau video explainer dengan suara kamu.' },
         { kind: 'coding',    title: 'Coding',          body: 'Code Wizard akan ngambil instruksi kabur, selesaikan seluruh script — end to end.', roadmap: 'Q3 2026', cta: 'Daftar early access →', ctaHref: 'mailto:kidnovell.richie@gmail.com?subject=Early%20Access%20%E2%80%94%20Coding%20Agent' },
-        { kind: 'knowledge', title: 'Knowledge',       body: 'Membangun memori dari setiap catatan, percakapan, dan tugas. Ia mengingat semua yang kamu kerjakan.' },
+        { kind: 'knowledge', title: 'Pengetahuan',     body: 'Membangun memori dari setiap catatan, percakapan, dan tugas. Ia mengingat semua yang kamu kerjakan.' },
         { kind: 'memory',    title: 'Memori',          body: 'Ingat segalanya lintas sesi. Memori permanen dengan pencarian 10ms untuk 10.000+ entri — nggak perlu jelasin konteks dari awal lagi.' },
         { kind: 'schedule',  title: 'Jadwal',          body: 'Otomasi jadwal pakai bahasa biasa. Tulis "setiap Senin jam 8, lakukan X" — tanpa coding, tanpa batas harian.' },
         { kind: 'browse',    title: 'Browsing',        body: 'Browsing internet secara mandiri. Scraping, search, dan otomasi browser via Firecrawl.' },
@@ -6869,6 +6870,22 @@
     function FAQ() {
       const items = [
         {
+          q: 'Saya gak tech-savvy, bisa pakai?',
+          a: 'Bisa. Setup otomatis — gak install apapun, gak perlu tau coding atau VPS. Cukup chat di Telegram seperti chat sama temen. Agent yang ngerjain.',
+        },
+        {
+          q: 'Bahasa apa support? Bisa pure Bahasa Indonesia?',
+          a: 'Default Bahasa Indonesia. English fully supported. Mixed chat (Bahasa + English) juga jalan natural.',
+        },
+        {
+          q: 'Aman buat data bisnis saya?',
+          a: 'Agent jalan di server VPS pribadi kamu, bukan share dengan customer lain. Memory chat gak shared dengan kami, gak training data. Customer-grown templates stay di server kamu.',
+        },
+        {
+          q: 'Bisa pakai metode pembayaran apa?',
+          a: 'Bank transfer (semua bank Indonesia), GoPay, OVO, DANA, ShopeePay, kartu kredit/debit. Lewat Xendit (gateway pembayaran Indonesia).',
+        },
+        {
           q: 'Apa beda dengan subscription biasa?',
           a: 'Setup-nya beneran sekali bayar — kamu beli engineering work yang udah kami lakukan. Hosting Rp 99k/bulan transparent: itu cost VPS yang real, kayak bayar listrik. Stop kapan saja, agent kamu auto-pause. Tagihan berhenti, setup tetap kamu punya.',
         },
@@ -6885,8 +6902,8 @@
           a: '7–10 hari kerja. Tiga hari pertama discovery — kami ngobrol soal voice kamu, workflow harian, dan tools yang sering dipakai. Sisa hari kami tune model, sambungkan tools, dan tes end-to-end. Begitu beres, kami onboard kamu lewat video call 30 menit dan kamu langsung pakai.',
         },
         {
-          q: 'BYOK LLM itu maksudnya apa? Berapa biaya LLM-nya?',
-          a: 'BYOK = Bring Your Own Key. Kamu daftar sendiri di OpenAI, Anthropic, OpenRouter, atau DeepSeek lalu masukkan API key kamu ke dashboard agent. Biaya LLM bayar langsung ke provider, bukan ke kami — typical Rp 50–300k per bulan tergantung intensitas. Lebih murah daripada subscription bundle karena kamu cuma bayar yang dipakai. Plan Starter dan Pro dapat starter credits ($3–5) via DeepSeek untuk onboarding pertama.',
+          q: 'Berapa biaya LLM-nya?',
+          a: 'Gak perlu mikirin. LLM cost udah masuk subscription — default pakai DeepSeek (cepet, hemat). Mau upgrade ke Claude Sonnet? Bisa di dashboard. Mau pakai OpenRouter key sendiri (BYOK)? Juga bisa, kalau kamu power user.',
         },
         {
           q: 'Apa beda dengan ChatGPT atau Claude biasa?',
@@ -7118,7 +7135,21 @@
               </div>
             </div>
 
-            <div className="mt-20 md:mt-32 pt-6 md:pt-8 border-t border-white/10 w-full flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0 text-xs text-white/40 font-body">
+            {/* WhatsApp support badge — visible above the legal row */}
+            <div className="mt-20 md:mt-32 w-full flex justify-center">
+              <a href="https://wa.me/6281234567890" target="_blank" rel="noopener" className="liquid-glass rounded-2xl px-5 py-3 flex items-center gap-3 no-underline" style={{ borderColor: 'rgba(34, 197, 94, 0.30)' }}>
+                <span className="relative flex w-2 h-2 flex-shrink-0">
+                  <span className="absolute inline-flex w-full h-full rounded-full opacity-75" style={{ background: '#22c55e', animation: 'wseaiPulse 2s ease-in-out infinite' }} />
+                  <span className="relative inline-flex w-2 h-2 rounded-full" style={{ background: '#22c55e' }} />
+                </span>
+                <div className="text-left">
+                  <div className="text-white font-body font-medium text-[13px] md:text-sm leading-tight">WhatsApp support</div>
+                  <div className="text-white/55 font-body font-light text-[11px] md:text-xs mt-0.5 leading-tight">+62 812 3456 7890 · Online 9–21 WIB</div>
+                </div>
+              </a>
+            </div>
+
+            <div className="mt-12 md:mt-16 pt-6 md:pt-8 border-t border-white/10 w-full flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0 text-xs text-white/40 font-body">
               <span>© 2026 weuseai.agent</span>
               <div className="flex items-center gap-5 md:gap-6">
                 <a href="#" className="hover:text-white/80 transition-colors">Privasi</a>
