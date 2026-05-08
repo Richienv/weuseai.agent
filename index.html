@@ -4768,12 +4768,15 @@
           src={`/assets/agent-${video || slug}.mp4`}
           color={invert ? '#0a0a0a' : '#E5322D'}
           // Smaller cells = denser dot grid = finer silhouette detail.
-          // Mobile clamps up via DottedVideo internals (Math.max(cellSize, 6)).
+          // Mobile clamps up via DottedVideo internals (Math.max(cellSize, 5)).
           cellSize={3}
           threshold={0.05}
-          // Default gamma (1.0) — let dot size scale linearly with source
-          // luminance. Earlier 0.75 lift crushed mid-tones into solid black
-          // and lost UI detail. Linear keeps the natural contrast falloff.
+          // Contrast 1.6 polarizes the dot pattern: bright UI in source
+          // pushes to full black dots (more solid coverage), midtones get
+          // squeezed smaller so the red BG punches through where the
+          // source is darker. Punchier silhouette without going full
+          // posterized.
+          contrast={invert ? 1.6 : 1}
           className="absolute inset-0 w-full h-full"
           style={{ background: invert ? '#E5322D' : '#050505' }}
         />
