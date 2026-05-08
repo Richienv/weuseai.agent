@@ -3134,6 +3134,147 @@
       );
     }
 
+    // ─────────────────────── SCANLINE VIDEO (CRT + glitch overlay) ───────────────────────
+    // Treatment 3: render the actual full-color source video, color-graded
+    // toward brand red via CSS filters, then overlaid with retro-CRT
+    // scanlines and an occasional brief glitch flicker. The source UI stays
+    // recognizable (unlike the halftone abstraction in DottedVideo) while
+    // still feeling on-brand and a touch unpredictable.
+    //
+    //   - <video> element does the heavy lifting (hardware-accelerated).
+    //   - Scanline overlay = static repeating-linear-gradient (GPU composite).
+    //   - Glitch overlay = ~5%/sec chance of a 100ms RGB-shift flicker.
+    //   - IntersectionObserver pauses video off-screen.
+    //   - prefers-reduced-motion: scanlines stay (static), glitch disabled,
+    //     video paused on first frame.
+    function ScanlineVideo({
+      src,
+      filter = 'hue-rotate(330deg) saturate(1.2) contrast(1.05)',
+      scanOpacity = 0.30,
+      glitchProbability = 0.05,
+      className = '',
+      style = {},
+    }) {
+      const wrapRef = useRef(null);
+      const videoRef = useRef(null);
+      const [glitch, setGlitch] = useState(false);
+
+      useEffect(() => {
+        const wrap = wrapRef.current;
+        const video = videoRef.current;
+        if (!wrap || !video) return;
+
+        const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        let inView = false;
+        let glitchTimer = null;
+        let clearTimer = null;
+
+        const io = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((e) => {
+              inView = e.isIntersecting;
+              if (inView) {
+                if (reduced) {
+                  // Show first frame only; do not autoplay.
+                  try { video.currentTime = 0; } catch (err) {}
+                  video.pause();
+                } else {
+                  const p = video.play();
+                  if (p && p.catch) p.catch(() => {});
+                }
+              } else {
+                video.pause();
+              }
+            });
+          },
+          { rootMargin: '200px' }
+        );
+        io.observe(wrap);
+
+        // Glitch tick: 1Hz roll, 100ms flash duration. Skipped entirely
+        // when the user prefers reduced motion.
+        if (!reduced) {
+          glitchTimer = setInterval(() => {
+            if (!inView) return;
+            if (Math.random() < glitchProbability) {
+              setGlitch(true);
+              clearTimer = setTimeout(() => setGlitch(false), 100);
+            }
+          }, 1000);
+        }
+
+        return () => {
+          io.disconnect();
+          if (glitchTimer) clearInterval(glitchTimer);
+          if (clearTimer) clearTimeout(clearTimer);
+        };
+      }, [src, glitchProbability]);
+
+      // Scanline gradient — 1px red line every 3px. mix-blend-mode: multiply
+      // keeps the dark areas of the video readable while tinting the bright
+      // bands toward oxblood. rgba uses brand red #E5322D.
+      const scanBg = `repeating-linear-gradient(to bottom, rgba(229,50,45,${scanOpacity}) 0px, rgba(229,50,45,${scanOpacity}) 1px, transparent 1px, transparent 3px)`;
+
+      return (
+        <div ref={wrapRef} className={className} style={{ position: 'relative', overflow: 'hidden', ...style }}>
+          <video
+            ref={videoRef}
+            src={src}
+            loop muted playsInline
+            preload="metadata"
+            aria-hidden="true"
+            style={{
+              position: 'absolute',
+              inset: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              display: 'block',
+              filter,
+              transform: glitch ? 'translate3d(2px, 0, 0)' : 'none',
+              transition: 'transform 40ms steps(2)',
+            }}
+          />
+          {/* Scanline overlay — static gradient, GPU-composited. */}
+          <div
+            aria-hidden="true"
+            style={{
+              position: 'absolute',
+              inset: 0,
+              backgroundImage: scanBg,
+              mixBlendMode: 'multiply',
+              pointerEvents: 'none',
+            }}
+          />
+          {/* Glitch overlay — RGB-split band + brief hue flash. Hidden when
+              not glitching so it doesn't sit composited every frame. */}
+          {glitch && (
+            <div
+              aria-hidden="true"
+              style={{
+                position: 'absolute',
+                inset: 0,
+                pointerEvents: 'none',
+                backgroundImage: 'linear-gradient(to bottom, transparent 30%, rgba(229,50,45,0.18) 30%, rgba(0,229,229,0.14) 32%, transparent 34%)',
+                mixBlendMode: 'screen',
+              }}
+            />
+          )}
+          {/* Vignette — subtle inner shadow grounds the video on the dark
+              card surface. Pure CSS, zero JS cost. */}
+          <div
+            aria-hidden="true"
+            style={{
+              position: 'absolute',
+              inset: 0,
+              pointerEvents: 'none',
+              boxShadow: 'inset 0 0 80px rgba(0,0,0,0.55)',
+            }}
+          />
+        </div>
+      );
+    }
+
     // ─────────────────────── UNICORN STUDIO EMBED ───────────────────────
     // Lazy-loads the unicornStudio.js lib once per page; (re-)initializes
     // any [data-us-project] divs on mount.
@@ -4750,58 +4891,40 @@
       );
     }
 
-    // Pivot 2026-05-09: every agent card now renders a hand-built mp4
-    // through the DottedVideo halftone canvas. Chat-bubble + animation
-    // scenes (AgentScene*) are kept in source as reference but no longer
-    // routed from the carousel.
+    // Treatment 3 (2026-05-09 explore branch): scanline + glitch CRT
+    // treatment. Every agent card renders the actual full-color source
+    // mp4 via <video>, color-graded toward the brand red palette and
+    // overlaid with retro-CRT scanlines + an occasional glitch flicker.
+    // Unlike the halftone DottedVideo path (kept in source for the other
+    // treatments to compare against), the source UI stays recognizable.
     //
-    // Two polarities:
-    //   1. Default (The Pro only) — red dots on near-black, big dots where
-    //      the source is bright. Source video has high contrast already, so
-    //      this reads cleanly.
-    //   2. Inverted (the other 8) — solid red card with BLACK dots forming
-    //      the dark subject of the source video. Source videos here are
-    //      mostly bright UI screenshots (88-98% pixels in the top band),
-    //      which would render as a solid red mush in default polarity. The
-    //      red↔black swap + strong contrast (3.0) drops the bright BG and
-    //      lets the dark text/icons punch through as a printed-halftone
-    //      silhouette.
-    // Per-slug overrides — any DottedVideo prop can be set per-agent.
-    // Useful when a source video is naturally busier (cellSize ↑) or when
-    // a card needs more polarization / a deeper BG to feel distinct.
+    // All 9 cards share the same treatment — `invert` is no longer used
+    // here because the colour-grade + scanlines work uniformly across
+    // both bright UI captures and dark hero footage.
+    //
+    // Per-slug overrides — bump scanline opacity or tweak the colour
+    // grade for agents whose footage reads too "live" without it.
     const AGENT_VISUAL_OVERRIDES = {
-      calendar: { cellSize: 5, contrast: 1.85, bg: '#B82420' },
-      trade:    { cellSize: 5, contrast: 1.85, bg: '#B82420' },
+      // Calendar/Trade footage is high-contrast bright UI; a slightly
+      // stronger scanline grounds it in the CRT aesthetic.
+      calendar: { scanOpacity: 0.38 },
+      trade:    { scanOpacity: 0.38 },
     };
 
     function AgentVisual({ video, slug, invert }) {
       const o = AGENT_VISUAL_OVERRIDES[slug] || {};
-      // 8 specialist cards: PURE-BLACK dots on a vibrant red BG — the
-      // polarity that read best in earlier tests (most UI detail visible).
-      // Visual punch comes from:
-      //   - Pure #000 dots (sharper edges than the previous #0a0a0a)
-      //   - Vibrant #ED3530 BG (slightly brighter than brand red so the
-      //     contrast against pure black feels more "printed-poster")
-      //   - 0.85× playback for editorial slow-mo (still feels live)
-      // The Pro keeps its red-on-near-black look (high contrast already
-      // baked into the source video).
+      // Note: `invert` prop kept in signature for backwards-compatibility
+      // with the AgentCarousel call-site, but ignored in this treatment —
+      // the scanline + colour-grade reads consistently regardless of
+      // source-video polarity, so all 9 cards use the same renderer.
       return (
-        <DottedVideo
+        <ScanlineVideo
           src={`/assets/agent-${video || slug}.mp4`}
-          color={invert ? '#000000' : '#E5322D'}
-          // Smaller cells = denser dot grid = finer silhouette detail.
-          // Mobile clamps up via DottedVideo internals (Math.max(cellSize, 5)).
-          cellSize={o.cellSize ?? 3}
-          threshold={0.05}
-          // Contrast 1.5 polarizes bright UI → full black dots, midtones
-          // squeeze a touch smaller. Just enough punch without crushing
-          // detail or making the card feel darker overall.
-          contrast={o.contrast ?? (invert ? 1.5 : 1)}
-          // Slight slow-mo for the inverted cards — feels editorial /
-          // halftone-poster instead of jittery UI capture.
-          playbackRate={invert ? 0.85 : 1}
+          filter={o.filter ?? 'hue-rotate(330deg) saturate(1.2) contrast(1.05)'}
+          scanOpacity={o.scanOpacity ?? 0.30}
+          glitchProbability={o.glitchProbability ?? 0.05}
           className="absolute inset-0 w-full h-full"
-          style={{ background: invert ? (o.bg ?? '#ED3530') : '#050505' }}
+          style={{ background: '#0a0606' }}
         />
       );
     }
