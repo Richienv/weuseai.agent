@@ -1796,44 +1796,45 @@
     .agent-card .scene-stagger > *:nth-child(4) { animation: sceneItem4 13000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
     .agent-card .scene-stagger > *:nth-child(5) { animation: sceneItem5 13000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
     .agent-card .scene-stagger > *:nth-child(6) { animation: sceneItem6 13000ms cubic-bezier(0.22, 0.85, 0.36, 1) infinite; }
-    /* Anim1 items: emerge at 50% (6.5s), all in by ~62% (8.0s), fade out
-       at 65% (8.5s) so anim2 can take the stage. transform-origin: top
-       center anchors the scale animation to B5 above. */
+    /* Anim1 items: emerge at 50% (6.5s), HOLD VISIBLE until 92% — i.e.
+       through the entire anim2 emergence + pin-zone hold window. This is
+       what makes "anim1 + anim2 both visible at the end of the cycle"
+       actually work. transform-origin: top center anchors scale to B5. */
     @keyframes sceneItem1 {
       0%, 50%   { opacity: 0; transform: translateY(-12px) scale(0.6); filter: blur(2px); }
       53%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
-      65%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
-      69%, 100% { opacity: 0; transform: translateY(-4px) scale(0.95); filter: blur(1px); }
+      92%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+      96%, 100% { opacity: 0; transform: translateY(0) scale(1); filter: blur(0); }
     }
     @keyframes sceneItem2 {
       0%, 51.5% { opacity: 0; transform: translateY(-12px) scale(0.6); filter: blur(2px); }
       54.5%     { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
-      65%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
-      69%, 100% { opacity: 0; transform: translateY(-4px) scale(0.95); filter: blur(1px); }
+      92%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+      96%, 100% { opacity: 0; transform: translateY(0) scale(1); filter: blur(0); }
     }
     @keyframes sceneItem3 {
       0%, 53%   { opacity: 0; transform: translateY(-12px) scale(0.6); filter: blur(2px); }
       56%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
-      65%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
-      69%, 100% { opacity: 0; transform: translateY(-4px) scale(0.95); filter: blur(1px); }
+      92%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+      96%, 100% { opacity: 0; transform: translateY(0) scale(1); filter: blur(0); }
     }
     @keyframes sceneItem4 {
       0%, 54.5% { opacity: 0; transform: translateY(-12px) scale(0.6); filter: blur(2px); }
       57.5%     { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
-      65%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
-      69%, 100% { opacity: 0; transform: translateY(-4px) scale(0.95); filter: blur(1px); }
+      92%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+      96%, 100% { opacity: 0; transform: translateY(0) scale(1); filter: blur(0); }
     }
     @keyframes sceneItem5 {
       0%, 56%   { opacity: 0; transform: translateY(-12px) scale(0.6); filter: blur(2px); }
       59%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
-      65%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
-      69%, 100% { opacity: 0; transform: translateY(-4px) scale(0.95); filter: blur(1px); }
+      92%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+      96%, 100% { opacity: 0; transform: translateY(0) scale(1); filter: blur(0); }
     }
     @keyframes sceneItem6 {
       0%, 57.5% { opacity: 0; transform: translateY(-12px) scale(0.6); filter: blur(2px); }
       60.5%     { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
-      65%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
-      69%, 100% { opacity: 0; transform: translateY(-4px) scale(0.95); filter: blur(1px); }
+      92%       { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+      96%, 100% { opacity: 0; transform: translateY(0) scale(1); filter: blur(0); }
     }
 
     /* === Researcher: papers list with confidence chips === */
@@ -1992,14 +1993,14 @@
     @keyframes chartDraw {
       0%, 50%   { stroke-dashoffset: 220; }
       62%       { stroke-dashoffset: 0; }
-      65%       { stroke-dashoffset: 0; }
-      69%, 100% { stroke-dashoffset: 220; }
+      92%       { stroke-dashoffset: 0; }
+      96%, 100% { stroke-dashoffset: 220; }
     }
     @keyframes chartMarker {
       0%, 60%   { opacity: 0; }
       63%       { opacity: 1; }
-      65%       { opacity: 1; }
-      69%, 100% { opacity: 0; }
+      92%       { opacity: 1; }
+      96%, 100% { opacity: 0; }
     }
 
     /* === Macro Strategist: 3 scenario bars === */
@@ -2047,20 +2048,20 @@
     @keyframes multiGrowBull {
       0%, 50%   { width: 0; }
       58%       { width: 88%; }
-      65%       { width: 88%; }
-      69%, 100% { width: 0; }
+      92%       { width: 88%; }
+      96%, 100% { width: 0; }
     }
     @keyframes multiGrowBase {
       0%, 51.5% { width: 0; }
       59.5%     { width: 60%; }
-      65%       { width: 60%; }
-      69%, 100% { width: 0; }
+      92%       { width: 60%; }
+      96%, 100% { width: 0; }
     }
     @keyframes multiGrowBear {
       0%, 53%   { width: 0; }
       61%       { width: 32%; }
-      65%       { width: 32%; }
-      69%, 100% { width: 0; }
+      92%       { width: 32%; }
+      96%, 100% { width: 0; }
     }
 
     /* === Business Director: KPI cards === */
@@ -2182,23 +2183,25 @@
       gap: 4px;
     }
 
-    /* Generic anim2 row patterns */
+    /* Generic anim2 row patterns — sized smaller than anim1 / bubble text
+       so the deliverable reads as compact "data summary" rather than
+       another bubble row. */
     .agent-card .scene-anim2 .anim2-row {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 7px;
       font-family: 'JetBrains Mono', monospace;
-      font-size: 9.5px;
+      font-size: 8.5px;
       color: rgba(255, 255, 255, 0.85);
       line-height: 1.3;
     }
     .agent-card .scene-anim2 .anim2-time {
       color: #E5322D;
-      font-size: 9px;
+      font-size: 8px;
       font-weight: 600;
       letter-spacing: 0.04em;
       flex-shrink: 0;
-      min-width: 36px;
+      min-width: 32px;
     }
     .agent-card .scene-anim2 .anim2-label {
       flex: 1;
@@ -2207,7 +2210,7 @@
     }
     .agent-card .scene-anim2 .anim2-meta {
       color: rgba(255, 255, 255, 0.45);
-      font-size: 8.5px;
+      font-size: 7.5px;
       flex-shrink: 0;
     }
     .agent-card .scene-anim2 .anim2-num {
@@ -2217,14 +2220,14 @@
     }
     .agent-card .scene-anim2 .anim2-arrow {
       color: #E5322D;
-      width: 12px; flex-shrink: 0; text-align: center;
+      width: 11px; flex-shrink: 0; text-align: center;
     }
     .agent-card .scene-anim2 .anim2-arrow.up { color: #E5322D; }
     .agent-card .scene-anim2 .anim2-arrow.down { color: rgba(255,255,255,0.55); }
     .agent-card .scene-anim2 .anim2-arrow.flat { color: rgba(255,255,255,0.40); }
     .agent-card .scene-anim2 .anim2-disclaimer {
       font-family: 'Inter', sans-serif;
-      font-size: 8px;
+      font-size: 7px;
       font-style: italic;
       color: rgba(255, 255, 255, 0.40);
       margin-top: 2px;
@@ -2232,29 +2235,32 @@
     }
     .agent-card .scene-anim2 .anim2-bullet {
       display: flex;
-      gap: 7px;
+      gap: 6px;
       align-items: flex-start;
+      font-size: 8.5px;
+      color: rgba(255, 255, 255, 0.85);
+      line-height: 1.3;
     }
     .agent-card .scene-anim2 .anim2-bullet::before {
       content: '';
-      width: 4px; height: 4px;
+      width: 3px; height: 3px;
       border-radius: 1px;
       background: #E5322D;
       flex-shrink: 0;
-      margin-top: 5px;
+      margin-top: 4px;
     }
     .agent-card .scene-anim2 .anim2-headline {
       font-family: 'Instrument Serif', serif;
-      font-size: 11.5px;
+      font-size: 10px;
       color: #fff;
       line-height: 1.2;
       letter-spacing: -0.01em;
     }
     .agent-card .scene-anim2 .anim2-email-meta {
       display: flex;
-      gap: 6px;
+      gap: 5px;
       font-family: 'JetBrains Mono', monospace;
-      font-size: 9px;
+      font-size: 8px;
     }
     .agent-card .scene-anim2 .anim2-email-meta .label {
       color: rgba(255,255,255,0.45);
@@ -2265,25 +2271,25 @@
       overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
     .agent-card .scene-anim2 .anim2-attach {
-      display: inline-flex; align-items: center; gap: 6px;
-      padding: 3px 7px;
-      border-radius: 4px;
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 2px 6px;
+      border-radius: 3px;
       background: rgba(229, 50, 45, 0.10);
       border: 1px solid rgba(229, 50, 45, 0.40);
       font-family: 'JetBrains Mono', monospace;
-      font-size: 8.5px;
+      font-size: 7.5px;
       color: #E5322D;
       letter-spacing: 0.04em;
       width: fit-content;
     }
     .agent-card .scene-anim2 .anim2-cta {
       display: inline-flex;
-      padding: 3px 9px;
+      padding: 2px 8px;
       border-radius: 999px;
       background: #E5322D;
       color: #fff;
       font-family: 'Inter', sans-serif;
-      font-size: 9px;
+      font-size: 8px;
       font-weight: 500;
       width: fit-content;
     }
