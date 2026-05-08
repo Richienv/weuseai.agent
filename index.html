@@ -4762,14 +4762,23 @@
     //      red↔black swap + strong contrast (3.0) drops the bright BG and
     //      lets the dark text/icons punch through as a printed-halftone
     //      silhouette.
+    // Per-slug overrides for cards whose source video is naturally busier
+    // (lots of small UI elements) — bumping cellSize coarsens the halftone
+    // so the silhouette reads as a shape, not a wall of detail.
+    const AGENT_VISUAL_OVERRIDES = {
+      calendar: { cellSize: 5 },
+      trade:    { cellSize: 5 },
+    };
+
     function AgentVisual({ video, slug, invert }) {
+      const o = AGENT_VISUAL_OVERRIDES[slug] || {};
       return (
         <DottedVideo
           src={`/assets/agent-${video || slug}.mp4`}
           color={invert ? '#0a0a0a' : '#E5322D'}
           // Smaller cells = denser dot grid = finer silhouette detail.
           // Mobile clamps up via DottedVideo internals (Math.max(cellSize, 5)).
-          cellSize={3}
+          cellSize={o.cellSize ?? 3}
           threshold={0.05}
           // Contrast 1.6 polarizes the dot pattern: bright UI in source
           // pushes to full black dots (more solid coverage), midtones get
