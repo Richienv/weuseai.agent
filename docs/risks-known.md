@@ -5,6 +5,29 @@
 
 ---
 
+## Direct Postgres connections to Supabase blocked from China (caught 2026-05-08)
+
+**Pattern.** From China-based networks (e.g. founder's Hangzhou primary location), the Great Firewall MITMs the TLS handshake on direct Postgres connections to Supabase. DNS for `db.<project-ref>.supabase.co` and `aws-0-<region>.pooler.supabase.com` resolves to `198.18.1.x` (TEST-NET-2 reserved range — non-routable), and even when overridden, the port-5432/6543 TCP handshake terminates with a TLS EOF error. `supabase db push --linked` fails reliably; `supabase migration list --linked` fails reliably; any `psql` directly against the Supabase host fails reliably.
+
+**Why this matters.** All schema-migration workflows that rely on the Supabase CLI's pg-protocol path are blocked when working from China. The default founder workflow (Hangzhou primary) hits this every time.
+
+**Impact.** Phase 2E-3 Day 3 hit this — Edge Function deploy worked fine (HTTPS:443, unaffected by the block) but `supabase db push --linked` returned `tls error (EOF)` on every retry. ~30 minutes wasted before identifying root cause.
+
+**Mitigation (locked).** Two paths for any future migration on this stack:
+
+1. **Dashboard SQL Editor** — paste the migration SQL into `app.supabase.com → SQL Editor → New query → Run`. Works from any network because the dashboard is HTTPS-only. All our migrations are written to be idempotent (`IF NOT EXISTS` guards) so re-runs are safe.
+2. **VPN to a non-China network** — Cloudflare WARP, an SSH tunnel through a non-China VPS, or any commercial VPN. Re-enables the direct pg path. Founder has a paid VPN for this case.
+
+**Forward-looking concerns.**
+
+1. **Production concierge customer onboarding.** Real customers in Indonesia (the target market) won't hit this block. The risk is operator-side only — when the founder applies a migration from China, they need to use the dashboard path. Solo-operator burden, not a customer-facing issue.
+2. **Phase 3+ automated migration workflows.** When we wire CI/CD migrations (currently manual), the runner must NOT live in China. GitHub Actions runners (US/EU) are unaffected.
+3. **Edge Functions are unaffected.** Anything that lives at `<project-ref>.supabase.co/functions/v1/*` (HTTPS:443) works fine. This means `supabase functions deploy` and any runtime Edge Function call from China works.
+
+**2026-05-08 first incident:** Phase 2E-3 schema migration `20260509000000_phase_2e3_tier_automation.sql` (3 tables — `tier_change_events`, `bundle_pull_attempts_summary`, `cleanup_notifications`) applied via Dashboard SQL Editor in 3 sequential blocks. Tables verified post-apply. `supabase db push` documented in commit `9b50527` as the failed direct path; runbook updated.
+
+---
+
 ## Floating IP orphan leak (caught 2026-05-08)
 
 **Pattern.** When a VPS is deleted via the IDCloudHost API, attached Floating IPs are NOT auto-released. They sit unassigned on the billing account and continue to accrue ~Rp 40k/IP/month silently. The IDCH dashboard surfaces this in the Network tab but the VM tab and billing summary don't flag it.
