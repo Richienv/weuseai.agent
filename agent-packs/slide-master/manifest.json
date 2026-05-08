@@ -1,0 +1,82 @@
+{
+  "$schema": "../_manifest.schema.json",
+  "agent_slug": "slide-master",
+  "version": "2.0.0",
+  "description_id": "Bundle skill + template Slide Master v2. Dua mode: narrative-arc (default — story arc 12 slide) dan template-picker (8 template student/worker). Tier change v2: Pro+ → All tiers (Starter+).",
+  "skills": [
+    {
+      "id": "narrative-arc-deck-builder",
+      "description_id": "Susun deck 12 slide pakai story arc problem→solution→market→traction→ask. Mode default — cocok buat pitch deck, customer pitch, internal review.",
+      "description_en": "Build a 12-slide deck using the problem→solution→market→traction→ask story arc. Default mode — good for pitch decks, customer pitches, internal reviews.",
+      "templates_used": [],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:narrative-arc-deck-builder",
+      "enabled_for_tiers": ["starter", "pro", "studio"]
+    },
+    {
+      "id": "template-deck-builder",
+      "description_id": "Pilih dari template library (presentasi tugas, defense skripsi, weekly report, project update, training, kuliah). Mode opt-in saat customer minta 'deck dari template'.",
+      "description_en": "Pick from the template library (student assignment, thesis defense, weekly report, project update, training, lecture). Opt-in mode when customer asks 'deck dari template'.",
+      "templates_used": [
+        "deck/student/assignment-presentation.md",
+        "deck/student/thesis-defense.md",
+        "deck/student/lecture-recap.md",
+        "deck/worker/weekly-report.md",
+        "deck/worker/project-update.md",
+        "deck/worker/training-onboarding.md"
+      ],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:template-deck-builder",
+      "enabled_for_tiers": ["starter", "pro", "studio"]
+    },
+    {
+      "id": "extend-capabilities",
+      "description_id": "Generate template deck baru saat customer minta sesuatu yang belum ada di inventory. Pakai LLM customer (BYOK), simpan ke /var/lib/weuseai/customer-grown/.",
+      "description_en": "Generate a new deck template at runtime when the customer asks for something not in inventory.",
+      "templates_used": [],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:extend-capabilities",
+      "enabled_for_tiers": ["starter", "pro", "studio"]
+    }
+  ],
+  "templates": [
+    {
+      "id": "deck/student/assignment-presentation.md",
+      "kind": "deck-template",
+      "description_id": "Presentasi tugas kuliah (8-10 slide) — judul, latar belakang, masalah, metode, hasil, kesimpulan, daftar pustaka. Format umum mata kuliah Indonesia.",
+      "best_for": "Mahasiswa S1 yang nyiapin presentasi tugas mata kuliah"
+    },
+    {
+      "id": "deck/student/thesis-defense.md",
+      "kind": "deck-template",
+      "description_id": "Defense / sidang skripsi (15-20 slide) — judul, BAB I summary, BAB II key references, BAB III metode, BAB IV findings, BAB V conclusion + recommendations, daftar pustaka, Q&A buffer.",
+      "best_for": "Mahasiswa S1/S2 yang sidang skripsi atau thesis"
+    },
+    {
+      "id": "deck/student/lecture-recap.md",
+      "kind": "deck-template",
+      "description_id": "Recap perkuliahan (8 slide) — minggu ke-N, learning outcomes, key concepts, contoh kasus, pertanyaan reflektif, action items.",
+      "best_for": "Mahasiswa atau pengajar yang ringkas materi kuliah"
+    },
+    {
+      "id": "deck/worker/weekly-report.md",
+      "kind": "deck-template",
+      "description_id": "Weekly report (6-8 slide) — highlights minggu ini, in-progress items, blockers, next week priorities, ask. Cocok buat 1-on-1 atau team standup mingguan.",
+      "best_for": "Karyawan yang report ke manager / tim"
+    },
+    {
+      "id": "deck/worker/project-update.md",
+      "kind": "deck-template",
+      "description_id": "Project update (10-12 slide) — project status (RAG), milestones achieved, current work, blockers, risks, next phase plan, decision-needed.",
+      "best_for": "PM atau project lead yang update stakeholder"
+    },
+    {
+      "id": "deck/worker/training-onboarding.md",
+      "kind": "deck-template",
+      "description_id": "Training / onboarding deck (12-15 slide) — welcome, learning objectives, content sections, hands-on exercise, summary, resources, Q&A.",
+      "best_for": "Trainer atau team lead yang bikin onboarding deck"
+    }
+  ],
+  "self_extend": true,
+  "extension_dir": "/var/lib/weuseai/customer-grown/"
+}

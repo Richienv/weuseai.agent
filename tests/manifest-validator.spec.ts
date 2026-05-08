@@ -413,13 +413,31 @@ test('every pilot manifest skill handler_ref points to a known edge function, he
     'domain-advisory',
     // Doc Expert (v2)
     'academic-doc-builder',
+    // Slide Master (v2)
+    'narrative-arc-deck-builder',
+    'template-deck-builder',
+    // Trade Pro (v2)
+    'market-briefing',
+    'alert-watcher',
+    'earnings-summarizer',
+    'idr-bi-rate-watcher',
   ])
   // External (third-party REST APIs called from Hermes on the VPS).
-  const knownExternal = new Set(['vercel-deploy'])
+  const knownExternal = new Set([
+    'vercel-deploy',
+    'bitget-readonly',
+  ])
 
   // Pilot manifests covered by the live-smoke test path. v2 added
-  // web-master (Web Creator).
-  for (const slug of ['doc-expert', 'the-pro', 'video-producer', 'web-master']) {
+  // web-master (Web Creator), slide-master, trade-pro.
+  for (const slug of [
+    'doc-expert',
+    'the-pro',
+    'video-producer',
+    'web-master',
+    'slide-master',
+    'trade-pro',
+  ]) {
     const m = readJson(`agent-packs/${slug}/manifest.json`) as Manifest
     for (const skill of m.skills) {
       const colonIdx = skill.handler_ref.indexOf(':')

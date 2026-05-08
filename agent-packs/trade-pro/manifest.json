@@ -1,0 +1,65 @@
+{
+  "$schema": "../_manifest.schema.json",
+  "agent_slug": "trade-pro",
+  "version": "2.0.0",
+  "description_id": "Bundle skill + template Trade Pro v2. Briefing pasar pagi, alert saham + crypto, ringkas laporan keuangan emiten, plus IDR/BI rate watcher (pindahan dari Macro Strategist) + Bitget read-only (P1).",
+  "skills": [
+    {
+      "id": "market-briefing",
+      "description_id": "Briefing pasar pagi jam 8 WIB — IDX open recap, US/EU overnight summary, crypto major moves, event calendar hari ini.",
+      "description_en": "Morning market briefing — IDX open, overnight US/EU, crypto top moves, today's event calendar.",
+      "templates_used": [],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:market-briefing",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
+      "id": "alert-watcher",
+      "description_id": "Set alert saham / crypto berdasarkan threshold (price, volume, news). Delivery via Telegram dengan one-line context. Tidak auto-trade.",
+      "description_en": "Watch stocks / crypto for threshold-based alerts (price, volume, news). Telegram delivery with one-line context. Never auto-trades.",
+      "templates_used": [],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:alert-watcher",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
+      "id": "earnings-summarizer",
+      "description_id": "Ringkas laporan keuangan emiten — key metrics, surprises vs konsensus, audit notes, guidance change. Source dari laporan resmi (annual / quarterly).",
+      "description_en": "Summarize listed-company financial reports — key metrics, surprises vs consensus, audit notes, guidance change. Sourced from official annual/quarterly filings.",
+      "templates_used": [],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:earnings-summarizer",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
+      "id": "idr-bi-rate-watcher",
+      "description_id": "Monitor IDR/USD dan BI rate. Update kalau IDR break level psikologis atau BI Board signal rate change. Konteks: spread vs Fed, capital flow, cadangan devisa. v2 — pindahan dari Macro Strategist.",
+      "description_en": "Monitor IDR/USD and BI rate. Updates on psychological-level breaks or BI Board signals. Context includes Fed spread, capital flow, foreign reserves. v2 — moved from Macro Strategist.",
+      "templates_used": [],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:idr-bi-rate-watcher",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
+      "id": "bitget-readonly",
+      "description_id": "Bitget integration read-only (P1). Customer pasang API key dengan read-only scope, aku surface portfolio snapshot, P&L, funding rate signal. Tidak execute trade. OAuth + execute scope di Phase 4.",
+      "description_en": "Bitget read-only integration (P1). Customer provides read-only API key; surface portfolio snapshot, P&L, funding rate. No trade execution. OAuth + execute scope deferred to Phase 4.",
+      "templates_used": [],
+      "execution": "external-api",
+      "handler_ref": "external:bitget-readonly",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
+      "id": "extend-capabilities",
+      "description_id": "Generate template baru saat customer minta sesuatu yang belum ada di inventory. Pakai LLM customer (BYOK), simpan ke /var/lib/weuseai/customer-grown/.",
+      "description_en": "Generate a new template at runtime when the customer asks for something not in inventory.",
+      "templates_used": [],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:extend-capabilities",
+      "enabled_for_tiers": ["pro", "studio"]
+    }
+  ],
+  "templates": [],
+  "self_extend": true,
+  "extension_dir": "/var/lib/weuseai/customer-grown/"
+}
