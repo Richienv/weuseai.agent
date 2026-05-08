@@ -1,0 +1,123 @@
+{
+  "$schema": "../_manifest.schema.json",
+  "agent_slug": "social-conductor",
+  "version": "2.0.0",
+  "description_id": "Bundle skill + template Social Conductor v2 (Option B scope). Content calendar, post drafting cross-platform, engagement log, voice-consistency checker. NO scraping, NO auto-post — kamu yang submit ke platform.",
+  "skills": [
+    {
+      "id": "voice-locker",
+      "description_id": "Locked brand voice profile dari 20+ sample writing. Reference yang dipakai semua draft skill untuk fit-score.",
+      "description_en": "Lock brand voice profile from 20+ samples; reference for all draft skills.",
+      "templates_used": ["voice-profile-template.md"],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:voice-locker",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
+      "id": "content-calendar-builder",
+      "description_id": "Susun content calendar lintas platform (TikTok, Reels, X, LinkedIn, blog). Slot terjadwal di local DB, bukan di platform 3rd-party. Output bisa di-export ke .ics atau Google Calendar manual.",
+      "description_en": "Build cross-platform content calendar in local DB.",
+      "templates_used": ["calendar-schema.md", "weekly-cadence-presets.md"],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:content-calendar-builder",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
+      "id": "post-drafter",
+      "description_id": "Draft post copy per platform — caption length-adjusted (TikTok ~150, Reels ~125, X ~280, LinkedIn ~700). Voice-fit scored. Customer copy-paste ke platform manual.",
+      "description_en": "Draft platform-optimal post copy in locked voice.",
+      "templates_used": ["platform-length-rules.md"],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:post-drafter",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
+      "id": "engagement-log-tracker",
+      "description_id": "Log comment / DM / mention yang customer input manual. Track yang belum dibalas, surface daily digest. Draft reply siap customer kirim manual.",
+      "description_en": "Manual-input engagement log + reply drafting.",
+      "templates_used": ["engagement-schema.md", "reply-pattern-library.md"],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:engagement-log-tracker",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
+      "id": "voice-consistency-checker",
+      "description_id": "Skor fit setiap draft (post / reply / DM) ke locked voice profile. Output: high/medium/low fit + saran tweak kalau medium/low. Track drift trend mingguan.",
+      "description_en": "Score draft fit to locked voice profile.",
+      "templates_used": ["voice-fit-rubric.md"],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:voice-consistency-checker",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
+      "id": "campaign-planner",
+      "description_id": "Multi-week campaign plan (produk launch, content series, seasonal push). Output: calendar entries + post drafts pre-staged + engagement triggers.",
+      "description_en": "Multi-week campaign plan with calendar + drafts.",
+      "templates_used": ["campaign-template.md"],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:campaign-planner",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
+      "id": "extend-capabilities",
+      "description_id": "Generate skill atau template baru saat customer minta sesuatu yang belum ada di inventory.",
+      "description_en": "Generate a new skill or template at runtime when the customer asks for something not in inventory.",
+      "templates_used": [],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:extend-capabilities",
+      "enabled_for_tiers": ["pro", "studio"]
+    }
+  ],
+  "templates": [
+    {
+      "id": "voice-profile-template.md",
+      "kind": "schema-spec",
+      "description_id": "Schema voice profile — register, banned words, signature phrases, length norms, emoji policy.",
+      "best_for": "Voice-locker output structure"
+    },
+    {
+      "id": "calendar-schema.md",
+      "kind": "schema-spec",
+      "description_id": "Schema calendar entries — platform, date, status (draft/scheduled/posted), tema, content type.",
+      "best_for": "content-calendar-builder DB shape"
+    },
+    {
+      "id": "weekly-cadence-presets.md",
+      "kind": "reference",
+      "description_id": "Cadence presets — solopreneur (3/week), brand (daily mixed), creator (1-2/day with batch).",
+      "best_for": "Calendar setup defaults"
+    },
+    {
+      "id": "platform-length-rules.md",
+      "kind": "reference",
+      "description_id": "Length budget per platform untuk post-drafter.",
+      "best_for": "Reference yang dipakai post-drafter"
+    },
+    {
+      "id": "engagement-schema.md",
+      "kind": "schema-spec",
+      "description_id": "Schema engagement log — source, type (comment/DM/mention), priority, status (pending/replied/escalated), draft reply.",
+      "best_for": "engagement-log-tracker DB shape"
+    },
+    {
+      "id": "reply-pattern-library.md",
+      "kind": "reference",
+      "description_id": "Reply patterns per situasi — appreciative, clarifying, redirect-to-DM, escalation flag.",
+      "best_for": "Reference yang dipakai engagement-log-tracker"
+    },
+    {
+      "id": "voice-fit-rubric.md",
+      "kind": "reference",
+      "description_id": "Rubric scoring high/medium/low fit. Specific signals per voice dimension.",
+      "best_for": "voice-consistency-checker scoring logic"
+    },
+    {
+      "id": "campaign-template.md",
+      "kind": "reference",
+      "description_id": "Campaign plan template — phase, week-by-week deliverables, KPI hooks.",
+      "best_for": "campaign-planner output frame"
+    }
+  ],
+  "self_extend": true,
+  "extension_dir": "/var/lib/weuseai/customer-grown/"
+}

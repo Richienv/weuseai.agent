@@ -426,6 +426,23 @@ test('every pilot manifest skill handler_ref points to a known edge function, he
     'task-decomposer',
     'multi-agent-router',
     'progress-monitor',
+    // Business Director (v2)
+    'business-roadmap-tracker',
+    'incorporation-advisor',
+    'department-task-spawner',
+    'compliance-checker',
+    // Video Producer (v2 EXPAND — HyperFrames + sound + hashtag + caption)
+    'hyperframes-storyboard',
+    'sound-trend-tracker',
+    'hashtag-research',
+    'caption-optimizer',
+    // Social Conductor (v2 EXPAND — Option B, no scraping)
+    'voice-locker',
+    'content-calendar-builder',
+    'post-drafter',
+    'engagement-log-tracker',
+    'voice-consistency-checker',
+    'campaign-planner',
   ])
   // External (third-party REST APIs called from Hermes on the VPS).
   const knownExternal = new Set([
@@ -444,6 +461,8 @@ test('every pilot manifest skill handler_ref points to a known edge function, he
     'slide-master',
     'trade-pro',
     'project-conductor',
+    'business-director',
+    'social-conductor',
   ]) {
     const m = readJson(`agent-packs/${slug}/manifest.json`) as Manifest
     for (const skill of m.skills) {
