@@ -21,6 +21,7 @@ import { createOnboardingStore } from '../_shared/onboarding-store-supabase.ts'
 import { MockLlmKeyMinter } from '../_shared/mock-llm-key-minter.ts'
 import { OpenRouterKeyMinter } from '../_shared/openrouter-key-minter.ts'
 import { OnboardingProvisioningClient } from '../_shared/onboarding-provisioning-client.ts'
+import { TelegramBotClient } from '../_shared/telegram-client.ts'
 import type { ILlmKeyMinter } from '../_shared/types.ts'
 
 // @ts-ignore — Deno global available at runtime
@@ -48,6 +49,14 @@ const provisioning = new OnboardingProvisioningClient({
   authToken: PROVISIONING_AUTH_TOKEN,
 })
 
+// Pair-flow Option A (2026-05-09): we call deleteWebhook on the
+// customer's own bot AFTER provisioning ACKs, so Hermes can long-poll
+// cleanly when the VPS boots. The TelegramBotClient platform token
+// (legacy @weuseaibot) is unused for that path — only sendMessageAs /
+// deleteWebhook with the customer's per-row token are exercised here.
+const PLATFORM_BOT_TOKEN = Deno.env.get('TELEGRAM_BOT_TOKEN') ?? ''
+const telegram = new TelegramBotClient({ token: PLATFORM_BOT_TOKEN })
+
 let minter: ILlmKeyMinter
 if (MINTER_MODE === 'live') {
   const provisioningKey = Deno.env.get('OPENROUTER_PROVISIONING_KEY')
@@ -73,6 +82,7 @@ Deno.serve(async (req) => {
     db,
     minter,
     provisioning,
+    telegram,
     publicBase: PUBLIC_BASE,
   })
   return withCors(res, req)
