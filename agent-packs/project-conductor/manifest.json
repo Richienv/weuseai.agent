@@ -1,0 +1,56 @@
+{
+  "$schema": "../_manifest.schema.json",
+  "agent_slug": "project-conductor",
+  "version": "2.0.0",
+  "description_id": "Bundle skill + template Project Conductor v2 (renamed dari Macro Strategist). Kanban orchestrator pakai Hermes v0.13.0 native — bagi project jadi task, spawn specialist agents per task, monitor dashboard, weekly recap. Tier change v1: Studio → v2: Pro+.",
+  "skills": [
+    {
+      "id": "kanban-orchestrator",
+      "description_id": "Susun kanban board dari project goal. Hermes v0.13.0 native kanban — column To Do / In Progress / Review / Done. Customer bisa custom column kalau workflow team beda.",
+      "description_en": "Build a kanban board from a project goal. Uses Hermes v0.13.0 native kanban with standard columns (To Do / In Progress / Review / Done). Customer can customize columns to match their team workflow.",
+      "templates_used": [],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:kanban-orchestrator",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
+      "id": "task-decomposer",
+      "description_id": "Terjemahkan project goal high-level (mis. 'plan product launch') jadi task-task konkret dengan dependencies + owner default per persona library.",
+      "description_en": "Translate a high-level project goal into concrete tasks with dependencies and default owners drawn from the persona library.",
+      "templates_used": [],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:task-decomposer",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
+      "id": "multi-agent-router",
+      "description_id": "Spawn specialist agent per task — Deep Researcher buat riset, Doc Expert buat draft, Web Creator buat landing, dst. Aggregate output balik ke kanban + customer.",
+      "description_en": "Delegate to specialist personas per task — Deep Researcher for research, Doc Expert for drafts, Web Creator for landings, etc. Aggregates output back to the kanban + customer.",
+      "templates_used": [],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:multi-agent-router",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
+      "id": "progress-monitor",
+      "description_id": "Render dashboard URL untuk view real-time project status. Telegram update saat milestone reached atau blocker baru. Weekly recap composer.",
+      "description_en": "Render a dashboard URL for real-time project status. Telegram updates when milestones are reached or blockers appear. Weekly recap composer included.",
+      "templates_used": [],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:progress-monitor",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
+      "id": "extend-capabilities",
+      "description_id": "Generate skill / template baru saat customer minta sesuatu yang belum ada di inventory. Pakai LLM customer (BYOK), simpan ke /var/lib/weuseai/customer-grown/.",
+      "description_en": "Generate a new skill or template at runtime when the customer asks for something not in inventory.",
+      "templates_used": [],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:extend-capabilities",
+      "enabled_for_tiers": ["pro", "studio"]
+    }
+  ],
+  "templates": [],
+  "self_extend": true,
+  "extension_dir": "/var/lib/weuseai/customer-grown/"
+}

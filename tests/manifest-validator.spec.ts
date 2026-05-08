@@ -421,6 +421,11 @@ test('every pilot manifest skill handler_ref points to a known edge function, he
     'alert-watcher',
     'earnings-summarizer',
     'idr-bi-rate-watcher',
+    // Project Conductor (v2 — REPLACE+RENAME from macro-strategist)
+    'kanban-orchestrator',
+    'task-decomposer',
+    'multi-agent-router',
+    'progress-monitor',
   ])
   // External (third-party REST APIs called from Hermes on the VPS).
   const knownExternal = new Set([
@@ -429,7 +434,8 @@ test('every pilot manifest skill handler_ref points to a known edge function, he
   ])
 
   // Pilot manifests covered by the live-smoke test path. v2 added
-  // web-master (Web Creator), slide-master, trade-pro.
+  // web-master (Web Creator), slide-master, trade-pro, project-conductor
+  // (renamed from macro-strategist).
   for (const slug of [
     'doc-expert',
     'the-pro',
@@ -437,6 +443,7 @@ test('every pilot manifest skill handler_ref points to a known edge function, he
     'web-master',
     'slide-master',
     'trade-pro',
+    'project-conductor',
   ]) {
     const m = readJson(`agent-packs/${slug}/manifest.json`) as Manifest
     for (const skill of m.skills) {
