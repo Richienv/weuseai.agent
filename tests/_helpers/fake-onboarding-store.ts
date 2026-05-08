@@ -24,9 +24,16 @@ export class FakeOnboardingStore implements IOnboardingStore {
   subscriptions = new Map<string, SubscriptionRow>()
   audits: AuditRow[] = []
   openrouterKeys = new Map<string, OpenRouterRow>()
+  /** Pair-flow Option A (2026-05-09): in-memory ciphertext store keyed by
+   *  customer_id. Tests can assert encryption + decryption round-trips
+   *  without invoking real pgcrypto. */
+  botTokensCiphertext = new Map<string, string>()
 
   /** Throw on any DB call — useful for tests that assert no DB write. */
   throwOnInsertCustomerOpenRouterKey = false
+  /** When true, getDecryptedBotToken throws (simulates RPC failure
+   *  / encryption-key misconfiguration). */
+  throwOnDecryptBotToken = false
 
   // ── seeders ─────────────────────────────────────────────────────
 
@@ -37,6 +44,7 @@ export class FakeOnboardingStore implements IOnboardingStore {
       display_name: c.display_name ?? null,
       whatsapp_number: c.whatsapp_number ?? null,
       telegram_chat_id: c.telegram_chat_id ?? null,
+      telegram_bot_username: c.telegram_bot_username ?? null,
       pairing_code: c.pairing_code ?? null,
       pairing_code_expires_at: c.pairing_code_expires_at ?? null,
       soul_md_text: c.soul_md_text ?? null,
@@ -133,5 +141,37 @@ export class FakeOnboardingStore implements IOnboardingStore {
       throw new Error('fake-store: simulated insert failure')
     }
     this.openrouterKeys.set(input.customer_id, { ...input })
+  }
+
+  // ── Per-customer bot (Pair-flow Option A, 2026-05-09) ────────────
+
+  async setBotTokenAndUsername(
+    customer_id: string,
+    bot_token_plaintext: string,
+    bot_username: string,
+  ): Promise<void> {
+    const existing = this.customers.get(customer_id)
+    if (!existing) {
+      throw new Error(
+        `fake-store: customer ${customer_id} not found (setBotTokenAndUsername)`,
+      )
+    }
+    // Reversible "encryption" so tests round-trip cleanly. Real
+    // implementation uses pgcrypto's pgp_sym_encrypt.
+    const ciphertext = `enc:${bot_token_plaintext}`
+    this.botTokensCiphertext.set(customer_id, ciphertext)
+    this.customers.set(customer_id, {
+      ...existing,
+      telegram_bot_username: bot_username,
+    })
+  }
+
+  async getDecryptedBotToken(customer_id: string): Promise<string | null> {
+    if (this.throwOnDecryptBotToken) {
+      throw new Error('fake-store: simulated decrypt failure')
+    }
+    const ciphertext = this.botTokensCiphertext.get(customer_id)
+    if (!ciphertext) return null
+    return ciphertext.startsWith('enc:') ? ciphertext.slice(4) : null
   }
 }

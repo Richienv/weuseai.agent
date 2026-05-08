@@ -130,12 +130,21 @@ export type XenditInvoiceEvent = {
 
 // Customer row — the slice of `customers` the onboarding handlers read/write.
 // Not every column is included; only what these handlers need.
+//
+// telegram_bot_token is intentionally OMITTED from this row even though the
+// column exists. It's stored as pgcrypto ciphertext (per migration
+// 20260509200000_telegram_bot_per_customer.sql) and the row would be a leak
+// risk if accidentally serialized to logs. Access via dedicated store
+// methods setBotTokenAndUsername / getDecryptedBotToken instead.
 export type CustomerRow = {
   id: string
   email: string
   display_name: string | null
   whatsapp_number: string | null
   telegram_chat_id: string | null
+  /** Plaintext, e.g. 'andyfounderbot'. Used for tg://resolve deeplink in
+   *  onboarding Step 3. Set during validate-bot-token-handler. */
+  telegram_bot_username: string | null
   pairing_code: string | null
   pairing_code_expires_at: string | null   // ISO timestamp
   soul_md_text: string | null
@@ -175,6 +184,22 @@ export interface IOnboardingStore {
     openrouter_key_hash: string
     credit_limit_usd_cents: number
   }): Promise<void>
+
+  // ─── Per-customer bot (Pair-flow Option A, 2026-05-09) ────────────────
+  //
+  // Set during validate-bot-token-handler (Step 2 of onboarding). The
+  // token plaintext is encrypted via SQL helper encrypt_bot_token() before
+  // landing in customers.telegram_bot_token. Username is plaintext.
+  setBotTokenAndUsername(
+    customer_id: string,
+    bot_token_plaintext: string,
+    bot_username: string,
+  ): Promise<void>
+
+  // Used by the provisioning service to write the customer's token to
+  // their VPS .env. Calls SQL decrypt_bot_token(). Service-role only.
+  // Returns null if the customer has no bot token set yet.
+  getDecryptedBotToken(customer_id: string): Promise<string | null>
 }
 
 // ─── LLM key minter (decoupled from Phase 2A merge) ───
@@ -217,11 +242,47 @@ export const TIER_CREDIT_USD_CENTS: Record<Tier, number> = {
 
 // ─── Telegram bot client (for webhook reply) ───
 //
-// The bot only ever sends text replies in Phase 1. Wider capabilities
-// (inline keyboards, photos) live in Phase 2C if/when we need them.
+// Phase 1 surface: replyText for the @weuseaibot pairing handler.
+// Pair-flow Option A (2026-05-09) added per-token operations so the
+// validate-bot-token-handler + pair-customer-bot-webhook + complete-
+// onboarding-handler can:
+//   - call getMe to validate a customer's freshly-pasted bot token
+//   - setWebhook on the customer's own bot during the pairing window
+//   - sendMessage as the customer's bot (pairing-success reply)
+//   - deleteWebhook on the customer's bot before VPS provisioning so
+//     Hermes can long-poll cleanly
+// All per-token methods take an explicit `botToken` parameter rather
+// than reading from env, since the customer's token is per-row.
 
 export interface ITelegramClient {
+  /** Reply via the platform's @weuseaibot token (from env). Legacy. */
   replyText(chatId: number | string, text: string): Promise<void>
+
+  /** Call /getMe on an arbitrary token. Returns the bot's username +
+   *  numeric id, or null if the token is invalid (Telegram returns
+   *  401/404). Throws on unexpected network/server errors. */
+  getMe(botToken: string): Promise<{ id: number; username: string } | null>
+
+  /** Call /setWebhook on an arbitrary token. The webhook URL must be
+   *  HTTPS. secret_token is sent back in `X-Telegram-Bot-Api-Secret-Token`
+   *  header on every webhook delivery — verify it server-side. */
+  setWebhook(input: {
+    botToken: string
+    url: string
+    secretToken: string
+    allowedUpdates?: string[]
+  }): Promise<void>
+
+  /** Call /deleteWebhook on an arbitrary token. Idempotent. */
+  deleteWebhook(botToken: string): Promise<void>
+
+  /** Send text as a specific bot. Used for the pairing-success reply
+   *  on the customer's own bot. */
+  sendMessageAs(
+    botToken: string,
+    chatId: number | string,
+    text: string,
+  ): Promise<void>
 }
 
 // ─── Provisioning client (extended) ───
@@ -236,6 +297,11 @@ export type SpinUpInput = {
   customerId: string
   tier: Tier
   telegramChatId: string
+  /** Customer's own bot token (per Option A — pair-flow 2026-05-09).
+   *  Provisioning writes this to /home/weuseai/.hermes/.env as
+   *  TELEGRAM_BOT_TOKEN, replacing the legacy shared @weuseaibot token.
+   *  Hermes long-polls THIS bot, not @weuseaibot. */
+  telegramBotToken: string
   openrouterApiKey: string
   soulMdContent: string
   alwaysOnEnabled: boolean

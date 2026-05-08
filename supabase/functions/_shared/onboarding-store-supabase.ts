@@ -30,7 +30,7 @@ export function createOnboardingStore(opts: {
       const { data } = await supabase
         .from('customers')
         .select(
-          'id, email, display_name, whatsapp_number, telegram_chat_id, pairing_code, pairing_code_expires_at, soul_md_text',
+          'id, email, display_name, whatsapp_number, telegram_chat_id, telegram_bot_username, pairing_code, pairing_code_expires_at, soul_md_text',
         )
         .eq('id', id)
         .maybeSingle()
@@ -41,7 +41,7 @@ export function createOnboardingStore(opts: {
       const { data } = await supabase
         .from('customers')
         .select(
-          'id, email, display_name, whatsapp_number, telegram_chat_id, pairing_code, pairing_code_expires_at, soul_md_text',
+          'id, email, display_name, whatsapp_number, telegram_chat_id, telegram_bot_username, pairing_code, pairing_code_expires_at, soul_md_text',
         )
         .eq('pairing_code', code)
         .maybeSingle()
@@ -73,7 +73,7 @@ export function createOnboardingStore(opts: {
         .update(patch)
         .eq('id', id)
         .select(
-          'id, email, display_name, whatsapp_number, telegram_chat_id, pairing_code, pairing_code_expires_at, soul_md_text',
+          'id, email, display_name, whatsapp_number, telegram_chat_id, telegram_bot_username, pairing_code, pairing_code_expires_at, soul_md_text',
         )
         .single()
       if (error) throw error
@@ -112,6 +112,62 @@ export function createOnboardingStore(opts: {
         .from('customer_openrouter_keys')
         .upsert(input, { onConflict: 'customer_id' })
       if (error) throw error
+    },
+
+    // ─── Per-customer bot (Pair-flow Option A, 2026-05-09) ───────────
+    //
+    // Both methods use Postgres RPC to call the SQL helpers
+    // encrypt_bot_token() / decrypt_bot_token() defined in migration
+    // 20260509200000_telegram_bot_per_customer.sql. The plaintext token
+    // never lives in this codebase outside the validate-bot-token
+    // request scope (encrypt) or the provisioning service spinUp
+    // payload (decrypt).
+
+    async setBotTokenAndUsername(customer_id, bot_token_plaintext, bot_username) {
+      // Step 1: encrypt server-side via RPC. Encrypted text comes back
+      // base64-encoded (see migration's encode(...,'base64')).
+      const { data: ciphertext, error: encErr } = await supabase.rpc(
+        'encrypt_bot_token',
+        { plaintext: bot_token_plaintext },
+      )
+      if (encErr) {
+        throw new Error(`encrypt_bot_token rpc failed: ${encErr.message}`)
+      }
+      if (typeof ciphertext !== 'string' || !ciphertext) {
+        throw new Error('encrypt_bot_token returned empty value')
+      }
+      // Step 2: persist ciphertext + username in one UPDATE.
+      const { error: upErr } = await supabase
+        .from('customers')
+        .update({
+          telegram_bot_token: ciphertext,
+          telegram_bot_username: bot_username,
+        })
+        .eq('id', customer_id)
+      if (upErr) throw upErr
+    },
+
+    async getDecryptedBotToken(customer_id) {
+      // Step 1: read the ciphertext via service-role (column-level
+      // REVOKE blocks anon, but service-role bypasses RLS + grants).
+      const { data, error: selErr } = await supabase
+        .from('customers')
+        .select('telegram_bot_token')
+        .eq('id', customer_id)
+        .maybeSingle()
+      if (selErr) throw selErr
+      const ciphertext = (data as { telegram_bot_token: string | null } | null)
+        ?.telegram_bot_token ?? null
+      if (!ciphertext) return null
+      // Step 2: decrypt via RPC.
+      const { data: plaintext, error: decErr } = await supabase.rpc(
+        'decrypt_bot_token',
+        { ciphertext },
+      )
+      if (decErr) {
+        throw new Error(`decrypt_bot_token rpc failed: ${decErr.message}`)
+      }
+      return typeof plaintext === 'string' ? plaintext : null
     },
   }
 }

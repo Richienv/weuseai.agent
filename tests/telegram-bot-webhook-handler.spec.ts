@@ -21,6 +21,28 @@ class FakeTelegram implements ITelegramClient {
   async replyText(chatId: number | string, text: string): Promise<void> {
     this.replies.push({ chatId, text })
   }
+
+  // Pair-flow Option A (2026-05-09): unused by the legacy /pair handler
+  // (which only calls replyText), but ITelegramClient now requires
+  // these. Tests for the new pair-customer-bot-webhook handler use
+  // their own dedicated FakeTelegram with full instrumentation.
+  async getMe(_botToken: string) {
+    return null
+  }
+  async setWebhook(_input: {
+    botToken: string
+    url: string
+    secretToken: string
+    allowedUpdates?: string[]
+  }) {}
+  async deleteWebhook(_botToken: string) {}
+  async sendMessageAs(
+    _botToken: string,
+    chatId: number | string,
+    text: string,
+  ): Promise<void> {
+    this.replies.push({ chatId, text })
+  }
 }
 
 const SECRET = 'super-secret-token'
