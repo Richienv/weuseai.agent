@@ -353,6 +353,13 @@ log "No agent-pack bundle supplied; running with Phase 1/2A baseline (daily-news
   const bundlePullScriptB64 = Buffer.from(bundlePullScript, 'utf8').toString('base64')
   const bundlePullInstallBlock = p.bundleTarBase64
     ? `
+# ─── 6c. weuseai-bundle-pull script (Phase 2E-2) ────────────────────────
+#
+# Install the bundle-pull script at /usr/local/bin/weuseai-bundle-pull.
+# This is the script that runs as Hermes systemd ExecStartPre on every
+# boot — pulls the per-agent bundle from Storage, applies tier filter,
+# copies SKILL.md files into Hermes' discovery path. Graceful failure
+# (always exits 0) preserves the bootstrap-bundle SLA floor.
 log "Installing weuseai-bundle-pull at /usr/local/bin/..."
 echo '${bundlePullScriptB64}' | base64 -d > /usr/local/bin/weuseai-bundle-pull
 chmod 0755 /usr/local/bin/weuseai-bundle-pull
@@ -440,16 +447,7 @@ chown -R weuseai:weuseai /home/weuseai/.hermes
 # Also initializes the customer-grown directory under /var/lib/weuseai/
 # — the persistence area for templates the agent generates at runtime
 # via the extend-capabilities skill.
-${bundleInstallBlock}
-
-# ─── 6c. weuseai-bundle-pull script (Phase 2E-2) ────────────────────────
-#
-# Install the bundle-pull script at /usr/local/bin/weuseai-bundle-pull.
-# This is the script that runs as Hermes systemd ExecStartPre on every
-# boot — pulls the per-agent bundle from Storage, applies tier filter,
-# copies SKILL.md files into Hermes' discovery path. Graceful failure
-# (always exits 0) preserves the bootstrap-bundle SLA floor.
-${bundlePullInstallBlock}
+${bundleInstallBlock}${bundlePullInstallBlock}
 
 # ─── 7. Hermes install (slow — 3-6 min) ────────────────────────────────
 log "Installing Hermes (this takes 3-6 min)..."

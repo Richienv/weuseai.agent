@@ -1,8 +1,12 @@
-# Workflow Library — Phase 2E-1.5 (Hermes-Native)
+# Workflow Library — Phases 2E-1.5 + 2E-2
 
-> **Status:** Per-agent bundles + 3 pilots shipping.
-> **Spec:** `docs/plans/2026-05-08-workflow-library-pivot-to-hermes-native.md`
-> **Architecture pivot:** dropped platform-side `workflow-discover` (Hermes does intent matching natively on the customer's VPS). See pivot spec for rationale.
+> **Status:**
+> - **2E-1.5** (merged `7f9ed98`): per-agent bundles + 3 pilots + Hermes-native skill discovery.
+> - **2E-2** (`feat/hermes-vps-integration`): bundle delivery (Storage pull at boot), tier gate, self-extension L1, telemetry. End of Day 5 deliverable.
+>
+> **Specs:**
+> - `docs/plans/2026-05-08-workflow-library-pivot-to-hermes-native.md` (2E-1.5 — architecture)
+> - `docs/plans/2026-05-08-phase-2e-2-bundle-delivery-spec.md` (2E-2 — delivery mechanics)
 
 ---
 
@@ -144,13 +148,88 @@ supabase functions deploy workflow-list workflow-execute \
 SUPABASE_URL=$STAGING_URL \
 SUPABASE_SERVICE_ROLE_KEY=$STAGING_SERVICE_KEY \
   tsx scripts/register-workflow.ts --all
-
-# customer-flow.ts integration (Phase 2E-2 work):
-#   tar agent-packs/<slug>/ + agent-packs/_shared/, base64 encode,
-#   pass as bundleTarBase64 to buildSetupScript()
 ```
 
 **Secrets dropped vs PR #2:** `OPENAI_EMBED_API_KEY`, `OPENROUTER_ORCHESTRATION_KEY` — no longer needed. $0 platform LLM cost.
+
+### Phase 2E-2 additional steps (after 2E-2 merge)
+
+```sh
+# 6. Apply 2E-2 migration (customers.bundle_versions + bundle_pull_attempts)
+supabase db push --linked
+
+# 7. Build the bootstrap bundle (one-time + whenever The Pro SOUL.md or
+#    extend-capabilities SKILL.md change). Drift test catches stale bundle.
+tsx scripts/build-bootstrap-bundle.ts
+
+# 8. Deploy the 3 new Edge Functions
+supabase functions deploy bundle-publish bundle-fetch bundle-pull-record \
+  --project-ref gtjgsligllbjcisiyrah
+
+# 9. Publish the per-agent bundle (used at customer first boot via bundle-fetch).
+#    Done via the bundle-publish Edge Function with service-role bearer:
+SUPABASE_URL=$STAGING_URL \
+SUPABASE_SERVICE_ROLE_KEY=$STAGING_SERVICE_KEY \
+  curl -X POST "$STAGING_URL/functions/v1/bundle-publish" \
+    -H "Authorization: Bearer $STAGING_SERVICE_KEY" \
+    -H "Content-Type: application/json" \
+    -d "$(jq -n \
+      --arg agent doc-expert \
+      --arg version 1.0.0 \
+      --arg b64 "$(tar --no-xattrs --no-mac-metadata --owner=0 --group=0 -czf - \
+        -C agent-packs/doc-expert . \
+        -C ../_shared . | base64)" \
+      '{agent_slug: $agent, version: $version, bundle_tar_base64: $b64}')"
+
+# (Repeat step 9 per published agent: doc-expert, the-pro, video-producer.)
+
+# 10. Set tier-default bundle_update_policy on existing customers (optional).
+#    Defaults: starter → 'pin', pro/studio → 'latest'.
+#    Run via psql or a one-off script. Phase 3+ adds this to the
+#    subscription-activation Edge Function.
+psql "$STAGING_DB_URL" -c "
+  update customers
+  set bundle_update_policy = case
+    when (select tier from subscriptions where customer_id = customers.id and status='active') in ('pro','studio') then 'latest'
+    else 'pin'
+  end;
+"
+```
+
+**No new Supabase secrets required for 2E-2.** Bundle delivery uses the existing service-role key for admin uploads (bundle-publish) and customer_id UUIDs for customer reads (bundle-fetch + bundle-pull-record). Customer's BYOK OpenRouter key on the VPS still pays for any LLM work the agent does.
+
+### Live VPS smoke test (manual run, costs ~\$0.50)
+
+Phase 2E-2 includes a real-VPS smoke test that provisions an IDCloudHost VM, ships the bundle, verifies installation. **Manual-run only**, capped at 2 runs per Phase 2E-2 (mid-phase + pre-PR) per founder gating policy.
+
+```sh
+SUPABASE_URL=https://gtjgsligllbjcisiyrah.supabase.co \
+SUPABASE_SERVICE_ROLE_KEY=<service-role> \
+IDCLOUDHOST_API_KEY=<idch-key> \
+IDCLOUDHOST_BILLING_ACCOUNT_ID=<billing-id> \
+AGENT_SLUG=doc-expert \
+BUNDLE_VERSION=1.0.0 \
+  npx tsx tests/_e2e-bundle-pull-smoke.mts
+```
+
+The script:
+1. Tars + uploads the agent's bundle to Storage via `bundle-publish`.
+2. Spawns a VPS tagged `weuseai-smoke-2e2-<YYYYMMDD>`.
+3. Runs the setup-script over SSH (with the inline bootstrap bundle).
+4. Polls until `/var/lib/weuseai/bundle/<slug>/.installed-version` exists.
+5. Verifies SKILL.md files, customer-grown dir, systemd drop-in, telemetry row.
+6. Tears down the VPS.
+
+To leave the VPS up for debugging: `SKIP_TEARDOWN=1`.
+
+### Cleanup utility
+
+```sh
+IDCLOUDHOST_API_KEY=<key> tsx scripts/cleanup-orphan-vms.ts
+# Add --dry-run to preview without deleting
+```
+
+Deletes any IDCloudHost VPS named `weuseai-smoke-*` older than 24h (override via `TTL_HOURS=N`). Safe to run nightly via cron.
 
 ---
 
@@ -158,6 +237,9 @@ SUPABASE_SERVICE_ROLE_KEY=$STAGING_SERVICE_KEY \
 
 | Phase | Scope | Status |
 |---|---|---|
-| **2E-1.5** (this branch) | Per-agent bundles + 3 pilots + Hermes-native pattern + provisioning hook (parameterized) | Shipping |
-| **2E-2** | customer-flow.ts wires bundle tar + base64; live Hermes integration + end-to-end demo on a VPS; PDF renderer; real MCPs; composite workflows; +10 more workflows | Pending |
-| **2E-3** | Customer-facing UI for browsing/invoking workflows + workflow_runs analytics + per-customer private templates dashboard | Pending |
+| **2E-1.5** | Per-agent bundles + 3 pilots + Hermes-native skill discovery | ✅ Merged `7f9ed98` |
+| **2E-2** (`feat/hermes-vps-integration`) | Bundle delivery (Storage pull at boot) + tier gate (`enabled_for_tiers`) + self-extension L1 + telemetry + live VPS smoke | In progress (Days 1-5) |
+| **2E-3** | PDF rendering + `customer-tier-bump` Edge Function (instant tier upgrade via Xendit webhook) | Pending |
+| **2E-4** | Bundle expansion (Slide Master, Trade Pro, Web Master, Macro Strategist, Business Director) — parallel-able | Pending |
+| **2E-5** | Auto-update background job (nightly poll for new bundle versions per `latest` policy) | Pending |
+| **Phase 3+** | Privacy levels 2-4, dashboard UI, staged update mode, customer-tier-bump automation | Pending |
