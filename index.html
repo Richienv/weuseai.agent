@@ -3134,6 +3134,334 @@
       );
     }
 
+    // ─────────────────────── EDGE VIDEO (SOBEL) ───────────────────────
+    // Treatment 5: per-frame Sobel edge detection of an mp4, rendered as
+    // crisp oxblood-on-black wireframe edges. WebGL2 primary path (one
+    // 3x3 fragment shader pass per frame); Canvas 2D fallback for legacy
+    // devices. Same IntersectionObserver gating as DottedVideo so that
+    // off-screen cards don't burn rAF.
+    //
+    // Visual character: cinematic / hacker-aesthetic. UI elements emerge
+    // as glowing red outlines on pure black. No fill, lines only.
+    function EdgeVideo({
+      src,
+      edgeColor = '#aa3333',
+      bg = '#000000',
+      threshold = 0.3,
+      contrast = 1.9,
+      playbackRate = 1,
+      className = '',
+      style = {},
+    }) {
+      const wrapRef = useRef(null);
+      const videoRef = useRef(null);
+      const canvasRef = useRef(null);
+
+      useEffect(() => {
+        const wrap = wrapRef.current;
+        const video = videoRef.current;
+        const canvas = canvasRef.current;
+        if (!wrap || !video || !canvas) return;
+        try { video.playbackRate = playbackRate; } catch (e) {}
+
+        const isMobile = window.matchMedia('(max-width: 767px)').matches;
+        const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const frameModulo = isMobile ? 2 : 1; // ~15fps mobile, ~30fps desktop
+        const dpr = 1;
+
+        // Parse hex color → vec3 (0..1) for WebGL uniform.
+        const hexToRgb = (hex) => {
+          const h = hex.replace('#', '');
+          const v = h.length === 3
+            ? h.split('').map((c) => parseInt(c + c, 16))
+            : [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+          return [v[0] / 255, v[1] / 255, v[2] / 255];
+        };
+        const edgeRgb = hexToRgb(edgeColor);
+        const edgeRgb255 = [Math.round(edgeRgb[0] * 255), Math.round(edgeRgb[1] * 255), Math.round(edgeRgb[2] * 255)];
+
+        let mounted = true;
+        let raf = 0;
+        let inView = false;
+        let frame = 0;
+
+        // ---------- WebGL2 setup (primary path) ----------
+        let gl = null;
+        let program = null;
+        let tex = null;
+        let uTexel = null;
+        let uThreshold = null;
+        let uContrast = null;
+        let uEdgeColor = null;
+        let glReady = false;
+
+        const tryInitGL = () => {
+          try {
+            gl = canvas.getContext('webgl2', { antialias: false, premultipliedAlpha: false, preserveDrawingBuffer: false });
+          } catch (e) { gl = null; }
+          if (!gl) return false;
+
+          const vsSrc = `#version 300 es
+in vec2 a_pos;
+out vec2 v_uv;
+void main() {
+  v_uv = vec2((a_pos.x + 1.0) * 0.5, 1.0 - (a_pos.y + 1.0) * 0.5);
+  gl_Position = vec4(a_pos, 0.0, 1.0);
+}`;
+          const fsSrc = `#version 300 es
+precision highp float;
+uniform sampler2D u_video;
+uniform vec2 u_texel;
+uniform float u_threshold;
+uniform float u_contrast;
+uniform vec3 u_edgeColor;
+in vec2 v_uv;
+out vec4 outColor;
+float lum(vec3 c) { return dot(c, vec3(0.299, 0.587, 0.114)); }
+void main() {
+  float tl = lum(texture(u_video, v_uv + u_texel * vec2(-1.0, -1.0)).rgb);
+  float tc = lum(texture(u_video, v_uv + u_texel * vec2( 0.0, -1.0)).rgb);
+  float tr = lum(texture(u_video, v_uv + u_texel * vec2( 1.0, -1.0)).rgb);
+  float ml = lum(texture(u_video, v_uv + u_texel * vec2(-1.0,  0.0)).rgb);
+  float mr = lum(texture(u_video, v_uv + u_texel * vec2( 1.0,  0.0)).rgb);
+  float bl = lum(texture(u_video, v_uv + u_texel * vec2(-1.0,  1.0)).rgb);
+  float bc = lum(texture(u_video, v_uv + u_texel * vec2( 0.0,  1.0)).rgb);
+  float br = lum(texture(u_video, v_uv + u_texel * vec2( 1.0,  1.0)).rgb);
+  float gx = -tl + tr - 2.0*ml + 2.0*mr - bl + br;
+  float gy = -tl - 2.0*tc - tr + bl + 2.0*bc + br;
+  float mag = sqrt(gx*gx + gy*gy);
+  float edge = smoothstep(u_threshold, u_threshold + 0.08, mag * u_contrast);
+  vec3 col = mix(vec3(0.0), u_edgeColor, edge);
+  outColor = vec4(col, 1.0);
+}`;
+          const compile = (type, src) => {
+            const sh = gl.createShader(type);
+            gl.shaderSource(sh, src);
+            gl.compileShader(sh);
+            if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) {
+              console.warn('[EdgeVideo] shader compile error', gl.getShaderInfoLog(sh));
+              gl.deleteShader(sh);
+              return null;
+            }
+            return sh;
+          };
+          const vs = compile(gl.VERTEX_SHADER, vsSrc);
+          const fs = compile(gl.FRAGMENT_SHADER, fsSrc);
+          if (!vs || !fs) return false;
+
+          program = gl.createProgram();
+          gl.attachShader(program, vs);
+          gl.attachShader(program, fs);
+          gl.bindAttribLocation(program, 0, 'a_pos');
+          gl.linkProgram(program);
+          if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+            console.warn('[EdgeVideo] program link error', gl.getProgramInfoLog(program));
+            return false;
+          }
+          gl.useProgram(program);
+
+          // Full-screen quad
+          const buf = gl.createBuffer();
+          gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+          gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+          gl.enableVertexAttribArray(0);
+          gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+
+          tex = gl.createTexture();
+          gl.bindTexture(gl.TEXTURE_2D, tex);
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+
+          uTexel = gl.getUniformLocation(program, 'u_texel');
+          uThreshold = gl.getUniformLocation(program, 'u_threshold');
+          uContrast = gl.getUniformLocation(program, 'u_contrast');
+          uEdgeColor = gl.getUniformLocation(program, 'u_edgeColor');
+          gl.uniform1f(uThreshold, threshold);
+          gl.uniform1f(uContrast, contrast);
+          gl.uniform3f(uEdgeColor, edgeRgb[0], edgeRgb[1], edgeRgb[2]);
+          gl.uniform1i(gl.getUniformLocation(program, 'u_video'), 0);
+          glReady = true;
+          return true;
+        };
+
+        // ---------- Canvas 2D fallback ----------
+        let ctx2d = null;
+        let sample = null;
+        let sampleCtx = null;
+        let lumBuf = null; // reusable Float32Array for one-pass luminance
+
+        const initCanvas2D = () => {
+          ctx2d = canvas.getContext('2d');
+          sample = document.createElement('canvas');
+          sampleCtx = sample.getContext('2d', { willReadFrequently: true });
+        };
+
+        const usingGL = tryInitGL();
+        if (usingGL) {
+          // eslint-disable-next-line no-console
+          console.log('[EdgeVideo] using WebGL2');
+        } else {
+          initCanvas2D();
+          // eslint-disable-next-line no-console
+          console.log('[EdgeVideo] fallback to Canvas 2D');
+        }
+
+        const resize = () => {
+          const r = wrap.getBoundingClientRect();
+          const w = Math.max(1, Math.floor(r.width * dpr));
+          const h = Math.max(1, Math.floor(r.height * dpr));
+          canvas.width = w;
+          canvas.height = h;
+          if (gl) gl.viewport(0, 0, w, h);
+        };
+        resize();
+        const ro = new ResizeObserver(resize);
+        ro.observe(wrap);
+
+        const drawGL = () => {
+          const vw = video.videoWidth, vh = video.videoHeight;
+          if (!vw || !vh) return;
+          gl.bindTexture(gl.TEXTURE_2D, tex);
+          try {
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
+          } catch (e) {
+            return;
+          }
+          gl.uniform2f(uTexel, 1 / vw, 1 / vh);
+          gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        };
+
+        const draw2D = () => {
+          const w = canvas.width, h = canvas.height;
+          const vw = video.videoWidth, vh = video.videoHeight;
+          if (!vw || !vh) return;
+          // Sample the video into a small offscreen canvas matching the
+          // output size (cover-fit).
+          if (sample.width !== w) sample.width = w;
+          if (sample.height !== h) sample.height = h;
+          const scale = Math.max(w / vw, h / vh);
+          const dw = vw * scale, dh = vh * scale;
+          const dx = (w - dw) / 2, dy = (h - dh) / 2;
+          sampleCtx.drawImage(video, dx, dy, dw, dh);
+          const img = sampleCtx.getImageData(0, 0, w, h);
+          const src = img.data;
+          // Pre-compute luminance once per pixel.
+          const N = w * h;
+          if (!lumBuf || lumBuf.length !== N) lumBuf = new Float32Array(N);
+          for (let i = 0, j = 0; i < src.length; i += 4, j++) {
+            lumBuf[j] = (0.299 * src[i] + 0.587 * src[i + 1] + 0.114 * src[i + 2]) / 255;
+          }
+          const out = new Uint8ClampedArray(src.length);
+          const er = edgeRgb255[0], eg = edgeRgb255[1], eb = edgeRgb255[2];
+          const t0 = threshold, t1 = threshold + 0.08;
+          // Sobel; skip 1px border.
+          for (let y = 1; y < h - 1; y++) {
+            const row = y * w;
+            for (let x = 1; x < w - 1; x++) {
+              const i = row + x;
+              const tl = lumBuf[i - w - 1], tc = lumBuf[i - w], tr = lumBuf[i - w + 1];
+              const ml = lumBuf[i - 1],     mr = lumBuf[i + 1];
+              const bl = lumBuf[i + w - 1], bc = lumBuf[i + w], br = lumBuf[i + w + 1];
+              const gx = -tl + tr - 2 * ml + 2 * mr - bl + br;
+              const gy = -tl - 2 * tc - tr + bl + 2 * bc + br;
+              const mag = Math.sqrt(gx * gx + gy * gy) * contrast;
+              // smoothstep(t0, t1, mag)
+              let e;
+              if (mag <= t0) e = 0;
+              else if (mag >= t1) e = 1;
+              else { const t = (mag - t0) / (t1 - t0); e = t * t * (3 - 2 * t); }
+              const o = i * 4;
+              out[o]     = er * e;
+              out[o + 1] = eg * e;
+              out[o + 2] = eb * e;
+              out[o + 3] = 255;
+            }
+          }
+          ctx2d.putImageData(new ImageData(out, w, h), 0, 0);
+        };
+
+        const renderOnce = () => {
+          if (video.readyState < 2) return false;
+          if (usingGL && glReady) drawGL(); else if (ctx2d) draw2D();
+          return true;
+        };
+
+        const tick = () => {
+          if (!mounted) return;
+          raf = requestAnimationFrame(tick);
+          if (!inView) return;
+          if ((frame++ % frameModulo) !== 0) return;
+          renderOnce();
+        };
+
+        // IntersectionObserver gates rAF + video play/pause.
+        const io = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((e) => {
+              inView = e.isIntersecting;
+              if (reducedMotion) {
+                // Render single frame at start, never autoplay.
+                video.pause();
+                if (inView) {
+                  // Try to force a frame load by seeking to 0.
+                  try { video.currentTime = 0; } catch (err) {}
+                  // Render once when the frame is ready.
+                  const tryDraw = () => {
+                    if (!renderOnce()) setTimeout(tryDraw, 80);
+                  };
+                  tryDraw();
+                }
+                return;
+              }
+              if (inView) {
+                try { video.playbackRate = playbackRate; } catch (err) {}
+                const p = video.play();
+                if (p && p.catch) p.catch(() => {});
+              } else {
+                video.pause();
+              }
+            });
+          },
+          { rootMargin: '200px' }
+        );
+        io.observe(wrap);
+
+        if (!reducedMotion && !raf) raf = requestAnimationFrame(tick);
+
+        return () => {
+          mounted = false;
+          ro.disconnect();
+          io.disconnect();
+          cancelAnimationFrame(raf);
+          if (gl) {
+            try {
+              if (program) gl.deleteProgram(program);
+              if (tex) gl.deleteTexture(tex);
+              const ext = gl.getExtension('WEBGL_lose_context');
+              if (ext) ext.loseContext();
+            } catch (e) {}
+          }
+        };
+      }, [src, edgeColor, bg, threshold, contrast, playbackRate]);
+
+      return (
+        <div ref={wrapRef} className={className} style={{ position: 'relative', overflow: 'hidden', background: bg, ...style }}>
+          <video
+            ref={videoRef}
+            src={src}
+            loop muted playsInline
+            preload="metadata"
+            crossOrigin="anonymous"
+            aria-hidden="true"
+            style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none' }}
+          />
+          <canvas ref={canvasRef} aria-hidden="true" style={{ width: '100%', height: '100%', display: 'block' }} />
+        </div>
+      );
+    }
+
     // ─────────────────────── UNICORN STUDIO EMBED ───────────────────────
     // Lazy-loads the unicornStudio.js lib once per page; (re-)initializes
     // any [data-us-project] divs on mount.
@@ -4750,58 +5078,33 @@
       );
     }
 
-    // Pivot 2026-05-09: every agent card now renders a hand-built mp4
-    // through the DottedVideo halftone canvas. Chat-bubble + animation
-    // scenes (AgentScene*) are kept in source as reference but no longer
+    // Treatment 5 (2026-05-09): every agent card runs a per-frame Sobel
+    // edge detection over its source mp4, rendered as crisp oxblood-on-
+    // black wireframe edges. WebGL2 fragment shader (one 3x3 pass per
+    // tick) is the primary path; Canvas 2D pixel-loop is the fallback.
+    // All 9 cards uniform — no per-agent polarity since edge detection
+    // works equally across the source set (UI screenshots and the The
+    // Pro persona alike). The DottedVideo / ScanlineVideo components
+    // remain in source for the section background, but are no longer
     // routed from the carousel.
     //
-    // Two polarities:
-    //   1. Default (The Pro only) — red dots on near-black, big dots where
-    //      the source is bright. Source video has high contrast already, so
-    //      this reads cleanly.
-    //   2. Inverted (the other 8) — solid red card with BLACK dots forming
-    //      the dark subject of the source video. Source videos here are
-    //      mostly bright UI screenshots (88-98% pixels in the top band),
-    //      which would render as a solid red mush in default polarity. The
-    //      red↔black swap + strong contrast (3.0) drops the bright BG and
-    //      lets the dark text/icons punch through as a printed-halftone
-    //      silhouette.
-    // Per-slug overrides — any DottedVideo prop can be set per-agent.
-    // Useful when a source video is naturally busier (cellSize ↑) or when
-    // a card needs more polarization / a deeper BG to feel distinct.
+    // Per-slug overrides — any EdgeVideo prop can be set per-agent if
+    // a source video needs different threshold/contrast tuning. Empty
+    // by default; populate as visual review surfaces outliers.
     const AGENT_VISUAL_OVERRIDES = {
-      calendar: { cellSize: 5, contrast: 1.85, bg: '#B82420' },
-      trade:    { cellSize: 5, contrast: 1.85, bg: '#B82420' },
+      // e.g. researcher: { threshold: 0.35 },
     };
 
-    function AgentVisual({ video, slug, invert }) {
+    function AgentVisual({ video, slug }) {
       const o = AGENT_VISUAL_OVERRIDES[slug] || {};
-      // 8 specialist cards: PURE-BLACK dots on a vibrant red BG — the
-      // polarity that read best in earlier tests (most UI detail visible).
-      // Visual punch comes from:
-      //   - Pure #000 dots (sharper edges than the previous #0a0a0a)
-      //   - Vibrant #ED3530 BG (slightly brighter than brand red so the
-      //     contrast against pure black feels more "printed-poster")
-      //   - 0.85× playback for editorial slow-mo (still feels live)
-      // The Pro keeps its red-on-near-black look (high contrast already
-      // baked into the source video).
       return (
-        <DottedVideo
+        <EdgeVideo
           src={`/assets/agent-${video || slug}.mp4`}
-          color={invert ? '#000000' : '#E5322D'}
-          // Smaller cells = denser dot grid = finer silhouette detail.
-          // Mobile clamps up via DottedVideo internals (Math.max(cellSize, 5)).
-          cellSize={o.cellSize ?? 3}
-          threshold={0.05}
-          // Contrast 1.5 polarizes bright UI → full black dots, midtones
-          // squeeze a touch smaller. Just enough punch without crushing
-          // detail or making the card feel darker overall.
-          contrast={o.contrast ?? (invert ? 1.5 : 1)}
-          // Slight slow-mo for the inverted cards — feels editorial /
-          // halftone-poster instead of jittery UI capture.
-          playbackRate={invert ? 0.85 : 1}
+          edgeColor={o.edgeColor ?? '#aa3333'}
+          threshold={o.threshold ?? 0.3}
+          contrast={o.contrast ?? 1.9}
+          playbackRate={o.playbackRate ?? 1}
           className="absolute inset-0 w-full h-full"
-          style={{ background: invert ? (o.bg ?? '#ED3530') : '#050505' }}
         />
       );
     }
@@ -4810,9 +5113,9 @@
     // 9 agent specialist cards. Sits inside #proses ("The wave") below the
     // CTA, on the same red-halftone canvas. Auto-rotates every 13s, hover-
     // pause, prefers-reduced-motion respect.
-    // Each agent is represented by a hand-built m4v rendered through the
-    // DottedVideo halftone canvas (matching the section background). The
-    // `video` field maps to /assets/agent-{video}.m4v.
+    // Each agent is represented by a hand-built mp4 rendered through the
+    // EdgeVideo Sobel edge-detection canvas (oxblood wireframe on black).
+    // The `video` field maps to /assets/agent-{video}.mp4.
     const AGENTS = [
       { slug: 'pro',         video: 'pro',         name: 'The Pro',           desc: 'Briefing pagi, ingat percakapan lintas sesi, jadi pendamping yang ngerti gaya kamu.' },
       { slug: 'researcher',  video: 'researcher',  name: 'Deep Researcher',   desc: 'Riset topik kompleks dari ratusan sumber, sintesis jadi laporan siap pakai.' },
@@ -4994,7 +5297,7 @@
                       data-active={isActive}
                     >
                       <div className="agent-viz">
-                        <AgentVisual key={`${a.slug}-${i}`} slug={a.slug} video={a.video} invert={a.slug !== 'pro'} />
+                        <AgentVisual key={`${a.slug}-${i}`} slug={a.slug} video={a.video} />
                       </div>
                       <div className="agent-body">
                         <div className="agent-name">{a.name}</div>
