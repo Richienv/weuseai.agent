@@ -82,6 +82,23 @@ export type SetupScriptParams = {
    * to test new upstream versions on a single VPS before promoting.
    */
   hermesVersion?: string
+  /**
+   * Phase 5-3.c rollout: per-customer HMAC-signed token. Computed at
+   * customer-creation time via
+   * `signCustomerToken(customerId, HERMES_INSTANCE_HMAC_KEY)` (see
+   * supabase/functions/_shared/hermes-instance-auth.ts) and threaded
+   * through customer-flow → buildSetupScript → VPS .env.
+   *
+   * Optional: when absent, the env line is skipped (back-compat with
+   * customers provisioned before HMAC rollout). Hermes-side proxy
+   * callers fall back to the MVP customer_id existence check until
+   * HERMES_INSTANCE_HMAC_KEY env is set on Supabase Edge Functions.
+   *
+   * Written to /home/weuseai/.hermes/.env as HERMES_INSTANCE_TOKEN.
+   * Hermes-side kanban-orchestrator + approval-emitter skills read this
+   * and include `Authorization: Bearer <token>` on platform callbacks.
+   */
+  hermesInstanceToken?: string
 }
 
 const DEFAULT_WORKFLOW_EXECUTE_URL =
@@ -281,10 +298,17 @@ export function buildSetupScript(p: SetupScriptParams): string {
         `TELEGRAM_REACTIONS=true`,
       ]
     : []
+  // Phase 5-3.c rollout: per-customer HMAC token. Hermes-side proxy
+  // callers read this and Authorization: Bearer it on platform callbacks.
+  // Skipped when caller hasn't computed (back-compat / pre-rollout).
+  const hmacEnvLines = p.hermesInstanceToken
+    ? [`HERMES_INSTANCE_TOKEN=${p.hermesInstanceToken}`]
+    : []
   const allEnvLines = [
     ...telegramEnvLines,
     ...llmEnvLines(p),
     ...workflowEnvLines(p),
+    ...hmacEnvLines,
   ]
 
   // Halo block — fires FIRST so customer sees life immediately.
