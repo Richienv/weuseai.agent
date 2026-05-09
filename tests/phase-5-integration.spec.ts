@@ -74,53 +74,19 @@ test('Phase 5-3.a migration contains all 6 decision_kinds in CHECK', () => {
   }
 })
 
-// ─── BD v3 manifest coherence ────────────────────────────────────
-
-test('business-director manifest is at version 3.0.0 (BD v3)', () => {
-  const m = JSON.parse(
-    fs.readFileSync(
-      path.join(ROOT, 'agent-packs/business-director/manifest.json'),
-      'utf8',
-    ),
-  ) as { version: string }
-  assert.equal(m.version, '3.0.0', 'BD v3 manifest should be at 3.0.0 after Phase 5-3.a')
-})
-
-test('BD v3 manifest declares all 5 dept dispatch skills', () => {
-  const m = JSON.parse(
-    fs.readFileSync(
-      path.join(ROOT, 'agent-packs/business-director/manifest.json'),
-      'utf8',
-    ),
-  ) as { skills: { id: string; enabled_for_tiers?: string[] }[] }
-  for (const dept of DEPT_PACKS) {
-    const entry = m.skills.find((s) => s.id === `${dept}-dispatch`)
-    assert.ok(entry, `manifest missing ${dept}-dispatch`)
-    assert.deepEqual(
-      entry!.enabled_for_tiers,
-      ['studio'],
-      `${dept}-dispatch should be Studio-only (Q3=A locked)`,
-    )
-  }
-})
-
-test('BD v3 manifest declares all Phase 5-4 templates (BPJS / DJP / bank / UU PDP)', () => {
-  const m = JSON.parse(
-    fs.readFileSync(
-      path.join(ROOT, 'agent-packs/business-director/manifest.json'),
-      'utf8',
-    ),
-  ) as { templates: { id: string }[] }
-  const ids = new Set(m.templates.map((t) => t.id))
-  for (const expected of [
-    'finance/bpjs-registration-paths.md',
-    'finance/djp-tax-filing-cycle.md',
-    'finance/bank-account-checklist.md',
-    'legal/uu-pdp-basic-compliance.md',
-  ]) {
-    assert.ok(ids.has(expected), `manifest missing template ${expected}`)
-  }
-})
+// ─── BD v3 manifest coherence (deduped 2026-05-10) ──────────────
+//
+// Drift-test layering:
+//   - tests/phase-5-3a-bd-v3-soul.spec.ts OWNS manifest 3.0.0 + SOUL content
+//   - tests/phase-5-2-dept-packs.spec.ts OWNS the 5 dispatch entries (Studio-only)
+//   - tests/phase-5-4-id-context-templates.spec.ts OWNS the 4 template entries
+//
+// Removed from this file: 3 manifest-level tests that pure-duplicated
+// the per-sub-phase tests above. See
+// docs/audits/2026-05-10-drift-test-consolidation.md for the rationale.
+//
+// Tests below remain because they assert CROSS-CUTTING coherence
+// (multiple-file consistency) that no single per-sub-phase test can see.
 
 // ─── BD v3 SOUL.md coherence with the implementation ────────────
 
