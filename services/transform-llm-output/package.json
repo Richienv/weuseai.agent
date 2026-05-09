@@ -1,0 +1,21 @@
+{
+  "name": "@weuseai/transform-llm-output",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "LLM-output post-processor: PII redaction (NPWP, KTP, Indonesian phone, email, bank account) + brand voice enforcement (banned words, exclamation strip, kamu form) + per-persona allowlist overrides. Designed to plug into Hermes' output pipeline as a transform_llm_output hook.",
+  "main": "src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test tests/*.spec.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.4.0"
+  },
+  "files": [
+    "src/**/*",
+    "README.md"
+  ]
+}
