@@ -21,7 +21,7 @@ export {
   ALL_DELIVERABLES,
   STAGES,
   STAGE_DELIVERABLES,
-} from './stages.js'
+} from './stages.ts'
 
 export {
   advance,
@@ -31,4 +31,4 @@ export {
   isStage,
   listMissingDeliverables,
   markDeliverable,
-} from './state-machine.js'
+} from './state-machine.ts'

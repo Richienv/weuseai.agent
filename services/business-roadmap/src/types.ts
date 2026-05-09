@@ -4,7 +4,7 @@
 // supabase/migrations/20260510100000_phase_5_master_agent_state.sql
 // (table business_roadmap_state). Drift is asserted in tests.
 
-import { STAGES } from './stages.js'
+import { STAGES } from './stages.ts'
 
 export type StageKind = (typeof STAGES)[number]
 
