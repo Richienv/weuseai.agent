@@ -98,22 +98,13 @@
     <div class="wrap">
       <p class="topnav"><a href="/admin">← Admin</a></p>
       <h1>Customers</h1>
-      <p class="lede">Reads <code>customers</code> via <code>/api/admin/customers</code>. Manual actions: tier flip, phase 5 / 6 enable, monthly LLM budget edit.</p>
+      <p class="lede">Reads <code>customers</code> via <code>/api/admin/customers</code>. Manual actions: phase 5 / 6 enable, monthly LLM budget edit. Tier shown read-only (flip via <code>customer-tier-bump-handler</code> Edge Function).</p>
 
       <form id="filter-form" class="controls" onsubmit="onFilter(event)">
         <div class="row">
           <div>
             <label for="f-secret">Admin secret</label>
             <input id="f-secret" type="password" placeholder="OBSERVABILITY_ADMIN_SECRET" autocomplete="off" />
-          </div>
-          <div>
-            <label for="f-tier">Tier</label>
-            <select id="f-tier">
-              <option value="">all</option>
-              <option value="starter">starter</option>
-              <option value="pro">pro</option>
-              <option value="studio">studio</option>
-            </select>
           </div>
           <div>
             <label for="f-phase5">Phase 5 enabled</label>
@@ -149,12 +140,7 @@
         <form id="edit-form" onsubmit="onUpdate(event)">
           <input id="e-uuid" type="hidden" />
           <div class="modal-row">
-            <label for="e-tier">Tier</label>
-            <select id="e-tier">
-              <option value="starter">starter</option>
-              <option value="pro">pro</option>
-              <option value="studio">studio</option>
-            </select>
+            <p class="hint" style="margin-bottom: 0;">Tier flip not supported here — use <code>customer-tier-bump-handler</code> Edge Function (VPS resize coordination required).</p>
           </div>
           <div class="modal-row checkbox">
             <input id="e-phase5" type="checkbox" style="width:auto;" />
@@ -180,7 +166,6 @@
 
     <script>
       const fSecret = document.getElementById('f-secret')
-      const fTier = document.getElementById('f-tier')
       const fPhase5 = document.getElementById('f-phase5')
       const fPhase6 = document.getElementById('f-phase6')
       const fGo = document.getElementById('f-go')
@@ -202,7 +187,6 @@
         try { sessionStorage.setItem('admin_secret', fSecret.value) } catch (e) {}
 
         const params = new URLSearchParams()
-        if (fTier.value) params.set('tier', fTier.value)
         if (fPhase5.value) params.set('phase_5_enabled', fPhase5.value)
         if (fPhase6.value) params.set('phase_6_enabled', fPhase6.value)
 
@@ -232,7 +216,7 @@
           <tr>
             <td><span class="id-short">${esc(c.id.slice(0, 8))}</span></td>
             <td>${esc(c.email)}<div class="ts">${esc(c.display_name || '')}</div></td>
-            <td><span class="badge badge-${esc(c.tier)}">${esc(c.tier)}</span></td>
+            <td>${tierBadge(c)}</td>
             <td><span class="badge badge-${c.phase_5_enabled ? 'yes' : 'no'}">${c.phase_5_enabled ? 'on' : 'off'}</span></td>
             <td><span class="badge badge-${c.phase_6_enabled ? 'yes' : 'no'}">${c.phase_6_enabled ? 'on' : 'off'}</span></td>
             <td>$${(c.monthly_llm_budget_cents / 100).toFixed(0)}</td>
@@ -262,7 +246,6 @@
       function openEditModal(c) {
         document.getElementById('e-id').textContent = c.id
         document.getElementById('e-uuid').value = c.id
-        document.getElementById('e-tier').value = c.tier
         document.getElementById('e-phase5').checked = c.phase_5_enabled
         document.getElementById('e-phase6').checked = c.phase_6_enabled
         document.getElementById('e-budget').value = c.monthly_llm_budget_cents
@@ -278,7 +261,7 @@
         eErr.hidden = true
         const id = document.getElementById('e-uuid').value
         const body = {
-          tier: document.getElementById('e-tier').value,
+          // tier intentionally absent — handler rejects it
           phase_5_enabled: document.getElementById('e-phase5').checked,
           phase_6_enabled: document.getElementById('e-phase6').checked,
           monthly_llm_budget_cents: parseInt(document.getElementById('e-budget').value, 10),
@@ -309,6 +292,15 @@
           .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
       }
       function escapeAttr(s) { return esc(s).replace(/"/g, '&quot;') }
+
+      // Embedded subscriptions[] — pull tier from first row (active sub).
+      // Customer with no subscription (rare; pre-payment state) → '—'.
+      function tierBadge(c) {
+        const subs = Array.isArray(c.subscriptions) ? c.subscriptions : []
+        const tier = subs[0]?.tier
+        if (!tier) return '<span class="ts">—</span>'
+        return `<span class="badge badge-${esc(tier)}">${esc(tier)}</span>`
+      }
     </script>
   </body>
 </html>
