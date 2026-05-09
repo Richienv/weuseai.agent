@@ -26,10 +26,15 @@ import {
   type ApprovalRowReader,
   type ApprovalRowWriter,
   type ApprovalStatus,
+  type ApprovalTokenVerifier,
   type HandlerInput,
 } from '../_shared/approval-queue-handler.ts'
 import { formatApprovalRequest } from '../_shared/approval-telegram-formatter.ts'
 import { TelegramBotClient } from '../_shared/telegram-client.ts'
+import {
+  extractBearerToken,
+  verifyCustomerToken,
+} from '../_shared/hermes-instance-auth.ts'
 
 // @ts-ignore — Deno global available at runtime
 declare const Deno: {
@@ -166,9 +171,17 @@ Deno.serve(async (req) => {
 
   const method = req.method
 
+  // Phase 5-3.c: parse bearer token + wire HMAC verifier
+  const bearer = extractBearerToken(req.headers.get('authorization'))
+  const HMAC_KEY = Deno.env.get('HERMES_INSTANCE_HMAC_KEY') ?? ''
+  const verifier: ApprovalTokenVerifier | undefined = HMAC_KEY
+    ? (claimed_id, token) =>
+        verifyCustomerToken(claimed_id, token ?? '', HMAC_KEY)
+    : undefined
+
   let input: HandlerInput
   if (method === 'GET') {
-    input = { method: 'GET', mode: 'list', query }
+    input = { method: 'GET', mode: 'list', query, bearer_token: bearer }
   } else if (method === 'POST') {
     let body: Record<string, unknown> = {}
     try {
@@ -180,7 +193,7 @@ Deno.serve(async (req) => {
     if (query.id && query.decision) {
       input = { method: 'POST', mode: 'decide', query, body }
     } else {
-      input = { method: 'POST', mode: 'create', body }
+      input = { method: 'POST', mode: 'create', body, bearer_token: bearer }
     }
   } else {
     return withCors(
@@ -197,6 +210,7 @@ Deno.serve(async (req) => {
     writer,
     mutator,
     now: () => new Date().toISOString(),
+    verifyToken: verifier,
   })
 
   // ─── Phase 5-5b: post-create Telegram dispatch (best-effort) ──

@@ -69,17 +69,26 @@ export type HandlerInput =
       method: 'POST'
       mode: 'create'
       body: Record<string, unknown> | null
+      /** Phase 5-3.c: optional bearer token, required when verifyToken
+       *  dep is configured. Validated against body.customer_id. */
+      bearer_token?: string | null
     }
   | {
       method: 'GET'
       mode: 'list'
       query: Record<string, string | undefined>
+      /** Phase 5-3.c: optional bearer token, validated against
+       *  query.customer_id. */
+      bearer_token?: string | null
     }
   | {
       method: 'POST'
       mode: 'decide'
       query: Record<string, string | undefined>
       body: Record<string, unknown>
+      // decide is reached via Telegram callback_query — already
+      // authenticated by the bot's secret_token at the webhook layer.
+      // No HMAC required here.
     }
 
 // ─── Result envelope ───────────────────────────────────────────────
@@ -90,7 +99,7 @@ export type HandlerOk =
 
 export type HandlerErr = {
   ok: false
-  status: 400 | 404 | 500
+  status: 400 | 401 | 404 | 500
   error: string
   detail?: string
 }
@@ -118,11 +127,22 @@ export type ApprovalRowMutator = (
   updates: Partial<Pick<ApprovalRow, 'status' | 'approved_by' | 'approved_at'>>,
 ) => Promise<{ ok: true; row: ApprovalRow } | { ok: false; error: string }>
 
+/** Phase 5-3.c: optional HMAC token verifier — same shape as the proxy
+ *  handler. When present, create + list modes require a valid bearer
+ *  token matching the claimed customer_id. */
+export type ApprovalTokenVerifier = (
+  claimed_customer_id: string,
+  bearer_token: string | null,
+) => Promise<boolean>
+
 export type Deps = {
   reader: ApprovalRowReader
   writer: ApprovalRowWriter
   mutator: ApprovalRowMutator
   now: () => string
+  /** Phase 5-3.c: optional. If omitted, create + list modes skip HMAC
+   *  check (backward compat for tests + MVP rollout). */
+  verifyToken?: ApprovalTokenVerifier
 }
 
 // ─── Handler ───────────────────────────────────────────────────────
@@ -132,10 +152,10 @@ export async function approvalQueueHandler(
   deps: Deps,
 ): Promise<HandlerResult> {
   if (input.mode === 'create') {
-    return await handleCreate(input.body, deps)
+    return await handleCreate(input.body, input.bearer_token ?? null, deps)
   }
   if (input.mode === 'list') {
-    return await handleList(input.query, deps)
+    return await handleList(input.query, input.bearer_token ?? null, deps)
   }
   if (input.mode === 'decide') {
     return await handleDecide(input.query, input.body, deps)
@@ -146,6 +166,7 @@ export async function approvalQueueHandler(
 
 async function handleCreate(
   body: Record<string, unknown> | null,
+  bearer_token: string | null,
   deps: Deps,
 ): Promise<HandlerResult> {
   if (!body || typeof body !== 'object') {
@@ -160,6 +181,14 @@ async function handleCreate(
 
   if (typeof customer_id !== 'string' || !customer_id) {
     return { ok: false, status: 400, error: 'invalid_customer_id' }
+  }
+  // Phase 5-3.c HMAC check (when configured) — runs immediately after
+  // customer_id shape validation but before any DB writes.
+  if (deps.verifyToken) {
+    const ok = await deps.verifyToken(customer_id, bearer_token)
+    if (!ok) {
+      return { ok: false, status: 401, error: 'unauthorized' }
+    }
   }
   if (typeof action_kind !== 'string' || !ACTION_KINDS_SET.has(action_kind)) {
     return { ok: false, status: 400, error: 'invalid_action_kind' }
@@ -200,11 +229,19 @@ async function handleCreate(
 
 async function handleList(
   query: Record<string, string | undefined>,
+  bearer_token: string | null,
   deps: Deps,
 ): Promise<HandlerResult> {
   const customer_id = query.customer_id
   if (!customer_id) {
     return { ok: false, status: 400, error: 'missing_customer_id' }
+  }
+  // Phase 5-3.c HMAC check (when configured)
+  if (deps.verifyToken) {
+    const ok = await deps.verifyToken(customer_id, bearer_token)
+    if (!ok) {
+      return { ok: false, status: 401, error: 'unauthorized' }
+    }
   }
   const statusFilter = query.status as ApprovalStatus | undefined
   const status: ApprovalStatus =

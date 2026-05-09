@@ -26,8 +26,13 @@ import {
   type ProxyInput,
   type CustomerExistsCheck,
   type BoardMirrorWriter,
+  type CustomerTokenVerifier,
   type Task,
 } from '../_shared/hermes-kanban-proxy-handler.ts'
+import {
+  extractBearerToken,
+  verifyCustomerToken,
+} from '../_shared/hermes-instance-auth.ts'
 
 // @ts-ignore — Deno global available at runtime
 declare const Deno: {
@@ -151,7 +156,23 @@ Deno.serve(async (req) => {
     )
   }
 
-  const result = await hermesKanbanProxyHandler(body, customerExists, writer)
+  // Phase 5-3.c: parse Authorization header + wire HMAC verifier when
+  // HERMES_INSTANCE_HMAC_KEY is set. Backward-compat: if env var is unset,
+  // verifier is omitted and the handler falls back to MVP customer
+  // existence check only.
+  body.bearer_token = extractBearerToken(req.headers.get('authorization'))
+  const HMAC_KEY = Deno.env.get('HERMES_INSTANCE_HMAC_KEY') ?? ''
+  const verifier: CustomerTokenVerifier | undefined = HMAC_KEY
+    ? (claimed_id, token) =>
+        verifyCustomerToken(claimed_id, token ?? '', HMAC_KEY)
+    : undefined
+
+  const result = await hermesKanbanProxyHandler(
+    body,
+    customerExists,
+    writer,
+    verifier,
+  )
 
   if (!result.ok) {
     return withCors(
