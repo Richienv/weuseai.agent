@@ -25,6 +25,12 @@
 //   SUPABASE_SERVICE_ROLE_KEY          — auto-set by Supabase
 //   PAIR_WEBHOOK_SECRET                — same value as in
 //                                        validate-bot-token function
+//   BOT_TOKEN_ENC_KEY                  — base64 32+ char key, passed as
+//                                        enc_key param to decrypt_bot_token
+//                                        when fetching the customer's bot
+//                                        token to send the pairing-success
+//                                        reply. Founder-applied Option A
+//                                        signature (2026-05-09 post-deploy).
 //   TELEGRAM_BOT_TOKEN                 — legacy @weuseaibot token
 //                                        (constructor argument; this
 //                                        handler only uses per-token
@@ -44,11 +50,13 @@ declare const Deno: {
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const PAIR_WEBHOOK_SECRET = Deno.env.get('PAIR_WEBHOOK_SECRET')!
+const BOT_TOKEN_ENC_KEY = Deno.env.get('BOT_TOKEN_ENC_KEY')!
 const PLATFORM_BOT_TOKEN = Deno.env.get('TELEGRAM_BOT_TOKEN') ?? ''
 
 const db = createOnboardingStore({
   supabaseUrl: SUPABASE_URL,
   serviceRoleKey: SERVICE_KEY,
+  botTokenEncKey: BOT_TOKEN_ENC_KEY,
 })
 
 const telegram = new TelegramBotClient({ token: PLATFORM_BOT_TOKEN })
