@@ -113,3 +113,53 @@ Phase 6+ scope (future Business Director expansion):
 - Dedicated HR agent untuk team scale
 
 > _Catatan: roadmap ini Indonesian-context (PT/CV, OSS, BPJS, payment gateway lokal). Buat business yang export-driven atau international-first, beberapa item shift._
+
+---
+
+## BD v3 state-machine mapping (Phase 5-2)
+
+The customer-facing narrative above is granular (33+ checklist items). BD v3 tracks
+progress with 4 coarse-grained deliverable IDs per stage (20 total) — the keys
+in `business_roadmap_state.deliverables_completed` and the source of truth in
+`services/business-roadmap/src/stages.ts`. Each ID rolls up several narrative
+items.
+
+Drift defense: a unit test in `tests/business-roadmap-state-machine.spec.ts`
+asserts these IDs match the `current_stage` CHECK enum. Renaming requires
+synchronized updates here + in `stages.ts` + in `20260510100000_phase_5_master_agent_state.sql`.
+
+| Stage | Deliverable id | Rolls up narrative items |
+|---|---|---|
+| Idea | `idea_problem_articulated` | Value-prop one-liner + Niche-1 customer profile |
+| Idea | `idea_target_customer_defined` | Niche-1 customer profile (segment + pain point) |
+| Idea | `idea_competitor_scan_done` | Competitor scan + market sizing |
+| Idea | `idea_pricing_hypothesis` | Initial pricing model (covered partially in customer interview log) |
+| Setup | `setup_entity_chosen` | PT vs CV decision (incorporation-advisor) |
+| Setup | `setup_pt_incorporated` | Akta notaris + OSS NIB |
+| Setup | `setup_npwp_acquired` | NPWP badan + NPWP personal |
+| Setup | `setup_bpjs_registered` | BPJS Kesehatan + Ketenagakerjaan (waivable for non-PT) |
+| Identity | `identity_brand_defined` | Brand name + tagline + visual identity |
+| Identity | `identity_landing_live` | Landing/multi-page site (Web Creator) |
+| Identity | `identity_socials_claimed` | WhatsApp Business + handle registrations |
+| Identity | `identity_legal_pages_published` | Privacy + ToS (Doc Expert; gated by `contract_sign` approval) |
+| Build | `build_mvp_shipped` | MVP product/service deliverable consistently |
+| Build | `build_first_payment_flow` | Payment gateway integration (Xendit/Midtrans/DOKU); gated by `regulatory_filing` when going live |
+| Build | `build_customer_support_channel` | WA + email response time SLA |
+| Build | `build_unit_economics_modeled` | Basic analytics (revenue, customer count, churn) |
+| Sell | `sell_first_paying_customer` | First customer revenue (gated by `public_emission` if first marketing campaign goes out) |
+| Sell | `sell_10_paying_customers` | First 10 customer feedback synthesis |
+| Sell | `sell_referral_loop_active` | Referral program live |
+| Sell | `sell_recurring_revenue_stable` | MRR positive 3+ months (top 2-3 channels stable) |
+
+### Approval gates (Q4=C per-action expiry)
+
+Some deliverables require an `approval_requests` row before BD v3 marks them complete:
+
+- `setup_pt_incorporated` → `incorporate` (14-day expiry)
+- `identity_legal_pages_published` → `contract_sign` (14-day expiry)
+- `build_first_payment_flow` (live with real money) → `regulatory_filing` (48-hour expiry)
+- `sell_first_paying_customer` (first public emission) → `public_emission` (24-hour expiry)
+
+Approval flow: BD v3 surfaces request via `approval-queue-handler` (5-3.b) →
+customer replies in Telegram (Q2=A locked, see 5-5) → handler flips
+`approved_at` and BD v3 marks the deliverable.

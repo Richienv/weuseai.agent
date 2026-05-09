@@ -1,8 +1,8 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "business-director",
-  "version": "2.0.0",
-  "description_id": "Bundle skill + template Business Director v2 (scoped MVP). 5-stage Indonesian-founder roadmap (Idea → Setup → Identity → Build → Sell). PT/CV setup, OSS, BPJS, payment gateway lokal, compliance. Tier change v1: Pro+ → v2: Studio.",
+  "version": "2.1.0",
+  "description_id": "Bundle skill + template Business Director (Phase 5-2 dept packs). 5-stage Indonesian-founder roadmap (Idea → Setup → Identity → Build → Sell). Master Agent dispatches ke 5 department packs (Sales, Marketing, Engineering, Legal, Finance) — facade routing ke specialist persona. Studio-tier only. Phase 5-3 akan bump ke v3 (SOUL.md rewrite + cross-session memory).",
   "skills": [
     {
       "id": "business-roadmap-tracker",
@@ -23,15 +23,6 @@
       "enabled_for_tiers": ["studio"]
     },
     {
-      "id": "department-task-spawner",
-      "description_id": "Delegate task ke department-equivalent specialist agents — Sales (channel strategy), Marketing (Web Creator + Social Conductor), Engineering (technical scoping), Legal (Doc Expert), Finance (Trade Pro). Lightweight delegation di MVP; full department workspaces di Phase 6+.",
-      "description_en": "Delegate to department-equivalent specialist agents — Sales, Marketing, Engineering, Legal, Finance. Lightweight delegation in MVP; full department workspaces deferred to Phase 6+.",
-      "templates_used": [],
-      "execution": "hermes-skill",
-      "handler_ref": "hermes-skill:department-task-spawner",
-      "enabled_for_tiers": ["studio"]
-    },
-    {
       "id": "compliance-checker",
       "description_id": "Check + remind compliance: BPJS Kesehatan + Ketenagakerjaan, NPWP badan, SPT Tahunan, PPh 21/25/Final UMKM 0.5%, OSS verifikasi 90-day. Reminder satu minggu sebelum due.",
       "description_en": "Check + remind compliance: BPJS health + employment, business NPWP, annual tax filing, PPh 21/25/UMKM Final 0.5%, OSS 90-day verification. Reminder one week before due.",
@@ -48,10 +39,55 @@
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:extend-capabilities",
       "enabled_for_tiers": ["studio"]
+    },
+    {
+      "id": "sales-dispatch",
+      "description_id": "Dept pack Sales — facade routing ke The Pro / Deep Researcher / Social Conductor / Doc Expert / Slide Master / Trade Pro. Translates intent (channel-strategy, lead-gen, outreach, proposal, pitch, pricing) ke skill specialist. Phase 5-2 dept pack.",
+      "description_en": "Sales dept pack — facade routing to The Pro / Deep Researcher / Social Conductor / Doc Expert / Slide Master / Trade Pro based on intent. Phase 5-2.",
+      "templates_used": [],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:sales-dispatch",
+      "enabled_for_tiers": ["studio"]
+    },
+    {
+      "id": "marketing-dispatch",
+      "description_id": "Dept pack Marketing — facade routing ke Social Conductor / Web Master / Video Producer / Doc Expert. Translates intent (campaign, content-calendar, blog-post, video-script, landing, ads-copy, broadcast, press-release) ke skill specialist. Surfaces public_emission approval gates (Q4=C 24h expiry). Phase 5-2 dept pack.",
+      "description_en": "Marketing dept pack — facade routing to Social Conductor / Web Master / Video Producer / Doc Expert. Surfaces public_emission approval gates. Phase 5-2.",
+      "templates_used": [],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:marketing-dispatch",
+      "enabled_for_tiers": ["studio"]
+    },
+    {
+      "id": "engineering-dispatch",
+      "description_id": "Dept pack Engineering — facade routing ke The Pro (extend-capabilities technical scoping) / Doc Expert (runbooks) / Trade Pro (cost-modeling). Output advisory only — BD v3 ngga execute code. Phase 5-2 dept pack.",
+      "description_en": "Engineering dept pack — facade routing to The Pro / Doc Expert / Trade Pro. Output advisory only; BD v3 does not execute code. Phase 5-2.",
+      "templates_used": [],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:engineering-dispatch",
+      "enabled_for_tiers": ["studio"]
+    },
+    {
+      "id": "legal-dispatch",
+      "description_id": "Dept pack Legal — facade routing ke Doc Expert (templates kontrak/NDA/ToS/privacy/license/employment) / Deep Researcher (regulation lookup) / Business Director (compliance-checker existing). Hard guardrail: bukan advokat berlisensi. Surfaces contract_sign approval gates (Q4=C 14d expiry). Phase 5-2 dept pack.",
+      "description_en": "Legal dept pack — facade routing to Doc Expert / Deep Researcher / Business Director. Not a licensed advokat. Surfaces contract_sign approval gates. Phase 5-2.",
+      "templates_used": [],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:legal-dispatch",
+      "enabled_for_tiers": ["studio"]
+    },
+    {
+      "id": "finance-dispatch",
+      "description_id": "Dept pack Finance — facade routing ke Trade Pro (pricing, runway, unit-economics, PPh, PPN, SPT, reconcile) / Doc Expert (invoice + SPT templates). Hard guardrail: bukan akuntan/konsultan pajak berlisensi. Surfaces regulatory_filing approval gates (Q4=C 48h expiry). Phase 5-2 dept pack.",
+      "description_en": "Finance dept pack — facade routing to Trade Pro / Doc Expert. Not a licensed accountant or tax consultant. Surfaces regulatory_filing approval gates. Phase 5-2.",
+      "templates_used": [],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:finance-dispatch",
+      "enabled_for_tiers": ["studio"]
     }
   ],
   "templates": [
-    { "id": "roadmap/5-stage-checklist.md", "kind": "markdown", "description_id": "5-stage Indonesian-founder roadmap checklist — Idea → Setup → Identity → Build → Sell. Per-stage deliverables + decision points." },
+    { "id": "roadmap/5-stage-checklist.md", "kind": "markdown", "description_id": "5-stage Indonesian-founder roadmap checklist — Idea → Setup → Identity → Build → Sell. Per-stage deliverables + decision points + BD v3 state-machine deliverable id mapping (Phase 5-2 update)." },
     { "id": "incorporation/pt-vs-cv-comparison.md", "kind": "markdown", "description_id": "PT vs CV side-by-side — modal, biaya, pajak, kompleksitas, fit context (UMKM, scale-up, multi-shareholder)." },
     { "id": "incorporation/oss-checklist.md", "kind": "markdown", "description_id": "OSS Risk-Based Approach checklist — KBLI, tingkat risiko, dokumen wajib, timeline approval." },
     { "id": "compliance/indonesian-due-dates.md", "kind": "markdown", "description_id": "Reference Indonesian compliance due dates — BPJS bulanan, SPT Tahunan, PPh 21/25/Final, OSS 90-day verification." }

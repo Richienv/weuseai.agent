@@ -428,11 +428,15 @@ test('every pilot manifest skill handler_ref points to a known edge function, he
     'task-decomposer',
     'multi-agent-router',
     'progress-monitor',
-    // Business Director (v2)
+    // Business Director (v2.1 — Phase 5-2 dept packs replace department-task-spawner)
     'business-roadmap-tracker',
     'incorporation-advisor',
-    'department-task-spawner',
     'compliance-checker',
+    'sales-dispatch',
+    'marketing-dispatch',
+    'engineering-dispatch',
+    'legal-dispatch',
+    'finance-dispatch',
     // Video Producer (v2 EXPAND — HyperFrames + sound + hashtag + caption)
     'hyperframes-storyboard',
     'sound-trend-tracker',
