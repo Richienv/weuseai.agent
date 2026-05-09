@@ -20,12 +20,12 @@ function makeRow(overrides?: Partial<CustomerRow>): CustomerRow {
     id: CUST,
     email: 'sarah@example.com',
     display_name: 'Sarah Tanaka',
-    tier: 'pro',
     phase_5_enabled: false,
     phase_6_enabled: false,
     monthly_llm_budget_cents: 5000,
     telegram_chat_id: '12345',
     created_at: NOW,
+    subscriptions: [{ tier: 'pro', status: 'active' }],
     ...overrides,
   }
 }
@@ -67,7 +67,7 @@ test('list: no filters → calls reader with empty params', async () => {
   assert.deepEqual(captured, {})
 })
 
-test('list: tier + phase_5_enabled + limit filters parsed', async () => {
+test('list: phase_5_enabled + limit filters parsed (tier filter NOT supported here)', async () => {
   const captured: Parameters<CustomerRowReader>[0][] = []
   const reader: CustomerRowReader = async (params) => {
     captured.push(params)
@@ -78,7 +78,6 @@ test('list: tier + phase_5_enabled + limit filters parsed', async () => {
       method: 'GET',
       mode: 'list',
       query: {
-        tier: 'studio',
         phase_5_enabled: 'true',
         phase_6_enabled: 'false',
         limit: '50',
@@ -88,20 +87,28 @@ test('list: tier + phase_5_enabled + limit filters parsed', async () => {
   )
   assert.equal(captured.length, 1)
   assert.deepEqual(captured[0], {
-    tier: 'studio',
     phase_5_enabled: true,
     phase_6_enabled: false,
     limit: 50,
   })
 })
 
-test('list: rejects bad tier', async () => {
+test('list: tier query param is silently ignored (filter not supported)', async () => {
+  // tier lives on subscriptions, not customers. Hotfix: filter dropped
+  // from this endpoint. Passing ?tier=studio should NOT error; it just
+  // gets ignored and reader called without a tier filter.
+  const captured: Parameters<CustomerRowReader>[0][] = []
+  const reader: CustomerRowReader = async (params) => {
+    captured.push(params)
+    return []
+  }
   const result = await handleAdminCustomers(
-    { method: 'GET', mode: 'list', query: { tier: 'enterprise' } },
-    makeDeps(),
+    { method: 'GET', mode: 'list', query: { tier: 'studio' } },
+    makeDeps({ reader }),
   )
-  assert.equal(result.ok, false)
-  if (!result.ok) assert.equal(result.error, 'bad_tier')
+  assert.equal(result.ok, true)
+  assert.equal(captured.length, 1)
+  assert.deepEqual(captured[0], {})
 })
 
 test('list: rejects bad boolean filters', async () => {
@@ -139,7 +146,7 @@ test('update: rejects bad id', async () => {
       method: 'POST',
       mode: 'update',
       query: { id: 'not-a-uuid' },
-      body: { tier: 'studio' },
+      body: { phase_5_enabled: true },
     },
     makeDeps(),
   )
@@ -156,18 +163,25 @@ test('update: rejects empty body', async () => {
   if (!result.ok) assert.equal(result.error, 'empty_update')
 })
 
-test('update: rejects invalid tier', async () => {
-  const result = await handleAdminCustomers(
-    {
-      method: 'POST',
-      mode: 'update',
-      query: { id: CUST },
-      body: { tier: 'enterprise' },
-    },
-    makeDeps(),
-  )
-  assert.equal(result.ok, false)
-  if (!result.ok) assert.equal(result.error, 'invalid_tier')
+test('update: ANY tier value rejected with tier_flip_not_supported_here', async () => {
+  // Hotfix: tier flip needs VPS-resize coordination via
+  // customer-tier-bump-handler. Reject any tier in body to surface misuse.
+  for (const tierValue of ['starter', 'pro', 'studio', 'enterprise']) {
+    const result = await handleAdminCustomers(
+      {
+        method: 'POST',
+        mode: 'update',
+        query: { id: CUST },
+        body: { tier: tierValue },
+      },
+      makeDeps(),
+    )
+    assert.equal(result.ok, false, `tier=${tierValue} should be rejected`)
+    if (!result.ok) {
+      assert.equal(result.error, 'tier_flip_not_supported_here')
+      assert.match(result.detail!, /customer-tier-bump-handler/)
+    }
+  }
 })
 
 test('update: rejects non-boolean phase flags', async () => {
@@ -203,26 +217,26 @@ test('update: rejects out-of-range monthly_llm_budget_cents', async () => {
   }
 })
 
-test('update: tier flip → mutator called with tier only', async () => {
+test('update: phase_5_enabled flip → mutator called with that field only', async () => {
   const captured: Parameters<CustomerRowMutator>[1][] = []
   const mutator: CustomerRowMutator = async (_id, updates) => {
     captured.push(updates)
-    return { ok: true, row: makeRow({ tier: 'studio' }) }
+    return { ok: true, row: makeRow({ phase_5_enabled: true }) }
   }
   const result = await handleAdminCustomers(
     {
       method: 'POST',
       mode: 'update',
       query: { id: CUST },
-      body: { tier: 'studio' },
+      body: { phase_5_enabled: true },
     },
     makeDeps({ mutator }),
   )
   assert.equal(result.ok, true)
   if (result.ok && 'customer' in result.body) {
-    assert.equal(result.body.customer.tier, 'studio')
+    assert.equal(result.body.customer.phase_5_enabled, true)
   }
-  assert.deepEqual(captured, [{ tier: 'studio' }])
+  assert.deepEqual(captured, [{ phase_5_enabled: true }])
 })
 
 test('update: phase_5 + phase_6 + budget combined update', async () => {
@@ -270,7 +284,7 @@ test('update: mutator failure surfaces 500', async () => {
       method: 'POST',
       mode: 'update',
       query: { id: CUST },
-      body: { tier: 'studio' },
+      body: { phase_5_enabled: true },
     },
     makeDeps({ mutator }),
   )

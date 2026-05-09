@@ -30,20 +30,27 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 // ─── Domain types ─────────────────────────────────────────────────
 
+// NOTE: tier is NOT a column on `customers` — it lives on `subscriptions`.
+// Hotfix: tier flip is removed from this admin endpoint entirely (separate
+// concern; use customer-tier-bump-handler Edge Function for actual tier
+// changes which need VPS resize coordination). Tier is still surfaced in
+// the list view as READ-ONLY via PostgREST nested embed of subscriptions.
+
 export const TIERS = ['starter', 'pro', 'studio'] as const
 export type Tier = (typeof TIERS)[number]
-const TIER_SET = new Set<string>(TIERS)
 
 export type CustomerRow = {
   id: string
   email: string
   display_name: string | null
-  tier: Tier
   phase_5_enabled: boolean
   phase_6_enabled: boolean
   monthly_llm_budget_cents: number
   telegram_chat_id: string | null
   created_at: string
+  /** READ-ONLY: embedded from active subscription via PostgREST.
+   *  May be null if customer has no active subscription row. */
+  subscriptions?: { tier: Tier; status: string }[] | null
 }
 
 // ─── Pure handler types ────────────────────────────────────────────
@@ -77,7 +84,6 @@ export type HandlerResult = HandlerOk | HandlerErr
 // ─── Injected dependencies ─────────────────────────────────────────
 
 export type CustomerRowReader = (params: {
-  tier?: Tier
   phase_5_enabled?: boolean
   phase_6_enabled?: boolean
   limit?: number
@@ -86,7 +92,6 @@ export type CustomerRowReader = (params: {
 export type CustomerRowMutator = (
   id: string,
   updates: {
-    tier?: Tier
     phase_5_enabled?: boolean
     phase_6_enabled?: boolean
     monthly_llm_budget_cents?: number
@@ -119,12 +124,9 @@ async function handleList(
   deps: Deps,
 ): Promise<HandlerResult> {
   const params: Parameters<CustomerRowReader>[0] = {}
-  if (query.tier) {
-    if (!TIER_SET.has(query.tier)) {
-      return { ok: false, status: 400, error: 'bad_tier' }
-    }
-    params.tier = query.tier as Tier
-  }
+  // tier filter intentionally not supported here — tier lives on
+  // subscriptions, not customers. UI can client-side filter on the
+  // embedded subscriptions[0].tier if needed.
   if (query.phase_5_enabled) {
     if (query.phase_5_enabled !== 'true' && query.phase_5_enabled !== 'false') {
       return { ok: false, status: 400, error: 'bad_phase_5_enabled' }
@@ -158,11 +160,16 @@ async function handleUpdate(
     return { ok: false, status: 400, error: 'invalid_id' }
   }
   const updates: Parameters<CustomerRowMutator>[1] = {}
+  // tier flip intentionally not supported here — needs VPS-resize
+  // coordination via customer-tier-bump-handler. Body field 'tier' is
+  // explicitly rejected to surface the misuse early.
   if (body.tier !== undefined) {
-    if (typeof body.tier !== 'string' || !TIER_SET.has(body.tier)) {
-      return { ok: false, status: 400, error: 'invalid_tier' }
+    return {
+      ok: false,
+      status: 400,
+      error: 'tier_flip_not_supported_here',
+      detail: 'Use customer-tier-bump-handler Edge Function for tier changes (VPS resize coordination required).',
     }
-    updates.tier = body.tier as Tier
   }
   if (body.phase_5_enabled !== undefined) {
     if (typeof body.phase_5_enabled !== 'boolean') {
@@ -271,11 +278,14 @@ export default async function handler(
   }
 
   const reader: CustomerRowReader = async (params) => {
+    // tier comes from subscriptions via PostgREST nested embed.
+    // Filtering subscriptions to status='active' would be ideal but
+    // PostgREST nested filters add complexity; for the admin UI a single
+    // embedded row is fine (assume one active subscription per customer).
     const qp: string[] = [
-      'select=id,email,display_name,tier,phase_5_enabled,phase_6_enabled,monthly_llm_budget_cents,telegram_chat_id,created_at',
+      'select=id,email,display_name,phase_5_enabled,phase_6_enabled,monthly_llm_budget_cents,telegram_chat_id,created_at,subscriptions(tier,status)',
       'order=created_at.desc',
     ]
-    if (params.tier) qp.push(`tier=eq.${params.tier}`)
     if (params.phase_5_enabled !== undefined)
       qp.push(`phase_5_enabled=eq.${params.phase_5_enabled}`)
     if (params.phase_6_enabled !== undefined)
