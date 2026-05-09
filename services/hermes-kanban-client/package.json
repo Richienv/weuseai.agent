@@ -1,0 +1,18 @@
+{
+  "name": "@weuseai/hermes-kanban-client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Typed contract for Hermes v0.13.x native kanban API. Shared between Project Conductor's kanban-orchestrator skill (customer VPS) and the platform-side proxy (deferred to Phase 4-5b). Runtime is upstream Hermes; this package is interface + mock + tests.",
+  "main": "src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test tests/*.spec.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.4.0"
+  },
+  "files": ["src/**/*", "README.md"]
+}
