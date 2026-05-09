@@ -90,7 +90,11 @@
     { "id": "roadmap/5-stage-checklist.md", "kind": "markdown", "description_id": "5-stage Indonesian-founder roadmap checklist — Idea → Setup → Identity → Build → Sell. Per-stage deliverables + decision points + BD v3 state-machine deliverable id mapping (Phase 5-2 update)." },
     { "id": "incorporation/pt-vs-cv-comparison.md", "kind": "markdown", "description_id": "PT vs CV side-by-side — modal, biaya, pajak, kompleksitas, fit context (UMKM, scale-up, multi-shareholder)." },
     { "id": "incorporation/oss-checklist.md", "kind": "markdown", "description_id": "OSS Risk-Based Approach checklist — KBLI, tingkat risiko, dokumen wajib, timeline approval." },
-    { "id": "compliance/indonesian-due-dates.md", "kind": "markdown", "description_id": "Reference Indonesian compliance due dates — BPJS bulanan, SPT Tahunan, PPh 21/25/Final, OSS 90-day verification." }
+    { "id": "compliance/indonesian-due-dates.md", "kind": "markdown", "description_id": "Reference Indonesian compliance due dates — BPJS bulanan, SPT Tahunan, PPh 21/25/Final, OSS 90-day verification." },
+    { "id": "finance/bpjs-registration-paths.md", "kind": "markdown", "description_id": "BPJS Kesehatan + Ketenagakerjaan (4 program: JHT, JKK, JKM, JP) registration steps, biaya, threshold per status (PT/CV/Perorangan). Phase 5-4." },
+    { "id": "finance/djp-tax-filing-cycle.md", "kind": "markdown", "description_id": "Monthly + annual DJP tax cycle (PPh 21/23/25/Final UMKM, PPN, SPT Tahunan 1771/1770) + PKP threshold + decision PPh 25 vs Final UMKM 0.5%. Phase 5-4." },
+    { "id": "finance/bank-account-checklist.md", "kind": "markdown", "description_id": "Rekening badan setup checklist — dokumen per bentuk badan, bank comparison (BCA/Mandiri/BNI/BRI/Jago/Permata) + multi-account strategy. Phase 5-4." },
+    { "id": "legal/uu-pdp-basic-compliance.md", "kind": "markdown", "description_id": "UU 27/2022 (PDP) basic compliance checklist — 3 tier (basic / platform-tier / sensitive-data tier), DPO appointment, breach response, vendor processor agreements. Phase 5-4." }
   ],
   "self_extend": true,
   "extension_dir": "/var/lib/weuseai/customer-grown/"
