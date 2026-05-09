@@ -3134,24 +3134,32 @@
       );
     }
 
-    // ─────────────────────── SCANLINE VIDEO (CRT + glitch overlay) ───────────────────────
-    // Treatment 3: render the actual full-color source video, color-graded
-    // toward brand red via CSS filters, then overlaid with retro-CRT
-    // scanlines and an occasional brief glitch flicker. The source UI stays
-    // recognizable (unlike the halftone abstraction in DottedVideo) while
-    // still feeling on-brand and a touch unpredictable.
+    // ─────────────────────── SCANLINE VIDEO (cinematic oxblood + glow) ───────────────────────
+    // Sub-treatment C: render the actual full-color source video, lightly
+    // graded for cinematic contrast, overlaid with muted-oxblood scanlines
+    // (#AA3333 @ 0.15) and an inset red rim glow. Glitch flicker disabled —
+    // this treatment is "muted hacker", a calm CRT terminal vibe rather than
+    // a glitchy cyberpunk one.
     //
     //   - <video> element does the heavy lifting (hardware-accelerated).
-    //   - Scanline overlay = static repeating-linear-gradient (GPU composite).
-    //   - Glitch overlay = ~5%/sec chance of a 100ms RGB-shift flicker.
+    //   - Filter `contrast(1.1) brightness(0.9)` keeps native UI colors
+    //     while pulling the footage slightly into a cinematic register.
+    //   - Scanline overlay = static repeating-linear-gradient with the
+    //     oxblood color rgba(170, 51, 51, 0.15), pattern 2px gap / 1px line.
+    //     No mix-blend-mode — at 0.15 opacity the muted color reads cleaner
+    //     overlaid directly than blended.
+    //   - Vignette layer combines the dark inner shadow with the red rim
+    //     glow `inset 0 0 30px rgba(170, 51, 51, 0.2)` per spec.
+    //   - Glitch flash removed (glitchProbability defaults to 0); state &
+    //     timer kept for prop-driven future toggling.
     //   - IntersectionObserver pauses video off-screen.
-    //   - prefers-reduced-motion: scanlines stay (static), glitch disabled,
-    //     video paused on first frame.
+    //   - prefers-reduced-motion: scanlines stay (static), video paused on
+    //     first frame.
     function ScanlineVideo({
       src,
-      filter = 'hue-rotate(330deg) saturate(1.2) contrast(1.05)',
-      scanOpacity = 0.30,
-      glitchProbability = 0.05,
+      filter = 'contrast(1.1) brightness(0.9)',
+      scanOpacity = 0.15,
+      glitchProbability = 0,
       className = '',
       style = {},
     }) {
@@ -3210,10 +3218,11 @@
         };
       }, [src, glitchProbability]);
 
-      // Scanline gradient — 1px red line every 3px. mix-blend-mode: multiply
-      // keeps the dark areas of the video readable while tinting the bright
-      // bands toward oxblood. rgba uses brand red #E5322D.
-      const scanBg = `repeating-linear-gradient(to bottom, rgba(229,50,45,${scanOpacity}) 0px, rgba(229,50,45,${scanOpacity}) 1px, transparent 1px, transparent 3px)`;
+      // Scanline gradient — 1px muted-oxblood line every 3px per founder
+      // spec. Color rgba(170, 51, 51, 0.15) reads as soft red haze over
+      // bright UI areas, near-invisible over dark areas. No blend mode:
+      // at 0.15 opacity the gradient sits cleanly on top.
+      const scanBg = `repeating-linear-gradient(0deg, transparent 0px, transparent 2px, rgba(170,51,51,${scanOpacity}) 2px, rgba(170,51,51,${scanOpacity}) 3px)`;
 
       return (
         <div ref={wrapRef} className={className} style={{ position: 'relative', overflow: 'hidden', ...style }}>
@@ -3242,12 +3251,12 @@
               position: 'absolute',
               inset: 0,
               backgroundImage: scanBg,
-              mixBlendMode: 'multiply',
               pointerEvents: 'none',
             }}
           />
-          {/* Glitch overlay — RGB-split band + brief hue flash. Hidden when
-              not glitching so it doesn't sit composited every frame. */}
+          {/* Glitch overlay — kept in-tree behind a glitchProbability prop
+              so the effect can be re-enabled per-instance, but the default
+              probability is 0 in this sub-treatment so glitch never fires. */}
           {glitch && (
             <div
               aria-hidden="true"
@@ -3255,20 +3264,22 @@
                 position: 'absolute',
                 inset: 0,
                 pointerEvents: 'none',
-                backgroundImage: 'linear-gradient(to bottom, transparent 30%, rgba(229,50,45,0.18) 30%, rgba(0,229,229,0.14) 32%, transparent 34%)',
+                backgroundImage: 'linear-gradient(to bottom, transparent 30%, rgba(170,51,51,0.18) 30%, rgba(0,229,229,0.14) 32%, transparent 34%)',
                 mixBlendMode: 'screen',
               }}
             />
           )}
-          {/* Vignette — subtle inner shadow grounds the video on the dark
-              card surface. Pure CSS, zero JS cost. */}
+          {/* Vignette + red rim glow — combined inset boxShadow grounds the
+              video on the dark card surface (dark inner shadow) and adds a
+              soft oxblood halo around the edges per founder spec. Pure CSS,
+              zero JS cost. */}
           <div
             aria-hidden="true"
             style={{
               position: 'absolute',
               inset: 0,
               pointerEvents: 'none',
-              boxShadow: 'inset 0 0 80px rgba(0,0,0,0.55)',
+              boxShadow: 'inset 0 0 80px rgba(0,0,0,0.4), inset 0 0 30px rgba(170,51,51,0.2)',
             }}
           />
         </div>
@@ -4891,22 +4902,26 @@
       );
     }
 
-    // Treatment 3 (2026-05-09 explore branch): scanline + glitch CRT
-    // treatment. Every agent card renders the actual full-color source
-    // mp4 via <video>, color-graded toward the brand red palette and
-    // overlaid with retro-CRT scanlines + an occasional glitch flicker.
-    // Unlike the halftone DottedVideo path (kept in source for the other
-    // treatments to compare against), the source UI stays recognizable.
+    // Sub-treatment C (2026-05-09 explore branch): scanlines + red glow
+    // (cinematic). Every agent card renders the actual full-color source
+    // mp4 via <video>, lightly graded for cinematic contrast, then
+    // overlaid with muted-oxblood scanlines (#AA3333 @ 0.15) and a soft
+    // red rim glow inset. No glitch — this is the calm, "muted hacker"
+    // CRT-terminal variant of the scanline branch.
     //
     // All 9 cards share the same treatment — `invert` is no longer used
-    // here because the colour-grade + scanlines work uniformly across
-    // both bright UI captures and dark hero footage.
+    // here because the scanline + glow read consistently across both
+    // bright UI captures and dark hero footage.
     //
-    // Per-slug overrides — bump scanline opacity or tweak the colour
-    // grade for agents whose footage reads too "live" without it.
+    // Per-slug overrides — bump scanline opacity for agents whose footage
+    // reads too "live" without it. Note: in this sub-treatment the default
+    // is 0.15 (oxblood), so the calendar/trade override at 0.38 lands as
+    // a noticeably denser red haze rather than the brand-red bands of
+    // earlier treatments. Kept because high-contrast UI still benefits
+    // from a stronger scanline to feel anchored in the CRT register.
     const AGENT_VISUAL_OVERRIDES = {
-      // Calendar/Trade footage is high-contrast bright UI; a slightly
-      // stronger scanline grounds it in the CRT aesthetic.
+      // Calendar/Trade footage is high-contrast bright UI; a stronger
+      // scanline grounds it in the cinematic register.
       calendar: { scanOpacity: 0.38 },
       trade:    { scanOpacity: 0.38 },
     };
@@ -4915,14 +4930,14 @@
       const o = AGENT_VISUAL_OVERRIDES[slug] || {};
       // Note: `invert` prop kept in signature for backwards-compatibility
       // with the AgentCarousel call-site, but ignored in this treatment —
-      // the scanline + colour-grade reads consistently regardless of
-      // source-video polarity, so all 9 cards use the same renderer.
+      // the scanline + glow read consistently regardless of source-video
+      // polarity, so all 9 cards use the same renderer.
       return (
         <ScanlineVideo
           src={`/assets/agent-${video || slug}.mp4`}
-          filter={o.filter ?? 'hue-rotate(330deg) saturate(1.2) contrast(1.05)'}
-          scanOpacity={o.scanOpacity ?? 0.30}
-          glitchProbability={o.glitchProbability ?? 0.05}
+          filter={o.filter ?? 'contrast(1.1) brightness(0.9)'}
+          scanOpacity={o.scanOpacity ?? 0.15}
+          glitchProbability={o.glitchProbability ?? 0}
           className="absolute inset-0 w-full h-full"
           style={{ background: '#0a0606' }}
         />
