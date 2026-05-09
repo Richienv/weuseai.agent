@@ -3134,24 +3134,26 @@
       );
     }
 
-    // ─────────────────────── SCANLINE VIDEO (CRT + glitch overlay) ───────────────────────
-    // Treatment 3: render the actual full-color source video, color-graded
-    // toward brand red via CSS filters, then overlaid with retro-CRT
-    // scanlines and an occasional brief glitch flicker. The source UI stays
-    // recognizable (unlike the halftone abstraction in DottedVideo) while
-    // still feeling on-brand and a touch unpredictable.
+    // ─────────────────────── SCANLINE VIDEO (duotone red filter) ───────────────────────
+    // Sub-treatment A (2026-05-09): render the source video through a
+    // strong CSS duotone filter chain — grayscale → contrast bump → sepia
+    // base tint → hue-rotate to oxblood → punchy saturation. Result: the
+    // video reads as a black-and-oxblood cinematic poster, fully on-brand,
+    // with no scanlines or glitch noise competing for attention.
     //
     //   - <video> element does the heavy lifting (hardware-accelerated).
-    //   - Scanline overlay = static repeating-linear-gradient (GPU composite).
-    //   - Glitch overlay = ~5%/sec chance of a 100ms RGB-shift flicker.
+    //   - Filter chain is GPU-composited on most modern browsers.
+    //   - Scanline overlay default opacity = 0 (overlay layer kept in DOM
+    //     so the prop API stays compatible, but invisible by default).
+    //   - Glitch flicker disabled by default (probability 0).
+    //   - Vignette retained — grounds the cards on dark surfaces.
     //   - IntersectionObserver pauses video off-screen.
-    //   - prefers-reduced-motion: scanlines stay (static), glitch disabled,
-    //     video paused on first frame.
+    //   - prefers-reduced-motion: video paused on first frame.
     function ScanlineVideo({
       src,
-      filter = 'hue-rotate(330deg) saturate(1.2) contrast(1.05)',
-      scanOpacity = 0.30,
-      glitchProbability = 0.05,
+      filter = 'grayscale(1) contrast(1.3) sepia(1) hue-rotate(-25deg) saturate(2.5)',
+      scanOpacity = 0,
+      glitchProbability = 0,
       className = '',
       style = {},
     }) {
@@ -4891,38 +4893,36 @@
       );
     }
 
-    // Treatment 3 (2026-05-09 explore branch): scanline + glitch CRT
-    // treatment. Every agent card renders the actual full-color source
-    // mp4 via <video>, color-graded toward the brand red palette and
-    // overlaid with retro-CRT scanlines + an occasional glitch flicker.
-    // Unlike the halftone DottedVideo path (kept in source for the other
-    // treatments to compare against), the source UI stays recognizable.
+    // Sub-treatment A (2026-05-09 explore branch): duotone red filter.
+    // Every agent card renders the actual full-color source mp4 via
+    // <video>, pushed through a strong CSS filter chain that converts
+    // it to a black-and-oxblood cinematic duotone. No scanlines, no
+    // glitch flicker — the duotone IS the brand layer.
     //
     // All 9 cards share the same treatment — `invert` is no longer used
-    // here because the colour-grade + scanlines work uniformly across
-    // both bright UI captures and dark hero footage.
+    // here because the duotone normalises tonal range across both bright
+    // UI captures and dark hero footage.
     //
-    // Per-slug overrides — bump scanline opacity or tweak the colour
-    // grade for agents whose footage reads too "live" without it.
+    // Per-slug overrides — empty by default. Kept as a hook for future
+    // per-agent tuning (e.g. nudging hue-rotate / saturate per footage)
+    // without having to wire new prop plumbing.
     const AGENT_VISUAL_OVERRIDES = {
-      // Calendar/Trade footage is high-contrast bright UI; a slightly
-      // stronger scanline grounds it in the CRT aesthetic.
-      calendar: { scanOpacity: 0.38 },
-      trade:    { scanOpacity: 0.38 },
+      // calendar: { filter: '...' },
+      // trade:    { filter: '...' },
     };
 
     function AgentVisual({ video, slug, invert }) {
       const o = AGENT_VISUAL_OVERRIDES[slug] || {};
       // Note: `invert` prop kept in signature for backwards-compatibility
       // with the AgentCarousel call-site, but ignored in this treatment —
-      // the scanline + colour-grade reads consistently regardless of
-      // source-video polarity, so all 9 cards use the same renderer.
+      // the duotone filter reads consistently regardless of source-video
+      // polarity, so all 9 cards use the same renderer.
       return (
         <ScanlineVideo
           src={`/assets/agent-${video || slug}.mp4`}
-          filter={o.filter ?? 'hue-rotate(330deg) saturate(1.2) contrast(1.05)'}
-          scanOpacity={o.scanOpacity ?? 0.30}
-          glitchProbability={o.glitchProbability ?? 0.05}
+          filter={o.filter ?? 'grayscale(1) contrast(1.3) sepia(1) hue-rotate(-25deg) saturate(2.5)'}
+          scanOpacity={o.scanOpacity ?? 0}
+          glitchProbability={o.glitchProbability ?? 0}
           className="absolute inset-0 w-full h-full"
           style={{ background: '#0a0606' }}
         />
