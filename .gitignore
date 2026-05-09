@@ -37,3 +37,4 @@ supabase/.branches/
 
 # Local git worktrees for parallel feature work
 .worktrees/
+.secrets-generated/
