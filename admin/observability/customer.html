@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex,nofollow,noarchive" />
+    <title>Observability — Customer · weuseai.agent</title>
+    <style>
+      :root {
+        --canvas: #faf9f5;
+        --ink: #141413;
+        --ink-soft: #5d5c58;
+        --ink-faint: #8a8983;
+        --rule: #e3e1da;
+        --rule-soft: #ecebe5;
+        --accent: #0047ff;
+        --ok: #1f8a4d;
+        --in-flight: #c47a00;
+        --stuck: #b3261e;
+        --pending: #8a8983;
+        --bg-card: #ffffff;
+      }
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0;
+        padding: 0;
+        background: var(--canvas);
+        color: var(--ink);
+        font: 15px/1.5 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      .wrap {
+        max-width: 880px;
+        margin: 0 auto;
+        padding: 48px 24px 96px;
+      }
+      h1 {
+        font-size: 22px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        margin: 0 0 6px;
+      }
+      .lede {
+        color: var(--ink-soft);
+        margin: 0 0 32px;
+      }
+      .controls {
+        background: var(--bg-card);
+        border: 1px solid var(--rule);
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 24px;
+      }
+      .controls label {
+        display: block;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        color: var(--ink-soft);
+        text-transform: uppercase;
+        margin-bottom: 6px;
+      }
+      .controls input {
+        width: 100%;
+        font: inherit;
+        padding: 10px 12px;
+        border: 1px solid var(--rule);
+        border-radius: 6px;
+        background: var(--canvas);
+        color: var(--ink);
+      }
+      .controls input:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(0, 71, 255, 0.12);
+      }
+      .controls .row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        margin-bottom: 16px;
+      }
+      .controls .row.single { grid-template-columns: 1fr; }
+      .controls .actions {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+      }
+      button {
+        font: inherit;
+        font-weight: 500;
+        padding: 10px 18px;
+        border-radius: 6px;
+        border: 1px solid var(--ink);
+        background: var(--ink);
+        color: var(--canvas);
+        cursor: pointer;
+      }
+      button.secondary {
+        background: transparent;
+        color: var(--ink);
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .hint {
+        font-size: 13px;
+        color: var(--ink-faint);
+      }
+      .err {
+        color: var(--stuck);
+        font-size: 13px;
+        margin-top: 8px;
+      }
+      /* Report styles — matches classes emitted by renderStatusReportHtml. */
+      .obs-report {
+        background: var(--bg-card);
+        border: 1px solid var(--rule);
+        border-radius: 10px;
+        padding: 24px 24px 8px;
+      }
+      .obs-header h1 {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 14px;
+        font-weight: 500;
+        margin-bottom: 16px;
+        color: var(--ink-soft);
+      }
+      .obs-header dl {
+        display: grid;
+        grid-template-columns: 140px 1fr;
+        gap: 4px 12px;
+        font-size: 13px;
+        margin: 0 0 24px;
+      }
+      .obs-header dt {
+        color: var(--ink-faint);
+        text-transform: uppercase;
+        font-size: 11px;
+        letter-spacing: 0.04em;
+        padding-top: 2px;
+      }
+      .obs-header dd { margin: 0; }
+      .obs-overall { font-weight: 600; text-transform: uppercase; }
+      .obs-overall-healthy { color: var(--ok); }
+      .obs-overall-in_flight { color: var(--in-flight); }
+      .obs-overall-stuck { color: var(--stuck); }
+      .obs-overall-unknown { color: var(--pending); }
+      .obs-next-action {
+        color: var(--in-flight);
+        font-weight: 500;
+      }
+      .obs-stages {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+      .obs-stage {
+        border-top: 1px solid var(--rule-soft);
+        padding: 16px 0;
+      }
+      .obs-stages > .obs-stage:first-child {
+        border-top: 1px solid var(--rule);
+      }
+      .obs-stage-head {
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+        margin-bottom: 6px;
+      }
+      .obs-stage-num {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 12px;
+        color: var(--ink-faint);
+        width: 18px;
+      }
+      .obs-stage-glyph {
+        width: 18px;
+        text-align: center;
+        font-weight: 600;
+      }
+      .obs-stage-label {
+        flex: 1;
+        font-weight: 600;
+      }
+      .obs-stage-state {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--ink-faint);
+      }
+      .obs-stage-body { padding-left: 46px; }
+      .obs-stage-body p {
+        margin: 0 0 4px;
+        color: var(--ink-soft);
+      }
+      .obs-stage-asof {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 12px;
+        color: var(--ink-faint);
+      }
+      .obs-stage-details {
+        margin: 8px 0 0;
+        display: grid;
+        grid-template-columns: 160px 1fr;
+        gap: 2px 12px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 12px;
+        color: var(--ink-soft);
+      }
+      .obs-stage-details dt { color: var(--ink-faint); }
+      .obs-stage-details dd { margin: 0; }
+      .obs-stage-action {
+        margin-top: 6px;
+        color: var(--stuck);
+        font-weight: 500;
+      }
+      .obs-stage-ok .obs-stage-glyph { color: var(--ok); }
+      .obs-stage-in_progress .obs-stage-glyph { color: var(--in-flight); }
+      .obs-stage-failed_retryable .obs-stage-glyph { color: var(--in-flight); }
+      .obs-stage-failed_hard .obs-stage-glyph { color: var(--stuck); }
+      .obs-stage-pending .obs-stage-glyph { color: var(--pending); }
+      .obs-stage-pending .obs-stage-label { color: var(--ink-faint); }
+      .obs-stage-pending .obs-stage-body p { color: var(--ink-faint); }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>Observability · Customer onboarding</h1>
+      <p class="lede">Internal-only. Reads <code>customers</code>, <code>vps_instances</code>, <code>bundle_pull_attempts</code>, and <code>usage_log</code> and walks the 6-stage pipeline.</p>
+
+      <form id="frm" class="controls" onsubmit="onSubmit(event)">
+        <div class="row">
+          <div>
+            <label for="id">Customer id (uuid)</label>
+            <input id="id" type="text" placeholder="11111111-1111-4111-8111-111111111111" autocomplete="off" />
+          </div>
+          <div>
+            <label for="secret">Admin secret</label>
+            <input id="secret" type="password" placeholder="OBSERVABILITY_ADMIN_SECRET" autocomplete="off" />
+          </div>
+        </div>
+        <div class="actions">
+          <button id="go" type="submit">Fetch report</button>
+          <button id="json" type="button" class="secondary" onclick="onSubmit(event, 'json')">View JSON</button>
+          <span class="hint">Secret persists in sessionStorage for this browser tab.</span>
+        </div>
+        <p id="err" class="err" hidden></p>
+      </form>
+
+      <div id="out"></div>
+    </div>
+
+    <script>
+      const idEl = document.getElementById('id')
+      const secretEl = document.getElementById('secret')
+      const goBtn = document.getElementById('go')
+      const jsonBtn = document.getElementById('json')
+      const errEl = document.getElementById('err')
+      const outEl = document.getElementById('out')
+
+      // Restore secret + last id from sessionStorage so refreshing keeps state.
+      try {
+        const saved = sessionStorage.getItem('obs_secret')
+        if (saved) secretEl.value = saved
+        const lastId = sessionStorage.getItem('obs_last_id')
+        if (lastId) idEl.value = lastId
+        // Allow `?id=<uuid>` deeplink.
+        const u = new URL(location.href)
+        const qid = u.searchParams.get('id')
+        if (qid) idEl.value = qid
+      } catch (e) { /* sessionStorage may be blocked */ }
+
+      async function onSubmit(ev, format) {
+        ev.preventDefault()
+        errEl.hidden = true
+        errEl.textContent = ''
+        const id = idEl.value.trim()
+        const secret = secretEl.value
+        if (!id) return showErr('Customer id required.')
+        if (!secret) return showErr('Admin secret required.')
+        try { sessionStorage.setItem('obs_secret', secret) } catch (e) {}
+        try { sessionStorage.setItem('obs_last_id', id) } catch (e) {}
+
+        const fmt = format === 'json' ? 'json' : 'html'
+        goBtn.disabled = jsonBtn.disabled = true
+        goBtn.textContent = 'Loading…'
+
+        try {
+          const r = await fetch(
+            `/api/admin/observability/customer?id=${encodeURIComponent(id)}&format=${fmt}`,
+            { headers: { Authorization: `Bearer ${secret}` } },
+          )
+          if (r.status === 401) {
+            showErr('401 unauthorized — wrong admin secret.')
+            return
+          }
+          if (!r.ok) {
+            const text = await r.text().catch(() => '')
+            showErr(`HTTP ${r.status}: ${text.slice(0, 240)}`)
+            return
+          }
+          if (fmt === 'json') {
+            const j = await r.json()
+            outEl.innerHTML = `<pre style="background:var(--bg-card);border:1px solid var(--rule);border-radius:10px;padding:24px;overflow:auto;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;">${escapeHtml(JSON.stringify(j, null, 2))}</pre>`
+          } else {
+            const html = await r.text()
+            outEl.innerHTML = html
+          }
+        } catch (e) {
+          showErr(`fetch failed: ${e instanceof Error ? e.message : e}`)
+        } finally {
+          goBtn.disabled = jsonBtn.disabled = false
+          goBtn.textContent = 'Fetch report'
+        }
+      }
+
+      function showErr(msg) {
+        errEl.hidden = false
+        errEl.textContent = msg
+      }
+      function escapeHtml(s) {
+        return String(s)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;')
+      }
+    </script>
+  </body>
+</html>
