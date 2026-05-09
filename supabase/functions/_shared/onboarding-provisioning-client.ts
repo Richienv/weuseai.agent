@@ -37,6 +37,20 @@ export class OnboardingProvisioningClient implements IOnboardingProvisioningClie
   }
 
   async spinUp(input: SpinUpInput): Promise<SpinUpResult> {
+    // Wire shape mirrors services/provisioning/src/spin-up-helpers.ts —
+    // notably the historical name `customerTelegramBotToken` (used since
+    // the BYO-bot intent in CLAUDE.md tech stack). The internal SpinUpInput
+    // field is named `telegramBotToken` for ergonomics; we translate
+    // here.
+    const wire = {
+      customerId: input.customerId,
+      tier: input.tier,
+      telegramChatId: input.telegramChatId,
+      customerTelegramBotToken: input.telegramBotToken,
+      openrouterApiKey: input.openrouterApiKey,
+      soulMdContent: input.soulMdContent,
+      alwaysOnEnabled: input.alwaysOnEnabled,
+    }
     let r: Response
     try {
       r = await fetch(`${this.baseUrl}/spin-up`, {
@@ -45,7 +59,7 @@ export class OnboardingProvisioningClient implements IOnboardingProvisioningClie
           authorization: `Bearer ${this.authToken}`,
           'content-type': 'application/json',
         },
-        body: JSON.stringify(input),
+        body: JSON.stringify(wire),
       })
     } catch (e) {
       // Network-level failure (DNS, TLS, connection refused). Surface

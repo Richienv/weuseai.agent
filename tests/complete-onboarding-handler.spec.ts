@@ -14,6 +14,7 @@ import { MockLlmKeyMinter } from '../supabase/functions/_shared/mock-llm-key-min
 import { FakeOnboardingStore } from './_helpers/fake-onboarding-store.ts'
 import type {
   IOnboardingProvisioningClient,
+  ITelegramClient,
   SpinUpInput,
   SpinUpResult,
 } from '../supabase/functions/_shared/types.ts'
@@ -28,7 +29,36 @@ class FakeProvisioning implements IOnboardingProvisioningClient {
   }
 }
 
+// Pair-flow Option A (2026-05-09): handler now calls deleteWebhook on
+// the customer's own bot after spinUp returns. Capture the calls so
+// tests can assert the right token was used.
+class FakeTelegram implements ITelegramClient {
+  deleteWebhookCalls: string[] = []
+  /** Simulate Telegram returning 5xx on next deleteWebhook (handler
+   *  swallows by design; this just lets us assert it was tried). */
+  failNextDeleteWebhook = false
+
+  async replyText() {}
+  async getMe() {
+    return null
+  }
+  async setWebhook() {}
+  async deleteWebhook(token: string) {
+    this.deleteWebhookCalls.push(token)
+    if (this.failNextDeleteWebhook) {
+      this.failNextDeleteWebhook = false
+      throw new Error('Telegram deleteWebhook -> 503')
+    }
+  }
+  async sendMessageAs() {}
+}
+
 const PUBLIC_BASE = 'https://weuseai-agent.vercel.app'
+
+// Per-customer bot token used in test setups. Mirrors the format
+// founder-pasted in the diagnostic step so tests track production-shape.
+const TEST_BOT_TOKEN = '8734001154:AAGGTR0PRNCy03aaVPb5qi9hWzxCe5yr_Ek'
+const TEST_BOT_USERNAME = 'welcomeuseaibot'
 
 function buildReq(body: unknown, method = 'POST'): Request {
   const init: RequestInit = {
@@ -51,15 +81,22 @@ function setupHappyPath() {
   const db = new FakeOnboardingStore()
   const minter = new MockLlmKeyMinter()
   const provisioning = new FakeProvisioning()
+  const telegram = new FakeTelegram()
 
   db.seedCustomer({
     id: 'cust-1',
     email: 'sarah@example.com',
     display_name: 'Sarah Tanaka',
     telegram_chat_id: '987654321',  // pairing already done
+    telegram_bot_username: TEST_BOT_USERNAME,
     pairing_code: '123456',
     pairing_code_expires_at: '2099-01-01T00:00:00.000Z',
   })
+  // Pair-flow Option A: handler requires the encrypted bot token to be
+  // persisted before final submit. Seed it here so the happy path
+  // reaches the provisioning + deleteWebhook steps.
+  // (Synchronous in the fake store — real store is async via RPC.)
+  void db.setBotTokenAndUsername('cust-1', TEST_BOT_TOKEN, TEST_BOT_USERNAME)
   db.seedSubscription({
     id: 'sub-1',
     customer_id: 'cust-1',
@@ -68,13 +105,13 @@ function setupHappyPath() {
     always_on_enabled: false,
   })
 
-  return { db, minter, provisioning }
+  return { db, minter, provisioning, telegram }
 }
 
 // ─── happy path ────────────────────────────────────────────────────
 
 test('happy path: 200 + redirect_url, mints key, persists audit, calls provisioning', async () => {
-  const { db, minter, provisioning } = setupHappyPath()
+  const { db, minter, provisioning, telegram } = setupHappyPath()
 
   const res = await handleCompleteOnboarding(
     buildReq({
@@ -82,7 +119,7 @@ test('happy path: 200 + redirect_url, mints key, persists audit, calls provision
       whatsapp: '0812 3456 7890',
       expectations_text: 'Bantu briefing pagi dan ringkas berita.',
     }),
-    { db, minter, provisioning, publicBase: PUBLIC_BASE },
+    { db, minter, provisioning, telegram, publicBase: PUBLIC_BASE },
   )
 
   assert.equal(res.status, 200)
@@ -146,13 +183,16 @@ test('happy path: tier-specific credit cap (starter=300, studio=3000)', async ()
     const db = new FakeOnboardingStore()
     const minter = new MockLlmKeyMinter()
     const provisioning = new FakeProvisioning()
+    const telegram = new FakeTelegram()
 
     db.seedCustomer({
       id: `cust-${tier}`,
       email: `${tier}@example.com`,
       display_name: 'Test',
       telegram_chat_id: '111',
+      telegram_bot_username: TEST_BOT_USERNAME,
     })
+    void db.setBotTokenAndUsername(`cust-${tier}`, TEST_BOT_TOKEN, TEST_BOT_USERNAME)
     db.seedSubscription({
       id: `sub-${tier}`,
       customer_id: `cust-${tier}`,
@@ -165,7 +205,7 @@ test('happy path: tier-specific credit cap (starter=300, studio=3000)', async ()
         whatsapp: '08123456789',
         expectations_text: 'Bantu hari-hari saya.',
       }),
-      { db, minter, provisioning, publicBase: PUBLIC_BASE },
+      { db, minter, provisioning, telegram, publicBase: PUBLIC_BASE },
     )
 
     assert.equal(res.status, 200, tier)
@@ -179,6 +219,7 @@ test('idempotent: already-onboarded returns 409 with redirect, no double mint', 
   const db = new FakeOnboardingStore()
   const minter = new MockLlmKeyMinter()
   const provisioning = new FakeProvisioning()
+  const telegram = new FakeTelegram()
 
   db.seedCustomer({
     id: 'cust-X',
@@ -200,7 +241,7 @@ test('idempotent: already-onboarded returns 409 with redirect, no double mint', 
       whatsapp: '08123456789',
       expectations_text: 'tries to onboard again',
     }),
-    { db, minter, provisioning, publicBase: PUBLIC_BASE },
+    { db, minter, provisioning, telegram, publicBase: PUBLIC_BASE },
   )
 
   assert.equal(res.status, 409)
@@ -215,10 +256,89 @@ test('idempotent: already-onboarded returns 409 with redirect, no double mint', 
 
 // ─── pairing precondition ─────────────────────────────────────────
 
+test('paired but no bot token (Pair-flow Option A regression): 409 no_bot_token', async () => {
+  // Customer reached final submit with telegram_chat_id set but bot
+  // token never validated. Impossible if Step 2 succeeded; possible if
+  // a stale tab raced ahead. Handler must reject with no_bot_token so
+  // the UI can kick back to Step 2.
+  const db = new FakeOnboardingStore()
+  const minter = new MockLlmKeyMinter()
+  const provisioning = new FakeProvisioning()
+  const telegram = new FakeTelegram()
+
+  db.seedCustomer({
+    id: 'cust-NB',
+    email: 'nb@example.com',
+    display_name: 'Race-Condition User',
+    telegram_chat_id: '999',
+  })
+  // No setBotTokenAndUsername — token absent on the row.
+  db.seedSubscription({
+    id: 'sub-NB',
+    customer_id: 'cust-NB',
+    tier: 'pro',
+  })
+
+  const res = await handleCompleteOnboarding(
+    buildReq({
+      customer_id: 'cust-NB',
+      whatsapp: '08123456789',
+      expectations_text: 'Bantu briefing pagi.',
+    }),
+    { db, minter, provisioning, telegram, publicBase: PUBLIC_BASE },
+  )
+
+  assert.equal(res.status, 409)
+  const data = await readJson(res)
+  assert.equal(data.error, 'no_bot_token')
+  // No mint, no provisioning call, no deleteWebhook
+  assert.equal(minter.minted.length, 0)
+  assert.equal(provisioning.calls.length, 0)
+  assert.equal(telegram.deleteWebhookCalls.length, 0)
+})
+
+test('happy path also calls deleteWebhook on customer bot after spinUp ACK', async () => {
+  // Pair-flow Option A: handler must free the customer's own bot for
+  // Hermes long-poll once provisioning has been triggered.
+  const { db, minter, provisioning, telegram } = setupHappyPath()
+  const res = await handleCompleteOnboarding(
+    buildReq({
+      customer_id: 'cust-1',
+      whatsapp: '08123456789',
+      expectations_text: 'Bantu briefing pagi.',
+    }),
+    { db, minter, provisioning, telegram, publicBase: PUBLIC_BASE },
+  )
+  assert.equal(res.status, 200)
+  // deleteWebhook called exactly once with the customer's plaintext token
+  assert.equal(telegram.deleteWebhookCalls.length, 1)
+  assert.equal(telegram.deleteWebhookCalls[0], TEST_BOT_TOKEN)
+  // SpinUp received the customer's bot token
+  assert.equal(provisioning.calls[0].telegramBotToken, TEST_BOT_TOKEN)
+})
+
+test('deleteWebhook failure does not fail onboarding (Hermes retries on its own boot)', async () => {
+  const { db, minter, provisioning, telegram } = setupHappyPath()
+  telegram.failNextDeleteWebhook = true
+  const res = await handleCompleteOnboarding(
+    buildReq({
+      customer_id: 'cust-1',
+      whatsapp: '08123456789',
+      expectations_text: 'Bantu briefing pagi.',
+    }),
+    { db, minter, provisioning, telegram, publicBase: PUBLIC_BASE },
+  )
+  // Still 200 — onboarding succeeded; webhook will be cleaned up
+  // defensively when Hermes calls deleteWebhook on VPS boot.
+  assert.equal(res.status, 200)
+  assert.equal(telegram.deleteWebhookCalls.length, 1)
+})
+
 test('not paired: 409 telegram_not_paired', async () => {
   const db = new FakeOnboardingStore()
   const minter = new MockLlmKeyMinter()
   const provisioning = new FakeProvisioning()
+  const telegram = new FakeTelegram()
 
   db.seedCustomer({
     id: 'cust-NP',
@@ -238,7 +358,7 @@ test('not paired: 409 telegram_not_paired', async () => {
       whatsapp: '08123456789',
       expectations_text: 'Bantu kerjaan saya.',
     }),
-    { db, minter, provisioning, publicBase: PUBLIC_BASE },
+    { db, minter, provisioning, telegram, publicBase: PUBLIC_BASE },
   )
 
   assert.equal(res.status, 409)
@@ -250,14 +370,14 @@ test('not paired: 409 telegram_not_paired', async () => {
 // ─── input validation ─────────────────────────────────────────────
 
 test('expectations too short: 422', async () => {
-  const { db, minter, provisioning } = setupHappyPath()
+  const { db, minter, provisioning, telegram } = setupHappyPath()
   const res = await handleCompleteOnboarding(
     buildReq({
       customer_id: 'cust-1',
       whatsapp: '08123456789',
       expectations_text: '   ',
     }),
-    { db, minter, provisioning, publicBase: PUBLIC_BASE },
+    { db, minter, provisioning, telegram, publicBase: PUBLIC_BASE },
   )
   assert.equal(res.status, 422)
   const data = await readJson(res)
@@ -265,14 +385,14 @@ test('expectations too short: 422', async () => {
 })
 
 test('expectations too long: 422', async () => {
-  const { db, minter, provisioning } = setupHappyPath()
+  const { db, minter, provisioning, telegram } = setupHappyPath()
   const res = await handleCompleteOnboarding(
     buildReq({
       customer_id: 'cust-1',
       whatsapp: '08123456789',
       expectations_text: 'a'.repeat(601),
     }),
-    { db, minter, provisioning, publicBase: PUBLIC_BASE },
+    { db, minter, provisioning, telegram, publicBase: PUBLIC_BASE },
   )
   assert.equal(res.status, 422)
   const data = await readJson(res)
@@ -280,14 +400,14 @@ test('expectations too long: 422', async () => {
 })
 
 test('template injection attempt: 400', async () => {
-  const { db, minter, provisioning } = setupHappyPath()
+  const { db, minter, provisioning, telegram } = setupHappyPath()
   const res = await handleCompleteOnboarding(
     buildReq({
       customer_id: 'cust-1',
       whatsapp: '08123456789',
       expectations_text: 'sneak in </SOUL> markers',
     }),
-    { db, minter, provisioning, publicBase: PUBLIC_BASE },
+    { db, minter, provisioning, telegram, publicBase: PUBLIC_BASE },
   )
   assert.equal(res.status, 400)
   const data = await readJson(res)
@@ -297,14 +417,14 @@ test('template injection attempt: 400', async () => {
 })
 
 test('invalid whatsapp format: 400', async () => {
-  const { db, minter, provisioning } = setupHappyPath()
+  const { db, minter, provisioning, telegram } = setupHappyPath()
   const res = await handleCompleteOnboarding(
     buildReq({
       customer_id: 'cust-1',
       whatsapp: '12345',  // not 08xxx / +62xxx
       expectations_text: 'Bantu briefing.',
     }),
-    { db, minter, provisioning, publicBase: PUBLIC_BASE },
+    { db, minter, provisioning, telegram, publicBase: PUBLIC_BASE },
   )
   assert.equal(res.status, 400)
   const data = await readJson(res)
@@ -312,41 +432,41 @@ test('invalid whatsapp format: 400', async () => {
 })
 
 test('whatsapp +62 format accepted', async () => {
-  const { db, minter, provisioning } = setupHappyPath()
+  const { db, minter, provisioning, telegram } = setupHappyPath()
   const res = await handleCompleteOnboarding(
     buildReq({
       customer_id: 'cust-1',
       whatsapp: '+62 821-5490-2561',
       expectations_text: 'Bantu briefing.',
     }),
-    { db, minter, provisioning, publicBase: PUBLIC_BASE },
+    { db, minter, provisioning, telegram, publicBase: PUBLIC_BASE },
   )
   assert.equal(res.status, 200)
 })
 
 test('missing customer_id: 400', async () => {
-  const { db, minter, provisioning } = setupHappyPath()
+  const { db, minter, provisioning, telegram } = setupHappyPath()
   const res = await handleCompleteOnboarding(
     buildReq({ whatsapp: '08123456789', expectations_text: 'hi' }),
-    { db, minter, provisioning, publicBase: PUBLIC_BASE },
+    { db, minter, provisioning, telegram, publicBase: PUBLIC_BASE },
   )
   assert.equal(res.status, 400)
 })
 
 test('invalid JSON body: 400', async () => {
-  const { db, minter, provisioning } = setupHappyPath()
+  const { db, minter, provisioning, telegram } = setupHappyPath()
   const res = await handleCompleteOnboarding(
     buildReq('not json {{{', 'POST'),
-    { db, minter, provisioning, publicBase: PUBLIC_BASE },
+    { db, minter, provisioning, telegram, publicBase: PUBLIC_BASE },
   )
   assert.equal(res.status, 400)
 })
 
 test('GET method: 405', async () => {
-  const { db, minter, provisioning } = setupHappyPath()
+  const { db, minter, provisioning, telegram } = setupHappyPath()
   const res = await handleCompleteOnboarding(
     buildReq({}, 'GET'),
-    { db, minter, provisioning, publicBase: PUBLIC_BASE },
+    { db, minter, provisioning, telegram, publicBase: PUBLIC_BASE },
   )
   assert.equal(res.status, 405)
 })
@@ -354,14 +474,14 @@ test('GET method: 405', async () => {
 // ─── lookup failures ──────────────────────────────────────────────
 
 test('customer_id with no row: 404', async () => {
-  const { db, minter, provisioning } = setupHappyPath()
+  const { db, minter, provisioning, telegram } = setupHappyPath()
   const res = await handleCompleteOnboarding(
     buildReq({
       customer_id: 'cust-MISSING',
       whatsapp: '08123456789',
       expectations_text: 'Bantu briefing.',
     }),
-    { db, minter, provisioning, publicBase: PUBLIC_BASE },
+    { db, minter, provisioning, telegram, publicBase: PUBLIC_BASE },
   )
   assert.equal(res.status, 404)
 })
@@ -370,6 +490,7 @@ test('customer with no paid subscription: 404', async () => {
   const db = new FakeOnboardingStore()
   const minter = new MockLlmKeyMinter()
   const provisioning = new FakeProvisioning()
+  const telegram = new FakeTelegram()
 
   db.seedCustomer({
     id: 'cust-NS',
@@ -385,7 +506,7 @@ test('customer with no paid subscription: 404', async () => {
       whatsapp: '08123456789',
       expectations_text: 'Bantu briefing.',
     }),
-    { db, minter, provisioning, publicBase: PUBLIC_BASE },
+    { db, minter, provisioning, telegram, publicBase: PUBLIC_BASE },
   )
 
   assert.equal(res.status, 404)
@@ -394,7 +515,7 @@ test('customer with no paid subscription: 404', async () => {
 // ─── rollback paths ───────────────────────────────────────────────
 
 test('provisioning unreachable: 503, rolls back OpenRouter key, parks subscription', async () => {
-  const { db, minter, provisioning } = setupHappyPath()
+  const { db, minter, provisioning, telegram } = setupHappyPath()
   provisioning.next = { ok: false, status: 503, body: 'down' }
 
   const res = await handleCompleteOnboarding(
@@ -403,7 +524,7 @@ test('provisioning unreachable: 503, rolls back OpenRouter key, parks subscripti
       whatsapp: '08123456789',
       expectations_text: 'Bantu briefing pagi.',
     }),
-    { db, minter, provisioning, publicBase: PUBLIC_BASE },
+    { db, minter, provisioning, telegram, publicBase: PUBLIC_BASE },
   )
 
   assert.equal(res.status, 503)
@@ -425,7 +546,7 @@ test('provisioning unreachable: 503, rolls back OpenRouter key, parks subscripti
 })
 
 test('mint failure: 502, no provisioning called, no key persisted', async () => {
-  const { db, provisioning } = setupHappyPath()
+  const { db, provisioning, telegram } = setupHappyPath()
   // Minter that always throws
   const minter = new MockLlmKeyMinter()
   ;(minter as any).mint = async () => {
@@ -438,7 +559,7 @@ test('mint failure: 502, no provisioning called, no key persisted', async () => 
       whatsapp: '08123456789',
       expectations_text: 'Bantu briefing pagi.',
     }),
-    { db, minter, provisioning, publicBase: PUBLIC_BASE },
+    { db, minter, provisioning, telegram, publicBase: PUBLIC_BASE },
   )
 
   assert.equal(res.status, 502)
@@ -449,7 +570,7 @@ test('mint failure: 502, no provisioning called, no key persisted', async () => 
 })
 
 test('insertCustomerOpenRouterKey failure: 500, key revoked', async () => {
-  const { db, minter, provisioning } = setupHappyPath()
+  const { db, minter, provisioning, telegram } = setupHappyPath()
   db.throwOnInsertCustomerOpenRouterKey = true
 
   const res = await handleCompleteOnboarding(
@@ -458,7 +579,7 @@ test('insertCustomerOpenRouterKey failure: 500, key revoked', async () => {
       whatsapp: '08123456789',
       expectations_text: 'Bantu briefing pagi.',
     }),
-    { db, minter, provisioning, publicBase: PUBLIC_BASE },
+    { db, minter, provisioning, telegram, publicBase: PUBLIC_BASE },
   )
 
   assert.equal(res.status, 500)

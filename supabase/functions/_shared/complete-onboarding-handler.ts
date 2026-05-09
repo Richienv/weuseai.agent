@@ -10,6 +10,7 @@ import {
   type ILlmKeyMinter,
   type IOnboardingStore,
   type IOnboardingProvisioningClient,
+  type ITelegramClient,
   type CustomerRow,
   type SubscriptionRow,
 } from './types.ts'
@@ -23,6 +24,10 @@ export type CompleteOnboardingDeps = {
   db: IOnboardingStore
   minter: ILlmKeyMinter
   provisioning: IOnboardingProvisioningClient
+  /** Pair-flow Option A (2026-05-09): used to deleteWebhook on the
+   *  customer's own bot AFTER provisioning ACK so Hermes can long-poll
+   *  cleanly when the VPS boots. */
+  telegram: ITelegramClient
   publicBase: string                 // e.g. https://weuseai-agent.vercel.app
   now?: () => Date
 }
@@ -84,6 +89,26 @@ export async function handleCompleteOnboarding(
   // ─── 3. Pairing must have completed BEFORE submit ─────────────────
   if (!customer.telegram_chat_id) {
     return json({ error: 'telegram_not_paired' }, 409)
+  }
+
+  // ─── 3b. Customer's bot token must be persisted (Pair-flow Option A)
+  // The provisioning service writes this to the customer's VPS .env
+  // as TELEGRAM_BOT_TOKEN. If it's missing, Hermes won't have a bot
+  // to attach to — fail loudly so the customer goes back to Step 2.
+  let customerBotToken: string | null
+  try {
+    customerBotToken = await deps.db.getDecryptedBotToken(customer_id)
+  } catch (e) {
+    // RPC failure (encryption key misconfigured, etc.) — surface 500
+    // so customer retries; we don't want to ship a half-onboarded
+    // VPS with no Telegram delivery.
+    return json(
+      { error: 'internal', detail: errMessage(e) },
+      500,
+    )
+  }
+  if (!customerBotToken) {
+    return json({ error: 'no_bot_token' }, 409)
   }
 
   // ─── 4. Sanitize expectations + render SOUL.md ────────────────────
@@ -156,10 +181,14 @@ export async function handleCompleteOnboarding(
   }
 
   // ─── 8. POST to provisioning service ──────────────────────────────
+  // Pair-flow Option A (2026-05-09): customerBotToken plumbed through
+  // so the provisioning service can write it to the VPS .env as
+  // TELEGRAM_BOT_TOKEN (replaces the legacy shared @weuseaibot token).
   const spinResult = await deps.provisioning.spinUp({
     customerId: customer_id,
     tier: subscription.tier,
     telegramChatId: customer.telegram_chat_id,
+    telegramBotToken: customerBotToken,
     openrouterApiKey: mintResult.key,
     soulMdContent: soulMdText,
     alwaysOnEnabled: subscription.always_on_enabled,
@@ -178,6 +207,16 @@ export async function handleCompleteOnboarding(
       503,
     )
   }
+
+  // ─── 8b. Free the customer's bot for Hermes long-poll ─────────────
+  // Pair-flow Option A: the webhook on the customer's bot was set
+  // during validate-bot-token (Step 2) so /pair messages could route
+  // to pair-customer-bot-webhook. Now that pairing is done AND
+  // provisioning has been triggered, delete the webhook so Hermes
+  // (which will boot on the VPS in 5-7 min) can call getUpdates
+  // cleanly. Best-effort: failure here doesn't block onboarding —
+  // Hermes will call deleteWebhook itself defensively on boot.
+  await safeDeleteWebhook(deps.telegram, customerBotToken)
 
   // ─── 9. Flip subscription to active ───────────────────────────────
   await deps.db.updateSubscription(subscription.id, {
@@ -225,6 +264,17 @@ async function safeRevoke(minter: ILlmKeyMinter, hash: string): Promise<void> {
     await minter.revoke(hash)
   } catch {
     /* swallow — rollback is best-effort, the key is small dollars */
+  }
+}
+
+async function safeDeleteWebhook(
+  telegram: ITelegramClient,
+  botToken: string,
+): Promise<void> {
+  try {
+    await telegram.deleteWebhook(botToken)
+  } catch {
+    /* swallow — Hermes calls deleteWebhook defensively on its own boot */
   }
 }
 

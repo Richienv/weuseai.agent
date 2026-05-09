@@ -233,8 +233,9 @@
         <span class="step-dot" data-step-dot="1"></span>
         <span class="step-dot" data-step-dot="2"></span>
         <span class="step-dot" data-step-dot="3"></span>
+        <span class="step-dot" data-step-dot="4"></span>
       </div>
-      <span id="step-label" class="text-xs text-white/55 mono">Step 1 dari 3</span>
+      <span id="step-label" class="text-xs text-white/55 mono">Step 1 dari 4</span>
     </header>
 
     <!-- ─── STEP 1: Konfirmasi data ─── -->
@@ -294,10 +295,94 @@
       </div>
     </section>
 
-    <!-- ─── STEP 2: Pasangkan Telegram ─── -->
+    <!-- ─── STEP 2: Buat bot Telegram kamu sendiri ─── -->
+    <!-- Pair-flow Option A (2026-05-09): customer creates a bot via -->
+    <!-- @BotFather and pastes the token. Backend (validate-bot-token -->
+    <!-- Edge Function) validates via getMe + sets webhook on customer's -->
+    <!-- own bot. Hermes on customer VPS later long-polls THIS bot — -->
+    <!-- no shared @weuseaibot conflict. -->
     <section
       class="step-panel liquid-glass rounded-2xl p-6 md:p-8 relative overflow-hidden"
       data-step="2"
+      hidden
+      aria-labelledby="step2bot-title"
+    >
+      <div class="halftone-strip"></div>
+      <div class="relative">
+        <h1 id="step2bot-title" class="serif text-3xl md:text-4xl text-white leading-[1.05]" style="letter-spacing: -0.04em;">
+          Buat bot Telegram kamu.
+        </h1>
+        <p class="mt-3 text-sm md:text-[15px] text-white/55 leading-relaxed">
+          Agent kamu pakai bot Telegram milik kamu sendiri. Buat lewat <span class="mono text-white/85">@BotFather</span> dulu (60 detik), lalu kembali ke sini.
+        </p>
+
+        <ol class="mt-7 space-y-4 list-none p-0 m-0">
+          <li class="flex items-start gap-3">
+            <span class="mono text-xs text-white/40 mt-0.5 w-6">01</span>
+            <div class="flex-1">
+              <div class="text-sm text-white/85">Buka <span class="mono">@BotFather</span> di Telegram</div>
+              <a
+                href="https://t.me/BotFather"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="btn-secondary focus-ring mt-2.5"
+              >
+                Buka @BotFather
+                <span aria-hidden="true">→</span>
+              </a>
+            </div>
+          </li>
+          <li class="flex items-start gap-3">
+            <span class="mono text-xs text-white/40 mt-0.5 w-6">02</span>
+            <div class="flex-1">
+              <div class="text-sm text-white/85">
+                Kirim <span class="mono text-white">/newbot</span> dan ikuti instruksinya.
+                Pilih nama dan username (akhiran <span class="mono">_bot</span>).
+              </div>
+            </div>
+          </li>
+          <li class="flex items-start gap-3">
+            <span class="mono text-xs text-white/40 mt-0.5 w-6">03</span>
+            <div class="flex-1">
+              <div class="text-sm text-white/85">
+                Salin token yang BotFather kirim, lalu paste di sini.
+              </div>
+            </div>
+          </li>
+        </ol>
+
+        <form id="step2bot-form" class="mt-7 space-y-3" novalidate>
+          <div>
+            <label class="block text-xs text-white/65 mb-1.5" for="f-bot-token">Token bot</label>
+            <input
+              id="f-bot-token"
+              class="field-input mono focus-ring"
+              type="text"
+              autocomplete="off"
+              spellcheck="false"
+              placeholder="123456789:ABCDEFghijklmnopqrstuvwxyz"
+              required
+            />
+            <p class="text-xs text-white/45 mt-1.5 leading-relaxed">
+              Format: angka, titik dua, huruf-angka. Tidak ada spasi.
+            </p>
+            <p id="f-bot-token-error" class="field-error" aria-live="polite"></p>
+          </div>
+          <button id="step2bot-cta" type="submit" class="btn-primary focus-ring mt-2">
+            Validasi token →
+          </button>
+        </form>
+
+        <p class="text-xs italic text-white/40 mt-5 leading-relaxed">
+          Token kami simpan ter-enkripsi dan hanya dipakai untuk agent kamu sendiri. Tidak dibagi ke pihak lain.
+        </p>
+      </div>
+    </section>
+
+    <!-- ─── STEP 3: Pasangkan Telegram ─── -->
+    <section
+      class="step-panel liquid-glass rounded-2xl p-6 md:p-8 relative overflow-hidden"
+      data-step="3"
       hidden
       aria-labelledby="step2-title"
     >
@@ -307,8 +392,7 @@
           Pasangkan Telegram kamu.
         </h1>
         <p class="mt-3 text-sm md:text-[15px] text-white/55 leading-relaxed">
-          Agent kamu kirim notifikasi lewat <span class="mono text-white/85">@weuseaibot</span>.
-          Tiga langkah, kira-kira 30 detik.
+          Kirim kode di bawah ke bot kamu sendiri (<span class="mono text-white/85" data-bot-username-display>@bot kamu</span>) lewat Telegram. Tiga langkah, kira-kira 30 detik.
         </p>
 
         <div class="mt-7 rounded-xl border border-white/[0.08] bg-white/[0.02] p-5 text-center">
@@ -325,13 +409,13 @@
           <li class="flex items-start gap-3">
             <span class="mono text-xs text-white/40 mt-0.5 w-6">01</span>
             <div class="flex-1">
-              <div class="text-sm text-white/85">Buka Telegram, cari <span class="mono">@weuseaibot</span></div>
+              <div class="text-sm text-white/85">Buka bot kamu (<span class="mono" data-bot-username-display>@bot kamu</span>) di Telegram</div>
               <a
-                href="https://t.me/weuseaibot"
+                href="https://t.me/"
                 target="_blank"
                 rel="noopener noreferrer"
                 class="btn-secondary focus-ring mt-2.5"
-                data-tg-deeplink
+                data-pair-bot-link
               >
                 Buka Telegram
                 <span aria-hidden="true">→</span>
@@ -376,10 +460,13 @@
       </div>
     </section>
 
-    <!-- ─── STEP 3: Cara kamu pakai agent ─── -->
+    <!-- ─── STEP 4: Cara kamu pakai agent ─── -->
+    <!-- (Pair-flow Option A renumbered: was Step 3 before BotFather step -->
+    <!-- got inserted as Step 2. Form ids kept as step3-* for diff cleanliness; -->
+    <!-- semantically they're now Step 4.) -->
     <section
       class="step-panel liquid-glass rounded-2xl p-6 md:p-8 relative overflow-hidden"
-      data-step="3"
+      data-step="4"
       hidden
       aria-labelledby="step3-title"
     >
@@ -527,6 +614,14 @@
     const $whatsappErr = document.getElementById('f-whatsapp-error');
     const $step1Form = document.getElementById('step1-form');
 
+    // Pair-flow Option A (2026-05-09): Step 2 BotFather walkthrough.
+    const $botToken    = document.getElementById('f-bot-token');
+    const $botTokenErr = document.getElementById('f-bot-token-error');
+    const $step2BotForm = document.getElementById('step2bot-form');
+    const $step2BotCta  = document.getElementById('step2bot-cta');
+    const $botUsernameDisplay = document.querySelectorAll('[data-bot-username-display]');
+    const $pairBotLink = document.querySelector('[data-pair-bot-link]');
+
     const $pairCode    = document.getElementById('pair-code');
     const $pairInline  = document.querySelector('[data-pair-inline]');
     const $pairExpiry  = document.getElementById('pair-expiry');
@@ -558,13 +653,57 @@
 
     function fetchCustomer() {
       const url = `${SUPABASE_URL}/rest/v1/customers?id=eq.${encodeURIComponent(cid)}` +
-        `&select=id,email,display_name,whatsapp_number,telegram_chat_id,pairing_code,pairing_code_expires_at,soul_md_text`;
+        // telegram_bot_token (encrypted) deliberately NOT selected — anon
+        // can't read it (column-level REVOKE in migration 20260509200000),
+        // and the page never needs the token plaintext anyway. We only
+        // fetch the username for display + deeplink.
+        `&select=id,email,display_name,whatsapp_number,telegram_chat_id,telegram_bot_username,pairing_code,pairing_code_expires_at,soul_md_text`;
       return fetch(url, {
         headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
       }).then((r) => {
         if (!r.ok) throw new Error(`fetchCustomer: ${r.status}`);
         return r.json();
       }).then((rows) => rows[0] ?? null);
+    }
+
+    /**
+     * POST /functions/v1/validate-bot-token. Validates a freshly-pasted
+     * bot token via Telegram getMe, persists encrypted token + username,
+     * sets webhook on the customer's bot. Returns { bot_username }.
+     * Pair-flow Option A (2026-05-09).
+     */
+    async function validateBotToken(token) {
+      const r = await fetch(
+        `${SUPABASE_URL}/functions/v1/validate-bot-token`,
+        {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ customer_id: cid, bot_token: token }),
+        },
+      );
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        const err = new Error(`validateBotToken: ${r.status}`);
+        err.status = r.status;
+        err.body = data;
+        throw err;
+      }
+      return data;
+    }
+
+    /**
+     * Refresh the per-bot deeplink + display once we know the customer's
+     * bot username. Used after Step 2 submit (fresh token validation)
+     * AND on boot (resume after refresh).
+     */
+    function applyBotUsername(username) {
+      if (!username) return;
+      $botUsernameDisplay.forEach((el) => {
+        el.textContent = `@${username}`;
+      });
+      if ($pairBotLink) {
+        $pairBotLink.href = `https://t.me/${encodeURIComponent(username)}`;
+      }
     }
 
     /**
@@ -610,8 +749,10 @@
     function setStep(step) {
       currentStep = step;
 
-      // Step indicator (only relevant for 1/2/3; on E we just hide)
-      const stepIdx = ({ '1': 1, '2': 2, '3': 3 }[step]) ?? null;
+      // Step indicator. Pair-flow Option A (2026-05-09): now 4 steps —
+      //   1 = WA confirm, 2 = BotFather walkthrough (NEW),
+      //   3 = pairing (was 2), 4 = expectations (was 3).
+      const stepIdx = ({ '1': 1, '2': 2, '3': 3, '4': 4 }[step]) ?? null;
       $stepDots.forEach((dot, i) => {
         dot.classList.remove('is-current', 'is-done');
         if (stepIdx == null) return;
@@ -619,7 +760,7 @@
         else if (i + 1 < stepIdx) dot.classList.add('is-done');
       });
       if (stepIdx != null) {
-        $stepLabel.textContent = `Step ${stepIdx} dari 3`;
+        $stepLabel.textContent = `Step ${stepIdx} dari 4`;
         $stepLabel.style.display = '';
       } else {
         $stepLabel.style.display = 'none';
@@ -636,8 +777,13 @@
         // Defer to next tick so the panel is visible before focusing.
         setTimeout(() => $whatsapp.focus({ preventScroll: false }), 0);
       } else if (step === '2') {
-        startPairing();
+        // BotFather walkthrough — focus the token input.
+        setTimeout(() => $botToken && $botToken.focus({ preventScroll: false }), 0);
       } else if (step === '3') {
+        // Pairing screen — start polling + show pairing code.
+        startPairing();
+      } else if (step === '4') {
+        // Expectations textarea.
         stopPolling();
         clearInterval(expiryTimer);
         setTimeout(() => $expectations.focus({ preventScroll: false }), 0);
@@ -665,10 +811,64 @@
       // doesn't lose it (we only PATCH it server-side at final submit).
       customer.whatsapp_number = wa.trim();
       try { localStorage.setItem(`onboarding_wa_${cid}`, customer.whatsapp_number); } catch {}
-      // If pairing is already complete (resume case), skip straight to Step 3.
-      if (customer.telegram_chat_id) setStep('3');
-      else setStep('2');
+      // Pair-flow Option A routing (2026-05-09):
+      //  - already paired (chat_id set) → Step 4 (expectations) — full resume
+      //  - bot token already validated (username set) but not yet paired → Step 3
+      //  - otherwise → Step 2 (BotFather walkthrough)
+      if (customer.telegram_chat_id && customer.telegram_bot_username) {
+        setStep('4');
+      } else if (customer.telegram_bot_username) {
+        setStep('3');
+      } else {
+        setStep('2');
+      }
     });
+
+    // ─── STEP 2: Buat bot Telegram kamu (Pair-flow Option A) ────
+
+    if ($step2BotForm) {
+      $step2BotForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const token = $botToken.value.trim();
+        if (!token) {
+          $botTokenErr.textContent = 'Paste token dari @BotFather dulu.';
+          return;
+        }
+        $botTokenErr.textContent = '';
+        $step2BotCta.disabled = true;
+        $step2BotCta.textContent = 'Validasi...';
+
+        try {
+          const result = await validateBotToken(token);
+          // Persist username on the in-memory customer object so resume
+          // logic + deeplinks pick it up immediately.
+          customer.telegram_bot_username = result.bot_username;
+          applyBotUsername(result.bot_username);
+          setStep('3');
+        } catch (err) {
+          let msg = 'Token tidak valid. Cek lagi di @BotFather.';
+          if (err && err.body && typeof err.body === 'object') {
+            if (err.body.error === 'invalid_token') {
+              msg = err.body.reason === 'format'
+                ? 'Format token salah. Harus angka, titik dua, lalu huruf-angka.'
+                : 'Token ditolak Telegram. Pastikan token belum kadaluarsa di @BotFather.';
+            } else if (err.body.error === 'webhook_setup_failed') {
+              msg = 'Token valid tapi gagal setup webhook. Coba lagi dalam 1 menit.';
+            } else if (err.body.error === 'no_paid_subscription') {
+              msg = 'Pembayaran kamu belum tercatat. Refresh halaman atau hubungi support.';
+            }
+          }
+          $botTokenErr.textContent = msg;
+        } finally {
+          $step2BotCta.disabled = false;
+          $step2BotCta.textContent = 'Validasi token →';
+        }
+      });
+
+      $botToken.addEventListener('input', () => {
+        if ($botTokenErr.textContent) $botTokenErr.textContent = '';
+      });
+    }
 
     // Clear error as soon as user starts editing
     $whatsapp.addEventListener('input', () => {
@@ -679,11 +879,13 @@
 
     async function startPairing() {
       try {
-        // Resume check: if pairing already complete, jump to Step 3.
+        // Resume check: if pairing already complete (chat_id set), jump
+        // straight to Step 4 (expectations). Pair-flow Option A renumbered:
+        // pairing is Step 3, expectations is Step 4.
         const fresh = await fetchCustomer();
         customer = { ...customer, ...fresh, whatsapp_number: customer.whatsapp_number };
         if (customer.telegram_chat_id) {
-          setStep('3');
+          setStep('4');
           return;
         }
 
@@ -763,17 +965,20 @@
         try {
           const c = await fetchCustomer();
           if (c?.telegram_chat_id) {
-            // Success!
+            // Success! Pair-flow Option A: webhook on customer's bot
+            // wrote telegram_chat_id; we detect via the SELECT poll.
             customer.telegram_chat_id = c.telegram_chat_id;
             renderPairingSuccess();
-            // Auto-advance after 600ms so the success message reads.
-            setTimeout(() => setStep('3'), 600);
+            // Auto-advance to Step 4 (expectations) after 600ms so the
+            // success message reads.
+            setTimeout(() => setStep('4'), 600);
             return;
           }
         } catch {
           // Network blip — keep polling silently.
         }
-        if (currentStep === '2') pollTimer = setTimeout(tick, PAIR_POLL_MS);
+        // Pair-flow Option A (2026-05-09): pairing screen is now Step 3.
+        if (currentStep === '3') pollTimer = setTimeout(tick, PAIR_POLL_MS);
       };
       pollTimer = setTimeout(tick, PAIR_POLL_MS);
     }
@@ -871,7 +1076,16 @@
         return;
       }
       if (r.status === 409 && data?.error === 'telegram_not_paired') {
-        // Customer somehow got here without pairing — kick back to Step 2.
+        // Customer somehow got here without pairing — kick back to the
+        // pairing screen (Step 3 in Pair-flow Option A).
+        $overlay.hidden = true;
+        setStep('3');
+        return;
+      }
+      if (r.status === 409 && data?.error === 'no_bot_token') {
+        // Pair-flow Option A: customer reached final submit but bot
+        // token isn't persisted (impossible if Step 2 succeeded; possible
+        // if a stale tab raced ahead). Kick back to Step 2.
         $overlay.hidden = true;
         setStep('2');
         return;
@@ -945,18 +1159,27 @@
 
       renderStep1();
 
-      // Resume rules:
-      //   - telegram_chat_id set + whatsapp known → jump to Step 3
-      //   - telegram_chat_id set + whatsapp missing → jump to Step 1
-      //     (need WA before submit; Step 1 submit will skip Step 2)
-      //   - whatsapp_number set + chat_id null → jump to Step 2
-      //   - otherwise Step 1
-      if (customer.telegram_chat_id && customer.whatsapp_number) {
-        setStep('3');
-      } else if (customer.telegram_chat_id) {
-        setStep('1');
-      } else if (customer.whatsapp_number) {
-        setStep('2');
+      // Pre-populate the bot username deeplink if we already validated
+      // it server-side (resume case after a tab refresh post-Step 2).
+      if (customer.telegram_bot_username) {
+        applyBotUsername(customer.telegram_bot_username);
+      }
+
+      // Resume rules (Pair-flow Option A, 2026-05-09 — replaces the
+      // old auto-jump-to-Step-2 boot rule that caused Bug 1):
+      //   - telegram_chat_id set + WA set + bot username set
+      //       → jump to Step 4 (full resume, only expectations remain)
+      //   - everything else → start at Step 1, let Step 1 form submit
+      //     route forward based on what's filled in
+      // Founder UX directive: always confirm WA first, regardless of
+      // whether server-side already has it. Avoids the "1s auto-jump
+      // to pairing" disorientation pattern.
+      if (
+        customer.telegram_chat_id &&
+        customer.whatsapp_number &&
+        customer.telegram_bot_username
+      ) {
+        setStep('4');
       } else {
         setStep('1');
       }
@@ -967,7 +1190,8 @@
     // Stop polling if the tab is hidden; resume on visible.
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'hidden') stopPolling();
-      else if (currentStep === '2' && !pollTimer) startPairingPoll();
+      // Pair-flow Option A: pairing screen is now Step 3 (was Step 2).
+      else if (currentStep === '3' && !pollTimer) startPairingPoll();
     });
 
     boot();
