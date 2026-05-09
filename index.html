@@ -2367,6 +2367,18 @@
     }
     .agent-nav:active { transform: translateY(-50%) scale(0.96); }
     .agent-nav:focus-visible { outline: 2px solid #E5322D; outline-offset: 3px; }
+
+    /* WCAG 2.4.7 Focus Visible — global keyboard focus indicator. Mouse/touch
+       users see nothing extra; keyboard users get an oxblood outline on every
+       interactive element. Browser default focus rings are thin and easy to
+       miss against dark BG; this guarantees visibility. */
+    a:focus-visible, button:focus-visible, [role="button"]:focus-visible,
+    input:focus-visible, textarea:focus-visible, select:focus-visible,
+    [tabindex]:focus-visible {
+      outline: 2px solid #E5322D;
+      outline-offset: 3px;
+      border-radius: 4px;
+    }
     .agent-nav svg {
       width: 20px; height: 20px;
       stroke: currentColor;
@@ -5230,7 +5242,10 @@
                   ? <span className="db-input-typed">{typedText}<span className="db-input-caret" /></span>
                   : <span className="db-input-placeholder">Tanya apa aja...<span className="db-input-caret" /></span>}
               </div>
-              <button className={`db-send ${phase === 'user-click' ? 'db-send-clicked' : ''}`}>
+              <button
+                type="button"
+                aria-label="Kirim pesan"
+                className={`db-send ${phase === 'user-click' ? 'db-send-clicked' : ''}`}>
                 <ArrowUpRight size={18} stroke={2.4} />
               </button>
             </div>
@@ -7184,14 +7199,14 @@
               <a href="https://cal.com/weuseai.agent/15min" target="_blank" rel="noopener" className="text-white/75 hover:text-white underline-offset-2 hover:underline">Jadwalkan panggilan</a>
             </p>
 
-            <div className="mt-20 md:mt-28 pt-6 md:pt-8 border-t border-white/5 w-full flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0 text-[11px] text-white/30 font-body font-light">
+            <div className="mt-20 md:mt-28 pt-6 md:pt-8 border-t border-white/5 w-full flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0 text-[11px] text-white/55 font-body font-light">
               <span>© 2026 weuseai.agent</span>
               <div className="flex items-center gap-4 md:gap-5">
-                <a href="/privasi" className="text-white/30 hover:text-white/55 transition-colors no-underline">privasi</a>
-                <span className="text-white/15">·</span>
-                <a href="/syarat" className="text-white/30 hover:text-white/55 transition-colors no-underline">syarat</a>
-                <span className="text-white/15">·</span>
-                <a href="/kontak" className="text-white/30 hover:text-white/55 transition-colors no-underline">kontak</a>
+                <a href="/privasi" className="text-white/55 hover:text-white/85 transition-colors no-underline">privasi</a>
+                <span className="text-white/25">·</span>
+                <a href="/syarat" className="text-white/55 hover:text-white/85 transition-colors no-underline">syarat</a>
+                <span className="text-white/25">·</span>
+                <a href="/kontak" className="text-white/55 hover:text-white/85 transition-colors no-underline">kontak</a>
               </div>
             </div>
           </div>
