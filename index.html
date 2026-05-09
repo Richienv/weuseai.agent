@@ -3134,24 +3134,32 @@
       );
     }
 
-    // ─────────────────────── SCANLINE VIDEO (CRT + glitch overlay) ───────────────────────
-    // Treatment 3: render the actual full-color source video, color-graded
-    // toward brand red via CSS filters, then overlaid with retro-CRT
-    // scanlines and an occasional brief glitch flicker. The source UI stays
-    // recognizable (unlike the halftone abstraction in DottedVideo) while
-    // still feeling on-brand and a touch unpredictable.
+    // ─────────────────────── SCANLINE VIDEO (oxblood multiply tint) ───────────────────────
+    // Sub-treatment B (2026-05-09 explore branch): render the actual
+    // full-color source video unmodified, then overlay a flat oxblood
+    // (#6B0D0D) layer at opacity 0.55 via mix-blend-mode: multiply. The
+    // multiply blend darkens bright UI toward red while preserving the
+    // underlying detail — subtler than a duotone or hue-rotate filter,
+    // and lets the source UI remain readable. Scanlines and glitch
+    // flicker are disabled by default; the multiply tint alone carries
+    // the brand layer.
     //
-    //   - <video> element does the heavy lifting (hardware-accelerated).
-    //   - Scanline overlay = static repeating-linear-gradient (GPU composite).
-    //   - Glitch overlay = ~5%/sec chance of a 100ms RGB-shift flicker.
+    //   - <video> element does the heavy lifting (hardware-accelerated)
+    //     and stays at original color (filter defaults to 'none').
+    //   - Oxblood overlay = solid #6B0D0D, mix-blend-mode: multiply,
+    //     opacity 0.55, painted between video and (disabled) scanlines.
+    //   - Scanline overlay defaults off (scanOpacity = 0) — multiply
+    //     tint is the brand layer; scanlines would just add noise.
+    //   - Glitch overlay defaults off (glitchProbability = 0) — multiply
+    //     mood is calm, glitch contradicts it.
+    //   - Vignette (inset boxShadow) kept — grounds the cards.
     //   - IntersectionObserver pauses video off-screen.
-    //   - prefers-reduced-motion: scanlines stay (static), glitch disabled,
-    //     video paused on first frame.
+    //   - prefers-reduced-motion: video paused on first frame.
     function ScanlineVideo({
       src,
-      filter = 'hue-rotate(330deg) saturate(1.2) contrast(1.05)',
-      scanOpacity = 0.30,
-      glitchProbability = 0.05,
+      filter = 'none',
+      scanOpacity = 0,
+      glitchProbability = 0,
       className = '',
       style = {},
     }) {
@@ -3233,6 +3241,21 @@
               filter,
               transform: glitch ? 'translate3d(2px, 0, 0)' : 'none',
               transition: 'transform 40ms steps(2)',
+            }}
+          />
+          {/* Oxblood multiply tint — flat #6B0D0D layer at 0.55 opacity,
+              mix-blend-mode: multiply. Darkens bright UI toward brand red
+              while preserving underlying detail. Sits between the video
+              and the (disabled) scanline overlay. */}
+          <div
+            aria-hidden="true"
+            style={{
+              position: 'absolute',
+              inset: 0,
+              background: '#6B0D0D',
+              mixBlendMode: 'multiply',
+              opacity: 0.55,
+              pointerEvents: 'none',
             }}
           />
           {/* Scanline overlay — static gradient, GPU-composited. */}
@@ -4891,38 +4914,34 @@
       );
     }
 
-    // Treatment 3 (2026-05-09 explore branch): scanline + glitch CRT
-    // treatment. Every agent card renders the actual full-color source
-    // mp4 via <video>, color-graded toward the brand red palette and
-    // overlaid with retro-CRT scanlines + an occasional glitch flicker.
-    // Unlike the halftone DottedVideo path (kept in source for the other
-    // treatments to compare against), the source UI stays recognizable.
+    // Sub-treatment B (2026-05-09 explore branch): red multiply overlay.
+    // Every agent card renders the actual full-color source mp4 via
+    // <video> at original color, then a flat oxblood (#6B0D0D) layer is
+    // composited over it with mix-blend-mode: multiply at opacity 0.55.
+    // Scanlines and glitch flicker are disabled — the multiply tint is
+    // the brand layer on its own.
     //
     // All 9 cards share the same treatment — `invert` is no longer used
-    // here because the colour-grade + scanlines work uniformly across
-    // both bright UI captures and dark hero footage.
+    // here because the multiply tint reads consistently regardless of
+    // source-video polarity, so all 9 cards use the same renderer.
     //
-    // Per-slug overrides — bump scanline opacity or tweak the colour
-    // grade for agents whose footage reads too "live" without it.
-    const AGENT_VISUAL_OVERRIDES = {
-      // Calendar/Trade footage is high-contrast bright UI; a slightly
-      // stronger scanline grounds it in the CRT aesthetic.
-      calendar: { scanOpacity: 0.38 },
-      trade:    { scanOpacity: 0.38 },
-    };
+    // Per-slug overrides — currently empty. The multiply tint is uniform
+    // across all agents; per-slug opacity/colour overrides can land here
+    // if any specific footage darkens too much under the multiply blend.
+    const AGENT_VISUAL_OVERRIDES = {};
 
     function AgentVisual({ video, slug, invert }) {
       const o = AGENT_VISUAL_OVERRIDES[slug] || {};
       // Note: `invert` prop kept in signature for backwards-compatibility
       // with the AgentCarousel call-site, but ignored in this treatment —
-      // the scanline + colour-grade reads consistently regardless of
-      // source-video polarity, so all 9 cards use the same renderer.
+      // the multiply tint reads consistently regardless of source-video
+      // polarity, so all 9 cards use the same renderer.
       return (
         <ScanlineVideo
           src={`/assets/agent-${video || slug}.mp4`}
-          filter={o.filter ?? 'hue-rotate(330deg) saturate(1.2) contrast(1.05)'}
-          scanOpacity={o.scanOpacity ?? 0.30}
-          glitchProbability={o.glitchProbability ?? 0.05}
+          filter={o.filter ?? 'none'}
+          scanOpacity={o.scanOpacity ?? 0}
+          glitchProbability={o.glitchProbability ?? 0}
           className="absolute inset-0 w-full h-full"
           style={{ background: '#0a0606' }}
         />
