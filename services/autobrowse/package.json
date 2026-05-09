@@ -1,0 +1,25 @@
+{
+  "name": "@weuseai/autobrowse",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Autobrowse harness — capture/synthesize/iterate/graduate customer browser interactions into Hermes skills. Founder-side CLI; never deployed to customer VPS.",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test tests/*.spec.ts",
+    "cli": "tsx src/cli.ts",
+    "playwright:install": "playwright install chromium"
+  },
+  "dependencies": {
+    "playwright": "^1.49.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.4.0"
+  },
+  "files": [
+    "src/**/*",
+    "README.md"
+  ]
+}
