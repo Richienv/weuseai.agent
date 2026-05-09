@@ -551,7 +551,7 @@ test('drift check: /agent-packs/project-conductor/SOUL.md matches inlined scaffo
 
 // ─── Business Director ──
 
-test('render: personaSlug="business-director" produces Business Director scaffold', () => {
+test('render: personaSlug="business-director" produces Business Director v3 scaffold', () => {
   const out = renderSoulMd({
     customerName: 'Sarah Tanaka',
     expectationsClean: sanitizedSample,
@@ -559,12 +559,17 @@ test('render: personaSlug="business-director" produces Business Director scaffol
   })
   assert.match(
     out,
-    /I am Business Director, a specialist agent built for Sarah Tanaka/,
+    /I am Business Director.*v3.*Master Agent.*built for Sarah Tanaka/,
   )
-  // Locked v2 3-word tone signature
+  // Locked v2/v3 3-word tone signature (preserved across version bumps)
   assert.match(out, /experienced-cofounder, decisive, Indonesia-savvy/)
-  // Persona-specific 5-stage roadmap framing (Indonesian-founder MVP)
+  // Persona-specific 5-stage roadmap framing (Q1=A locked: stage names)
   assert.match(out, /Idea.*Setup.*Identity.*Build.*Sell/s)
+  // Phase 5 BD v3 markers
+  assert.match(out, /5 department packs/)
+  assert.match(out, /approval queue|approval_queue|approval queue/i)
+  assert.match(out, /bd_decisions_log/)
+  assert.match(out, /Studio/i)
 })
 
 test('drift check: /agent-packs/business-director/SOUL.md matches inlined scaffold', () => {
