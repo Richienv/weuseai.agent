@@ -33,9 +33,13 @@ Earlier rounds stay documented below as the reasoning archive.
 **Treatment 6 — Raw mp4 playback of hand-built oxblood-on-black wireframe GIFs**
 
 - **Branch:** `feat/agent-carousel-richie-gifs`
-- **Preview:** see PR #7 latest comment for the live URL (Vercel preview built from the branch HEAD)
+- **Preview:** https://weuseai-agent-b2jyujfiq-richies-projects-6f212435.vercel.app/
 - **Source:** 9 hand-built GIFs from founder, ~50-71 MB each
 - **Output:** 9 mp4s in `assets/<canonical>.mp4`, 0.9-2.0 MB each, ~17 MB total
+
+### Side-by-side viewport (1280×900, Doc Expert / Email Manager / Calendar Agent trio centered)
+
+![Round 4 — founder GIFs](screenshots/carousel-treatments/09-richie-gifs-raw.png)
 - **Encoding recipe:**
   ```
   ffmpeg -i in.gif -movflags +faststart -pix_fmt yuv420p \
