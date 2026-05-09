@@ -1,8 +1,8 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "video-producer",
-  "version": "2.0.0",
-  "description_id": "Bundle skill + template Video Producer v2. Script TikTok dan Reels, hashtag research, sound trend tracking, caption drafting, HyperFrames storyboard spec untuk render off-platform.",
+  "version": "2.1.0",
+  "description_id": "Bundle skill + template Video Producer v2.1. Script TikTok dan Reels, hashtag research, sound trend tracking, caption drafting, HyperFrames storyboard spec, dan HyperFrames render execution (Runway primary + Pika fallback) — output mp4 ke kamu, bukan storyboard JSON.",
   "skills": [
     {
       "id": "tiktok-script-builder",
@@ -15,11 +15,20 @@
     },
     {
       "id": "hyperframes-storyboard",
-      "description_id": "Susun HyperFrames JSON — storyboard per-scene siap di-feed ke Runway/Sora/CapCut. Scene berisi visual_prompt, motion_hint, duration_sec, audio_cue, transition_to_next. Render actual off-platform di Phase 5; di Phase 6+ kemungkinan in-house render.",
-      "description_en": "Build HyperFrames JSON storyboard ready for off-platform render (Runway/Sora/CapCut).",
+      "description_id": "Susun HyperFrames JSON — storyboard per-scene siap di-feed ke Runway/Sora/CapCut. Scene berisi visual_prompt, motion_hint, duration_sec, audio_cue, transition_to_next. Phase 4-2 menambahkan execution path: hyperframes-render skill yang convert storyboard ini jadi mp4.",
+      "description_en": "Build HyperFrames JSON storyboard. Pair with hyperframes-render (Phase 4-2) for actual mp4 output.",
       "templates_used": ["hyperframes-storyboard-format.md"],
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:hyperframes-storyboard",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
+      "id": "hyperframes-render",
+      "description_id": "Eksekusi storyboard HyperFrames jadi mp4 actual. Per-scene render via Runway (primary, $0.05/s) atau Pika (fallback, $0.02/s) — kamu pasang BYOK key di Hermes .env. Output: array per-scene mp4 URL + stitch recipe. Hermes download tiap scene + jalanin hyperframes-stitch CLI lokal (ffmpeg) untuk merge.",
+      "description_en": "Execute HyperFrames storyboard to mp4. Per-scene render via Runway (primary) / Pika (fallback). Customer Hermes downloads scenes + runs local ffmpeg stitch.",
+      "templates_used": [],
+      "execution": "edge-function",
+      "handler_ref": "edge-fn:hyperframes-render",
       "enabled_for_tiers": ["pro", "studio"]
     },
     {
