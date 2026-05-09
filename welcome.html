@@ -381,13 +381,20 @@
     // ─── Polling ──────────────────────────────────────────────
 
     async function pollOnce() {
+      // Sesi D P0-3 (2026-05-11): subscriptions RLS now requires X-CID
+      // header. Without it, the policy returns 0 rows and the page never
+      // sees its own subscription status.
       const url =
         `${SUPABASE_URL}/rest/v1/subscriptions` +
         `?customer_id=eq.${encodeURIComponent(cid)}` +
         `&select=id,status,started_at` +
         `&order=started_at.desc&limit=1`;
       const r = await fetch(url, {
-        headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          'X-CID': cid,
+        },
       });
       if (!r.ok) throw new Error(`poll failed: ${r.status}`);
       const rows = await r.json();
