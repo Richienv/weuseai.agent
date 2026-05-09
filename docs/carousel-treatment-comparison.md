@@ -1,31 +1,94 @@
 # Agent Carousel — Treatment Comparison
 
 **Status:** Side-by-side exploration sprint, founder review pending.
-**Date:** 2026-05-09 (round 3 — Sobel edge detection added; **likely final winner**)
+**Date:** 2026-05-09 (round 4 — founder's hand-built GIFs as raw mp4 playback; **final direction**)
 **Scope:** Compare candidate visual treatments for the agent persona carousel inside the "Era baru / Fine-tuned agent yang ngerjain. Bukan chatbot yang cuma jawab." section. Pick a winner, that branch becomes the merge candidate.
 
-> **Round 3 update (2026-05-09):** Founder pivoted away from the round-2 raw-video brand overlays. The duotone variant (A) read as overexposed/blurry; founder prefers **crisp edge detection in brand red**. Treatment 5 added — Sobel edge detection rendered as oxblood-on-black via WebGL2 fragment shader. **Recommended winner.** See Round 3 section below.
+> **Round 4 update (2026-05-09):** Founder hand-built 9 oxblood-on-black wireframe GIFs (one per persona) — the exact aesthetic we were trying to generate via Sobel edge detection in round 3. Drop all generated visual treatments (halftone, ASCII, LED, scanline, duotone, multiply, glow, edge detection) and just play the founder's GIFs as raw mp4 directly. Branch: `feat/agent-carousel-richie-gifs`. **This is the final direction.** See Round 4 section below.
 >
-> **Round 2 update (earlier 2026-05-09):** After round 1's 4 treatments, founder confirmed raw-video direction was right but wanted stronger brand identity layered on top. Three sub-treatments built (A duotone, B multiply, C glow+scanlines). Multiply (B) was the round-2 recommendation but the duotone reading was the catalyst for the round-3 pivot.
+> **Round 3 (earlier 2026-05-09):** Sobel edge detection treatment was the recommended winner of generated approaches — but founder's hand-built GIFs in round 4 supersede the need for any per-frame processing. T5 stays archived as a fallback if the founder ever wants to apply edge detection to non-wireframe source content.
+>
+> **Round 2:** Three brand-overlay sub-treatments (duotone, multiply, glow). Multiply (B) was the round-2 pick but duotone (A) reading as overexposed catalyzed the round-3 pivot to edge detection.
 
 ---
 
 ## TL;DR — recommended winner
 
-**Treatment 5 (Sobel edge detection — oxblood-on-black via WebGL2)** — see Round 3 section below.
+**Round 4: Founder's hand-built GIFs played as raw mp4 (`feat/agent-carousel-richie-gifs`)** — see Round 4 section below.
 
-Wins on every axis the founder has been optimizing for through the whole sprint:
-- **Crisp UI legibility** — every element of the source video reads as a clean wireframe outline; viewers can immediately tell what each agent does (inbox, calendar grid, market data, etc.)
-- **Strong brand identity** — pure oxblood `#aa3333` lines on pure black `#000000`, no chromatic competition, immediately on-brand
-- **Performance verified** — WebGL2 fragment shader at 60fps measured on M-series, near-zero CPU; Canvas 2D fallback algorithm verified working for devices without WebGL2
-- **Universal across all 9 source videos** — no per-agent tuning needed for the v1 ship; every source converts cleanly at threshold=0.3 / contrast=1.9
-- **Cinematic / hacker-aesthetic** — fits the "fine-tuned agent yang ngerjain" framing better than recoloured screenshots, halftone abstractions, or terminal art
+Why this beats every prior treatment: the founder hand-crafted exactly the visual identity we were trying to generate via per-frame processing (oxblood-on-black wireframe aesthetic). Hand-built > algorithmically derived for this stake of brand expression — every frame is intentional, no thresholds to tune, no source-video edge cases. We just play them.
 
-Earlier rounds stay documented below as fallback options + reasoning archive.
+Other wins:
+- **Zero per-frame processing** — no canvas pipeline, no WebGL shader, no CSS filter chains. Native `<video>` decode, hardware-accelerated by default, IntersectionObserver-gated.
+- **Smallest implementation** — `AgentVisual` is now ~20 lines (was 70+ for ScanlineVideo, 350+ for EdgeVideo).
+- **Smallest asset weight** — 9 mp4s × 0.9-2.0 MB = ~17 MB total (was 53 MB pre-compression in round 1)
+- **Easiest to maintain** — founder just ships new GIFs + we ffmpeg them; no code changes for visual updates.
+
+Earlier rounds stay documented below as the reasoning archive.
 
 ---
 
-## Round 3 — Sobel edge detection (RECOMMENDED WINNER)
+## Round 4 — Founder's hand-built GIFs (FINAL DIRECTION)
+
+**Treatment 6 — Raw mp4 playback of hand-built oxblood-on-black wireframe GIFs**
+
+- **Branch:** `feat/agent-carousel-richie-gifs`
+- **Preview:** see PR #7 latest comment for the live URL (Vercel preview built from the branch HEAD)
+- **Source:** 9 hand-built GIFs from founder, ~50-71 MB each
+- **Output:** 9 mp4s in `assets/<canonical>.mp4`, 0.9-2.0 MB each, ~17 MB total
+- **Encoding recipe:**
+  ```
+  ffmpeg -i in.gif -movflags +faststart -pix_fmt yuv420p \
+    -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" -c:v libx264 -crf 28 \
+    -preset slow -an out.mp4
+  ```
+
+### Lineup change (10 → 9 agents)
+
+Founder's GIFs cover 9 personas, not all 10 from the persona-v2 lineup on main. Carousel narrows to those 9; the missing 4 (Web Creator, Slide Master, Video Producer, Social Conductor) get bumped from the carousel until their GIFs ship — they can stay in the pricing tier copy / marketplace if needed.
+
+| File mapping | Source GIF | Canonical mp4 |
+|---|---|---|
+| The Pro | `pro.gif` | `the-pro.mp4` |
+| Deep Researcher | `deep-reserach.gif` *(typo fixed)* | `deep-researcher.mp4` |
+| App Builder | `build-app.gif` | `app-builder.mp4` |
+| Doc Expert | `doc-expert.gif` | `doc-expert.mp4` |
+| Email Manager | `email.gif` | `email-manager.mp4` |
+| Calendar Agent | `calender.gif` *(typo fixed)* | `calendar-agent.mp4` |
+| Trade Pro | `trade.gif` | `trade-pro.mp4` |
+| Project Conductor | `macro-strategist.gif` *(persona v2 rename)* | `project-conductor.mp4` |
+| Business Director | `business-dir.gif` | `business-director.mp4` |
+
+### Implementation
+
+- `AgentVisual` rewrite: plain `<video>` element, `loop muted playsInline preload="metadata"`. IntersectionObserver bumps `preload='auto'` + plays on intersect; pauses on leave. `prefers-reduced-motion`: stays paused at first frame.
+- Drops AGENT_SCENES routing, `agentVideoSrc` placeholder, all canvas pipelines from the carousel (DottedVideo halftone, ScanlineVideo, EdgeVideo Sobel — DottedVideo stays for the section background).
+- AGENTS array: 9 entries with `{ slug, file, name, desc }`. `slug` stays back-compat with persona-v2 IDs (pro/researcher/doc/etc.); `file` maps to founder's canonical mp4 names.
+- Carousel sentinel-wrap track shrinks 12 → 11 slots, dots 10 → 9, tier-line text "Studio: 10 agent" → "Studio: full set".
+
+### Performance
+
+| Aspect | Round 3 (T5 edge detection) | Round 4 (raw mp4) |
+|---|---|---|
+| Per-frame work | WebGL Sobel shader | Native HW video decode |
+| First paint | Decode + texImage2D + drawArrays | Just video.preload='metadata' (~bytes for moov atom) |
+| Bandwidth on first scroll | ~17 MB (all 9 cards visible-or-near) | ~1 MB initially, ~17 MB total once carousel fully scrolled |
+| Mobile fallback | Canvas 2D (Sobel manual) | None needed — mp4 is universal |
+| LOC for renderer | ~350 | ~25 |
+
+### Flag for founder
+
+The lineup change (10 → 9 agents) is a substantive product call. **If you want to keep all 10 visible** in the carousel, two options:
+1. Ship the remaining 4 GIFs (web/slide/video/social) and we re-add them
+2. Apply round-3 edge-detection to the remaining 4 source clips so they fit the same visual language while we wait for hand-built GIFs
+
+Default to option 1 unless you say otherwise. Sesi A's persona-v2 PR #8 added those 4 personas — they're not lost from copy/marketing, just from the carousel showcase until they have their own GIFs.
+
+---
+
+## Round 3 archive — Sobel edge detection
+
+> Was the round-3 recommended winner — superseded by Round 4 (founder's hand-built GIFs achieve the same aesthetic without per-frame processing).
 
 **Treatment 5 — Sobel edge detection (oxblood-on-black, WebGL2)**
 
@@ -111,7 +174,7 @@ T5 wins over B on every dimension: edge detection beats UI-tinted-with-multiply 
 
 ---
 
-## Round 2 — brand-overlay sub-treatments on the raw-video base
+### Round 2 deep-dive — sub-treatment screenshots + matrix
 
 All 3 sub-treatments share the same `<video>` rendering pipeline. Only the visual treatment layered on top differs.
 
