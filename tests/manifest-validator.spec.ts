@@ -399,6 +399,8 @@ test('every pilot manifest skill handler_ref points to a known edge function, he
     'tiktok-script-handler',
     'workflow-execute',
     'workflow-list',
+    // Phase 4-2 (2026-05-10): HyperFrames render Edge Function.
+    'hyperframes-render',
   ])
   // Persona v2 (2026-05-09): added the per-persona Hermes skills
   // shipped under each agent's skills/<id>/SKILL.md. Drift between
