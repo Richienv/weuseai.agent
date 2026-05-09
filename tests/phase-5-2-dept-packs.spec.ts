@@ -44,12 +44,17 @@ function readManifest(): Manifest {
 
 // ─── Manifest entries exist ─────────────────────────────────────────
 
-test('business-director manifest version bumped to 2.1.0 (Phase 5-2 dept packs)', () => {
+test('business-director manifest version is at least 2.1.0 (Phase 5-2 dept packs ship + Phase 5-3.a BD v3 bumps to 3.0.0)', () => {
   const m = readManifest()
-  assert.equal(
-    m.version,
-    '2.1.0',
-    'expected 2.1.0 — Phase 5-2 adds 5 dept-dispatch skills',
+  // Drift defense: the dept packs land at 2.1.0 (Phase 5-2). The BD v3
+  // SOUL.md rewrite bumps to 3.0.0 (Phase 5-3.a). Either is acceptable —
+  // a regression to <2.1.0 fails this test.
+  const parts = m.version.split('.').map(Number)
+  const maj = parts[0] ?? 0
+  const min = parts[1] ?? 0
+  assert.ok(
+    (maj === 2 && min >= 1) || maj >= 3,
+    `expected version >= 2.1.0; got ${m.version}`,
   )
 })
 
