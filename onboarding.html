@@ -4,53 +4,99 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Lengkapi profil agent — weuseai.agent</title>
+  <meta name="description" content="Lengkapi profil agent kamu — 4 langkah, sekitar 5 menit.">
   <meta name="robots" content="noindex,nofollow" />
-  <meta name="theme-color" content="#000000" />
+  <meta name="theme-color" content="#0a0a0a" />
+  <link rel="icon" type="image/svg+xml" href="assets/logo.svg" />
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png" />
 
   <!-- Same font load as welcome.html / landing for visual continuity -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Instrument+Serif&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
   <style>
     :root {
+      color-scheme: dark;
       --signal-red: #E5322D;
       --signal-red-soft: rgba(229, 50, 45, 0.18);
       --signal-red-glow: rgba(229, 50, 45, 0.45);
       --signal-red-line: rgba(229, 50, 45, 0.6);
-      --bg: #000;
-      --ink: #fff;
-      --muted: rgba(255,255,255,0.55);
-      --line: rgba(255,255,255,0.12);
-      --card-line: rgba(255,255,255,0.10);
-      --card-bg: rgba(255,255,255,0.02);
-      --field-bg: rgba(255,255,255,0.03);
-      --field-bg-readonly: rgba(255,255,255,0.015);
+      --bg: #0a0a0a;
+      --ink: #f5f5f5;
+      --muted: rgba(245, 245, 245, 0.55);
+      --line: rgba(255, 255, 255, 0.12);
+      --card-line: rgba(255, 255, 255, 0.10);
+      --card-bg: rgba(20, 20, 20, 0.55);
+      --field-bg: rgba(255, 255, 255, 0.03);
+      --field-bg-readonly: rgba(255, 255, 255, 0.015);
     }
     * { box-sizing: border-box; }
     html, body {
       background: var(--bg);
       color: var(--ink);
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      font-weight: 300;
       -webkit-font-smoothing: antialiased;
       margin: 0;
       min-height: 100vh;
+      line-height: 1.6;
     }
-    .serif { font-family: 'Instrument Serif', serif; font-weight: 400; }
+    .serif { font-family: 'Instrument Serif', 'Times New Roman', serif; font-weight: 400; letter-spacing: -0.02em; }
     .mono  { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace; }
 
-    .liquid-glass {
+    /* Layout primitives ------------------------------------------------ */
+    .container { max-width: 640px; margin: 0 auto; padding: 0 20px; }
+    @media (min-width: 768px) { .container { padding: 0 24px; } }
+
+    /* Header / footer skeleton (mirrors welcome / syarat / kontak / privasi) */
+    header.site {
+      padding: 28px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    header.site .row { display: flex; align-items: center; justify-content: space-between; }
+    header.site a.brand {
+      color: var(--ink); text-decoration: none;
+      font-size: 14px; letter-spacing: -0.01em;
+    }
+    header.site .badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px; color: rgba(245, 245, 245, 0.4);
+      text-transform: uppercase; letter-spacing: 0.18em;
+    }
+    main { padding: 40px 0 64px; }
+    @media (min-width: 768px) { main { padding: 64px 0 96px; } }
+
+    footer.site {
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      padding: 24px 0;
+      font-size: 12px;
+      color: rgba(245, 245, 245, 0.4);
+    }
+    footer.site .row {
+      display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;
+    }
+    footer.site a {
+      color: rgba(245, 245, 245, 0.55); text-decoration: none; transition: color 180ms ease;
+    }
+    footer.site a:hover { color: rgba(245, 245, 245, 0.9); }
+    footer.site .links a + a { margin-left: 14px; }
+
+    /* Card surface --------------------------------------------------- */
+    .card {
       background: var(--card-bg);
       border: 1px solid var(--card-line);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
+      border-radius: 18px;
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      padding: 24px;
+      position: relative;
+      overflow: hidden;
     }
+    @media (min-width: 768px) { .card { padding: 32px; } }
 
-    /* Subtle red halftone strip at top of each step card —
-       same brand cue as checkout.html, restrained so the form
-       still reads professional. */
+    /* Subtle red halftone strip at top of each step card */
     .halftone-strip {
       position: absolute; top: 0; left: 0; right: 0; height: 90px;
       pointer-events: none;
@@ -61,42 +107,90 @@
       opacity: 0.45;
     }
 
-    /* Step indicator dots */
+    /* Step header ---------------------------------------------------- */
+    .step-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 24px;
+    }
+    @media (min-width: 768px) { .step-header { margin-bottom: 32px; } }
+    .step-dots { display: flex; align-items: center; gap: 8px; }
     .step-dot {
       width: 6px; height: 6px; border-radius: 50%;
-      background: rgba(255,255,255,0.18);
-      transition: background 220ms ease, transform 220ms ease;
+      background: rgba(255, 255, 255, 0.18);
+      transition: background 220ms ease, transform 220ms ease, box-shadow 220ms ease;
       display: inline-block;
     }
-    .step-dot.is-current { background: var(--signal-red); transform: scale(1.4); }
-    .step-dot.is-done { background: rgba(255,255,255,0.55); }
+    .step-dot.is-current {
+      background: var(--signal-red);
+      transform: scale(1.4);
+      box-shadow: 0 0 8px var(--signal-red-glow);
+    }
+    .step-dot.is-done { background: rgba(245, 245, 245, 0.55); }
 
-    /* Form fields */
+    /* Headings ------------------------------------------------------- */
+    h1.step-title {
+      font-size: clamp(28px, 5vw, 40px);
+      line-height: 1.1;
+      margin: 0;
+    }
+    p.step-sub {
+      margin: 14px 0 0;
+      font-size: 15px;
+      color: rgba(245, 245, 245, 0.65);
+      line-height: 1.6;
+    }
+    @media (min-width: 768px) { p.step-sub { font-size: 16px; } }
+
+    /* Eyebrow */
+    .eyebrow {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      color: rgba(245, 245, 245, 0.55);
+    }
+
+    /* Form fields ---------------------------------------------------- */
+    .field-label {
+      display: block;
+      font-size: 12px;
+      color: rgba(245, 245, 245, 0.65);
+      margin-bottom: 8px;
+    }
     .field-input {
       width: 100%;
-      padding: 10px 12px;
+      padding: 12px 14px;
       border: 1px solid var(--line);
-      border-radius: 8px;
+      border-radius: 10px;
       font-size: 14px;
       color: var(--ink);
       background: var(--field-bg);
-      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+      transition: border-color 180ms ease, box-shadow 180ms ease, background 180ms ease;
       font-family: inherit;
+      font-weight: 300;
       outline: none;
+      min-height: 44px;
     }
-    .field-input::placeholder { color: rgba(255,255,255,0.32); }
+    .field-input::placeholder { color: rgba(245, 245, 245, 0.32); }
     .field-input:focus {
       border-color: var(--signal-red);
-      box-shadow: 0 0 0 1px var(--signal-red), 0 1px 3px rgba(229,50,45,0.20);
+      box-shadow: 0 0 0 3px rgba(229, 50, 45, 0.15);
+      background: rgba(255, 255, 255, 0.04);
     }
     .field-input.readonly {
       background: var(--field-bg-readonly);
-      color: rgba(255,255,255,0.65);
+      color: rgba(245, 245, 245, 0.65);
       cursor: default;
     }
     .field-input.readonly:focus {
       border-color: var(--line);
       box-shadow: none;
+    }
+    .field-help {
+      font-size: 12px;
+      color: rgba(245, 245, 245, 0.45);
+      margin-top: 8px;
+      line-height: 1.6;
     }
     .field-error {
       color: var(--signal-red);
@@ -105,67 +199,115 @@
       min-height: 16px;
     }
 
-    /* Primary CTA (red, glowing) */
+    /* Primary CTA — landing-style: white BG, near-black text, rounded-full */
     .btn-primary {
       width: 100%;
-      padding: 12px 16px;
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 13px 20px;
       border-radius: 999px;
-      background: var(--signal-red);
-      color: #fff;
+      background: #fff;
+      color: #0a0a0a;
+      font-family: inherit;
       font-weight: 500;
       font-size: 14px;
-      border: 1px solid var(--signal-red);
+      border: 1px solid #fff;
       cursor: pointer;
-      transition: background 0.15s ease, transform 0.05s ease, box-shadow 0.15s ease, opacity 0.15s ease;
-      box-shadow: 0 8px 24px -8px rgba(229,50,45,0.55), 0 0 0 1px rgba(229,50,45,0.4);
+      min-height: 46px;
+      transition: background 180ms ease, transform 100ms ease, box-shadow 220ms ease, opacity 180ms ease;
     }
-    .btn-primary:hover { background: #c92723; box-shadow: 0 12px 32px -8px rgba(229,50,45,0.7), 0 0 0 1px rgba(229,50,45,0.55); }
+    .btn-primary:hover { background: #f0f0f0; box-shadow: 0 12px 28px -10px rgba(255, 255, 255, 0.25); }
     .btn-primary:active { transform: translateY(1px); }
     .btn-primary:disabled, .btn-primary[aria-disabled="true"] {
-      background: rgba(255,255,255,0.06);
-      color: rgba(255,255,255,0.45);
-      border-color: rgba(255,255,255,0.10);
+      background: rgba(255, 255, 255, 0.06);
+      color: rgba(245, 245, 245, 0.45);
+      border-color: rgba(255, 255, 255, 0.10);
       cursor: not-allowed;
       box-shadow: none;
     }
+    .btn-primary[data-loading="true"] {
+      cursor: progress;
+    }
+    .btn-primary[data-loading="true"] .btn-spinner {
+      display: inline-block;
+    }
 
-    /* Secondary CTA (glass, outlined) */
+    /* Inline spinner inside primary CTA (loading state) */
+    .btn-spinner {
+      display: none;
+      width: 14px; height: 14px;
+      border: 2px solid rgba(10, 10, 10, 0.18);
+      border-top-color: #0a0a0a;
+      border-radius: 50%;
+      animation: spin 800ms linear infinite;
+    }
+
+    /* Secondary CTA (liquid-glass per landing hero) */
     .btn-secondary {
-      display: inline-flex; align-items: center; gap: 8px;
-      padding: 10px 16px;
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 11px 18px;
       border-radius: 999px;
-      background: rgba(255,255,255,0.04);
+      background: rgba(255, 255, 255, 0.06);
       color: var(--ink);
       font-size: 13px;
       font-weight: 500;
-      border: 1px solid rgba(255,255,255,0.18);
+      border: 1px solid rgba(255, 255, 255, 0.22);
       text-decoration: none;
-      transition: background 0.15s ease, border-color 0.15s ease;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      transition: background 180ms ease, border-color 180ms ease;
       cursor: pointer;
+      min-height: 44px;
+      font-family: inherit;
     }
-    .btn-secondary:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.30); }
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.10);
+      border-color: rgba(255, 255, 255, 0.34);
+    }
 
-    /* Pairing code display — six oversized serif numerals */
+    /* Step list (numbered instructions) */
+    .step-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 16px; }
+    .step-list li { display: flex; gap: 14px; align-items: flex-start; }
+    .step-list .num {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: rgba(245, 245, 245, 0.4);
+      width: 22px; flex-shrink: 0; padding-top: 3px;
+    }
+    .step-list .body { flex: 1; min-width: 0; }
+    .step-list .body .text { font-size: 14px; color: rgba(245, 245, 245, 0.85); line-height: 1.6; }
+    .step-list .body .btn-secondary { margin-top: 10px; }
+
+    /* Pairing code display ------------------------------------------- */
+    .pair-code-wrap {
+      margin-top: 28px;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.02);
+      padding: 18px;
+      text-align: center;
+    }
     .pair-code {
       display: flex; gap: 6px; justify-content: center;
       margin: 8px 0 4px;
+      flex-wrap: nowrap;
     }
     .pair-code-cell {
       font-family: 'Instrument Serif', serif;
-      font-size: 44px; line-height: 1; letter-spacing: -0.02em;
-      width: 44px; height: 56px;
+      font-size: 38px; line-height: 1; letter-spacing: -0.02em;
+      width: clamp(36px, 11vw, 48px);
+      height: clamp(50px, 14vw, 60px);
       display: grid; place-items: center;
-      border: 1px solid rgba(255,255,255,0.10);
-      border-radius: 8px;
-      background: rgba(255,255,255,0.025);
+      border: 1px solid rgba(255, 255, 255, 0.10);
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.025);
       color: var(--ink);
     }
     @media (min-width: 480px) {
-      .pair-code-cell { font-size: 56px; width: 54px; height: 70px; }
+      .pair-code-cell { font-size: 52px; width: 54px; height: 70px; }
       .pair-code { gap: 8px; }
     }
 
-    /* Pulsing dot for "Menunggu pasangan..." */
+    /* Pulsing dot ----------------------------------------------------- */
     @keyframes pulseDot {
       0%, 100% { opacity: 0.35; transform: scale(0.85); }
       50%      { opacity: 1;    transform: scale(1); }
@@ -173,97 +315,199 @@
     .pulse-dot {
       width: 8px; height: 8px; border-radius: 50%;
       background: var(--signal-red);
+      box-shadow: 0 0 10px var(--signal-red-glow);
       animation: pulseDot 1.4s ease-in-out infinite;
       display: inline-block;
     }
 
-    /* Preset chip row for Step 3 */
+    /* Status row inside Step 3 (pairing) */
+    .status-row {
+      margin-top: 24px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.02);
+      padding: 14px 16px;
+      display: flex; align-items: center; gap: 12px;
+      min-height: 50px;
+    }
+
+    /* Preset chip row for Step 4 */
     .chip {
       display: inline-flex; align-items: center;
-      padding: 6px 11px; border-radius: 999px;
+      padding: 7px 12px; border-radius: 999px;
       font-size: 12px;
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.10);
-      color: rgba(255,255,255,0.75);
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.10);
+      color: rgba(245, 245, 245, 0.75);
       cursor: pointer;
-      transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+      transition: background 180ms ease, border-color 180ms ease, color 180ms ease;
       user-select: none;
+      font-family: inherit;
+      font-weight: 400;
+      min-height: 32px;
     }
-    .chip:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.18); color: var(--ink); }
+    .chip:hover { background: rgba(255, 255, 255, 0.10); border-color: rgba(255, 255, 255, 0.22); color: var(--ink); }
     .chip:active { transform: translateY(1px); }
 
-    /* Step transitions */
-    @keyframes stepFadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
-    .step-panel { animation: stepFadeIn 280ms ease both; }
+    /* Step transitions ----------------------------------------------- */
+    @keyframes stepFadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: none; }
+    }
+    .step-panel { animation: stepFadeIn 320ms cubic-bezier(0.22, 0.61, 0.36, 1) both; }
     .step-panel[hidden] { display: none; }
+
+    /* Step header fade swap when step changes */
+    @keyframes labelFade {
+      from { opacity: 0; transform: translateY(2px); }
+      to   { opacity: 1; transform: none; }
+    }
+    #step-label.is-fading { animation: labelFade 280ms ease both; }
 
     .focus-ring:focus-visible {
       outline: 2px solid var(--signal-red);
       outline-offset: 3px;
     }
 
-    /* Submit overlay */
+    /* Alert (oxblood-tinted) for error states inside cards */
+    .alert {
+      border-radius: 12px;
+      padding: 16px;
+      background: rgba(229, 50, 45, 0.08);
+      border: 1px solid rgba(229, 50, 45, 0.32);
+      margin-top: 16px;
+    }
+    .alert .alert-title {
+      display: flex; align-items: center; gap: 10px;
+      color: rgba(245, 245, 245, 0.95);
+      font-size: 14px; font-weight: 500;
+      margin-bottom: 6px;
+    }
+    .alert .alert-title .icon {
+      width: 22px; height: 22px;
+      display: grid; place-items: center;
+      border-radius: 50%;
+      background: rgba(229, 50, 45, 0.20);
+      color: var(--signal-red);
+      font-family: 'Instrument Serif', serif;
+      font-size: 14px; line-height: 1;
+    }
+    .alert p { margin: 0; font-size: 13px; color: rgba(245, 245, 245, 0.75); line-height: 1.6; }
+
+    /* Submit overlay ------------------------------------------------- */
     .submit-overlay {
       position: fixed; inset: 0;
-      background: rgba(0,0,0,0.72);
-      backdrop-filter: blur(6px);
-      -webkit-backdrop-filter: blur(6px);
+      background: rgba(10, 10, 10, 0.78);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
       display: grid; place-items: center;
       z-index: 100;
+      padding: 20px;
     }
     .submit-overlay[hidden] { display: none; }
+    .submit-overlay .panel {
+      max-width: 360px; width: 100%;
+      text-align: center;
+      background: rgba(20, 20, 20, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.10);
+      border-radius: 18px;
+      padding: 32px 24px;
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
+    .submit-overlay .panel.is-error {
+      border-color: rgba(229, 50, 45, 0.32);
+    }
 
     /* Spinner */
     @keyframes spin { to { transform: rotate(360deg); } }
     .spinner {
       width: 36px; height: 36px;
-      border: 2px solid rgba(255,255,255,0.18);
+      margin: 0 auto;
+      border: 2px solid rgba(255, 255, 255, 0.12);
       border-top-color: var(--signal-red);
       border-radius: 50%;
       animation: spin 800ms linear infinite;
     }
+    .spinner.is-error {
+      animation: none;
+      border: 2px solid rgba(229, 50, 45, 0.6);
+      border-top-color: var(--signal-red);
+      position: relative;
+    }
+    .spinner.is-error::after {
+      content: '!';
+      position: absolute; inset: 0;
+      display: grid; place-items: center;
+      font-family: 'Instrument Serif', serif;
+      font-size: 22px; line-height: 1;
+      color: var(--signal-red);
+    }
+
+    /* Reduce motion */
+    @media (prefers-reduced-motion: reduce) {
+      .pulse-dot, .step-panel, .spinner, .btn-spinner, #step-label.is-fading { animation: none !important; }
+    }
+
+    /* Footer micro-disclaimer — italic, muted */
+    .micro {
+      margin-top: 20px;
+      font-size: 12px;
+      font-style: italic;
+      color: rgba(245, 245, 245, 0.45);
+      line-height: 1.6;
+    }
+    .micro.center { text-align: center; }
   </style>
 </head>
 <body>
-  <main class="max-w-xl mx-auto px-5 md:px-6 py-10 md:py-16">
+  <header class="site">
+    <div class="container row">
+      <a href="/" class="brand focus-ring">weuseai.agent</a>
+      <span class="badge">onboarding</span>
+    </div>
+  </header>
 
-    <!-- ─── Header: step indicator ─── -->
-    <header class="flex items-center justify-between mb-6 md:mb-8">
-      <div class="flex items-center gap-2" aria-hidden="true">
+  <main>
+    <div class="container">
+
+    <!-- ─── Step indicator ─── -->
+    <div class="step-header">
+      <div class="step-dots" aria-hidden="true">
         <span class="step-dot" data-step-dot="1"></span>
         <span class="step-dot" data-step-dot="2"></span>
         <span class="step-dot" data-step-dot="3"></span>
         <span class="step-dot" data-step-dot="4"></span>
       </div>
-      <span id="step-label" class="text-xs text-white/55 mono">Step 1 dari 4</span>
-    </header>
+      <span id="step-label" class="eyebrow">Step 1 dari 4</span>
+    </div>
 
     <!-- ─── STEP 1: Konfirmasi data ─── -->
     <section
-      class="step-panel liquid-glass rounded-2xl p-6 md:p-8 relative overflow-hidden"
+      class="step-panel card"
       data-step="1"
       aria-labelledby="step1-title"
     >
       <div class="halftone-strip"></div>
-      <div class="relative">
-        <h1 id="step1-title" class="serif text-3xl md:text-4xl text-white leading-[1.05]" style="letter-spacing: -0.04em;">
+      <div style="position: relative;">
+        <h1 id="step1-title" class="serif step-title">
           Konfirmasi data kamu.
         </h1>
-        <p class="mt-3 text-sm md:text-[15px] text-white/55 leading-relaxed">
-          Data ini dipakai buat tagihan + kontak support kalau setup butuh bantuan.
+        <p class="step-sub">
+          Data ini dipakai untuk tagihan dan kontak support kalau setup butuh bantuan.
         </p>
 
-        <form id="step1-form" class="mt-7 space-y-4" novalidate>
+        <form id="step1-form" style="margin-top: 28px; display: flex; flex-direction: column; gap: 16px;" novalidate>
           <div>
-            <label class="block text-xs text-white/65 mb-1.5" for="f-name">Nama</label>
+            <label class="field-label" for="f-name">Nama</label>
             <input id="f-name" class="field-input readonly" readonly aria-readonly="true" value="" />
           </div>
           <div>
-            <label class="block text-xs text-white/65 mb-1.5" for="f-email">Email</label>
+            <label class="field-label" for="f-email">Email</label>
             <input id="f-email" class="field-input readonly" readonly aria-readonly="true" value="" type="email" />
           </div>
           <div>
-            <label class="block text-xs text-white/65 mb-1.5" for="f-whatsapp">Nomor WhatsApp</label>
+            <label class="field-label" for="f-whatsapp">Nomor WhatsApp</label>
             <input
               id="f-whatsapp"
               class="field-input focus-ring"
@@ -273,24 +517,27 @@
               placeholder="0812 3456 7890"
               required
             />
-            <p id="f-whatsapp-help" class="text-xs text-white/45 mt-1.5 leading-relaxed">
+            <p id="f-whatsapp-help" class="field-help">
               Dipakai untuk concierge support, bukan promo. Format: 08xxx atau +62xxx.
             </p>
             <p id="f-whatsapp-error" class="field-error" aria-live="polite"></p>
           </div>
-          <button id="step1-cta" type="submit" class="btn-primary focus-ring mt-2">
-            Lanjut →
+          <button id="step1-cta" type="submit" class="btn-primary focus-ring" style="margin-top: 4px;">
+            <span class="btn-spinner" aria-hidden="true"></span>
+            <span class="btn-label">Lanjut</span>
+            <span aria-hidden="true">→</span>
           </button>
         </form>
 
-        <p class="text-xs italic text-white/40 mt-5 leading-relaxed">
+        <p class="micro">
           Butuh ganti nama atau email?
           <a
             href="https://wa.me/6282154902561?text=Halo%20tim%2C%20saya%20mau%20ganti%20data%20di%20checkout."
             target="_blank"
             rel="noopener noreferrer"
-            class="text-white/65 hover:text-white underline-offset-2 hover:underline focus-ring"
-          >WhatsApp tim kami: +62 821-5490-2561</a>
+            class="focus-ring"
+            style="color: rgba(245,245,245,0.7); text-decoration: underline; text-decoration-color: rgba(229,50,45,0.45); text-underline-offset: 3px;"
+          >WhatsApp +62 821-5490-2561</a>
         </p>
       </div>
     </section>
@@ -302,58 +549,55 @@
     <!-- own bot. Hermes on customer VPS later long-polls THIS bot — -->
     <!-- no shared @weuseaibot conflict. -->
     <section
-      class="step-panel liquid-glass rounded-2xl p-6 md:p-8 relative overflow-hidden"
+      class="step-panel card"
       data-step="2"
       hidden
       aria-labelledby="step2bot-title"
     >
       <div class="halftone-strip"></div>
-      <div class="relative">
-        <h1 id="step2bot-title" class="serif text-3xl md:text-4xl text-white leading-[1.05]" style="letter-spacing: -0.04em;">
+      <div style="position: relative;">
+        <h1 id="step2bot-title" class="serif step-title">
           Buat bot Telegram kamu.
         </h1>
-        <p class="mt-3 text-sm md:text-[15px] text-white/55 leading-relaxed">
-          Agent kamu pakai bot Telegram milik kamu sendiri. Buat lewat <span class="mono text-white/85">@BotFather</span> dulu (60 detik), lalu kembali ke sini.
+        <p class="step-sub">
+          Agent kamu pakai bot Telegram milik kamu sendiri. Buat lewat <span class="mono" style="color: rgba(245,245,245,0.85);">@BotFather</span> dulu — sekitar 60 detik — lalu kembali ke sini.
         </p>
 
-        <ol class="mt-7 space-y-4 list-none p-0 m-0">
-          <li class="flex items-start gap-3">
-            <span class="mono text-xs text-white/40 mt-0.5 w-6">01</span>
-            <div class="flex-1">
-              <div class="text-sm text-white/85">Buka <span class="mono">@BotFather</span> di Telegram</div>
+        <ol class="step-list" style="margin-top: 28px;">
+          <li>
+            <span class="num">01</span>
+            <div class="body">
+              <div class="text">Buka <span class="mono">@BotFather</span> di Telegram.</div>
               <a
                 href="https://t.me/BotFather"
                 target="_blank"
                 rel="noopener noreferrer"
-                class="btn-secondary focus-ring mt-2.5"
+                class="btn-secondary focus-ring"
               >
                 Buka @BotFather
                 <span aria-hidden="true">→</span>
               </a>
             </div>
           </li>
-          <li class="flex items-start gap-3">
-            <span class="mono text-xs text-white/40 mt-0.5 w-6">02</span>
-            <div class="flex-1">
-              <div class="text-sm text-white/85">
-                Kirim <span class="mono text-white">/newbot</span> dan ikuti instruksinya.
-                Pilih nama dan username (akhiran <span class="mono">_bot</span>).
+          <li>
+            <span class="num">02</span>
+            <div class="body">
+              <div class="text">
+                Kirim <span class="mono" style="color: rgba(245,245,245,0.95);">/newbot</span> dan ikuti instruksinya. Pilih nama dan username (akhiran <span class="mono">_bot</span>).
               </div>
             </div>
           </li>
-          <li class="flex items-start gap-3">
-            <span class="mono text-xs text-white/40 mt-0.5 w-6">03</span>
-            <div class="flex-1">
-              <div class="text-sm text-white/85">
-                Salin token yang BotFather kirim, lalu paste di sini.
-              </div>
+          <li>
+            <span class="num">03</span>
+            <div class="body">
+              <div class="text">Salin token yang BotFather kirim, lalu paste di sini.</div>
             </div>
           </li>
         </ol>
 
-        <form id="step2bot-form" class="mt-7 space-y-3" novalidate>
+        <form id="step2bot-form" style="margin-top: 28px; display: flex; flex-direction: column; gap: 12px;" novalidate>
           <div>
-            <label class="block text-xs text-white/65 mb-1.5" for="f-bot-token">Token bot</label>
+            <label class="field-label" for="f-bot-token">Token bot</label>
             <input
               id="f-bot-token"
               class="field-input mono focus-ring"
@@ -363,17 +607,19 @@
               placeholder="123456789:ABCDEFghijklmnopqrstuvwxyz"
               required
             />
-            <p class="text-xs text-white/45 mt-1.5 leading-relaxed">
+            <p class="field-help">
               Format: angka, titik dua, huruf-angka. Tidak ada spasi.
             </p>
             <p id="f-bot-token-error" class="field-error" aria-live="polite"></p>
           </div>
-          <button id="step2bot-cta" type="submit" class="btn-primary focus-ring mt-2">
-            Validasi token →
+          <button id="step2bot-cta" type="submit" class="btn-primary focus-ring" style="margin-top: 4px;">
+            <span class="btn-spinner" aria-hidden="true"></span>
+            <span class="btn-label">Validasi token</span>
+            <span aria-hidden="true">→</span>
           </button>
         </form>
 
-        <p class="text-xs italic text-white/40 mt-5 leading-relaxed">
+        <p class="micro">
           Token kami simpan ter-enkripsi dan hanya dipakai untuk agent kamu sendiri. Tidak dibagi ke pihak lain.
         </p>
       </div>
@@ -381,40 +627,38 @@
 
     <!-- ─── STEP 3: Pasangkan Telegram ─── -->
     <section
-      class="step-panel liquid-glass rounded-2xl p-6 md:p-8 relative overflow-hidden"
+      class="step-panel card"
       data-step="3"
       hidden
       aria-labelledby="step2-title"
     >
       <div class="halftone-strip"></div>
-      <div class="relative">
-        <h1 id="step2-title" class="serif text-3xl md:text-4xl text-white leading-[1.05]" style="letter-spacing: -0.04em;">
+      <div style="position: relative;">
+        <h1 id="step2-title" class="serif step-title">
           Pasangkan Telegram kamu.
         </h1>
-        <p class="mt-3 text-sm md:text-[15px] text-white/55 leading-relaxed">
-          Kirim kode di bawah ke bot kamu sendiri (<span class="mono text-white/85" data-bot-username-display>@bot kamu</span>) lewat Telegram. Tiga langkah, kira-kira 30 detik.
+        <p class="step-sub">
+          Kirim kode di bawah ke bot kamu sendiri (<span class="mono" style="color: rgba(245,245,245,0.85);" data-bot-username-display>@bot kamu</span>) lewat Telegram. Tiga langkah, sekitar 30 detik.
         </p>
 
-        <div class="mt-7 rounded-xl border border-white/[0.08] bg-white/[0.02] p-5 text-center">
-          <div class="text-[11px] mono uppercase tracking-[0.18em] text-white/55 mb-2">
-            Kode pasangan kamu
-          </div>
+        <div class="pair-code-wrap">
+          <div class="eyebrow" style="margin-bottom: 10px;">Kode pasangan kamu</div>
           <div id="pair-code" class="pair-code" aria-label="Kode pasangan 6 digit" role="img"></div>
-          <div id="pair-expiry" class="text-xs mono text-white/45 mt-3">
+          <div id="pair-expiry" class="mono" style="font-size: 12px; color: rgba(245,245,245,0.5); margin-top: 14px;">
             Kode kadaluarsa dalam: <span data-mmss>—:—</span>
           </div>
         </div>
 
-        <ol class="mt-6 space-y-4 list-none p-0 m-0">
-          <li class="flex items-start gap-3">
-            <span class="mono text-xs text-white/40 mt-0.5 w-6">01</span>
-            <div class="flex-1">
-              <div class="text-sm text-white/85">Buka bot kamu (<span class="mono" data-bot-username-display>@bot kamu</span>) di Telegram</div>
+        <ol class="step-list" style="margin-top: 24px;">
+          <li>
+            <span class="num">01</span>
+            <div class="body">
+              <div class="text">Buka bot kamu (<span class="mono" data-bot-username-display>@bot kamu</span>) di Telegram.</div>
               <a
                 href="https://t.me/"
                 target="_blank"
                 rel="noopener noreferrer"
-                class="btn-secondary focus-ring mt-2.5"
+                class="btn-secondary focus-ring"
                 data-pair-bot-link
               >
                 Buka Telegram
@@ -422,39 +666,38 @@
               </a>
             </div>
           </li>
-          <li class="flex items-start gap-3">
-            <span class="mono text-xs text-white/40 mt-0.5 w-6">02</span>
-            <div class="flex-1">
-              <div class="text-sm text-white/85">
-                Kirim pesan: <span class="mono text-white">/pair <span data-pair-inline>—</span></span>
-              </div>
+          <li>
+            <span class="num">02</span>
+            <div class="body">
+              <div class="text">Kirim pesan: <span class="mono" style="color: rgba(245,245,245,0.95);">/pair <span data-pair-inline>—</span></span></div>
             </div>
           </li>
-          <li class="flex items-start gap-3">
-            <span class="mono text-xs text-white/40 mt-0.5 w-6">03</span>
-            <div class="flex-1">
-              <div class="text-sm text-white/85">Tunggu konfirmasi di sini (max 30 detik)</div>
+          <li>
+            <span class="num">03</span>
+            <div class="body">
+              <div class="text">Tunggu konfirmasi di sini (max 30 detik).</div>
             </div>
           </li>
         </ol>
 
         <div
           id="pair-status"
-          class="mt-6 rounded-xl border border-white/[0.08] bg-white/[0.02] p-4 flex items-center gap-3"
+          class="status-row"
           aria-live="polite"
           aria-atomic="true"
         >
           <span class="pulse-dot" aria-hidden="true"></span>
-          <span class="text-sm text-white/85">Menunggu pasangan...</span>
+          <span style="font-size: 14px; color: rgba(245,245,245,0.85);">Menunggu pasangan...</span>
         </div>
 
-        <p class="text-xs italic text-white/40 mt-5 leading-relaxed">
+        <p class="micro">
           Belum punya Telegram?
           <a
             href="https://telegram.org/"
             target="_blank"
             rel="noopener noreferrer"
-            class="text-white/65 hover:text-white underline-offset-2 hover:underline focus-ring"
+            class="focus-ring"
+            style="color: rgba(245,245,245,0.7); text-decoration: underline; text-decoration-color: rgba(229,50,45,0.45); text-underline-offset: 3px;"
           >Download di telegram.org →</a>
         </p>
       </div>
@@ -465,43 +708,42 @@
     <!-- got inserted as Step 2. Form ids kept as step3-* for diff cleanliness; -->
     <!-- semantically they're now Step 4.) -->
     <section
-      class="step-panel liquid-glass rounded-2xl p-6 md:p-8 relative overflow-hidden"
+      class="step-panel card"
       data-step="4"
       hidden
       aria-labelledby="step3-title"
     >
       <div class="halftone-strip"></div>
-      <div class="relative">
-        <h1 id="step3-title" class="serif text-3xl md:text-4xl text-white leading-[1.05]" style="letter-spacing: -0.04em;">
+      <div style="position: relative;">
+        <h1 id="step3-title" class="serif step-title">
           Cara kamu pakai agent.
         </h1>
-        <p class="mt-3 text-sm md:text-[15px] text-white/55 leading-relaxed">
+        <p class="step-sub">
           Tulis bebas. Yang kamu tulis di sini jadi "kontrak kepribadian" agent kamu.
         </p>
 
-        <form id="step3-form" class="mt-7" novalidate>
-          <label class="block text-xs text-white/65 mb-1.5" for="f-expectations">
-            Apa yang paling kamu butuhin dari agent kamu?
+        <form id="step3-form" style="margin-top: 28px;" novalidate>
+          <label class="field-label" for="f-expectations">
+            Apa yang paling kamu butuhkan dari agent kamu?
           </label>
           <textarea
             id="f-expectations"
-            class="field-input focus-ring leading-relaxed"
+            class="field-input focus-ring"
             rows="6"
             maxlength="600"
             placeholder="Contoh: Bantu briefing pagi, ringkas berita, follow up klien via WhatsApp."
+            style="line-height: 1.6; min-height: 140px; resize: vertical;"
           ></textarea>
-          <div class="flex items-center justify-between mt-1.5">
-            <p id="f-expectations-error" class="field-error" aria-live="polite"></p>
-            <p id="char-counter" class="text-xs mono text-white/45 whitespace-nowrap">
-              <span data-char-count>0</span> / 600 karakter
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 6px;">
+            <p id="f-expectations-error" class="field-error" aria-live="polite" style="margin-top: 0; flex: 1;"></p>
+            <p id="char-counter" class="mono" style="font-size: 11px; color: rgba(245,245,245,0.45); white-space: nowrap; margin: 0;">
+              <span data-char-count>0</span> / 600
             </p>
           </div>
 
-          <div class="mt-5">
-            <div class="text-[11px] mono uppercase tracking-[0.18em] text-white/55 mb-2">
-              Atau pilih dari preset
-            </div>
-            <div class="flex flex-wrap gap-2" role="group" aria-label="Preset cara pakai agent">
+          <div style="margin-top: 24px;">
+            <div class="eyebrow" style="margin-bottom: 10px;">Atau pilih dari preset</div>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px;" role="group" aria-label="Preset cara pakai agent">
               <button type="button" class="chip focus-ring" data-preset="Briefing pagi">Briefing pagi</button>
               <button type="button" class="chip focus-ring" data-preset="Email triage">Email triage</button>
               <button type="button" class="chip focus-ring" data-preset="Content drafting">Content drafting</button>
@@ -511,10 +753,12 @@
             </div>
           </div>
 
-          <button id="step3-cta" type="submit" class="btn-primary focus-ring mt-7" aria-disabled="true" disabled>
-            Lengkapi cara pakai agent
+          <button id="step3-cta" type="submit" class="btn-primary focus-ring" aria-disabled="true" disabled style="margin-top: 28px;">
+            <span class="btn-spinner" aria-hidden="true"></span>
+            <span class="btn-label">Lengkapi cara pakai agent</span>
+            <span aria-hidden="true" style="display: none;">→</span>
           </button>
-          <p class="text-xs italic text-white/40 mt-3 leading-relaxed text-center">
+          <p class="micro center">
             Setelah klik, agent kamu mulai dibangun. Proses biasanya 5–7 menit.
           </p>
         </form>
@@ -523,28 +767,42 @@
 
     <!-- ─── STEP E: Invalid cid ─── -->
     <section
-      class="step-panel liquid-glass rounded-2xl p-6 md:p-8 relative overflow-hidden"
+      class="step-panel card"
       data-step="E"
       hidden
       aria-labelledby="stepE-title"
     >
       <div class="halftone-strip"></div>
-      <div class="relative">
-        <h1 id="stepE-title" class="serif text-3xl md:text-4xl text-white leading-[1.05]" style="letter-spacing: -0.04em;">
+      <div style="position: relative;">
+        <h1 id="stepE-title" class="serif step-title">
           Halaman ini hanya untuk pelanggan yang sudah bayar.
         </h1>
-        <p class="mt-3 text-sm md:text-[15px] text-white/55 leading-relaxed">
-          Mungkin kamu salah link?
+        <p class="step-sub">
+          Mungkin kamu salah link, atau session-nya kadaluarsa.
         </p>
-        <a href="/" class="btn-secondary focus-ring mt-5">
-          Kembali ke beranda
-          <span aria-hidden="true">→</span>
-        </a>
+        <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 24px;">
+          <a href="/" class="btn-secondary focus-ring">
+            Kembali ke beranda
+            <span aria-hidden="true">→</span>
+          </a>
+          <a
+            href="https://wa.me/6282154902561?text=Halo%20tim%2C%20link%20onboarding%20saya%20bermasalah."
+            target="_blank"
+            rel="noopener noreferrer"
+            class="btn-secondary focus-ring"
+          >
+            Hubungi tim
+            <span aria-hidden="true">→</span>
+          </a>
+        </div>
       </div>
     </section>
 
-    <!-- ─── Footer ─── -->
-    <footer class="mt-10 md:mt-14 pt-6 border-t border-white/[0.08] text-xs text-white/45 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+    </div>
+  </main>
+
+  <footer class="site">
+    <div class="container row">
       <div>
         Butuh bantuan?
         <a
@@ -552,28 +810,32 @@
           href="https://wa.me/6282154902561?text=Halo%20tim%20weuseai%2C%20saya%20butuh%20bantuan%20dengan%20onboarding%20agent."
           target="_blank"
           rel="noopener noreferrer"
-          class="text-white/75 hover:text-white underline-offset-2 hover:underline focus-ring"
-        >WhatsApp tim kami: +62 821-5490-2561</a>
+          class="focus-ring"
+          style="color: rgba(245,245,245,0.75);"
+        >WhatsApp +62 821-5490-2561</a>
       </div>
-      <div class="flex items-center gap-4">
-        <a href="/#faq" class="text-white/55 hover:text-white no-underline focus-ring">FAQ</a>
-        <a href="/" class="text-white/55 hover:text-white no-underline focus-ring">weuseai.agent</a>
+      <div class="links">
+        <a href="/#faq" class="focus-ring">FAQ</a>
+        <a href="/syarat" class="focus-ring">syarat</a>
+        <a href="/privasi" class="focus-ring">privasi</a>
+        <a href="/kontak" class="focus-ring">kontak</a>
       </div>
-    </footer>
-  </main>
+    </div>
+  </footer>
 
-  <!-- ─── Submit overlay (Step 3 → server) ─── -->
-  <div id="submit-overlay" class="submit-overlay" hidden>
-    <div class="text-center">
-      <div class="spinner mx-auto" aria-hidden="true"></div>
-      <p id="submit-text" class="mt-4 text-sm text-white/85">Menyiapkan agent kamu...</p>
-      <p id="submit-error" class="mt-3 text-xs text-white/55" hidden></p>
+  <!-- ─── Submit overlay (Step 4 → server) ─── -->
+  <div id="submit-overlay" class="submit-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="submit-text">
+    <div class="panel" id="submit-panel">
+      <div id="submit-spinner" class="spinner" aria-hidden="true"></div>
+      <p id="submit-text" style="margin: 18px 0 0; font-size: 15px; color: rgba(245,245,245,0.92); font-weight: 400;">Menyiapkan agent kamu...</p>
+      <p id="submit-error" style="margin: 12px 0 0; font-size: 13px; color: rgba(245,245,245,0.65); line-height: 1.6;" hidden></p>
       <a
         id="submit-error-cta"
         href="https://wa.me/6282154902561?text=Halo%20tim%2C%20onboarding%20saya%20gagal."
         target="_blank"
         rel="noopener noreferrer"
-        class="btn-secondary focus-ring mt-4"
+        class="btn-secondary focus-ring"
+        style="margin-top: 16px;"
         hidden
       >
         Hubungi tim
@@ -635,6 +897,8 @@
     const $chips           = document.querySelectorAll('.chip');
 
     const $overlay        = document.getElementById('submit-overlay');
+    const $submitPanel    = document.getElementById('submit-panel');
+    const $submitSpinner  = document.getElementById('submit-spinner');
     const $submitText     = document.getElementById('submit-text');
     const $submitError    = document.getElementById('submit-error');
     const $submitErrorCta = document.getElementById('submit-error-cta');
@@ -652,14 +916,15 @@
     // ─── Helpers ────────────────────────────────────────────────
 
     function fetchCustomer() {
-      // Sesi D P0-2 (2026-05-11):
-      //   - SELECT only allowlisted columns (PII columns email,
-      //     whatsapp_number, soul_md_text are now REVOKE'd at DB layer
-      //     and would 401 the whole query if requested).
-      //   - Send X-CID header — RLS policy now scopes anon SELECT to the
-      //     row whose id matches X-CID. Without the header, 0 rows.
-      //   - email + whatsapp_number now come from form-input + localStorage
-      //     (cached during checkout flow); soul_md_text was unused.
+      // Sesi D P0-2 (2026-05-11): customers table now has column-level
+      // REVOKE on PII (email, whatsapp_number, soul_md_text, telegram_bot_token,
+      // monthly_llm_budget_cents, …). Anon SELECT of those columns 401s.
+      // The page sources email/whatsapp_number from localStorage + form
+      // input instead — they're not fetched from the server here.
+      //
+      // Sesi D P0-2 also requires the X-CID header to scope the SELECT
+      // to the matching customer row. Without the header, anon SELECT
+      // returns 0 rows even for the allowlisted columns.
       const url = `${SUPABASE_URL}/rest/v1/customers?id=eq.${encodeURIComponent(cid)}` +
         `&select=id,display_name,telegram_chat_id,telegram_bot_username,pairing_code,pairing_code_expires_at`;
       return fetch(url, {
@@ -754,6 +1019,33 @@
       return /^(?:\+?62|0)\d{8,13}$/.test(digits);
     }
 
+    /**
+     * Toggle a primary CTA into "loading" mode. Preserves the .btn-label
+     * span so the original text can be restored — also hides the trailing
+     * arrow (last <span aria-hidden>) while loading so the spinner +
+     * label feels balanced.
+     */
+    function setBtnLoading(btn, isLoading, loadingLabel) {
+      if (!btn) return;
+      const label = btn.querySelector('.btn-label');
+      const arrow = btn.querySelector('span[aria-hidden="true"]:not(.btn-spinner)');
+      if (isLoading) {
+        btn.dataset.loading = 'true';
+        btn.disabled = true;
+        if (!btn.dataset.origLabel && label) btn.dataset.origLabel = label.textContent;
+        if (label && loadingLabel) label.textContent = loadingLabel;
+        if (arrow) arrow.style.display = 'none';
+      } else {
+        btn.dataset.loading = '';
+        btn.disabled = false;
+        if (label && btn.dataset.origLabel) {
+          label.textContent = btn.dataset.origLabel;
+          delete btn.dataset.origLabel;
+        }
+        if (arrow) arrow.style.display = '';
+      }
+    }
+
     function setStep(step) {
       currentStep = step;
 
@@ -768,16 +1060,33 @@
         else if (i + 1 < stepIdx) dot.classList.add('is-done');
       });
       if (stepIdx != null) {
+        // Re-trigger fade animation by toggling the class
+        $stepLabel.classList.remove('is-fading');
+        // Force reflow so the animation re-runs
+        // eslint-disable-next-line no-unused-expressions
+        $stepLabel.offsetWidth;
         $stepLabel.textContent = `Step ${stepIdx} dari 4`;
+        $stepLabel.classList.add('is-fading');
         $stepLabel.style.display = '';
       } else {
         $stepLabel.style.display = 'none';
       }
 
-      // Show only the matching panel
+      // Show only the matching panel. Re-triggering the step-panel
+      // animation by toggling .step-panel off then on means each transition
+      // gets a fresh fade-in (smoother than a static one-time animation).
       $stepPanels.forEach((panel) => {
         const matches = panel.dataset.step === step;
-        panel.hidden = !matches;
+        if (matches) {
+          panel.hidden = false;
+          panel.classList.remove('step-panel');
+          // Force reflow so re-adding triggers animation
+          // eslint-disable-next-line no-unused-expressions
+          panel.offsetWidth;
+          panel.classList.add('step-panel');
+        } else {
+          panel.hidden = true;
+        }
       });
 
       // Step-specific focus + behaviors
@@ -843,8 +1152,7 @@
           return;
         }
         $botTokenErr.textContent = '';
-        $step2BotCta.disabled = true;
-        $step2BotCta.textContent = 'Validasi...';
+        setBtnLoading($step2BotCta, true, 'Memvalidasi token...');
 
         try {
           const result = await validateBotToken(token);
@@ -868,8 +1176,7 @@
           }
           $botTokenErr.textContent = msg;
         } finally {
-          $step2BotCta.disabled = false;
-          $step2BotCta.textContent = 'Validasi token →';
+          setBtnLoading($step2BotCta, false);
         }
       });
 
@@ -908,13 +1215,13 @@
       } catch (err) {
         // Friendly retry — most likely cause is a transient network blip.
         $pairStatus.innerHTML = `
-          <span class="text-sm text-white/85">Gagal menyiapkan kode. </span>
-          <button type="button" class="btn-secondary ml-2 focus-ring" id="retry-pair">Coba lagi</button>
+          <span style="font-size: 14px; color: rgba(245,245,245,0.85); flex: 1;">Gagal menyiapkan kode pasangan.</span>
+          <button type="button" class="btn-secondary focus-ring" id="retry-pair">Coba lagi</button>
         `;
         document.getElementById('retry-pair')?.addEventListener('click', () => {
           $pairStatus.innerHTML = `
             <span class="pulse-dot" aria-hidden="true"></span>
-            <span class="text-sm text-white/85">Menunggu pasangan...</span>
+            <span style="font-size: 14px; color: rgba(245,245,245,0.85);">Menunggu pasangan...</span>
           `;
           startPairing();
         });
@@ -953,15 +1260,13 @@
 
     function renderExpired() {
       $pairStatus.innerHTML = `
-        <div class="flex items-center gap-3 flex-wrap">
-          <span class="text-sm text-white/85">Kode kadaluarsa.</span>
-          <button type="button" class="btn-secondary focus-ring" id="rotate-now">Mulai ulang →</button>
-        </div>
+        <span style="font-size: 14px; color: rgba(245,245,245,0.85); flex: 1;">Kode kadaluarsa.</span>
+        <button type="button" class="btn-secondary focus-ring" id="rotate-now">Mulai ulang <span aria-hidden="true">→</span></button>
       `;
       document.getElementById('rotate-now')?.addEventListener('click', () => {
         $pairStatus.innerHTML = `
           <span class="pulse-dot" aria-hidden="true"></span>
-          <span class="text-sm text-white/85">Menunggu pasangan...</span>
+          <span style="font-size: 14px; color: rgba(245,245,245,0.85);">Menunggu pasangan...</span>
         `;
         startPairing();
       });
@@ -1000,9 +1305,19 @@
 
     function renderPairingSuccess() {
       stopPolling();
+      $pairStatus.style.borderColor = 'rgba(229, 50, 45, 0.32)';
+      $pairStatus.style.background = 'rgba(229, 50, 45, 0.08)';
       $pairStatus.innerHTML = `
-        <span aria-hidden="true" style="color: var(--signal-red); font-size: 16px;">✓</span>
-        <span class="text-sm text-white/90">Pairing berhasil. Lanjut otomatis...</span>
+        <span aria-hidden="true" style="
+          width: 22px; height: 22px;
+          display: grid; place-items: center;
+          border-radius: 50%;
+          background: rgba(229, 50, 45, 0.20);
+          color: var(--signal-red);
+          font-family: 'Instrument Serif', serif;
+          font-size: 16px; line-height: 1;
+        ">&#10003;</span>
+        <span style="font-size: 14px; color: rgba(245,245,245,0.92);">Pairing berhasil. Lanjut otomatis...</span>
       `;
     }
 
@@ -1014,7 +1329,17 @@
       const enabled = $expectations.value.trim().length >= 10;
       $step3Cta.disabled = !enabled;
       $step3Cta.setAttribute('aria-disabled', String(!enabled));
-      $step3Cta.textContent = enabled ? 'Buat agent saya →' : 'Lengkapi cara pakai agent';
+      // Update only the label span — preserve spinner + arrow markup so
+      // the loading state still has them to toggle on submit.
+      const $label = $step3Cta.querySelector('.btn-label');
+      if ($label) {
+        $label.textContent = enabled ? 'Buat agent saya' : 'Lengkapi cara pakai agent';
+      }
+      // Hide the trailing arrow when disabled so the CTA reads cleaner
+      const $arrow = $step3Cta.querySelector('span[aria-hidden="true"]:not(.btn-spinner)');
+      if ($arrow && !$step3Cta.dataset.loading) {
+        $arrow.style.display = enabled ? '' : 'none';
+      }
     }
 
     $expectations.addEventListener('input', () => {
@@ -1046,10 +1371,15 @@
     // ─── Submit handler ─────────────────────────────────────────
 
     async function submitOnboarding(expectations_text) {
+      // Reset overlay to "loading" state — clear any stale error decoration
       $overlay.hidden = false;
+      $submitPanel.classList.remove('is-error');
+      $submitSpinner.classList.remove('is-error');
       $submitError.hidden = true;
       $submitErrorCta.hidden = true;
       $submitText.textContent = 'Menyiapkan agent kamu...';
+      // Also reflect loading on the inline CTA in case overlay is dismissed
+      setBtnLoading($step3Cta, true, 'Mengirim...');
 
       let r;
       try {
@@ -1087,6 +1417,7 @@
         // Customer somehow got here without pairing — kick back to the
         // pairing screen (Step 3 in Pair-flow Option A).
         $overlay.hidden = true;
+        setBtnLoading($step3Cta, false);
         setStep('3');
         return;
       }
@@ -1095,21 +1426,25 @@
         // token isn't persisted (impossible if Step 2 succeeded; possible
         // if a stale tab raced ahead). Kick back to Step 2.
         $overlay.hidden = true;
+        setBtnLoading($step3Cta, false);
         setStep('2');
         return;
       }
       if (r.status === 422 && data?.error === 'expectations_too_short') {
         $overlay.hidden = true;
-        $expectationsErr.textContent = 'Tulis minimal 1 kalimat biar agent ngerti karakter kamu.';
+        setBtnLoading($step3Cta, false);
+        $expectationsErr.textContent = 'Tulis minimal 1 kalimat biar agent paham karakter kamu.';
         return;
       }
       if (r.status === 422 && data?.error === 'expectations_too_long') {
         $overlay.hidden = true;
+        setBtnLoading($step3Cta, false);
         $expectationsErr.textContent = 'Maksimum 600 karakter.';
         return;
       }
       if (r.status === 400 && data?.error === 'invalid_input') {
         $overlay.hidden = true;
+        setBtnLoading($step3Cta, false);
         $expectationsErr.textContent = 'Ada karakter yang ditolak. Tulis ulang tanpa tag/kode.';
         return;
       }
@@ -1118,17 +1453,26 @@
     }
 
     function showSubmitError(msg, withCta) {
+      // Swap the spinner to an error state (matches alert visual language)
+      $submitSpinner.classList.add('is-error');
+      $submitPanel.classList.add('is-error');
       $submitText.textContent = 'Belum jadi.';
       $submitError.hidden = false;
       $submitError.textContent = msg;
       if (withCta) $submitErrorCta.hidden = false;
-      // Reuse the spinner spot for an error state — replace spinner with a
-      // close affordance via tap outside.
+      // Tap outside to dismiss
       $overlay.addEventListener('click', dismissOverlay, { once: true });
     }
 
-    function dismissOverlay() {
+    function dismissOverlay(e) {
+      // Only dismiss when clicking the backdrop, not the inner panel
+      if (e && e.target.closest('#submit-panel')) {
+        $overlay.addEventListener('click', dismissOverlay, { once: true });
+        return;
+      }
       $overlay.hidden = true;
+      // Reset CTA loading so user can retry
+      setBtnLoading($step3Cta, false);
     }
 
     // ─── Boot ───────────────────────────────────────────────────

@@ -34,8 +34,12 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&family=Noto+Serif+SC:wght@400&display=swap" rel="stylesheet">
 
-  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin></script>
-  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin></script>
+  <!-- Hero video preload — LCP candidate, surfaces first frame faster. -->
+  <link rel="preload" as="video" href="assets/new-hero.mp4" type="video/mp4">
+
+  <!-- React production builds — faster runtime, smaller payload than dev builds. -->
+  <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin></script>
   <script src="https://unpkg.com/framer-motion@11.11.17/dist/framer-motion.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/hls.js@1.6.15/dist/hls.min.js"></script>
@@ -1421,9 +1425,12 @@
 
     .agent-card {
       flex: 0 0 auto;
-      /* Mobile: narrower so the shorter 4/5 viz still feels like a focal
-         card. Card body title + desc fits below. */
-      width: min(74vw, 290px);
+      /* 2026-05-09 16:9 pivot: source GIFs are 1920×1080 landscape. Card
+         viz area is 16:9 across all breakpoints; card body grows below
+         with the title + desc.
+         Mobile: card spans the carousel width (with a 360px cap so phablets
+         + small tablets don't go gauche-wide). */
+      width: min(86vw, 360px);
       display: flex; flex-direction: column;
       border-radius: 18px;
       overflow: hidden;
@@ -1433,11 +1440,18 @@
       -webkit-backdrop-filter: blur(18px) saturate(1.05);
       transition: border-color 240ms ease;
     }
-    @media (min-width: 641px) and (max-width: 1024px) {
-      .agent-card { width: min(42vw, 360px); }
+    /* Tablet (768-1024px): single card centered, no peek of neighbors —
+       the carousel JS computes pitch from getBoundingClientRect so this
+       width just flows through. ~520px keeps the 16:9 viz at 520×293 which
+       reads as a hero card without crowding the screen. */
+    @media (min-width: 768px) and (max-width: 1024px) {
+      .agent-card { width: min(72vw, 520px); }
     }
+    /* Desktop (≥1025px): 480px per founder spec — fits 2 visible cards on
+       a 1280-1366 laptop with breathing room (480 × 2 + 18px gap = 978px).
+       Above 1500px, browser shows 3 cards naturally. */
     @media (min-width: 1025px) {
-      .agent-card { width: min(28vw, 380px); }
+      .agent-card { width: min(36vw, 480px); }
     }
     .agent-card:hover {
       border-color: rgba(229, 50, 45, 0.40);
@@ -1446,15 +1460,11 @@
     .agent-card .agent-viz {
       position: relative;
       width: 100%;
-      /* Mobile: shorter aspect (4/5) so the card + body title + desc all
-         fit one screen. Desktop: portrait 5/6 with room for bubble zone +
-         pin zone fully expanded. */
-      aspect-ratio: 4 / 5;
+      /* 16:9 across all breakpoints — matches the source GIFs (1920×1080)
+         so object-fit: cover doesn't crop important content out of frame. */
+      aspect-ratio: 16 / 9;
       background-color: #050505;
       overflow: hidden;
-    }
-    @media (min-width: 768px) {
-      .agent-card .agent-viz { aspect-ratio: 5 / 6; }
     }
     /* Halftone background + vignette removed (2026-05-07 pivot): the
        chat bubble + action scenes need clean black so bubbles read as
@@ -2357,6 +2367,18 @@
     }
     .agent-nav:active { transform: translateY(-50%) scale(0.96); }
     .agent-nav:focus-visible { outline: 2px solid #E5322D; outline-offset: 3px; }
+
+    /* WCAG 2.4.7 Focus Visible — global keyboard focus indicator. Mouse/touch
+       users see nothing extra; keyboard users get an oxblood outline on every
+       interactive element. Browser default focus rings are thin and easy to
+       miss against dark BG; this guarantees visibility. */
+    a:focus-visible, button:focus-visible, [role="button"]:focus-visible,
+    input:focus-visible, textarea:focus-visible, select:focus-visible,
+    [tabindex]:focus-visible {
+      outline: 2px solid #E5322D;
+      outline-offset: 3px;
+      border-radius: 4px;
+    }
     .agent-nav svg {
       width: 20px; height: 20px;
       stroke: currentColor;
@@ -3393,7 +3415,7 @@
 
             <BlurText
               text="Enable AI Agent dalam hidup kamu, sekarang."
-              className="mt-7 md:mt-10 text-[2.5rem] sm:text-5xl md:text-6xl lg:text-[7rem] font-heading leading-[0.96] md:leading-[0.94] max-w-[18ch] text-white px-2"
+              className="mt-7 md:mt-10 text-[2.5rem] sm:text-5xl md:text-6xl lg:text-[5.5rem] xl:text-[6.5rem] font-heading leading-[0.96] md:leading-[0.94] max-w-[18ch] md:max-w-[22ch] lg:max-w-[26ch] xl:max-w-[28ch] text-white px-2"
               style={{ letterSpacing: '-0.045em', fontStyle: 'normal' }}
               delay={100} />
 
@@ -3410,7 +3432,7 @@
               animate={{ filter: 'blur(0px)', opacity: 1, y: 0 }}
               transition={{ duration: 0.6, ease: EASE, delay: 0.95 }}
               className="mt-5 font-mono uppercase tracking-[0.18em] text-[10px] md:text-[11px] text-white/55">
-              Bayar setup sekali · Garansi 14 hari* · Cancel kapan aja
+              Bayar setup sekali · Cancel kapan aja
             </Mot.p>
 
             <Mot.div
@@ -3419,11 +3441,11 @@
               transition={{ duration: 0.6, ease: EASE, delay: 1.1 }}
               className="mt-10 flex flex-col items-center gap-3">
               <div className="flex items-center gap-3 flex-wrap justify-center">
-                <a href="checkout.html" className="rounded-full px-5 py-2.5 text-sm font-medium flex items-center gap-2 no-underline"
+                <a href="checkout.html" className="rounded-full px-5 py-2.5 min-h-[44px] text-sm font-medium flex items-center gap-2 no-underline"
                   style={{ background: '#fff', color: '#0a0a0a', border: '1px solid #fff' }}>
                   Mulai sekarang <ArrowUpRight size={14} stroke={2.2} />
                 </a>
-                <a href="https://cal.com/weuseai.agent/15min" target="_blank" rel="noopener" className="rounded-full px-5 py-2.5 text-sm font-medium flex items-center gap-2 no-underline text-white"
+                <a href="https://cal.com/weuseai.agent/15min" target="_blank" rel="noopener" className="rounded-full px-5 py-2.5 min-h-[44px] text-sm font-medium flex items-center gap-2 no-underline text-white"
                   style={{ background: 'rgba(255, 255, 255, 0.06)', border: '1px solid rgba(255, 255, 255, 0.22)', backdropFilter: 'blur(8px)' }}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                     <rect x="3" y="4" width="18" height="18" rx="2" />
@@ -3434,9 +3456,6 @@
                   Konsultasi gratis (15 menit)
                 </a>
               </div>
-              <a href="#snk-garansi" className="text-[10px] font-mono tracking-[0.10em] no-underline" style={{ color: '#E5322D' }}>
-                *S&K berlaku — lihat detail
-              </a>
             </Mot.div>
 
             <div className="mt-12 md:mt-auto pb-6 md:pb-12 pt-12 md:pt-20 w-full max-w-5xl mx-auto">
@@ -4732,58 +4751,101 @@
       );
     }
 
-    // Router: every slug now has a scene. CreatureSprite is no longer
-    // referenced from the carousel (kept in source for prefers-reduced-
-    // motion fallback / future use).
-    const AGENT_SCENES = {
-      pro:        AgentScenePro,
-      researcher: AgentSceneResearcher,
-      web:        AgentSceneWeb,
-      doc:        AgentSceneDoc,
-      slide:      AgentSceneSlide,
-      trade:      AgentSceneTrade,
-      project:    AgentSceneProject,
-      business:   AgentSceneBusiness,
-      video:      AgentSceneVideo,
-      social:     AgentSceneSocial,
-    };
-    function AgentVisual({ slug, index }) {
-      const Scene = AGENT_SCENES[slug];
-      if (Scene) return <Scene />;
-      // Fallback: legacy creature sprite (shouldn't trigger in production).
-      return <CreatureSprite slug={slug} index={index} />;
+    // ─────────────────────── AGENT VISUAL — RAW VIDEO PLAYBACK ───────────────────────
+    // 2026-05-09 pivot: founder hand-built 9 oxblood-on-black wireframe GIFs
+    // for the agents (one per persona). We just play the converted MP4s
+    // directly — no canvas pipeline, no WebGL filter, no per-frame
+    // processing. The visual treatment lives in the GIFs themselves.
+    //
+    // Source files: assets/<file>.mp4 (mp4-converted from founder's GIFs via
+    //   ffmpeg -i in.gif -movflags +faststart -pix_fmt yuv420p \
+    //     -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" -c:v libx264 -crf 28 \
+    //     -preset slow -an out.mp4)
+    // Per-file ~0.9-2.0 MB, total ~17 MB across 9 cards.
+    //
+    // Lazy-load via IntersectionObserver: video.preload starts as 'metadata'
+    // (just enough to know dimensions); when the card enters the viewport
+    // we set preload='auto' and call play(); when it leaves, we pause.
+    // Saves bandwidth on first paint (~1MB instead of 17MB) and CPU when
+    // off-screen.
+    //
+    // prefers-reduced-motion: video stays paused at first frame, no play().
+    function AgentVisual({ file }) {
+      const videoRef = useRef(null);
+      useEffect(() => {
+        const v = videoRef.current;
+        if (!v) return;
+        const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const io = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((e) => {
+              if (e.isIntersecting) {
+                if (reduced) {
+                  // Show first frame only.
+                  v.preload = 'auto';
+                  try { v.currentTime = 0; } catch (err) {}
+                  v.pause();
+                } else {
+                  v.preload = 'auto';
+                  const p = v.play();
+                  if (p && p.catch) p.catch(() => {});
+                }
+              } else {
+                v.pause();
+              }
+            });
+          },
+          { rootMargin: '200px' }
+        );
+        io.observe(v);
+        return () => io.disconnect();
+      }, [file]);
+      return (
+        <video
+          ref={videoRef}
+          src={`/assets/${file}.mp4`}
+          loop
+          muted
+          playsInline
+          preload="metadata"
+          aria-hidden="true"
+          className="absolute inset-0 w-full h-full"
+          style={{ objectFit: 'cover', display: 'block', background: '#000' }}
+        />
+      );
     }
 
     // ─────────────────────── AGENT PERSONA CAROUSEL ───────────────────────
-    // 10 agent specialist cards mirroring the agents listed in Studio tier.
-    // Sits inside #proses ("The wave") below the CTA, on the same red-halftone
-    // canvas. Auto-rotates every 4s, hover-pause, prefers-reduced-motion respect.
+    // 9 agent specialist cards. Sits inside #proses ("The wave") below the
+    // CTA, on the same red-halftone canvas. Auto-rotates every 13s, hover-
+    // pause, prefers-reduced-motion respect.
+    //
+    // 2026-05-09 lineup pivot: founder shipped 9 hand-built GIFs (one per
+    // persona) — these become the canonical 9 agents. Web Creator, Slide
+    // Master, Video Producer, Social Conductor (added in persona v2) are
+    // dropped from the carousel for now; bring them back if/when they get
+    // their own GIFs. App Builder, Email Manager, Calendar Agent take
+    // their slots on the carousel.
+    //
+    // `file` field maps to the founder's canonical mp4 name (assets/<file>.mp4).
     const AGENTS = [
-      { slug: 'pro',        name: 'The Pro',           desc: 'Briefing pagi, ingat percakapan lintas sesi, jadi pendamping yang ngerti gaya kamu.' },
-      { slug: 'researcher', name: 'Deep Researcher',   desc: 'Riset topik kompleks dari ratusan sumber, sintesis jadi laporan siap pakai.' },
-      { slug: 'web',        name: 'Web Creator',       desc: 'Bangun landing page atau multi-page site, deploy ke Vercel, sambungkan domain — dari brief sampai live URL.' },
-      { slug: 'doc',        name: 'Doc Expert',        desc: 'Laporan, proposal, email, plus skripsi-thesis academic mode — siap kirim dalam menit, sesuai gaya kamu.' },
-      { slug: 'slide',      name: 'Slide Master',      desc: 'Outline jadi deck 12 slide. Pilih narrative-arc atau pakai template (skripsi defense, weekly report, training).' },
-      { slug: 'trade',      name: 'Trade Pro',         desc: 'Briefing pasar pagi, alert saham + crypto, kurs IDR-BI, ringkas laporan keuangan emiten, plus Bitget read-only sync.' },
-      { slug: 'project',    name: 'Project Conductor', desc: 'Kanban orchestration: pecah task, route ke specialist agent, monitor progress lintas hari.' },
-      { slug: 'business',   name: 'Business Director', desc: 'Roadmap 5-tahap founder Indonesia (idea → setup → identity → build → sell). Surface PT/CV, OSS, BPJS, compliance reminder.' },
-      { slug: 'video',      name: 'Video Producer',    desc: 'Script TikTok/Reels, hashtag research, sound trend, caption optimizer, plus HyperFrames storyboard untuk render off-platform.' },
-      { slug: 'social',     name: 'Social Conductor',  desc: 'Content calendar lintas platform, draft post dengan voice locked, engagement log + reply draft. Kamu yang submit ke platform.' },
+      { slug: 'pro',        file: 'the-pro',           name: 'The Pro',           desc: 'Briefing pagi, ingat percakapan lintas sesi, jadi pendamping yang ngerti gaya kamu.' },
+      { slug: 'researcher', file: 'deep-researcher',   name: 'Deep Researcher',   desc: 'Riset topik kompleks dari ratusan sumber, sintesis jadi laporan siap pakai.' },
+      { slug: 'builder',    file: 'app-builder',       name: 'App Builder',       desc: 'Bikin web app dari ide ke deploy — tanpa nulis kode dari nol.' },
+      { slug: 'doc',        file: 'doc-expert',        name: 'Doc Expert',        desc: 'Laporan, proposal, email, plus skripsi-thesis academic mode — siap kirim dalam menit, sesuai gaya kamu.' },
+      { slug: 'email',      file: 'email-manager',     name: 'Email Manager',     desc: 'Sortir 300+ email per hari, draft balasan dengan tone kamu, auto-handle yang gak penting.' },
+      { slug: 'calendar',   file: 'calendar-agent',    name: 'Calendar Agent',    desc: 'Atur jadwal, hindari bentrok, kasih saran reschedule — diplomatis sesuai konteks kamu.' },
+      { slug: 'trade',      file: 'trade-pro',         name: 'Trade Pro',         desc: 'Briefing pasar pagi, alert saham + crypto, kurs IDR-BI, ringkas laporan keuangan emiten, plus Bitget read-only sync.' },
+      { slug: 'project',    file: 'project-conductor', name: 'Project Conductor', desc: 'Kanban orchestration: pecah task, route ke specialist agent, monitor progress lintas hari.' },
+      { slug: 'business',   file: 'business-director', name: 'Business Director', desc: 'Roadmap 5-tahap founder Indonesia (idea → setup → identity → build → sell). Surface PT/CV, OSS, BPJS, compliance reminder.' },
     ];
-
-    // Phase 1 placeholder: even-index cards use new-hero, odd use ascii-wave.
-    // Final asset: `/assets/agent-${slug}.mp4` (TODO above).
-    function agentVideoSrc(slug, index) {
-      // When per-agent assets ship, swap to: return `/assets/agent-${slug}.mp4`;
-      return index % 2 === 0 ? '/assets/new-hero.mp4' : '/assets/ascii-wave.mp4';
-    }
 
     function AgentCarousel() {
       const trackRef = useRef(null);
       const rootRef = useRef(null);
       // displayIndex is the position in the 12-slot track [sentinel_last,
-      // ...10 real, sentinel_first]. realIndex (the agent shown) is
-      // displayIndex - 1, clamped to 0-9. Sentinels at 0 and 11 are
+      // ...9 real, sentinel_first]. realIndex (the agent shown) is
+      // displayIndex - 1, clamped to 0-8. Sentinels at 0 and 10 are
       // identical to last/first real cards — visible only during the
       // wrap-around transition, then we silently snap back to the real
       // copy with no transition. Result: seamless infinite carousel.
@@ -4923,7 +4985,7 @@
             </button>
             <div className="agent-fade" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
               <div ref={trackRef} className="agent-track" aria-live="polite">
-                {/* 12-slot track: [last-card-sentinel, ...10 real cards,
+                {/* 11-slot track: [last-card-sentinel, ...9 real cards,
                     first-card-sentinel]. Sentinels are dupes of the
                     last/first real cards so the wrap-around slide has
                     something to animate to. After the slide completes,
@@ -4940,7 +5002,7 @@
                       data-active={isActive}
                     >
                       <div className="agent-viz">
-                        <AgentVisual key={`${a.slug}-${i}`} slug={a.slug} index={i} />
+                        <AgentVisual key={`${a.file}-${i}`} file={a.file} />
                       </div>
                       <div className="agent-body">
                         <div className="agent-name">{a.name}</div>
@@ -4968,7 +5030,7 @@
           </div>
 
           <p className="agent-tier-line">
-            Starter: 1 agent · Pro: 5 agent · Studio: 10 agent — pilih yang cocok di <a href="#pricing">harga →</a>
+            Starter: 1 agent · Pro: 5 agent · Studio: full set — pilih yang cocok di <a href="#pricing">harga →</a>
           </p>
         </div>
       );
@@ -5124,8 +5186,8 @@
               <span className="live-dot" />
               <span>Agen kamu bekerja</span>
             </div>
-            <h2 className="db-headline">Satu super-agent. Growing skills. Create apa aja yang kamu mau.</h2>
-            <p className="db-sub">Agent pro-actively chat kamu — bukan kamu chat agent. Cukup say yes / no. Gak perlu jadi prompt expert.</p>
+            <h2 className="db-headline">Satu super-agent. Growing skills.<br className="hidden md:inline" /> Create Anything You Want.</h2>
+            <p className="db-sub">Agent pro-actively reach you out — bukan kamu yang daily chat. Automate Everything. Gak perlu pusing mikirin prompt.</p>
           </div>
 
           <div className="db-frame">
@@ -5180,7 +5242,10 @@
                   ? <span className="db-input-typed">{typedText}<span className="db-input-caret" /></span>
                   : <span className="db-input-placeholder">Tanya apa aja...<span className="db-input-caret" /></span>}
               </div>
-              <button className={`db-send ${phase === 'user-click' ? 'db-send-clicked' : ''}`}>
+              <button
+                type="button"
+                aria-label="Kirim pesan"
+                className={`db-send ${phase === 'user-click' ? 'db-send-clicked' : ''}`}>
                 <ArrowUpRight size={18} stroke={2.4} />
               </button>
             </div>
@@ -5200,12 +5265,12 @@
     // ─────────────────────── DIY PAIN ───────────────────────
     function FeaturesChess() {
       const pains = [
-        { n: '01', viz: 'vps',   title: 'Beli & konfigurasi VPS',           body: 'Pilih provider. Bandingkan spec. Setup SSH key. Buka port yang benar. Berdoa kamu nggak ninggal port 22 terbuka.' },
-        { n: '02', viz: 'py',    title: 'Installation Compatibility Issue', body: 'Conda atau venv? Versi CUDA salah. Library X butuh Python 3.9, library Y butuh 3.11. Akhir pekan kamu hilang.' },
-        { n: '03', viz: 'tools', title: 'Pre-Configured Technical Tool',    body: 'API key untuk search, browser automation, TTS, vision. Tiap satu dashboard sendiri, billing sendiri, auth sendiri.' },
-        { n: '04', viz: 'debug', title: 'Debugging Installation Error',     body: 'Stack trace di Docker log. SSL cert expired. Bot Telegram berhenti merespon. Kamu jadi sysadmin yang nggak pernah kamu mau.' },
-        { n: '05', viz: 'mem',   title: 'Configure a Running System',       body: 'Restart. Update. Memory leak. Model di-deprecate. Tiap minggu ada kebakaran baru.' },
-        { n: '06', viz: 'tune',  title: 'Burn token just to tune and introduce your flow', body: 'Tiap kali ngajarin agent kenal cara kerja kamu, kamu bakar token. Hasil akhirnya generic, dan tagihan API kamu naik tanpa progress yang kelihatan.' },
+        { n: '01', viz: 'vps',   title: 'Beli & konfigurasi VPS',     body: 'Pilih provider. Setup SSH. Buka port. Berdoa port 22 nggak ke-expose.' },
+        { n: '02', viz: 'py',    title: 'Library bentrok terus',      body: 'Conda vs venv. CUDA salah. Python 3.9 vs 3.11. Weekend kamu hilang.' },
+        { n: '03', viz: 'tools', title: 'Setup API key satu-satu',    body: 'Search. Browser. TTS. Vision. 10 dashboard, 10 billing, 10 auth.' },
+        { n: '04', viz: 'debug', title: 'Debug error tengah malam',   body: 'Stack trace. SSL expired. Bot mati. Kamu jadi sysadmin dadakan.' },
+        { n: '05', viz: 'mem',   title: 'Maintain sistem 24/7',       body: 'Restart. Update. Memory leak. Tiap minggu kebakaran baru.' },
+        { n: '06', viz: 'tune',  title: 'Bakar token cuma buat tune', body: 'Tiap session bakar token. Hasil generic. Tagihan API naik. Progress nol.' },
       ];
 
       const PainViz = ({ kind }) => {
@@ -5308,7 +5373,7 @@
               </div>
               <BlurText
                 as="h2"
-                text="No need for trial and error. Ready to use, incorporate workflow kamu langsung."
+                text="No need for trial and error. Incorporate workflow kamu langsung."
                 className="mt-5 md:mt-6 text-3xl md:text-5xl lg:text-6xl font-heading text-white tracking-tight leading-[1.0] md:leading-[0.95] max-w-4xl"
                 style={{ letterSpacing: '-0.04em' }}
                 delay={70}
@@ -5768,7 +5833,7 @@
                 </div>
               </Mot.div>
               <div className="mt-10 flex justify-center px-5">
-                <a href="use-cases.html" className="liquid-glass-strong rounded-full px-5 py-2.5 text-sm font-medium flex items-center gap-2 text-white">
+                <a href="use-cases.html" className="liquid-glass-strong rounded-full px-5 py-2.5 min-h-[44px] text-sm font-medium flex items-center gap-2 text-white">
                   Lihat cara orang pakai <ArrowUpRight size={14} stroke={2.2} />
                 </a>
               </div>
@@ -6191,7 +6256,7 @@
               </span>
             </div>
             <p className="mt-2 text-[10px] font-mono uppercase tracking-[0.12em] text-white/45">
-              Diskon launch · Garansi 14 hari · Cancel kapan aja
+              Diskon launch · Cancel kapan aja
             </p>
           </div>
 
@@ -7119,14 +7184,14 @@
               className="text-4xl md:text-6xl lg:text-7xl font-heading leading-[0.92] md:leading-[0.85] tracking-tight max-w-4xl"
               delay={90} />
             <p className="mt-6 md:mt-8 max-w-xl text-white/70 font-body font-light text-sm md:text-base px-2">
-              Lihat agen yang cocok dengan kebutuhan kamu. 5 menit setup, atau 14 hari garansi — kamu yang pilih.
+              Lihat agen yang cocok dengan kebutuhan kamu. 5 menit setup, langsung jalan.
             </p>
             <div className="mt-8 md:mt-10 flex items-center gap-3 md:gap-4 flex-wrap justify-center">
               <a href="checkout.html" className="bg-white text-black rounded-full px-5 md:px-6 py-3 text-sm font-medium flex items-center gap-2 no-underline">
                 Mulai sekarang <ArrowUpRight size={14} stroke={2.2} />
               </a>
-              <a href="#proses" className="liquid-glass-strong rounded-full px-5 md:px-6 py-3 text-sm font-medium no-underline text-white">
-                Lihat demo 5 menit
+              <a href="https://cal.com/weuseai.agent/15min" target="_blank" rel="noopener" className="liquid-glass-strong rounded-full px-5 md:px-6 py-3 text-sm font-medium no-underline text-white">
+                Konsultasi gratis (15 menit)
               </a>
             </div>
             <p className="mt-6 text-xs text-white/45 font-body font-light max-w-md mx-auto leading-relaxed">
@@ -7134,54 +7199,14 @@
               <a href="https://cal.com/weuseai.agent/15min" target="_blank" rel="noopener" className="text-white/75 hover:text-white underline-offset-2 hover:underline">Jadwalkan panggilan</a>
             </p>
 
-            {/* Garansi 14 hari T&C — anchored from the hero "*S&K berlaku" link */}
-            <div id="snk-garansi" className="mt-16 md:mt-24 max-w-2xl w-full text-left">
-              <div className="liquid-glass rounded-2xl p-6 md:p-8">
-                <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-white/45 mb-3">
-                  Syarat & Ketentuan
-                </div>
-                <h3 className="text-xl md:text-2xl font-heading text-white tracking-tight mb-4" style={{ letterSpacing: '-0.02em' }}>
-                  Garansi 14 hari uang kembali — syarat:
-                </h3>
-                <ul className="space-y-2.5 list-none">
-                  {[
-                    'Klaim dalam 14 hari pertama setelah setup selesai',
-                    'Belum pakai self-extension (belum bikin skill custom baru)',
-                    'Refund hanya untuk biaya setup, bukan hosting yang sudah berjalan',
-                    'Klaim via WhatsApp support, proses 3–5 hari kerja',
-                    'Berlaku 1× per akun',
-                  ].map((line, i) => (
-                    <li key={i} className="flex items-start gap-2.5 text-sm font-body font-light leading-relaxed text-white/80">
-                      <span aria-hidden="true" className="mt-[7px] block w-1 h-1 flex-shrink-0 rounded-full" style={{ background: '#E5322D' }} />
-                      <span>{line}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-
-            {/* WhatsApp support pill (Konsultasi/booking moved to hero). */}
-            <div className="mt-20 md:mt-32 w-full flex justify-center">
-              <a href="https://wa.me/6282154902561?text=Halo%20weuseai%2C%20saya%20mau%20tanya%20tentang%20agent" target="_blank" rel="noopener" className="liquid-glass rounded-2xl px-5 py-3 flex items-center gap-3 no-underline" style={{ borderColor: 'rgba(34, 197, 94, 0.30)' }}>
-                <span className="relative flex w-2 h-2 flex-shrink-0">
-                  <span className="absolute inline-flex w-full h-full rounded-full opacity-75" style={{ background: '#22c55e', animation: 'wseaiPulse 2s ease-in-out infinite' }} />
-                  <span className="relative inline-flex w-2 h-2 rounded-full" style={{ background: '#22c55e' }} />
-                </span>
-                <div className="text-left">
-                  <div className="text-white font-body font-medium text-[13px] md:text-sm leading-tight">WhatsApp support</div>
-                  <div className="text-white/55 font-body font-light text-[11px] md:text-xs mt-0.5 leading-tight">+62 821 5490 2561 · Sen-Sab 9-21 WIB</div>
-                </div>
-              </a>
-            </div>
-
-            <div className="mt-12 md:mt-16 pt-6 md:pt-8 border-t border-white/5 w-full flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0 text-[11px] text-white/30 font-body font-light">
+            <div className="mt-20 md:mt-28 pt-6 md:pt-8 border-t border-white/5 w-full flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0 text-[11px] text-white/55 font-body font-light">
               <span>© 2026 weuseai.agent</span>
               <div className="flex items-center gap-4 md:gap-5">
-                <a href="#" className="text-white/30 hover:text-white/55 transition-colors no-underline">privasi</a>
-                <span className="text-white/15">·</span>
-                <a href="#" className="text-white/30 hover:text-white/55 transition-colors no-underline">syarat</a>
-                <span className="text-white/15">·</span>
-                <a href="#" className="text-white/30 hover:text-white/55 transition-colors no-underline">kontak</a>
+                <a href="/privasi" className="text-white/55 hover:text-white/85 transition-colors no-underline">privasi</a>
+                <span className="text-white/25">·</span>
+                <a href="/syarat" className="text-white/55 hover:text-white/85 transition-colors no-underline">syarat</a>
+                <span className="text-white/25">·</span>
+                <a href="/kontak" className="text-white/55 hover:text-white/85 transition-colors no-underline">kontak</a>
               </div>
             </div>
           </div>
