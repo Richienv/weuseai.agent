@@ -1,8 +1,8 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "web-master",
-  "version": "2.0.0",
-  "description_id": "Bundle skill + template Web Creator. Bikin website komplit (landing, multi-page, blog), deploy ke Vercel, dan sarankan domain Indonesia (Niagahoster, IDwebhost, Hostinger).",
+  "version": "2.1.0",
+  "description_id": "Bundle skill + template Web Creator. Bikin website komplit (landing, multi-page, blog), deploy ke Vercel, sarankan domain Indonesia (Niagahoster, IDwebhost, Hostinger), dan extract data dari 6 situs Indonesia populer (Tokopedia, Shopee, Glints, Kompas, OLX, Lamudi) — Phase 4-3 seed skills, DRAFT scaffolding sampai founder graduate via Autobrowse.",
   "skills": [
     {
       "id": "landing-page-builder",
@@ -62,6 +62,60 @@
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:domain-advisory",
       "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
+      "id": "tokopedia-product-page",
+      "description_id": "Phase 4-3 seed skill (DRAFT). Extract title, price, seller, stock, rating dari halaman produk Tokopedia. Selectors placeholder; founder run Autobrowse capture untuk graduate ke production.",
+      "description_en": "Phase 4-3 seed skill (DRAFT). Extract Tokopedia product details. Founder runs Autobrowse capture to graduate.",
+      "templates_used": [],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:autobrowse-replay",
+      "enabled_for_tiers": ["studio"]
+    },
+    {
+      "id": "shopee-storefront",
+      "description_id": "Phase 4-3 seed skill (DRAFT). Extract product list dari halaman storefront Shopee — title, price, sold count, rating per item. Selectors placeholder; founder run Autobrowse capture untuk graduate.",
+      "description_en": "Phase 4-3 seed skill (DRAFT). Extract Shopee storefront product list. Founder runs Autobrowse capture to graduate.",
+      "templates_used": [],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:autobrowse-replay",
+      "enabled_for_tiers": ["studio"]
+    },
+    {
+      "id": "glints-job-post",
+      "description_id": "Phase 4-3 seed skill (DRAFT). Extract job title, company, location, requirements list, salary range dari Glints job post. Selectors placeholder; founder run Autobrowse capture untuk graduate.",
+      "description_en": "Phase 4-3 seed skill (DRAFT). Extract Glints job post details. Founder runs Autobrowse capture to graduate.",
+      "templates_used": [],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:autobrowse-replay",
+      "enabled_for_tiers": ["studio"]
+    },
+    {
+      "id": "kompas-article",
+      "description_id": "Phase 4-3 seed skill (DRAFT). Extract headline, byline, published date, article body, tags dari Kompas article. Selectors placeholder; founder run Autobrowse capture untuk graduate.",
+      "description_en": "Phase 4-3 seed skill (DRAFT). Extract Kompas article content. Founder runs Autobrowse capture to graduate.",
+      "templates_used": [],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:autobrowse-replay",
+      "enabled_for_tiers": ["studio"]
+    },
+    {
+      "id": "olx-listing",
+      "description_id": "Phase 4-3 seed skill (DRAFT). Extract title, price, location, condition, posted date, seller info dari OLX listing. Selectors placeholder; founder run Autobrowse capture untuk graduate.",
+      "description_en": "Phase 4-3 seed skill (DRAFT). Extract OLX listing details. Founder runs Autobrowse capture to graduate.",
+      "templates_used": [],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:autobrowse-replay",
+      "enabled_for_tiers": ["studio"]
+    },
+    {
+      "id": "lamudi-rental",
+      "description_id": "Phase 4-3 seed skill (DRAFT). Extract property title, price, type, bedrooms, bathrooms, area, location, agent dari Lamudi listing. Selectors placeholder; founder run Autobrowse capture untuk graduate.",
+      "description_en": "Phase 4-3 seed skill (DRAFT). Extract Lamudi property details. Founder runs Autobrowse capture to graduate.",
+      "templates_used": [],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:autobrowse-replay",
+      "enabled_for_tiers": ["studio"]
     }
   ],
   "templates": [

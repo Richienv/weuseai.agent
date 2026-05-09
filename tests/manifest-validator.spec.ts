@@ -445,6 +445,9 @@ test('every pilot manifest skill handler_ref points to a known edge function, he
     'engagement-log-tracker',
     'voice-consistency-checker',
     'campaign-planner',
+    // Phase 4-3 seed skills (DRAFT) — single shared handler-ref;
+    // Hermes routes by skill_id from the customer message.
+    'autobrowse-replay',
   ])
   // External (third-party REST APIs called from Hermes on the VPS).
   const knownExternal = new Set([
