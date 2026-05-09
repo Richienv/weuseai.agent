@@ -3,7 +3,7 @@
 Typed contract for **Hermes v0.13.x native kanban API**. Used by:
 
 - Project Conductor's `kanban-orchestrator` skill on customer VPS (consumes the contract via `IHermesKanbanClient` interface; runtime is upstream Hermes, not this package).
-- Platform-side proxy / dashboard (Phase 4-5b — deferred until `SUPABASE_ACCESS_TOKEN` arrives for the schema-mirror migration).
+- Platform-side proxy / dashboard (Phase 4-5b — schema mirror live as of `20260510120000_phase_4_5b_hermes_kanban_mirror.sql`; proxy handler Edge Function still pending).
 - Tests across the repo that need to simulate kanban behavior without spinning up Hermes.
 
 ## Why this exists
@@ -87,9 +87,10 @@ Hermes v0.13.x runtime               (Phase 4-5b — deferred)
 
 ## Deferred to Phase 4-5b
 
-🕐 `hermes-kanban-proxy-handler` Edge Function (needs `hermes_kanban_boards` schema migration → blocked on `SUPABASE_ACCESS_TOKEN`).
+✅ `hermes_kanban_boards` + `hermes_kanban_tasks` schema migration — applied via Management API 2026-05-10 (file: `supabase/migrations/20260510120000_phase_4_5b_hermes_kanban_mirror.sql`). RLS enabled, `v0.13.x` version pin enforced as a CHECK constraint, partial index on overdue active tasks for founder dashboard "what's stuck" query.
+🕐 `hermes-kanban-proxy-handler` Edge Function — POSTs board snapshots into the mirror tables on customer-VPS update.
 🕐 Platform dashboard for cross-customer kanban view.
-🕐 Real Hermes integration test (live VPS) — Phase 4-5b once founder runs first kanban end-to-end.
+🕐 Real Hermes integration test (live VPS) — once founder runs first kanban end-to-end.
 
 ## Testing
 
@@ -101,4 +102,4 @@ Pure-logic tests cover the mock client's behavior + constants. No real Hermes in
 
 ## Status
 
-Phase 4-5 v0 — typed contract + mock + version-pin guard. Phase 4-5b will add the proxy handler and schema mirror.
+Phase 4-5 — typed contract + mock + version-pin guard (PR #15). Phase 4-5b — schema mirror applied 2026-05-10; proxy handler Edge Function pending.
