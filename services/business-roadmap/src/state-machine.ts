@@ -4,8 +4,8 @@
 // `now: () => string` injection so tests can pin time). Default uses
 // system time.
 
-import { ALL_DELIVERABLES, STAGES, STAGE_DELIVERABLES, type StageKind } from './stages.js'
-import type { AdvanceResult, RoadmapState } from './types.js'
+import { ALL_DELIVERABLES, STAGES, STAGE_DELIVERABLES, type StageKind } from './stages.ts'
+import type { AdvanceResult, RoadmapState } from './types.ts'
 
 const ALL_DELIVERABLE_SET = new Set<string>(ALL_DELIVERABLES)
 const STAGE_SET = new Set<string>(STAGES)
