@@ -39,11 +39,20 @@
  *   SUPABASE_SECRET_KEY            (or SUPABASE_SERVICE_ROLE_KEY)
  */
 
+// NOTE: import path uses .js extension (NodeNext-style) even though the source
+// is index.ts. Reasons:
+//   1. Root package.json has "type": "module" — Node ESM strict resolution at
+//      runtime requires explicit extensions.
+//   2. Vercel's @vercel/node compiles .ts → .js per file (it does NOT inline
+//      via bundler), so the runtime needs to find the compiled .js sibling.
+//   3. The original `.ts` extension caused ERR_MODULE_NOT_FOUND at runtime
+//      (log: 2026-05-09 dpl_BLvD8as4itsVFBcnxNeGw3SJ17eB).
+// TS accepts the .js extension under moduleResolution: bundler.
 import {
   deriveCustomerStatus,
   fetchCustomerSnapshot,
   renderStatusReportHtml,
-} from '../../../packages/observability/src/index.ts'
+} from '../../../packages/observability/src/index.js'
 
 const ADMIN_SECRET = process.env.OBSERVABILITY_ADMIN_SECRET ?? ''
 const SUPABASE_URL = process.env.SUPABASE_URL ?? ''
