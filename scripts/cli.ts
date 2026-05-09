@@ -8,6 +8,11 @@
 //                                    --verbose adds stage details.
 //                                    --json outputs StatusReport JSON.
 //                                    --no-color disables ANSI.
+//   health                           Operational health-check dashboard.
+//                                    Edge Functions + schema tables +
+//                                    customer routes. Exit 0 green / 1
+//                                    yellow / 2 red. Flags: --no-color,
+//                                    --json, --site-url <url>.
 //
 // Loads env from .env.local for local dev; in CI use real env vars.
 //
@@ -19,11 +24,13 @@ import { readFileSync, existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 import diagnose from './cli/diagnose.ts'
+import health from './cli/health.ts'
 
 type SubcommandHandler = (args: string[]) => Promise<number>
 
 const SUBCOMMANDS: Record<string, SubcommandHandler> = {
   diagnose,
+  health,
 }
 
 async function main(): Promise<number> {
@@ -52,10 +59,14 @@ function printHelp(): void {
     'subcommands:',
     '  diagnose --customer-id <uuid>   Print onboarding stage report.',
     '                                  Flags: --verbose, --json, --no-color',
+    '  health                          Operational health-check dashboard.',
+    '                                  Flags: --no-color, --json,',
+    '                                         --site-url <url>',
     '',
     'env (read from .env.local automatically):',
     '  SUPABASE_URL',
     '  SUPABASE_SECRET_KEY (or SUPABASE_SERVICE_ROLE_KEY)',
+    '  SUPABASE_ACCESS_TOKEN (Mgmt API; needed for `health`)',
   ]
   console.log(lines.join('\n'))
 }
