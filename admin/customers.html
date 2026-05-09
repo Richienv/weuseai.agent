@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex,nofollow,noarchive" />
+    <title>Customers · admin · weuseai.agent</title>
+    <style>
+      :root {
+        --canvas: #faf9f5;
+        --ink: #141413;
+        --ink-soft: #5d5c58;
+        --ink-faint: #8a8983;
+        --rule: #e3e1da;
+        --rule-soft: #ecebe5;
+        --accent: #0047ff;
+        --ok: #1f8a4d;
+        --warn: #c47a00;
+        --stuck: #b3261e;
+        --bg-card: #ffffff;
+      }
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0; padding: 0;
+        background: var(--canvas); color: var(--ink);
+        font: 15px/1.5 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      .wrap { max-width: 1200px; margin: 0 auto; padding: 48px 24px 96px; }
+      .topnav { font-size: 12px; color: var(--ink-faint); margin-bottom: 32px; }
+      .topnav a { color: var(--accent); text-decoration: none; }
+      h1 { font-size: 22px; font-weight: 600; letter-spacing: -0.01em; margin: 0 0 6px; }
+      .lede { color: var(--ink-soft); margin: 0 0 32px; }
+      .controls {
+        background: var(--bg-card); border: 1px solid var(--rule);
+        border-radius: 10px; padding: 20px; margin-bottom: 24px;
+      }
+      .controls .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+      label {
+        display: block; font-size: 11px; font-weight: 600;
+        letter-spacing: 0.04em; color: var(--ink-soft);
+        text-transform: uppercase; margin-bottom: 4px;
+      }
+      input, select { width: 100%; font: inherit; padding: 8px 10px; border: 1px solid var(--rule); border-radius: 6px; background: var(--canvas); color: var(--ink); }
+      input:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0, 71, 255, 0.12); }
+      .actions { display: flex; gap: 12px; margin-top: 16px; align-items: center; flex-wrap: wrap; }
+      button { font: inherit; font-weight: 500; padding: 8px 16px; border-radius: 6px; border: 1px solid var(--ink); background: var(--ink); color: var(--canvas); cursor: pointer; }
+      button.secondary { background: transparent; color: var(--ink); }
+      button.danger { border-color: var(--stuck); background: var(--stuck); color: var(--canvas); }
+      .hint { font-size: 12px; color: var(--ink-faint); }
+      .err { color: var(--stuck); font-size: 13px; margin-top: 8px; }
+      .ok-msg { color: var(--ok); font-size: 13px; margin-top: 8px; }
+      table {
+        width: 100%; border-collapse: collapse; background: var(--bg-card);
+        border: 1px solid var(--rule); border-radius: 10px; overflow: hidden;
+      }
+      thead th {
+        text-align: left; padding: 12px 14px; font-size: 11px;
+        font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
+        color: var(--ink-faint); background: var(--rule-soft);
+        border-bottom: 1px solid var(--rule);
+      }
+      tbody td { padding: 12px 14px; border-bottom: 1px solid var(--rule-soft); vertical-align: top; }
+      tbody tr:hover { background: var(--rule-soft); }
+      .badge {
+        display: inline-block; padding: 2px 8px; border-radius: 4px;
+        font-size: 11px; font-weight: 600; text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .badge-starter { background: rgba(138, 137, 131, 0.18); color: var(--ink-soft); }
+      .badge-pro { background: rgba(0, 71, 255, 0.12); color: var(--accent); }
+      .badge-studio { background: rgba(196, 122, 0, 0.15); color: var(--warn); }
+      .badge-yes { background: rgba(31, 138, 77, 0.12); color: var(--ok); }
+      .badge-no { background: rgba(138, 137, 131, 0.12); color: var(--ink-faint); }
+      .id-short { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; color: var(--ink-faint); }
+      .ts { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; color: var(--ink-faint); }
+      .obs-link { color: var(--accent); text-decoration: none; font-size: 12px; }
+      .obs-link:hover { text-decoration: underline; }
+      .modal { position: fixed; inset: 0; background: rgba(20,20,19,0.5); display: none; align-items: flex-start; justify-content: center; padding: 64px 24px; }
+      .modal.open { display: flex; }
+      .modal-card { background: var(--bg-card); border-radius: 10px; padding: 24px; width: 100%; max-width: 520px; }
+      .modal-title { font-size: 18px; font-weight: 600; margin: 0 0 16px; }
+      .modal-row { margin-bottom: 16px; }
+      .modal-row.checkbox { display: flex; align-items: center; gap: 8px; }
+      .modal-row.checkbox label { margin-bottom: 0; text-transform: none; letter-spacing: normal; font-size: 14px; font-weight: 500; color: var(--ink); }
+      .modal-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 16px; }
+      .row-cell-actions {
+        display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+      }
+      .row-cell-actions button {
+        font-size: 12px; padding: 4px 10px;
+        border: 1px solid var(--rule); background: transparent; color: var(--ink);
+      }
+      .row-cell-actions button:hover { border-color: var(--accent); color: var(--accent); }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <p class="topnav"><a href="/admin">← Admin</a></p>
+      <h1>Customers</h1>
+      <p class="lede">Reads <code>customers</code> via <code>/api/admin/customers</code>. Manual actions: tier flip, phase 5 / 6 enable, monthly LLM budget edit.</p>
+
+      <form id="filter-form" class="controls" onsubmit="onFilter(event)">
+        <div class="row">
+          <div>
+            <label for="f-secret">Admin secret</label>
+            <input id="f-secret" type="password" placeholder="OBSERVABILITY_ADMIN_SECRET" autocomplete="off" />
+          </div>
+          <div>
+            <label for="f-tier">Tier</label>
+            <select id="f-tier">
+              <option value="">all</option>
+              <option value="starter">starter</option>
+              <option value="pro">pro</option>
+              <option value="studio">studio</option>
+            </select>
+          </div>
+          <div>
+            <label for="f-phase5">Phase 5 enabled</label>
+            <select id="f-phase5">
+              <option value="">any</option>
+              <option value="true">true</option>
+              <option value="false">false</option>
+            </select>
+          </div>
+          <div>
+            <label for="f-phase6">Phase 6 enabled</label>
+            <select id="f-phase6">
+              <option value="">any</option>
+              <option value="true">true</option>
+              <option value="false">false</option>
+            </select>
+          </div>
+        </div>
+        <div class="actions">
+          <button id="f-go" type="submit">List customers</button>
+          <span class="hint">Secret persists per-tab.</span>
+          <span id="f-msg" class="ok-msg" style="margin-left:auto;"></span>
+        </div>
+        <p id="f-err" class="err" hidden></p>
+      </form>
+
+      <div id="list-out"></div>
+    </div>
+
+    <div id="edit-modal" class="modal">
+      <div class="modal-card">
+        <h2 class="modal-title">Edit customer <span id="e-id" class="id-short"></span></h2>
+        <form id="edit-form" onsubmit="onUpdate(event)">
+          <input id="e-uuid" type="hidden" />
+          <div class="modal-row">
+            <label for="e-tier">Tier</label>
+            <select id="e-tier">
+              <option value="starter">starter</option>
+              <option value="pro">pro</option>
+              <option value="studio">studio</option>
+            </select>
+          </div>
+          <div class="modal-row checkbox">
+            <input id="e-phase5" type="checkbox" style="width:auto;" />
+            <label for="e-phase5">Phase 5 enabled (BD v3 + 5 dept packs)</label>
+          </div>
+          <div class="modal-row checkbox">
+            <input id="e-phase6" type="checkbox" style="width:auto;" />
+            <label for="e-phase6">Phase 6 enabled (Cofounder-Clone — workspaces + patterns)</label>
+          </div>
+          <div class="modal-row">
+            <label for="e-budget">Monthly LLM budget (cents)</label>
+            <input id="e-budget" type="number" min="0" max="100000" step="500" />
+            <p class="hint" style="margin-top: 4px;">Default 5000 ($50). Max 100000 ($1000). Customer-paid via BYOK.</p>
+          </div>
+          <p id="e-err" class="err" hidden></p>
+          <div class="modal-actions">
+            <button type="button" class="secondary" onclick="closeEditModal()">Cancel</button>
+            <button type="submit">Save</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <script>
+      const fSecret = document.getElementById('f-secret')
+      const fTier = document.getElementById('f-tier')
+      const fPhase5 = document.getElementById('f-phase5')
+      const fPhase6 = document.getElementById('f-phase6')
+      const fGo = document.getElementById('f-go')
+      const fErr = document.getElementById('f-err')
+      const fMsg = document.getElementById('f-msg')
+      const listOut = document.getElementById('list-out')
+
+      try {
+        const s = sessionStorage.getItem('admin_secret')
+        if (s) fSecret.value = s
+      } catch (e) {}
+
+      function authHeader() { return { Authorization: `Bearer ${fSecret.value}` } }
+
+      async function onFilter(ev) {
+        ev.preventDefault()
+        fErr.hidden = true; fMsg.textContent = ''
+        if (!fSecret.value) return showErr(fErr, 'Admin secret required.')
+        try { sessionStorage.setItem('admin_secret', fSecret.value) } catch (e) {}
+
+        const params = new URLSearchParams()
+        if (fTier.value) params.set('tier', fTier.value)
+        if (fPhase5.value) params.set('phase_5_enabled', fPhase5.value)
+        if (fPhase6.value) params.set('phase_6_enabled', fPhase6.value)
+
+        fGo.disabled = true; fGo.textContent = 'Loading…'
+        try {
+          const r = await fetch(`/api/admin/customers?${params.toString()}`, { headers: { ...authHeader() } })
+          if (r.status === 401) return showErr(fErr, '401 unauthorized — wrong admin secret.')
+          if (!r.ok) {
+            const t = await r.text().catch(() => '')
+            return showErr(fErr, `HTTP ${r.status}: ${t.slice(0, 240)}`)
+          }
+          const j = await r.json()
+          renderList(j.customers || [])
+        } catch (e) {
+          showErr(fErr, `fetch failed: ${e.message || e}`)
+        } finally {
+          fGo.disabled = false; fGo.textContent = 'List customers'
+        }
+      }
+
+      function renderList(customers) {
+        if (customers.length === 0) {
+          listOut.innerHTML = '<p class="hint" style="text-align:center;padding:48px;">No customers matching filter.</p>'
+          return
+        }
+        const rows = customers.map(c => `
+          <tr>
+            <td><span class="id-short">${esc(c.id.slice(0, 8))}</span></td>
+            <td>${esc(c.email)}<div class="ts">${esc(c.display_name || '')}</div></td>
+            <td><span class="badge badge-${esc(c.tier)}">${esc(c.tier)}</span></td>
+            <td><span class="badge badge-${c.phase_5_enabled ? 'yes' : 'no'}">${c.phase_5_enabled ? 'on' : 'off'}</span></td>
+            <td><span class="badge badge-${c.phase_6_enabled ? 'yes' : 'no'}">${c.phase_6_enabled ? 'on' : 'off'}</span></td>
+            <td>$${(c.monthly_llm_budget_cents / 100).toFixed(0)}</td>
+            <td><span class="ts">${esc(c.created_at.slice(0, 10))}</span></td>
+            <td>
+              <div class="row-cell-actions">
+                <button onclick='openEditModal(${escapeAttr(JSON.stringify(c))})'>Edit</button>
+                <a class="obs-link" href="/admin/observability/customer?id=${encodeURIComponent(c.id)}">Observability →</a>
+              </div>
+            </td>
+          </tr>
+        `).join('')
+        listOut.innerHTML = `
+          <table>
+            <thead><tr>
+              <th>id</th><th>email</th><th>tier</th>
+              <th>p5</th><th>p6</th><th>budget</th>
+              <th>created</th><th></th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        `
+      }
+
+      // ─── Edit ──
+
+      function openEditModal(c) {
+        document.getElementById('e-id').textContent = c.id
+        document.getElementById('e-uuid').value = c.id
+        document.getElementById('e-tier').value = c.tier
+        document.getElementById('e-phase5').checked = c.phase_5_enabled
+        document.getElementById('e-phase6').checked = c.phase_6_enabled
+        document.getElementById('e-budget').value = c.monthly_llm_budget_cents
+        document.getElementById('e-err').hidden = true
+        document.getElementById('edit-modal').classList.add('open')
+      }
+      function closeEditModal() {
+        document.getElementById('edit-modal').classList.remove('open')
+      }
+      async function onUpdate(ev) {
+        ev.preventDefault()
+        const eErr = document.getElementById('e-err')
+        eErr.hidden = true
+        const id = document.getElementById('e-uuid').value
+        const body = {
+          tier: document.getElementById('e-tier').value,
+          phase_5_enabled: document.getElementById('e-phase5').checked,
+          phase_6_enabled: document.getElementById('e-phase6').checked,
+          monthly_llm_budget_cents: parseInt(document.getElementById('e-budget').value, 10),
+        }
+        try {
+          const r = await fetch(`/api/admin/customers?id=${encodeURIComponent(id)}`, {
+            method: 'POST',
+            headers: { ...authHeader(), 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          })
+          if (!r.ok) {
+            const t = await r.json().catch(() => ({}))
+            return showErr(eErr, `HTTP ${r.status}: ${t.error || 'unknown'}`)
+          }
+          closeEditModal()
+          fMsg.textContent = 'Customer updated.'
+          onFilter({ preventDefault: () => {} })
+        } catch (e) {
+          showErr(eErr, `fetch failed: ${e.message || e}`)
+        }
+      }
+
+      // ─── helpers ──
+
+      function showErr(el, msg) { el.hidden = false; el.textContent = msg }
+      function esc(s) {
+        return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+      }
+      function escapeAttr(s) { return esc(s).replace(/"/g, '&quot;') }
+    </script>
+  </body>
+</html>
