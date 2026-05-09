@@ -237,65 +237,141 @@
     }
 
     /* ─── Payment method picker ─── */
-    .method-list { display: flex; flex-direction: column; gap: 8px; }
-    .method {
+    /* ─── PAYMENT METHODS — accordion + groups (2026-05-09 redesign) ─── */
+    .method-list { display: flex; flex-direction: column; gap: 6px; }
+
+    /* Group subheader */
+    .method-group-header {
+      font-size: 10.5px;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--text-subtle);
+      margin: 14px 0 4px;
+      padding: 0 2px;
+    }
+    .method-group-header:first-child { margin-top: 4px; }
+
+    /* Each row = collapsed-by-default; expanded inline only when selected */
+    .method-row {
+      border: 1px solid var(--field-border);
+      border-radius: 10px;
+      background: var(--field-bg);
+      transition: border-color 0.15s ease, background 0.15s ease;
+      overflow: hidden;
+    }
+    .method-row:hover { border-color: var(--border-strong); }
+    .method-row.is-selected {
+      border-color: var(--accent);
+      background: rgba(229,50,45,0.05);
+    }
+
+    /* Trigger: full-width button, single line: icon | name | fee chip */
+    .method-row-trigger {
       display: grid;
-      grid-template-columns: 36px 1fr auto;
+      grid-template-columns: 32px 1fr auto;
       gap: 12px;
       align-items: center;
+      width: 100%;
       padding: 12px 14px;
-      border: 1px solid var(--field-border);
-      border-radius: 8px;
-      background: var(--field-bg);
+      background: transparent;
+      border: 0;
       cursor: pointer;
-      transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
-      position: relative;
+      text-align: left;
+      color: inherit;
+      font: inherit;
+      min-height: 56px;
     }
-    .method:hover { border-color: var(--border-strong); }
-    .method input[type="radio"] {
-      position: absolute; opacity: 0; pointer-events: none;
+    .method-row-trigger:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: -2px;
+      border-radius: 10px;
     }
-    .method.is-selected {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 1px var(--accent), 0 1px 3px rgba(229,50,45,0.20);
-      background: rgba(229,50,45,0.06);
-    }
+
+    /* Unified icon system: monochrome white SVG glyphs on category-tinted
+       flat squares. Tints set via inline style from GROUPS map. No
+       gradients — single flat color per square. */
     .method-icon {
-      width: 36px; height: 24px; border-radius: 4px;
+      width: 32px; height: 32px;
+      border-radius: 8px;
       display: grid; place-items: center;
-      font-size: 9px; font-weight: 700; letter-spacing: 0.04em; color: #fff;
+      color: #fff;
       flex-shrink: 0;
     }
-    .mi-qris   { background: linear-gradient(135deg, #e63946, #1d3557); }
-    .mi-va     { background: #1a1f36; }
-    .mi-card   { background: linear-gradient(90deg, #1a1f71 50%, #eb001b 50%); }
-    .mi-cicilan{ background: linear-gradient(135deg, #635bff, #00a3ff); }
-    .mi-ewlt   { background: linear-gradient(90deg, #00aa13, #ff7e01); color: #fff; }
-    .mi-bnpl   { background: linear-gradient(135deg, #2e2e4f, #635bff); }
-
-    .method-body { min-width: 0; }
-    .method-name { font-size: 14px; font-weight: 500; color: var(--text); line-height: 1.2; }
-    .method-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; line-height: 1.3; }
-    .method-fee { text-align: right; flex-shrink: 0; }
-    .method-fee .amt { font-size: 13px; font-weight: 500; color: var(--text); }
-    .method-fee .pct { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
-    .method.is-cheapest .method-fee .amt::after {
-      content: 'Cheapest';
-      display: inline-block; margin-left: 6px;
-      font-size: 9.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
-      color: var(--discount); padding: 2px 5px; border-radius: 3px;
-      background: rgba(74,222,128,0.10);
+    .method-icon svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .method-icon .text-glyph {
+      font-size: 11px; font-weight: 700; letter-spacing: 0.02em; line-height: 1;
     }
 
-    .method-details {
-      margin-top: 14px;
-      padding: 14px;
-      border: 1px dashed var(--field-border);
-      border-radius: 8px;
-      background: var(--bg-elevated);
+    .method-name {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text);
+      line-height: 1.25;
+      min-width: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .method-fee {
+      text-align: right;
+      flex-shrink: 0;
+      font-variant-numeric: tabular-nums;
+    }
+    .method-fee .amt { font-size: 13px; font-weight: 500; color: var(--text); display: block; line-height: 1.2; }
+    .method-fee .pct { font-size: 10.5px; color: var(--text-subtle); margin-top: 2px; display: block; line-height: 1.2; }
+
+    /* CHEAPEST badge — rendered separately in expanded zone, NOT inline
+       in the collapsed fee chip (so wide fees don't bump the layout). */
+    .method-row-expanded {
+      padding: 0 14px 14px 60px;
+      display: grid;
+      gap: 8px;
+    }
+    .method-sub-banks {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+    .method-info {
       font-size: 13px;
       color: var(--text-muted);
       line-height: 1.5;
+      padding: 10px 12px;
+      border: 1px dashed var(--field-border);
+      border-radius: 6px;
+      background: var(--bg-elevated);
+    }
+    .method-info strong { color: var(--text); font-weight: 500; }
+    .method-row-badges {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .method-badge {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 3px 7px;
+      border-radius: 3px;
+      line-height: 1.2;
+    }
+    .method-badge.is-cheapest {
+      color: var(--discount);
+      background: rgba(74,222,128,0.10);
+      border: 1px solid rgba(74,222,128,0.30);
+    }
+
+    /* "Detail kamu" form-block header (same style as group headers) */
+    .form-section-header {
+      font-size: 10.5px;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--text-subtle);
+      margin: 28px 0 10px;
+      padding: 0 2px;
     }
     .method-details strong { color: var(--text); font-weight: 500; }
 
@@ -480,22 +556,23 @@
 
         <form id="payForm" autocomplete="on" novalidate>
           <div class="field-group">
-            <label class="field-label" for="email">Email</label>
-            <input class="field-input" type="email" id="email" name="email" placeholder="you@company.com" autocomplete="email" required>
-          </div>
-
-          <div class="field-group">
-            <label class="field-label">Payment method</label>
-            <div class="method-list" id="methodList" role="radiogroup" aria-label="Payment method">
-              <!-- Populated by JS so the fee column reflects the live plan total. -->
+            <div class="method-list" id="methodList" role="radiogroup" aria-label="Cara bayar">
+              <!-- Populated by JS — grouped accordion with category subheaders.
+                   Each row collapsed by default; selected row expands inline
+                   with sub-banks list, info text, and any badges. -->
             </div>
           </div>
 
-          <div id="methodDetails"><!-- swapped per method --></div>
+          <div class="form-section-header">Detail kamu</div>
 
           <div class="field-group">
             <label class="field-label" for="name">Nama lengkap</label>
             <input class="field-input" type="text" id="name" name="name" placeholder="Nama yang muncul di invoice" autocomplete="name" required>
+          </div>
+
+          <div class="field-group">
+            <label class="field-label" for="email">Email</label>
+            <input class="field-input" type="email" id="email" name="email" placeholder="you@company.com" autocomplete="email" required>
           </div>
 
           <div class="field-group">
@@ -566,40 +643,74 @@
     };
 
     // Payment methods — fees match published Xendit/Midtrans rates as of 2026-04.
-    // Schema: { id, label, sub, icon, iconClass, pct, flat, requiresCard, details }
+    // Schema: { id, group, label, name, subBanks, icon (SVG markup), pct, flat, requiresCard, details }
     //   final fee = round(price * pct / 100) + flat
-    //   `details` is the helper text shown under the picker when this method is chosen.
+    //   `details` is the helper text shown inline when this method is selected.
+    //   `name` is the short collapsed-row label; `label` is the full descriptive name.
+    //   `subBanks` is the comma-separated list of supported sub-options shown in the expanded state.
+    //   `icon` is an inline SVG glyph (white via stroke=currentColor).
+    //
+    // 2026-05-09 redesign: rows render as collapsed accordion with category
+    // grouping. Only the selected row expands. Icon is a monochrome SVG on
+    // a category-tinted square (no gradients).
     const METHODS = [
+      // — Bayar instan —
       {
-        id: 'qris',  label: 'QRIS',  sub: 'Scan with any Indonesian banking or e-wallet app',
-        icon: 'QRIS', iconClass: 'mi-qris', pct: 0.7, flat: 0, requiresCard: false,
-        details: 'After clicking Pay you will see a <strong>QR code</strong> valid for 30 minutes. Scan it with BCA mobile, Mandiri Livin, BRImo, GoPay, OVO, DANA, ShopeePay — anything that supports QRIS.',
+        id: 'qris', group: 'instan',
+        name: 'QRIS', label: 'QRIS',
+        subBanks: 'BCA · Mandiri · BRI · BNI · GoPay · OVO · DANA · ShopeePay',
+        icon: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="16" y="16" width="2" height="2"/><rect x="14" y="14" width="2" height="2"/><rect x="19" y="14" width="2" height="2"/><rect x="14" y="19" width="2" height="2"/><rect x="19" y="19" width="2" height="2"/></svg>',
+        pct: 0.7, flat: 0, requiresCard: false,
+        details: 'Setelah klik Bayar, kamu akan lihat <strong>QR code</strong> yang berlaku selama 30 menit. Scan pakai BCA mobile, Mandiri Livin, BRImo, GoPay, OVO, DANA, ShopeePay — apa saja yang support QRIS.',
       },
       {
-        id: 'va',  label: 'Bank Transfer (Virtual Account)',  sub: 'BCA · Mandiri · BNI · BRI · Permata · CIMB',
-        icon: 'VA', iconClass: 'mi-va', pct: 0, flat: 4000, requiresCard: false,
-        details: 'You will get a <strong>unique virtual account number</strong> after clicking Pay. Transfer the exact amount from your banking app within 24 hours — your account is activated automatically the moment we receive it.',
+        id: 'ewallet', group: 'instan',
+        name: 'E-wallet', label: 'E-wallet',
+        subBanks: 'GoPay · OVO · DANA · ShopeePay · LinkAja',
+        icon: '<svg viewBox="0 0 24 24"><path d="M21 8H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16v-3"/><path d="M21 12v4h-4a2 2 0 0 1 0-4z"/><path d="M5 8V5a1 1 0 0 1 1.5-.87L17 8"/></svg>',
+        pct: 2.0, flat: 0, requiresCard: false,
+        details: 'Kamu akan dialihkan ke e-wallet pilihan untuk konfirmasi. Bisa pakai <strong>GoPay, OVO, DANA, ShopeePay, LinkAja</strong> dan wallet apa pun yang support QRIS.',
+      },
+      // — Transfer & kartu —
+      {
+        id: 'va', group: 'transfer',
+        name: 'Bank Transfer (VA)', label: 'Bank Transfer (Virtual Account)',
+        subBanks: 'BCA · Mandiri · BNI · BRI · Permata · CIMB',
+        icon: '<svg viewBox="0 0 24 24"><path d="M3 21h18"/><path d="M3 10h18"/><path d="M5 6l7-3 7 3"/><path d="M4 10v11"/><path d="M20 10v11"/><path d="M8 14v4"/><path d="M12 14v4"/><path d="M16 14v4"/></svg>',
+        pct: 0, flat: 4000, requiresCard: false,
+        details: 'Setelah klik Bayar, kamu dapat <strong>nomor VA unik</strong>. Transfer nominal pas dari mobile banking dalam 24 jam — akun kamu otomatis aktif begitu masuk.',
       },
       {
-        id: 'card',  label: 'Credit / Debit Card',  sub: 'Visa · Mastercard · AMEX · JCB',
-        icon: 'CARD', iconClass: 'mi-card', pct: 2.9, flat: 2000, requiresCard: true,
-        details: 'Your card statement will show <strong>WEUSEAI*AGENT</strong>. We never store your card details — they go straight to our payment processor over TLS.',
+        id: 'card', group: 'transfer',
+        name: 'Credit / Debit Card', label: 'Credit / Debit Card',
+        subBanks: 'Visa · Mastercard · AMEX · JCB',
+        icon: '<svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/><line x1="6" y1="15" x2="10" y2="15"/></svg>',
+        pct: 2.9, flat: 2000, requiresCard: true,
+        details: 'Statement kartu kamu akan muncul sebagai <strong>WEUSEAI*AGENT</strong>. Kami nggak simpan detail kartu — langsung ke payment processor lewat TLS.',
+      },
+      // — Cicilan & nanti bayar —
+      {
+        id: 'cicilan', group: 'cicilan',
+        name: 'Cicilan 0% (3 / 6 / 12 bulan)', label: 'Cicilan 0%',
+        subBanks: 'BCA · Mandiri · BNI · BRI · CIMB · Citi',
+        icon: '<svg viewBox="0 0 24 24"><line x1="3" y1="3" x2="21" y2="21"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>',
+        pct: 3.5, flat: 2000, requiresCard: true,
+        details: 'Bayar pakai kartu kredit dengan <strong>bunga 0%</strong> dalam 3, 6, atau 12 bulan. Tenor dipilih di halaman konfirmasi kartu kamu. Berlaku di sebagian besar kartu kredit Indonesia di atas Rp 500.000.',
       },
       {
-        id: 'cicilan',  label: 'Cicilan 0% — 3, 6, 12 months',  sub: 'BCA · Mandiri · BNI · BRI · CIMB · Citi',
-        icon: '0%', iconClass: 'mi-cicilan', pct: 3.5, flat: 2000, requiresCard: true,
-        details: 'Pay your card with <strong>zero interest</strong> over 3, 6, or 12 monthly installments. You pick the tenor on your card issuer\'s confirmation page. Available on most major Indonesian credit cards above Rp 500.000.',
+        id: 'bnpl', group: 'cicilan',
+        name: 'BNPL (Kredivo · Akulaku · Indodana)', label: 'Buy Now Pay Later',
+        subBanks: 'Kredivo · Akulaku · Indodana',
+        icon: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>',
+        pct: 3.0, flat: 0, requiresCard: false,
+        details: 'Nggak perlu kartu. Kamu akan dialihkan ke provider BNPL untuk eligibility check 60 detik. Tunduk persetujuan provider.',
       },
-      {
-        id: 'ewallet',  label: 'E-wallet — GoPay · OVO · DANA · ShopeePay',  sub: 'Pay from your wallet balance',
-        icon: 'WLT', iconClass: 'mi-ewlt', pct: 2.0, flat: 0, requiresCard: false,
-        details: 'You will be redirected to the chosen e-wallet to confirm. Works with <strong>GoPay, OVO, DANA, ShopeePay, LinkAja</strong> and any wallet supporting QRIS.',
-      },
-      {
-        id: 'bnpl',  label: 'Buy Now Pay Later — Kredivo · Akulaku · Indodana',  sub: 'Split into 3, 6, or 12 monthly payments',
-        icon: 'BNPL', iconClass: 'mi-bnpl', pct: 3.0, flat: 0, requiresCard: false,
-        details: 'No card required. You will be redirected to the BNPL provider for a 60-second eligibility check. Subject to provider approval.',
-      },
+    ];
+
+    const GROUPS = [
+      { id: 'instan',   label: 'Bayar instan',          tint: '#E5322D' },
+      { id: 'transfer', label: 'Transfer & kartu',      tint: '#3a3530' },
+      { id: 'cicilan',  label: 'Cicilan & nanti bayar', tint: '#7A1F1B' },
     ];
 
     const HOSTING_MONTHLY = 99000;
@@ -649,32 +760,58 @@
       });
 
       list.innerHTML = '';
-      METHODS.forEach((m) => {
-        const fee = calcFee(baseAmount, m);
-        const id = `pm-${m.id}`;
-        const wrap = document.createElement('label');
-        wrap.className = 'method' + (m.id === state.methodId ? ' is-selected' : '') + (m.id === cheapestId ? ' is-cheapest' : '');
-        wrap.htmlFor = id;
-        const pctTxt = m.pct > 0
-          ? `${m.pct}%${m.flat ? ' + ' + fmt(m.flat) : ''}`
-          : (m.flat ? fmt(m.flat) + ' flat' : 'Free');
-        wrap.innerHTML = `
-          <input type="radio" name="pm" id="${id}" value="${m.id}" ${m.id === state.methodId ? 'checked' : ''}>
-          <div class="method-icon ${m.iconClass}">${m.icon}</div>
-          <div class="method-body">
-            <div class="method-name">${m.label}</div>
-            <div class="method-sub">${m.sub}</div>
-          </div>
-          <div class="method-fee">
-            <div class="amt">+${fmt(fee)}</div>
-            <div class="pct">${pctTxt}</div>
-          </div>
-        `;
-        wrap.addEventListener('click', () => {
-          state.methodId = m.id;
-          renderAll();
+      // Render in group order with subheader + collapsed accordion rows.
+      // Only the selected row expands inline.
+      GROUPS.forEach((g) => {
+        const groupMethods = METHODS.filter((m) => m.group === g.id);
+        if (groupMethods.length === 0) return;
+
+        const header = document.createElement('div');
+        header.className = 'method-group-header';
+        header.textContent = g.label;
+        list.appendChild(header);
+
+        groupMethods.forEach((m) => {
+          const fee = calcFee(baseAmount, m);
+          const isSelected = m.id === state.methodId;
+          const isCheapest = m.id === cheapestId;
+          const pctTxt = m.pct > 0
+            ? `${m.pct}%${m.flat ? ' + ' + fmt(m.flat) : ''}`
+            : (m.flat ? fmt(m.flat) + ' flat' : 'Free');
+
+          const wrap = document.createElement('div');
+          wrap.className = 'method-row' + (isSelected ? ' is-selected' : '');
+          wrap.dataset.methodId = m.id;
+          wrap.innerHTML = `
+            <button type="button"
+                    class="method-row-trigger"
+                    role="radio"
+                    aria-checked="${isSelected}"
+                    aria-expanded="${isSelected}"
+                    aria-controls="pm-${m.id}-expanded">
+              <span class="method-icon" style="background: ${g.tint}" aria-hidden="true">
+                ${m.icon}
+              </span>
+              <span class="method-name">${m.name}</span>
+              <span class="method-fee">
+                <span class="amt">+${fmt(fee)}</span>
+                <span class="pct">${pctTxt}</span>
+              </span>
+            </button>
+            ${isSelected ? `
+              <div class="method-row-expanded" id="pm-${m.id}-expanded">
+                <div class="method-sub-banks">${m.subBanks}</div>
+                <div class="method-info">${m.details}</div>
+                ${isCheapest ? '<div class="method-row-badges"><span class="method-badge is-cheapest">Cheapest</span></div>' : ''}
+              </div>
+            ` : ''}
+          `;
+          wrap.querySelector('.method-row-trigger').addEventListener('click', () => {
+            state.methodId = m.id;
+            renderAll();
+          });
+          list.appendChild(wrap);
         });
-        list.appendChild(wrap);
       });
     }
 
@@ -699,7 +836,7 @@
       document.getElementById('discount').textContent = '−' + fmt(discountAmt);
       document.getElementById('discountLbl').textContent = `Launch discount (${discountPct}%)`;
       document.getElementById('paymentFee').textContent = '+' + fmt(fee);
-      document.getElementById('feeTag').textContent = m.label.split(' — ')[0].split(' (')[0];
+      document.getElementById('feeTag').textContent = m.name;
       document.getElementById('grandTotal').textContent = fmt(grand);
       document.getElementById('payBtnAmount').textContent = fmt(grand);
       document.getElementById('recurringTotal').textContent = fmt(recurring) + '/bulan';
@@ -718,16 +855,12 @@
       document.title = `Checkout · ${plan.name} — weuseai.agent`;
     }
 
-    function renderMethodDetails() {
-      const m = METHODS.find((x) => x.id === state.methodId) || METHODS[0];
-      const wrap = document.getElementById('methodDetails');
-      wrap.innerHTML = `<div class="method-details">${m.details}</div>`;
-    }
+    // (Method details now render inline within the expanded accordion row
+    // via renderMethods() — no separate renderMethodDetails() needed.)
 
     function renderAll() {
       renderMethods();
       renderTotals();
-      renderMethodDetails();
     }
 
     document.addEventListener('DOMContentLoaded', () => {
