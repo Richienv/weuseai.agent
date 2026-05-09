@@ -652,14 +652,22 @@
     // ─── Helpers ────────────────────────────────────────────────
 
     function fetchCustomer() {
+      // Sesi D P0-2 (2026-05-11):
+      //   - SELECT only allowlisted columns (PII columns email,
+      //     whatsapp_number, soul_md_text are now REVOKE'd at DB layer
+      //     and would 401 the whole query if requested).
+      //   - Send X-CID header — RLS policy now scopes anon SELECT to the
+      //     row whose id matches X-CID. Without the header, 0 rows.
+      //   - email + whatsapp_number now come from form-input + localStorage
+      //     (cached during checkout flow); soul_md_text was unused.
       const url = `${SUPABASE_URL}/rest/v1/customers?id=eq.${encodeURIComponent(cid)}` +
-        // telegram_bot_token (encrypted) deliberately NOT selected — anon
-        // can't read it (column-level REVOKE in migration 20260509200000),
-        // and the page never needs the token plaintext anyway. We only
-        // fetch the username for display + deeplink.
-        `&select=id,email,display_name,whatsapp_number,telegram_chat_id,telegram_bot_username,pairing_code,pairing_code_expires_at,soul_md_text`;
+        `&select=id,display_name,telegram_chat_id,telegram_bot_username,pairing_code,pairing_code_expires_at`;
       return fetch(url, {
-        headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          'X-CID': cid,
+        },
       }).then((r) => {
         if (!r.ok) throw new Error(`fetchCustomer: ${r.status}`);
         return r.json();
