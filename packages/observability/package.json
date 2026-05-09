@@ -1,0 +1,21 @@
+{
+  "name": "@weuseai/observability",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Customer onboarding observability — pure-logic snapshot-to-status derivation + PostgREST snapshot fetcher + text/HTML renderers. Backs the admin dashboard at /admin/observability and the diagnose CLI (`npm run cli -- diagnose --customer-id <uuid>`).",
+  "main": "src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test tests/*.spec.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.4.0"
+  },
+  "files": [
+    "src/**/*",
+    "README.md"
+  ]
+}
