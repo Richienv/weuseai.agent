@@ -4,14 +4,28 @@
 //   "Edge Function: telegram-bot-webhook"
 //
 // Validates Telegram's secret-token header, parses the Update payload,
-// and handles the /pair <6-digit-code> command. All other messages are
-// silently acknowledged with 200 OK so Telegram doesn't retry.
+// and handles:
+//   - the `/pair <6-digit-code>` command (Phase 1 pairing flow)
+//   - `callback_query` updates from Phase 5-5 approval inline buttons
+//     (Phase 5-5b — formatter shipped in #29; wiring lands here).
+// All other messages are silently acknowledged with 200 OK so Telegram
+// doesn't retry.
 
+import { parseCallbackData, APPROVAL_ACK } from './approval-telegram-formatter.ts'
 import { isPairingCodeExpired } from './pairing-code.ts'
 import type {
   IOnboardingStore,
   ITelegramClient,
 } from './types.ts'
+
+/** Phase 5-5b: outcome the webhook hands off to when a customer presses
+ *  Approve/Reject. Returns the ack text to render back in Telegram. */
+export type ApprovalCallbackHandler = (input: {
+  decision: 'approve' | 'reject'
+  approvalId: string
+  /** Telegram user id of the presser — useful for audit / approved_by. */
+  callerTelegramUserId: number
+}) => Promise<{ ok: boolean; ackText: string }>
 
 export type TelegramBotWebhookDeps = {
   db: IOnboardingStore
@@ -19,9 +33,18 @@ export type TelegramBotWebhookDeps = {
   /** Must match the value passed to setWebhook(secret_token=...). */
   webhookSecret: string
   now?: () => number
+  /** Phase 5-5b: optional. When present, callback_query updates from
+   *  approval buttons get routed here. Omit to disable approval handling
+   *  (e.g. for the platform @weuseaibot which only handles /pair). */
+  onApprovalCallback?: ApprovalCallbackHandler
+  /** Phase 5-5b: when handling callback_query, we need the customer's bot
+   *  token (to call answerCallbackQuery on their bot). The webhook entry
+   *  can derive it from the customer row using the chat_id; this is the
+   *  lookup hook. Returns null if the chat is unrecognized. */
+  resolveCustomerBotTokenByChat?: (chatId: number | string) => Promise<string | null>
 }
 
-// Subset of Telegram's Update type — we only consume `message`.
+// Subset of Telegram's Update type — we consume `message` and `callback_query`.
 export type TelegramUpdate = {
   update_id?: number
   message?: {
@@ -29,6 +52,12 @@ export type TelegramUpdate = {
     text?: string
     chat: { id: number | string; type?: string }
     from?: { id: number; username?: string; is_bot?: boolean }
+  }
+  callback_query?: {
+    id: string
+    data?: string
+    from: { id: number; username?: string; is_bot?: boolean }
+    message?: { chat: { id: number | string } }
   }
 }
 
@@ -65,6 +94,11 @@ export async function handleTelegramBotWebhook(
     // Malformed JSON — return 200 so Telegram won't retry-storm us;
     // logging happens via Edge Function logs.
     return ok({ ignored: 'invalid_json' })
+  }
+
+  // ─── 4a. Phase 5-5b: callback_query (Approve/Reject button press) ─
+  if (update.callback_query) {
+    return await handleCallbackQuery(update.callback_query, deps)
   }
 
   const message = update.message
@@ -108,6 +142,68 @@ export async function handleTelegramBotWebhook(
   // ─── 7. Reply success ─────────────────────────────────────────────
   await safeReply(deps.telegram, message.chat.id, PAIR_BOT_REPLY_SUCCESS)
   return ok({ replied: 'paired' })
+}
+
+async function handleCallbackQuery(
+  cb: NonNullable<TelegramUpdate['callback_query']>,
+  deps: TelegramBotWebhookDeps,
+): Promise<Response> {
+  // Bail-outs return 200 so Telegram doesn't retry-storm; details in body.
+  if (!deps.onApprovalCallback || !deps.resolveCustomerBotTokenByChat) {
+    return ok({ ignored: 'callback_handler_not_configured' })
+  }
+  const data = cb.data
+  if (!data) {
+    return ok({ ignored: 'callback_no_data' })
+  }
+  const parsed = parseCallbackData(data)
+  if (!parsed) {
+    return ok({ ignored: 'callback_unrecognized_payload' })
+  }
+  const chatId = cb.message?.chat.id
+  if (!chatId) {
+    return ok({ ignored: 'callback_no_chat' })
+  }
+
+  // Resolve the customer's bot token from chat (we need it for both
+  // answerCallbackQuery + sendMessageAs ack).
+  const botToken = await deps.resolveCustomerBotTokenByChat(chatId)
+  if (!botToken) {
+    // Customer chat unrecognized — best-effort no-op + 200 to Telegram.
+    return ok({ ignored: 'callback_unknown_customer' })
+  }
+
+  // Hand off to the approval-decision dep.
+  let outcome: { ok: boolean; ackText: string }
+  try {
+    outcome = await deps.onApprovalCallback({
+      decision: parsed.decision,
+      approvalId: parsed.approval_id,
+      callerTelegramUserId: cb.from.id,
+    })
+  } catch {
+    outcome = { ok: false, ackText: APPROVAL_ACK.error }
+  }
+
+  // Always answer the callback so the customer's UI dismisses the spinner.
+  try {
+    await deps.telegram.answerCallbackQuery({
+      botToken,
+      callbackQueryId: cb.id,
+      text: outcome.ackText.slice(0, 200), // Telegram caps callback toast at 200 chars
+    })
+  } catch {
+    /* swallow — the chat ack below is the real signal */
+  }
+
+  // Best-effort follow-up message in the chat with the full ack text.
+  try {
+    await deps.telegram.sendMessageAs(botToken, chatId, outcome.ackText)
+  } catch {
+    /* swallow */
+  }
+
+  return ok({ replied: outcome.ok ? 'approval_handled' : 'approval_failed' })
 }
 
 async function safeReply(

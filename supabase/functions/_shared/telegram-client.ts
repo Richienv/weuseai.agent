@@ -145,4 +145,55 @@ export class TelegramBotClient implements ITelegramClient {
       )
     }
   }
+
+  // ─── Phase 5-5b: inline-keyboard support for approval surfacing ──
+
+  async sendMessageWithButtonsAs(
+    botToken: string,
+    chatId: number | string,
+    text: string,
+    replyMarkup: { inline_keyboard: { text: string; callback_data: string }[][] },
+  ): Promise<void> {
+    const r = await fetch(`${TELEGRAM_API}/bot${botToken}/sendMessage`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text,
+        disable_web_page_preview: true,
+        reply_markup: replyMarkup,
+      }),
+    })
+    if (!r.ok) {
+      const txt = await r.text().catch(() => '')
+      throw new Error(
+        `Telegram sendMessage(buttons) -> ${r.status}: ${txt.slice(0, 300)}`,
+      )
+    }
+  }
+
+  async answerCallbackQuery(input: {
+    botToken: string
+    callbackQueryId: string
+    text?: string
+  }): Promise<void> {
+    const r = await fetch(
+      `${TELEGRAM_API}/bot${input.botToken}/answerCallbackQuery`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          callback_query_id: input.callbackQueryId,
+          text: input.text,
+          // show_alert false — toast not modal. show_alert default false.
+        }),
+      },
+    )
+    if (!r.ok) {
+      const txt = await r.text().catch(() => '')
+      throw new Error(
+        `Telegram answerCallbackQuery -> ${r.status}: ${txt.slice(0, 300)}`,
+      )
+    }
+  }
 }
