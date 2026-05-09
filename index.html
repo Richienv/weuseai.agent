@@ -1421,9 +1421,12 @@
 
     .agent-card {
       flex: 0 0 auto;
-      /* Mobile: narrower so the shorter 4/5 viz still feels like a focal
-         card. Card body title + desc fits below. */
-      width: min(74vw, 290px);
+      /* 2026-05-09 16:9 pivot: source GIFs are 1920×1080 landscape. Card
+         viz area is 16:9 across all breakpoints; card body grows below
+         with the title + desc.
+         Mobile: card spans the carousel width (with a 360px cap so phablets
+         + small tablets don't go gauche-wide). */
+      width: min(86vw, 360px);
       display: flex; flex-direction: column;
       border-radius: 18px;
       overflow: hidden;
@@ -1433,11 +1436,18 @@
       -webkit-backdrop-filter: blur(18px) saturate(1.05);
       transition: border-color 240ms ease;
     }
-    @media (min-width: 641px) and (max-width: 1024px) {
-      .agent-card { width: min(42vw, 360px); }
+    /* Tablet (768-1024px): single card centered, no peek of neighbors —
+       the carousel JS computes pitch from getBoundingClientRect so this
+       width just flows through. ~520px keeps the 16:9 viz at 520×293 which
+       reads as a hero card without crowding the screen. */
+    @media (min-width: 768px) and (max-width: 1024px) {
+      .agent-card { width: min(72vw, 520px); }
     }
+    /* Desktop (≥1025px): 480px per founder spec — fits 2 visible cards on
+       a 1280-1366 laptop with breathing room (480 × 2 + 18px gap = 978px).
+       Above 1500px, browser shows 3 cards naturally. */
     @media (min-width: 1025px) {
-      .agent-card { width: min(28vw, 380px); }
+      .agent-card { width: min(36vw, 480px); }
     }
     .agent-card:hover {
       border-color: rgba(229, 50, 45, 0.40);
@@ -1446,15 +1456,11 @@
     .agent-card .agent-viz {
       position: relative;
       width: 100%;
-      /* Mobile: shorter aspect (4/5) so the card + body title + desc all
-         fit one screen. Desktop: portrait 5/6 with room for bubble zone +
-         pin zone fully expanded. */
-      aspect-ratio: 4 / 5;
+      /* 16:9 across all breakpoints — matches the source GIFs (1920×1080)
+         so object-fit: cover doesn't crop important content out of frame. */
+      aspect-ratio: 16 / 9;
       background-color: #050505;
       overflow: hidden;
-    }
-    @media (min-width: 768px) {
-      .agent-card .agent-viz { aspect-ratio: 5 / 6; }
     }
     /* Halftone background + vignette removed (2026-05-07 pivot): the
        chat bubble + action scenes need clean black so bubbles read as
