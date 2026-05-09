@@ -75,6 +75,10 @@ export type Board = {
 export type ProxyInput = {
   board: Board
   hermes_version: string
+  /** Phase 5-3.c: optional bearer token from Authorization header.
+   *  Validated against board.customer_id via verifyToken dep when
+   *  present. Backward-compat: handlers without verifyToken ignore. */
+  bearer_token?: string | null
 }
 
 // ─── Result envelope ───────────────────────────────────────────────────
@@ -87,7 +91,7 @@ export type ProxyOk = {
 
 export type ProxyErr = {
   ok: false
-  status: 400 | 404 | 500
+  status: 400 | 401 | 404 | 500
   error: string
   detail?: string
 }
@@ -104,6 +108,16 @@ export type BoardMirrorWriter = (row: {
 }) =>
   | Promise<{ ok: true; board_id: string; task_count: number }>
   | Promise<{ ok: false; error: string }>
+
+/** Phase 5-3.c: optional HMAC token verifier. When the Edge Function
+ *  has HERMES_INSTANCE_HMAC_KEY configured, it injects a verifier that
+ *  proves the caller knows the shared secret AND claims to be the
+ *  customer matching board.customer_id. When omitted, the handler
+ *  falls back to the customer_id existence check (backward compat). */
+export type CustomerTokenVerifier = (
+  claimed_customer_id: string,
+  bearer_token: string | null,
+) => Promise<boolean>
 
 // ─── Validation ─────────────────────────────────────────────────────────
 
@@ -122,6 +136,7 @@ export async function hermesKanbanProxyHandler(
   input: ProxyInput,
   customerExists: CustomerExistsCheck,
   writer: BoardMirrorWriter,
+  verifyToken?: CustomerTokenVerifier,
 ): Promise<ProxyResult> {
   // ── Shape ────────────────────────────────────────────────────────
   if (!input || typeof input !== 'object') {
@@ -209,6 +224,16 @@ export async function hermesKanbanProxyHandler(
           detail: taskId,
         }
       }
+    }
+  }
+
+  // ── Phase 5-3.c HMAC token check (when configured) ──────────────
+  // Runs BEFORE customer existence check so we never leak whether a
+  // customer_id maps to a real row to unauthenticated callers.
+  if (verifyToken) {
+    const ok = await verifyToken(board.customer_id, input.bearer_token ?? null)
+    if (!ok) {
+      return { ok: false, status: 401, error: 'unauthorized' }
     }
   }
 
