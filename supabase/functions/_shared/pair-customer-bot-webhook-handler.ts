@@ -23,6 +23,7 @@
 // runs deleteWebhook in Step 4. Until then, additional /pair messages
 // to a paired customer's bot get a "kamu sudah pair" no-op reply.
 
+import { constantTimeEqual } from './constant-time-equal.ts'
 import { isPairingCodeExpired } from './pairing-code.ts'
 import type { IOnboardingStore, ITelegramClient } from './types.ts'
 
@@ -67,8 +68,9 @@ export async function handlePairCustomerBotWebhook(
   }
 
   // ─── 2. Secret-token check ────────────────────────────────────────
+  // Sesi D P1-1: constant-time comparison to defeat timing side-channels.
   const sentToken = req.headers.get('x-telegram-bot-api-secret-token')
-  if (!sentToken || sentToken !== deps.webhookSecret) {
+  if (!sentToken || !constantTimeEqual(sentToken, deps.webhookSecret)) {
     // 401 with empty body — Telegram doesn't read the body.
     return new Response(null, { status: 401 })
   }

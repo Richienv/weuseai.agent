@@ -1,5 +1,6 @@
 // Pure handler for xendit-webhook. Web Platform APIs only.
 
+import { constantTimeEqual } from './constant-time-equal.ts'
 import {
   STARTER_CREDITS_USD_CENTS,
   type IInvoiceStore,
@@ -25,10 +26,12 @@ export async function handleXenditWebhook(
     return json({ error: 'method_not_allowed' }, 405)
   }
 
-  // Constant-time-ish compare. Xendit's "x-callback-token" is a shared secret,
+  // Constant-time compare. Xendit's "x-callback-token" is a shared secret,
   // not an HMAC — direct equality is what they document.
+  // Sesi D P1-1: comparator now lives in ./constant-time-equal.ts
+  // (single source of truth across all Edge Functions).
   const callbackToken = req.headers.get('x-callback-token') ?? ''
-  if (!safeEqual(callbackToken, deps.webhookToken)) {
+  if (!constantTimeEqual(callbackToken, deps.webhookToken)) {
     return json({ error: 'unauthorized' }, 401)
   }
 
@@ -141,12 +144,8 @@ async function handleFailed(
   return json({ ok: true, marked_failed: true })
 }
 
-function safeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false
-  let diff = 0
-  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i)
-  return diff === 0
-}
+// Sesi D P1-1: safeEqual deleted; callers use constantTimeEqual from
+// ./constant-time-equal.ts (single source of truth).
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
