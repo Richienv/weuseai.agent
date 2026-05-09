@@ -26,6 +26,9 @@ import { resolve as pathResolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { buildSetupScript, type Tier } from './setup-script.js'
+// Phase 5-3.c rollout: per-customer HMAC token computed at customer-creation
+// time. Reuses the same auth module as the verifier side (Edge Functions).
+import { signCustomerToken } from '../../../supabase/functions/_shared/hermes-instance-auth'
 
 export type { Tier }
 
@@ -173,7 +176,7 @@ export async function spinUpCustomer(
 
   // ── Build setup script (the customer's persona, skill, halo, install) ──
   const sshPassword = cryptoRandomPassword()
-  const setupScript = buildScriptFor(opts, openRouterKey)
+  const setupScript = await buildScriptFor(opts, openRouterKey)
 
   // ── Create VM (NO cloud_init — we're going SSH route) ──
   log(`Creating VPS for tier=${opts.tier}...`)
@@ -323,11 +326,27 @@ const FLEET_SSH_PUBKEY = process.env.FLEET_SSH_PUBKEY ?? ''
 // (v0.13.0); operator can override via env.
 const HERMES_VERSION = process.env.HERMES_VERSION
 
-function buildScriptFor(opts: SpinUpOpts, openRouterKey: string): string {
+// Phase 5-3.c: shared HMAC secret. When set, computeHermesInstanceToken()
+// signs a per-customer token at provision time and threads it through
+// the VPS .env. When unset, no token written → Hermes-side falls back
+// to MVP customer_id existence check (handler-side gating preserves
+// backward compat).
+const HERMES_INSTANCE_HMAC_KEY = process.env.HERMES_INSTANCE_HMAC_KEY ?? ''
+
+async function computeHermesInstanceToken(
+  customerId: string,
+): Promise<string | undefined> {
+  if (!HERMES_INSTANCE_HMAC_KEY) return undefined
+  return await signCustomerToken(customerId, HERMES_INSTANCE_HMAC_KEY)
+}
+
+async function buildScriptFor(opts: SpinUpOpts, openRouterKey: string): Promise<string> {
   // Phase 2A: every tier uses the same script shape — single OpenRouter key
   // routed via OpenAI-compatible env vars. No more starter/proxy split.
   // Phase 2E-2: include bootstrap bundle + agentSlug for Hermes-native bundle.
   // Phase 2E-3: include fleet SSH pubkey + Hermes version pin.
+  // Phase 5-3.c: compute HMAC token if HERMES_INSTANCE_HMAC_KEY env set.
+  const hermesInstanceToken = await computeHermesInstanceToken(opts.customerId)
   return buildSetupScript({
     customerId: opts.customerId,
     tier: opts.tier,
@@ -338,6 +357,7 @@ function buildScriptFor(opts: SpinUpOpts, openRouterKey: string): string {
     bundleTarBase64: BOOTSTRAP_BUNDLE_BASE64,
     fleetSshPubkey: FLEET_SSH_PUBKEY || undefined,
     hermesVersion: HERMES_VERSION,
+    hermesInstanceToken,
   })
 }
 
