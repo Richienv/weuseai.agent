@@ -6,13 +6,15 @@
 **Coordination:** complementary to Sesi D (security/RLS/webhook hardening — see [docs/audits/2026-05-10-security-audit-sesi-d.md](../audits/2026-05-10-security-audit-sesi-d.md)) and Sesi A (builds approved recommendations after founder sign-off)
 **Repo state:** `origin/main` @ d22bacb (Phase 6 foundation + #37 health-check dashboard). 858 unit tests passing. First paying customer not yet onboarded.
 
+> **Founder constraints locked 2026-05-10** (after first scout pass): no counsel relationship → legal text v1.0 from boilerplate, BI primary, "pending counsel review" note in legal doc footers; no PT entity → personal-operator footer wording; PSE registration deferred to logged trigger; Phase 5-5b is poll-only v1; BI is controlling legal language with Jakarta jurisdiction + BANI arbitration. Detail in "Founder decisions locked" section below; deferred items in "Founder-decision triggers logged" section.
+
 ---
 
 ## Executive summary
 
 The product is technically ready. Phase 1–5 ship in production, security primitives are correct (Sesi D's findings are scoped fixes, not architectural rewrites), and the customer pipeline functions end-to-end in code. **The pre-launch gap is not engineering — it's the surface around the engineering.** Three clusters dominate:
 
-1. **Legal page surface is empty.** Footer "Privacy" and "Terms" links resolve to `#`. No standalone Privacy Policy, ToS, Refund Policy, Contact, or business-info disclosure exists. Indonesia's UU PDP (effective 2024 with sanctions live) and the absence of an enforceable contract on a paid Rp 999k/mo product are P0 legal exposure on customer 1. Same gap surfaces from Track 1 (page audit), Track 3 (readiness checklist), and would surface from any payment-processor compliance review.
+1. **Legal page surface is empty.** Footer "Privacy" and "Terms" links resolve to `#`. No standalone Privacy Policy, ToS, Refund Policy, Contact, or operator-info disclosure exists. Indonesia's UU PDP (effective 2024 with sanctions live) and the absence of an enforceable contract on a paid product (Studio = Rp 4.9jt setup + Rp 99k/mo hosting) are P0 legal exposure on customer 1. Same gap surfaces from Track 1 (page audit), Track 3 (readiness checklist), and would surface from any payment-processor compliance review.
 
 2. **Operational telemetry is invisible.** No public status page, no error monitoring (Sentry/PostHog), no alerting on Edge Function error rates, no first-customer rehearsal recorded. The system works in tests; nobody is watching it work in production. This is the second-most-likely cause of a silent first-customer failure.
 
@@ -22,11 +24,11 @@ The product is technically ready. Phase 1–5 ship in production, security primi
 
 | # | Gap | Why blocking | Owner | Effort |
 |---|---|---|---|---|
-| 1 | Privacy Policy + ToS + Refund Policy live at real URLs (not `#`), in Bahasa Indonesia (controlling) + EN (convenience) | UU PDP Art. 21 disclosure obligations are live with sanctions; no enforceable contract = chargeback + dispute risk on first paid invoice | Sesi A (legal-pack draft via Master Agent legal-dispatch + counsel verify) | M (3-5 days incl. counsel review) |
-| 2 | Footer with legal links + business info (PT name, NIB once obtained, support email, Kominfo PSE registration) on every page | All pages today have zero footer; legal pages invisible without it; ID buyers verify "is this a real company?" via footer | Sesi A | S (half day) |
-| 3 | First-customer end-to-end paid rehearsal (founder pays Rp 1k fixture invoice through full chain: landing → Xendit → provisioning → bot pair → first reply) — recorded + logged | No proof on prod that the full chain works for a fresh paying customer; webhook callback wiring (Phase 5-5b) deferred → polling-only mode unverified | Founder + Sesi A (smoke harness) | M (half day rehearsal + 1-day fix budget) |
+| 1 | Privacy Policy + ToS + Refund Policy live at real URLs (not `#`), in Bahasa Indonesia (controlling) + EN (convenience). v1.0 from boilerplate templates, "pending counsel review" footer note. | UU PDP Art. 21 disclosure obligations are live with sanctions; no enforceable contract = chargeback + dispute risk on first paid invoice | Sesi A (legal-pack draft via Master Agent legal-dispatch) | S-M (1-2 days; no counsel-blocker) |
+| 2 | Footer on every page with legal links + personal-operator wording: "Dioperasikan oleh Richie [surname], berbasis di Jakarta. Kontak: [support email]." (no PT yet — PT setup is a logged trigger) | All pages today have zero footer; legal pages invisible without it; buyers need a clear operator + contact path | Sesi A | S (half day) |
+| 3 | First-customer end-to-end paid rehearsal (founder pays Rp 1k fixture invoice through full chain: landing → Xendit → provisioning → bot pair → first reply) — recorded + logged. v1 ships poll-only mode for Phase 5-5b integrations (founder-locked 2026-05-10); rehearsal validates poll worker. | No proof on prod that the full chain works for a fresh paying customer; poll-mode behavior must be validated end-to-end | Founder + Sesi A (smoke harness) | M (half day rehearsal + 1-day fix budget) |
 | 4 | Error monitoring + alerting wired (PostHog or Sentry on Edge Functions + frontend; Telegram alert on error-rate spike) | Silent failures are invisible today; first customer's first failure must page someone, not vanish | Sesi A | S-M (half day if PostHog; 1 day if Sentry+integration) |
-| 5 | Resend transactional email + Crisp free-tier landing chat | Receipts, password reset, provisioning emails are non-negotiable for Studio tier; pre-sales chat is table stakes for B2B trust on a Rp 999k/mo product | Sesi A | S (1 day combined) |
+| 5 | Resend transactional email + Crisp free-tier landing chat | Receipts, password reset, provisioning emails are non-negotiable for Studio tier (Rp 4.9jt setup + Rp 99k/mo); pre-sales chat is table stakes for B2B trust | Sesi A | S (1 day combined) |
 
 Everything else is P1 or later. Detail follows.
 
@@ -45,7 +47,7 @@ The live site (https://weuseai-agent.vercel.app/) ships **5 HTML pages**: [index
 | Page | Status | Why needed | Content outline | Link from | Priority |
 |---|---|---|---|---|---|
 | Privacy Policy / Kebijakan Privasi | missing | UU PDP Art. 21 mandates controller identity, legal basis, purpose; Art. 5 grants subject rights that must be discoverable | Data categories (name, email, WA, Telegram ID, agent prompts); legal basis (contract + consent); retention; sub-processors (Supabase SG, Vercel, Telegram Bot API, Xendit, OpenAI/Anthropic/DeepSeek); cross-border transfer disclosure; subject rights + how to exercise; DPO contact; UU PDP citation | footer (all pages), checkout consent, onboarding step 1 | P0 |
-| Terms of Service / Syarat dan Ketentuan | missing | No enforceable contract with paying users; required to bind users to AUP, payment terms, IP, liability cap | Service description (Studio Rp 999k/mo); payment terms (Xendit); auto-pause after 30d inactivity; user IP ownership of outputs; liability cap; governing law (Indonesia); arbitration (BANI or PN Jakarta); suspension grounds | footer, checkout pre-pay checkbox, header | P0 |
+| Terms of Service / Syarat dan Ketentuan | missing | No enforceable contract with paying users; required to bind users to AUP, payment terms, IP, liability cap | Service description (Starter Rp 299k / Pro Rp 1.2jt / Studio Rp 4.9jt setup + Rp 99k/mo hosting + optional Rp 49k Always-On); payment terms (Xendit); auto-pause after 30d inactivity; user IP ownership of outputs; liability cap; governing law (Indonesia, Jakarta jurisdiction); arbitration via BANI; **BI version controls per founder lock 2026-05-10**; suspension grounds | footer, checkout pre-pay checkbox, header | P0 |
 | Refund Policy / Kebijakan Pengembalian Dana | missing | Currently buried in 1 FAQ answer; ID buyers + Xendit dispute process expect a standalone page | Setup fee non-refundable rationale; 14-day technical-issue guarantee scope; hosting cancel-any-time clause; how to request (email + WA); processing time; processor fee deduction note | footer, checkout pre-pay checkbox, FAQ link | P0 |
 | Acceptable Use Policy / AUP | missing | Agent can be misused (spam, scraping, illegal automation); AUP gives grounds to suspend without refund | Prohibited: spam, illegal content, scraping ToS-protected sites, impersonation, fraud, automated harassment via WA/Telegram, CSAM, financial advice violating OJK rules | linked from ToS, footer | P1 |
 | Cookie Policy / Kebijakan Cookie | missing | If analytics/Vercel cookies are set, UU PDP consent applies | Cookie categories (essential, analytics if any), opt-out mechanism, third-party cookies disclosed | footer, cookie banner | P1 |
@@ -64,7 +66,7 @@ The live site (https://weuseai-agent.vercel.app/) ships **5 HTML pages**: [index
 
 | Page | Status | Why needed | Content outline | Link from | Priority |
 |---|---|---|---|---|---|
-| About / Tentang Kami | missing | First-paying enterprise buyers verify "is this a real company?"; required for PSE registration narrative | Founder bio, mission, location (city only is fine), legal entity name (PT ___), founding year, team size, why-we-built-this | footer, header | P1 |
+| About / Tentang Kami | missing | First-paying buyers verify "is this a real operator?" before paying setup fee | Founder bio (Richie, Hangzhou + Jakarta), mission, location (Jakarta), **operator wording** (no PT yet — "Dioperasikan oleh Richie [surname], berbasis di Jakarta"), founding year, why-we-built-this. Update to PT name when entity registered. | footer, header | P1 |
 | Security / Keamanan | missing | Studio tier touches business workflows — buyers need security posture even pre-SOC 2 | Encryption at rest (Supabase) + in transit (TLS); access control (RLS, admin auth-gated observability); secrets management (Vercel env, no plaintext); incident response plan; subprocessors; "SOC 2 / ISO 27001 on roadmap"; vulnerability disclosure email | footer | P1 |
 | Responsible Disclosure / Lapor Bug | missing | Industry-standard for any SaaS handling customer data; gives security researchers a sanctioned channel | Scope, in/out-of-scope assets, no-bounty-yet but recognition, contact email + PGP key, safe-harbor language, response SLA | linked from /security, footer | P2 |
 | Sub-processor List | missing (UU PDP-relevant) | UU PDP cross-border transfer disclosure cleanest as standalone list | Table: Supabase (Singapore), Vercel (global), Telegram (various), Xendit (ID), OpenAI/Anthropic/DeepSeek (US/CN), purpose, data category, transfer mechanism | linked from Privacy Policy | P1 |
@@ -73,7 +75,7 @@ The live site (https://weuseai-agent.vercel.app/) ships **5 HTML pages**: [index
 
 | Page | Status | Why needed | Content outline | Link from | Priority |
 |---|---|---|---|---|---|
-| Pricing (standalone) | partial — `#pricing` anchor only | Studio Rp 999k/mo not on standalone page; no tier comparison; SEO loss | Tier table (Starter / Pro / Studio), feature matrix, FAQ on billing, money-back blurb, CTA | header (replace `#pricing`), footer | P1 |
+| Pricing (standalone) | partial — `#pricing` anchor only | Tiers (Starter Rp 299k / Pro Rp 1.2jt / Studio Rp 4.9jt setup + Rp 99k/mo hosting + optional Rp 49k Always-On) buried in landing anchor; no tier comparison; SEO loss | Tier table (Starter / Pro / Studio), setup vs hosting vs Always-On split, feature matrix, FAQ on billing, money-back blurb, CTA | header (replace `#pricing`), footer | P1 |
 | Case Studies / Studi Kasus | missing | Pre-launch placeholder OK but framework needed | 3–5 templated slots ("coming soon" or pilot results); per-persona ROI estimates from use-cases.html | header, footer, use-cases.html | P2 |
 | Customer Logos | missing | Social proof; can use launch-partner placeholder or "design partner" badges | Logo wall (5–8 slots, anonymized OK as silhouettes pre-launch) | landing hero, pricing | P2 |
 | Use Case Landing Pages (per persona) | partial — single use-cases.html for all 8 | Each persona deserves its own URL for SEO + ad targeting | Split into `/use-cases/insurance-agent`, `/use-cases/realtor`, etc.; persona-specific CTA each | use-cases index, ads | P2 |
@@ -90,13 +92,15 @@ The live site (https://weuseai-agent.vercel.app/) ships **5 HTML pages**: [index
 
 | Page | Status | Why needed | Content outline | Link from | Priority |
 |---|---|---|---|---|---|
-| Business Info Disclosure (footer block) | missing | Best practice for ID buyers; required if registered as PSE | PT legal name, NIB, NPWP, registered address, Kominfo PSE registration number once obtained | footer (every page) | P0 |
-| PSE Registration Statement | missing | Kominfo requires Private PSE registration for SaaS serving Indonesian users; non-registration risks platform blocking | "PSE Terdaftar No. ___" badge once registered; compliance statement; "registration in progress" note acceptable but flag the risk | footer | P0 (registration itself) / P1 (page) |
+| Operator Disclosure (footer block) | missing | Best practice for ID buyers; required ID-style operator disclosure even pre-PT | **Founder-locked 2026-05-10**: personal-operator wording — "Dioperasikan oleh Richie [surname], berbasis di Jakarta. Kontak: [support email]." Upgrade to PT legal name + NIB + NPWP when PT registered (logged trigger: first concierge customer signs OR Rp 50jt cumulative revenue) | footer (every page) | P0 |
+| PSE Registration Statement | missing — registration deferred per founder lock | Kominfo PSE-Lingkup-Privat required for SaaS serving Indonesian users; non-registration risks platform blocking | **Founder-locked 2026-05-10**: PSE registration deferred to logged trigger (1000 paid users OR Rp 100jt cumulative revenue, after PT exists). Regulatory exposure carried knowingly during MVP. Omit PSE badge from footer; add when registered. | footer | logged trigger (post-revenue) |
 | Bahasa Indonesia variants of legal docs | missing | UU PDP Art. 6 + UU 24/2009 — contracts with Indonesian parties must be in Bahasa Indonesia (BI version controls) | Bilingual ToS + Privacy + Refund (BI primary, EN convenience translation); checkout consent in Bahasa | header lang toggle | P0 |
 | Customer Support Hours / Channels (standalone) | missing | Buyers expect WIB hours + WA + email; currently only WA in nav | Hours table (WIB), channels (WA, email, in-Telegram), response SLA per channel | Contact page, footer | P1 |
 | Pajak / PPN 11% Note | missing | If PT collects PPN, must disclose on invoice + checkout; if not yet a PKP, note "harga belum termasuk PPN" | Note on pricing page + checkout: PPN status, NPWP on invoice | pricing, checkout | P1 |
 
-### UU PDP compliance specifics (verify with counsel before publishing)
+### UU PDP compliance specifics
+
+> **Founder-locked 2026-05-10**: legal text ships as v1.0 from boilerplate templates, BI primary, with "pending counsel review" footer note. Counsel review becomes a post-revenue trigger (no specific threshold yet), not a pre-launch blocker. Use the article list below to scope what the v1.0 template must cover.
 
 Indonesia's **Law No. 27/2022 (UU PDP)** is fully effective with sanctions live as of late 2024. Mandatory disclosures for an Indonesian SaaS Privacy Policy:
 
@@ -109,7 +113,7 @@ Indonesia's **Law No. 27/2022 (UU PDP)** is fully effective with sanctions live 
 - **Art. 53** — DPO required if processing involves large-scale data / sensitive data / systematic monitoring; designate one and publish contact
 - **UU 24/2009 (Indonesian language law)** — legal docs binding Indonesian parties must exist in Bahasa Indonesia; the BI version controls
 
-Separately, **Kominfo PSE Private registration** is mandatory for SaaS serving Indonesian users; non-registration risks platform blocking. The resulting registration number belongs in the footer once obtained.
+Separately, **Kominfo PSE-Lingkup-Privat registration** is mandatory for SaaS serving Indonesian users; non-registration risks platform blocking. **Founder-locked 2026-05-10**: PSE registration is deferred to a logged trigger (1000 paid users OR Rp 100jt cumulative revenue, after PT exists). Regulatory exposure is carried knowingly during MVP. Registration number is added to footer when obtained.
 
 ---
 
@@ -193,7 +197,7 @@ Separately, **Kominfo PSE Private registration** is mandatory for SaaS serving I
 |---|---|---|---|
 | Landing renders on prod | ✅ | live verified via WebFetch | none |
 | Checkout → Xendit invoice | ✅ | [checkout.html:778](../../checkout.html) POSTs to `create-invoice` Edge Function | none |
-| Payment → provisioning | ⚠️ | [welcome.html:383-394](../../welcome.html) polls `subscriptions.status`. Phase 5-5b webhook callback wiring deferred per active dev state | Wire callbacks before launch OR formally accept poll-only mode + monitor |
+| Payment → provisioning | ⏸ poll-only formally accepted | [welcome.html:383-394](../../welcome.html) polls `subscriptions.status`. **Founder-locked 2026-05-10**: poll-only mode for v1 (single poll worker, 5–15 min cadence per integration). Webhooks revisit at customer workflow needing < 1 min freshness. | Implement single poll worker (Sesi A buildlist #10) |
 | Onboarding form (SOUL.md) | ✅ | [onboarding.html](../../onboarding.html) gated, multi-step | none |
 | Bot pairing | ⚠️ | `pair-customer-bot-webhook` Edge Function exists; pairing UI in onboarding.html | Founder-supervised dry run on prod required |
 | First chat / first output | ❌ | No verified end-to-end trace from "fresh paying customer → bot replies first message" on prod | Run paid fixture E2E rehearsal before first customer |
@@ -315,7 +319,7 @@ Separately, **Kominfo PSE Private registration** is mandatory for SaaS serving I
 2. **Terms of Service missing** — same `#` placeholders. Risk of disputes on refund/cancellation. → Write minimum ToS, add `/terms.html`.
 3. **Checkout has no ToS-acceptance checkbox** — payment processors and Indonesian e-commerce regs expect it. → Add required checkbox.
 4. **End-to-end "first paying customer" rehearsal not run** — no proof the full chain (Xendit → provision → bundle pull → bot pair → first reply) works on prod. → Founder runs paid fixture invoice before launch.
-5. **Webhook callback wiring not live (Phase 5-5b)** — provisioning is poll-only. → Ship wiring or formally accept poll-only mode for v1 + monitor.
+5. **Phase 5-5b poll worker not yet implemented** — founder-locked 2026-05-10 to poll-only for v1; need single poll worker with 5–15 min cadence per integration + monitoring on stuck-in-pending durations. Webhook wiring deferred to "customer workflow needs < 1 min freshness" trigger. → Implement poll worker.
 6. **No error monitoring / alerting** — silent failures invisible. → PostHog (or Sentry) + Telegram alert on Edge Function error rate.
 7. **No Supabase backup verification or restore drill** — no proof recovery works. → Verify Supabase auto-backups enabled, run one restore drill.
 8. **No public sitemap.xml / robots.txt** — index/checkout/welcome/onboarding indexable accidentally; SEO blocker. → Add static files.
@@ -389,25 +393,29 @@ Everything else is either commodity infrastructure (dashboard, public API, voice
 
 ### P0 — ship before first paying customer onboards
 
+> **All P0 items below are Sesi-A-executable** post founder decisions locked 2026-05-10 — no founder strategic input required. Three items embed minor non-strategic founder actions: items 6-8 may need a one-time third-party account signup (~5 min: Resend, Crisp; item 6's `support@` email requires DNS/MX setup if not already provisioned); item 9 needs a ~30 s Rp 1 k fixture purchase for the E2E rehearsal (or can use Xendit sandbox first, real payment as final smoke). Sesi A surfaces credential requests as it goes; founder treats them as unblock-prompt actions, not decisions.
+
 | # | Task | Source track | Effort | Notes |
 |---|---|---|---|---|
-| 1 | Write `/privacy.html` (Bahasa Indonesia primary + EN convenience), UU PDP-aware (Art. 21 disclosures, Art. 5 rights, Art. 53–56 cross-border) — counsel verification before publish | T1, T3 | M (3-5 days incl. counsel) | Use Master Agent legal-dispatch to draft; founder + counsel review |
-| 2 | Write `/terms.html` (Bahasa Indonesia primary + EN convenience) — service description, payment terms, IP, liability cap, governing law (Indonesia), arbitration | T1, T3 | M (3-5 days incl. counsel) | Same draft pipeline as #1 |
-| 3 | Write `/refund-policy.html` — extract from FAQ + 14-day garansi T&C; standalone page with how-to-request + processing time | T1, T3 | S (half day) | Existing inline content + processor fee deduction note |
-| 4 | Add footer with legal/support/business-info block to all 5 HTML pages — replace `href="#"` placeholders | T1, T3 | S (half day) | Footer = legal links + support email + WA + business info (PT name, NIB, NPWP, Kominfo PSE once obtained) |
+| 1 | Write `/privacy.html` v1.0 from boilerplate (Bahasa Indonesia primary controls per UU 24/2009 + EN reference translation), UU PDP-aware (Art. 21 disclosures, Art. 5 rights, Art. 53–56 cross-border, sub-processor list). Add "v1.0 — pending counsel review" footer note. | T1, T3 | S-M (1-2 days) | Use Master Agent legal-dispatch to draft from open templates (e.g., Iubenda BI templates, Mekari pattern). Counsel review = post-revenue trigger. |
+| 2 | Write `/terms.html` v1.0 from boilerplate (BI primary controls + EN reference) — service description (Starter Rp 299k / Pro Rp 1.2jt / Studio Rp 4.9jt setup + Rp 99k/mo hosting + optional Rp 49k Always-On), payment terms (Xendit), IP, liability cap, **governing law: Indonesia, jurisdiction: Jakarta, arbitration: BANI**. Add "v1.0 — pending counsel review" footer note. | T1, T3 | S-M (1-2 days) | Same draft pipeline as #1 |
+| 3 | Write `/refund-policy.html` v1.0 — extract from inline FAQ + 14-day garansi T&C; standalone page with how-to-request + processing time. BI primary, EN reference. | T1, T3 | S (half day) | Existing inline content + processor fee deduction note |
+| 4 | Add footer with legal/support/operator block to all 5 HTML pages — replace `href="#"` placeholders. **Operator wording (founder-locked 2026-05-10)**: "Dioperasikan oleh Richie [surname], berbasis di Jakarta. Kontak: [support email]." (no PT yet — PT is logged trigger). | T1, T3 | S (half day) | Footer = legal links + support email + WA + operator wording. Upgrade to PT name + NIB + NPWP when PT registered. |
 | 5 | Add ToS-acceptance required checkbox to checkout.html payment form | T3 | S (1 hour) | Plus separate unchecked marketing-email opt-in |
 | 6 | Add `support@weuseai.id` + `/contact.html` page (WA, email, hours, escalation) | T1, T3 | S (half day) | Currently only in `docs/troubleshooting.md`; needs live page |
 | 7 | Resend integration — typed wrapper for transactional email (receipts, password reset, provisioning success) | T2 | S (1 day) | $0 free tier; ~50 LOC |
 | 8 | Crisp free-tier chat widget on landing | T2 | S (2 hours) | Script tag + webhook |
-| 9 | Founder-funded paid-fixture E2E rehearsal (Rp 1k Xendit invoice → full chain → first bot reply) — recorded + logged | T3 | M (half day rehearsal + 1-day fix budget) | Proves the chain works on prod for a fresh customer |
-| 10 | Wire Phase 5-5b webhook callback OR formally accept poll-only mode for v1 with explicit monitoring | T3 | M (1 day if wire; half day if document poll-only + add monitoring) | Per active dev state, callback wiring is < 100 LOC |
-| 11 | Verify Supabase auto-backups enabled + screenshot + run one restore drill | T3 | S-M (half day) | Founder dashboard verification + Mgmt API test restore |
+| 9 | Paid-fixture E2E rehearsal harness — Sesi A builds smoke harness + recording + runbook so founder triggers a Rp 1 k Xendit invoice purchase (~30 s action) and full chain (Xendit → poll worker → provisioning → bot pair → first reply) is recorded + logged | T3 | M (Sesi A: 1 day harness + ~30 s founder action + 1-day fix budget) | Proves the poll-only chain works on prod for a fresh customer. Sesi A delivers the harness; founder action is a single de-minimis purchase, no strategic decision. |
+| 10 | **Implement single poll worker for Phase 5-5b integrations** — 5–15 min cadence per integration, monitoring on stuck-in-pending durations, exponential backoff on persistent failure. **Founder-locked 2026-05-10**: poll-only is the v1 path. Webhook wiring revisited only when customer workflow needs < 1 min freshness. | T3 | M (1-2 days) | Implementation cost saved vs. webhook wiring should fund Mekari/Jurnal/Tokopedia/Mayar coverage breadth (Track 4 #12, P2 buildlist) |
+| 11 | Verify Supabase auto-backups enabled + screenshot + run one restore drill | T3 | S-M (half day) | Mgmt API verification + test restore |
 | 12 | Add `sitemap.xml` + `robots.txt` (disallow `/onboarding.html`, `/welcome.html`, `/admin/`) | T3 | S (1 hour) | Static files |
 | 13 | Add `<link rel="canonical">` to all 5 HTML files | T3 | S (30 min) | One line per file |
 | 14 | Fix [checkout.html:2](../../checkout.html) to `lang="id"`; bump muted text from `text-white/30` to `text-white/65` for WCAG 4.5:1 | T3 | S (30 min) | Trivial |
 | 15 | Add `viewport-fit=cover` to [index.html:5](../../index.html) and checkout.html | T3 | S (15 min) | iPhone notch safety |
-| 16 | Bahasa Indonesia variants of all P0 legal docs — BI primary controls per UU 24/2009 | T1 | (covered in #1-3 effort) | Verify with counsel BI version is the controlling text |
-| 17 | Begin Kominfo PSE Private registration | T1 | M (founder-only ops) | Operational, not a page; non-registration risks platform blocking |
+
+**Removed from P0** (founder-locked 2026-05-10):
+- *(was #16)* "Verify with counsel BI is the controlling text" — counsel review is now post-revenue trigger; BI controlling is locked, no verification step
+- *(was #17)* "Begin Kominfo PSE Private registration" — PSE registration deferred to logged trigger (1000 paid users OR Rp 100jt cumulative revenue, after PT exists). MVP carries regulatory exposure knowingly.
 
 ### P1 — ship within first week post-launch
 
@@ -476,15 +484,30 @@ Everything else is either commodity infrastructure (dashboard, public API, voice
 
 ---
 
-## Open questions for founder
+## Founder decisions locked 2026-05-10
 
-These warrant a strategic decision before Sesi A builds the P0 buildlist.
+The 5 strategic questions Sesi B raised were answered the same day. All P0 items in the Sesi A buildlist above are now executable without further founder input.
 
-1. **Counsel relationship** — UU PDP-compliant Privacy + ToS + Refund Policy ideally pass an Indonesian lawyer's review before publication. Is there a counsel relationship to route P0 #1-3 drafts through? If not, the fallback is a public template + clear scope-limited language + visible "v1 — under active legal review" banner. (founder decision)
-2. **PT entity status** — Footer business-info disclosure (P0 #4) lists PT name + NIB + NPWP. If the legal entity isn't yet finalized, the footer can list "PT in formation" with a target date, but the gap should be explicit. (founder decision)
-3. **Kominfo PSE registration** — non-registration risks platform blocking for SaaS serving Indonesian users. P0 #17 starts the process; this is founder-only ops (likely OSS / online single submission portal). Status today? (founder action)
-4. **Webhook callback wiring vs. poll-only mode for v1** — Phase 5-5b is < 100 LOC per active dev state. P0 #10 asks: do we ship the wiring now (clean) or formally accept poll-only mode + monitor (faster but a known scar)? (founder call)
-5. **Bahasa Indonesia primary language status** — Per UU 24/2009 the BI version of contracts with Indonesian parties controls. This means BI is not just a convenience translation — it's the legal text. Confirm Sesi A authors BI first, EN second. (founder confirm)
+| # | Question | Lock | Implication for Sesi A |
+|---|---|---|---|
+| 1 | Counsel relationship for UU PDP-compliant legal text | **No counsel relationship.** Legal text ships as v1.0 from boilerplate templates with "pending counsel review" footer note. Counsel review becomes a post-revenue trigger, not a pre-launch blocker. | P0 #1-3 unblocked; legal-pack agent generates from open templates |
+| 2 | PT entity status for footer business-info | **No PT registered yet.** Footer uses personal-operator wording: "Dioperasikan oleh Richie [surname], berbasis di Jakarta. Kontak: [support email]." | P0 #4 unblocked with explicit wording |
+| 3 | Kominfo PSE registration status | **Not yet registered.** PSE deferred to logged trigger (1000 paid users OR Rp 100jt cumulative revenue, after PT exists). Regulatory exposure carried knowingly during MVP. Omit PSE badge from footer. | Removed from P0 — see logged trigger below |
+| 4 | Webhook callback wiring vs. poll-only mode for v1 (Phase 5-5b) | **Poll-only v1.** Single poll worker, 5–15 min cadence per integration. Webhooks revisit when customer workflow needs < 1 min freshness. Implementation cost saved redirected to ID B2B integration breadth (Mekari/Jurnal/Tokopedia/Mayar). | P0 #10 reframed as poll-worker implementation |
+| 5 | Bahasa Indonesia as primary controlling legal language | **Confirmed.** All legal docs BI primary, EN reference translation. Dispute clause: BI version controls. Jurisdiction: Jakarta. Arbitration: BANI. | P0 #1-3 author BI first; "previously P0 #16 (verify with counsel BI is controlling)" removed since locked |
+
+---
+
+## Founder-decision triggers logged
+
+These items are explicitly **deferred until trigger conditions are met**. Sesi A does not build them; the founder revisits them when triggers fire.
+
+| Item | Trigger to revisit | Why deferred | Risk carried meanwhile |
+|---|---|---|---|
+| **PT entity registration** (PT BUMS or PT PMA) | First concierge customer signs **OR** Rp 50jt cumulative revenue, whichever comes first | Operating as personal entity is acceptable for MVP; PT setup costs ~Rp 8-15jt + 2-4 weeks; not justified pre-revenue | Personal liability exposure on customer disputes; less professional appearance to enterprise buyers |
+| **Kominfo PSE-Lingkup-Privat registration** | 1000 paid users **OR** Rp 100jt cumulative revenue, after PT exists (whichever is later — PT must exist first to register) | Registration requires registered legal entity; pre-PT registration is impossible; pre-revenue platform-blocking risk is acceptable for MVP | Kominfo can technically block the platform for unregistered PSE; in practice enforcement is selective, but exposure is real |
+| **Counsel review of legal pack** (Privacy / ToS / Refund) | Post-revenue (no specific threshold; revisit at first revenue milestone OR if any legal dispute arises) | Counsel relationship costs ongoing retainer; v1.0 boilerplate is acceptable for MVP with "pending review" disclosure | Legal text may be unenforceable in edge cases; dispute handling may favor customer until counsel-validated v2.0 |
+| **Phase 5-5b webhook callback wiring** | Customer workflow needs < 1 min freshness (e.g., concierge customer requires real-time approval routing) | Poll-only v1 is sufficient for current 5-stage roadmap pacing; webhook wiring + replay protection costs 2-3 days dev + ongoing maintenance | Approval queue freshness is bounded by poll cadence (5-15 min); not visible to customer in current flow |
 
 ---
 
@@ -492,8 +515,8 @@ These warrant a strategic decision before Sesi A builds the P0 buildlist.
 
 - **Security** — Sesi D shipped a comprehensive audit at [docs/audits/2026-05-10-security-audit-sesi-d.md](../audits/2026-05-10-security-audit-sesi-d.md). 3 P0s + 6 P1s + 7 P2s + 4 P3s. Sesi A's actual buildlist must merge Sesi D's findings with this Sesi B buildlist; Sesi B explicitly defers all security items to Sesi D.
 - **Lighthouse measurement on prod** — Track 3 recommends running Lighthouse but did not run it (read-only research scope). Sesi A's first step on the perf items should be measurement.
-- **Counsel-verified legal text** — drafts can be machine-generated; controlling legal text is not in Sesi B's scope.
-- **PSE registration mechanics** — operational, founder-only.
+- **Counsel-verified legal text** — v1.0 drafts ship from boilerplate per founder lock; counsel review is a logged post-revenue trigger.
+- **PSE registration mechanics** — deferred per founder lock; logged trigger.
 - **Pricing experiments / packaging changes** — out of scope per mandate (forward-looking gap analysis, not pricing strategy).
 
 ---
