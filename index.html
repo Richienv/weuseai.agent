@@ -4732,58 +4732,101 @@
       );
     }
 
-    // Router: every slug now has a scene. CreatureSprite is no longer
-    // referenced from the carousel (kept in source for prefers-reduced-
-    // motion fallback / future use).
-    const AGENT_SCENES = {
-      pro:        AgentScenePro,
-      researcher: AgentSceneResearcher,
-      web:        AgentSceneWeb,
-      doc:        AgentSceneDoc,
-      slide:      AgentSceneSlide,
-      trade:      AgentSceneTrade,
-      project:    AgentSceneProject,
-      business:   AgentSceneBusiness,
-      video:      AgentSceneVideo,
-      social:     AgentSceneSocial,
-    };
-    function AgentVisual({ slug, index }) {
-      const Scene = AGENT_SCENES[slug];
-      if (Scene) return <Scene />;
-      // Fallback: legacy creature sprite (shouldn't trigger in production).
-      return <CreatureSprite slug={slug} index={index} />;
+    // ─────────────────────── AGENT VISUAL — RAW VIDEO PLAYBACK ───────────────────────
+    // 2026-05-09 pivot: founder hand-built 9 oxblood-on-black wireframe GIFs
+    // for the agents (one per persona). We just play the converted MP4s
+    // directly — no canvas pipeline, no WebGL filter, no per-frame
+    // processing. The visual treatment lives in the GIFs themselves.
+    //
+    // Source files: assets/<file>.mp4 (mp4-converted from founder's GIFs via
+    //   ffmpeg -i in.gif -movflags +faststart -pix_fmt yuv420p \
+    //     -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" -c:v libx264 -crf 28 \
+    //     -preset slow -an out.mp4)
+    // Per-file ~0.9-2.0 MB, total ~17 MB across 9 cards.
+    //
+    // Lazy-load via IntersectionObserver: video.preload starts as 'metadata'
+    // (just enough to know dimensions); when the card enters the viewport
+    // we set preload='auto' and call play(); when it leaves, we pause.
+    // Saves bandwidth on first paint (~1MB instead of 17MB) and CPU when
+    // off-screen.
+    //
+    // prefers-reduced-motion: video stays paused at first frame, no play().
+    function AgentVisual({ file }) {
+      const videoRef = useRef(null);
+      useEffect(() => {
+        const v = videoRef.current;
+        if (!v) return;
+        const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const io = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((e) => {
+              if (e.isIntersecting) {
+                if (reduced) {
+                  // Show first frame only.
+                  v.preload = 'auto';
+                  try { v.currentTime = 0; } catch (err) {}
+                  v.pause();
+                } else {
+                  v.preload = 'auto';
+                  const p = v.play();
+                  if (p && p.catch) p.catch(() => {});
+                }
+              } else {
+                v.pause();
+              }
+            });
+          },
+          { rootMargin: '200px' }
+        );
+        io.observe(v);
+        return () => io.disconnect();
+      }, [file]);
+      return (
+        <video
+          ref={videoRef}
+          src={`/assets/${file}.mp4`}
+          loop
+          muted
+          playsInline
+          preload="metadata"
+          aria-hidden="true"
+          className="absolute inset-0 w-full h-full"
+          style={{ objectFit: 'cover', display: 'block', background: '#000' }}
+        />
+      );
     }
 
     // ─────────────────────── AGENT PERSONA CAROUSEL ───────────────────────
-    // 10 agent specialist cards mirroring the agents listed in Studio tier.
-    // Sits inside #proses ("The wave") below the CTA, on the same red-halftone
-    // canvas. Auto-rotates every 4s, hover-pause, prefers-reduced-motion respect.
+    // 9 agent specialist cards. Sits inside #proses ("The wave") below the
+    // CTA, on the same red-halftone canvas. Auto-rotates every 13s, hover-
+    // pause, prefers-reduced-motion respect.
+    //
+    // 2026-05-09 lineup pivot: founder shipped 9 hand-built GIFs (one per
+    // persona) — these become the canonical 9 agents. Web Creator, Slide
+    // Master, Video Producer, Social Conductor (added in persona v2) are
+    // dropped from the carousel for now; bring them back if/when they get
+    // their own GIFs. App Builder, Email Manager, Calendar Agent take
+    // their slots on the carousel.
+    //
+    // `file` field maps to the founder's canonical mp4 name (assets/<file>.mp4).
     const AGENTS = [
-      { slug: 'pro',        name: 'The Pro',           desc: 'Briefing pagi, ingat percakapan lintas sesi, jadi pendamping yang ngerti gaya kamu.' },
-      { slug: 'researcher', name: 'Deep Researcher',   desc: 'Riset topik kompleks dari ratusan sumber, sintesis jadi laporan siap pakai.' },
-      { slug: 'web',        name: 'Web Creator',       desc: 'Bangun landing page atau multi-page site, deploy ke Vercel, sambungkan domain — dari brief sampai live URL.' },
-      { slug: 'doc',        name: 'Doc Expert',        desc: 'Laporan, proposal, email, plus skripsi-thesis academic mode — siap kirim dalam menit, sesuai gaya kamu.' },
-      { slug: 'slide',      name: 'Slide Master',      desc: 'Outline jadi deck 12 slide. Pilih narrative-arc atau pakai template (skripsi defense, weekly report, training).' },
-      { slug: 'trade',      name: 'Trade Pro',         desc: 'Briefing pasar pagi, alert saham + crypto, kurs IDR-BI, ringkas laporan keuangan emiten, plus Bitget read-only sync.' },
-      { slug: 'project',    name: 'Project Conductor', desc: 'Kanban orchestration: pecah task, route ke specialist agent, monitor progress lintas hari.' },
-      { slug: 'business',   name: 'Business Director', desc: 'Roadmap 5-tahap founder Indonesia (idea → setup → identity → build → sell). Surface PT/CV, OSS, BPJS, compliance reminder.' },
-      { slug: 'video',      name: 'Video Producer',    desc: 'Script TikTok/Reels, hashtag research, sound trend, caption optimizer, plus HyperFrames storyboard untuk render off-platform.' },
-      { slug: 'social',     name: 'Social Conductor',  desc: 'Content calendar lintas platform, draft post dengan voice locked, engagement log + reply draft. Kamu yang submit ke platform.' },
+      { slug: 'pro',        file: 'the-pro',           name: 'The Pro',           desc: 'Briefing pagi, ingat percakapan lintas sesi, jadi pendamping yang ngerti gaya kamu.' },
+      { slug: 'researcher', file: 'deep-researcher',   name: 'Deep Researcher',   desc: 'Riset topik kompleks dari ratusan sumber, sintesis jadi laporan siap pakai.' },
+      { slug: 'builder',    file: 'app-builder',       name: 'App Builder',       desc: 'Bikin web app dari ide ke deploy — tanpa nulis kode dari nol.' },
+      { slug: 'doc',        file: 'doc-expert',        name: 'Doc Expert',        desc: 'Laporan, proposal, email, plus skripsi-thesis academic mode — siap kirim dalam menit, sesuai gaya kamu.' },
+      { slug: 'email',      file: 'email-manager',     name: 'Email Manager',     desc: 'Sortir 300+ email per hari, draft balasan dengan tone kamu, auto-handle yang gak penting.' },
+      { slug: 'calendar',   file: 'calendar-agent',    name: 'Calendar Agent',    desc: 'Atur jadwal, hindari bentrok, kasih saran reschedule — diplomatis sesuai konteks kamu.' },
+      { slug: 'trade',      file: 'trade-pro',         name: 'Trade Pro',         desc: 'Briefing pasar pagi, alert saham + crypto, kurs IDR-BI, ringkas laporan keuangan emiten, plus Bitget read-only sync.' },
+      { slug: 'project',    file: 'project-conductor', name: 'Project Conductor', desc: 'Kanban orchestration: pecah task, route ke specialist agent, monitor progress lintas hari.' },
+      { slug: 'business',   file: 'business-director', name: 'Business Director', desc: 'Roadmap 5-tahap founder Indonesia (idea → setup → identity → build → sell). Surface PT/CV, OSS, BPJS, compliance reminder.' },
     ];
-
-    // Phase 1 placeholder: even-index cards use new-hero, odd use ascii-wave.
-    // Final asset: `/assets/agent-${slug}.mp4` (TODO above).
-    function agentVideoSrc(slug, index) {
-      // When per-agent assets ship, swap to: return `/assets/agent-${slug}.mp4`;
-      return index % 2 === 0 ? '/assets/new-hero.mp4' : '/assets/ascii-wave.mp4';
-    }
 
     function AgentCarousel() {
       const trackRef = useRef(null);
       const rootRef = useRef(null);
       // displayIndex is the position in the 12-slot track [sentinel_last,
-      // ...10 real, sentinel_first]. realIndex (the agent shown) is
-      // displayIndex - 1, clamped to 0-9. Sentinels at 0 and 11 are
+      // ...9 real, sentinel_first]. realIndex (the agent shown) is
+      // displayIndex - 1, clamped to 0-8. Sentinels at 0 and 10 are
       // identical to last/first real cards — visible only during the
       // wrap-around transition, then we silently snap back to the real
       // copy with no transition. Result: seamless infinite carousel.
@@ -4923,7 +4966,7 @@
             </button>
             <div className="agent-fade" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
               <div ref={trackRef} className="agent-track" aria-live="polite">
-                {/* 12-slot track: [last-card-sentinel, ...10 real cards,
+                {/* 11-slot track: [last-card-sentinel, ...9 real cards,
                     first-card-sentinel]. Sentinels are dupes of the
                     last/first real cards so the wrap-around slide has
                     something to animate to. After the slide completes,
@@ -4940,7 +4983,7 @@
                       data-active={isActive}
                     >
                       <div className="agent-viz">
-                        <AgentVisual key={`${a.slug}-${i}`} slug={a.slug} index={i} />
+                        <AgentVisual key={`${a.file}-${i}`} file={a.file} />
                       </div>
                       <div className="agent-body">
                         <div className="agent-name">{a.name}</div>
@@ -4968,7 +5011,7 @@
           </div>
 
           <p className="agent-tier-line">
-            Starter: 1 agent · Pro: 5 agent · Studio: 10 agent — pilih yang cocok di <a href="#pricing">harga →</a>
+            Starter: 1 agent · Pro: 5 agent · Studio: full set — pilih yang cocok di <a href="#pricing">harga →</a>
           </p>
         </div>
       );
