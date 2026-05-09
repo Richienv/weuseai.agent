@@ -20,6 +20,11 @@
 //                                        shared with pair-customer-bot-webhook
 //   EDGE_FN_BASE_URL                   — e.g.
 //     https://gtjgsligllbjcisiyrah.supabase.co/functions/v1
+//   BOT_TOKEN_ENC_KEY                  — base64 32+ char key, passed as
+//                                        enc_key param to encrypt_bot_token
+//                                        / decrypt_bot_token RPC helpers
+//                                        (founder-applied Option A
+//                                        signature, 2026-05-09 post-deploy)
 //   TELEGRAM_BOT_TOKEN                 — legacy @weuseaibot token (still
 //                                        loaded so TelegramBotClient
 //                                        constructor doesn't throw, even
@@ -41,11 +46,13 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const PAIR_WEBHOOK_SECRET = Deno.env.get('PAIR_WEBHOOK_SECRET')!
 const EDGE_FN_BASE_URL = Deno.env.get('EDGE_FN_BASE_URL')!
+const BOT_TOKEN_ENC_KEY = Deno.env.get('BOT_TOKEN_ENC_KEY')!
 const PLATFORM_BOT_TOKEN = Deno.env.get('TELEGRAM_BOT_TOKEN') ?? ''
 
 const db = createOnboardingStore({
   supabaseUrl: SUPABASE_URL,
   serviceRoleKey: SERVICE_KEY,
+  botTokenEncKey: BOT_TOKEN_ENC_KEY,
 })
 
 const telegram = new TelegramBotClient({ token: PLATFORM_BOT_TOKEN })

@@ -14,6 +14,13 @@
 //   PUBLIC_BASE_URL                    — https://weuseai-agent.vercel.app (default applied)
 //   LLM_MINTER_MODE                    — 'mock' | 'live' (default: 'mock')
 //   OPENROUTER_PROVISIONING_KEY        — required only when LLM_MINTER_MODE=live
+//   BOT_TOKEN_ENC_KEY                  — base64 32+ char key, passed as
+//                                        enc_key param to decrypt_bot_token
+//                                        when fetching the customer's bot
+//                                        token to pass to provisioning +
+//                                        call deleteWebhook on it.
+//                                        Founder-applied Option A signature
+//                                        (2026-05-09 post-deploy).
 
 import { handleCompleteOnboarding } from '../_shared/complete-onboarding-handler.ts'
 import { handleCors, withCors } from '../_shared/cors.ts'
@@ -38,10 +45,12 @@ const PROVISIONING_URL = Deno.env.get('PROVISIONING_URL')!
 const PROVISIONING_AUTH_TOKEN = Deno.env.get('PROVISIONING_AUTH_TOKEN')!
 const PUBLIC_BASE = Deno.env.get('PUBLIC_BASE_URL') ?? 'https://weuseai-agent.vercel.app'
 const MINTER_MODE = Deno.env.get('LLM_MINTER_MODE') ?? 'mock'
+const BOT_TOKEN_ENC_KEY = Deno.env.get('BOT_TOKEN_ENC_KEY')!
 
 const db = createOnboardingStore({
   supabaseUrl: SUPABASE_URL,
   serviceRoleKey: SERVICE_KEY,
+  botTokenEncKey: BOT_TOKEN_ENC_KEY,
 })
 
 const provisioning = new OnboardingProvisioningClient({

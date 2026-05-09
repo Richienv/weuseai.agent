@@ -19,11 +19,31 @@ import type {
 export function createOnboardingStore(opts: {
   supabaseUrl: string
   serviceRoleKey: string
+  /** Pair-flow Option A (post-deploy refactor 2026-05-09): the
+   *  founder-applied helper functions take the encryption key as an RPC
+   *  param rather than reading it from a Postgres GUC. The Edge Function
+   *  entry reads BOT_TOKEN_ENC_KEY from Supabase secrets and passes it
+   *  here. Optional in the constructor so callers that don't touch
+   *  bot-token paths (xendit-webhook, telegram-bot-webhook legacy) can
+   *  omit it; setBotTokenAndUsername / getDecryptedBotToken throw a
+   *  clear error if the key is needed but missing. */
+  botTokenEncKey?: string
 }): IOnboardingStore {
   const supabase: SupabaseClient = createClient(
     opts.supabaseUrl,
     opts.serviceRoleKey,
   )
+
+  const requireEncKey = (): string => {
+    if (!opts.botTokenEncKey) {
+      throw new Error(
+        'createOnboardingStore: botTokenEncKey not configured. Set the ' +
+          'Supabase secret BOT_TOKEN_ENC_KEY and pass it from the Edge ' +
+          'Function entry.',
+      )
+    }
+    return opts.botTokenEncKey
+  }
 
   return {
     async findCustomerById(id) {
@@ -117,18 +137,25 @@ export function createOnboardingStore(opts: {
     // ─── Per-customer bot (Pair-flow Option A, 2026-05-09) ───────────
     //
     // Both methods use Postgres RPC to call the SQL helpers
-    // encrypt_bot_token() / decrypt_bot_token() defined in migration
-    // 20260509200000_telegram_bot_per_customer.sql. The plaintext token
+    // encrypt_bot_token() / decrypt_bot_token(). The plaintext token
     // never lives in this codebase outside the validate-bot-token
     // request scope (encrypt) or the provisioning service spinUp
     // payload (decrypt).
+    //
+    // RPC signature (founder-applied Option A, 2026-05-09 post-deploy):
+    //   encrypt_bot_token(token text, enc_key text) RETURNS text
+    //   decrypt_bot_token(encrypted text, enc_key text) RETURNS text
+    // The encryption key is passed as an RPC param (not read from a
+    // Postgres GUC). Edge Function entry reads BOT_TOKEN_ENC_KEY from
+    // Supabase secrets and passes it via createOnboardingStore opts.
 
     async setBotTokenAndUsername(customer_id, bot_token_plaintext, bot_username) {
+      const encKey = requireEncKey()
       // Step 1: encrypt server-side via RPC. Encrypted text comes back
-      // base64-encoded (see migration's encode(...,'base64')).
+      // base64-encoded (per the helper's pgp_sym_encrypt → encode pipeline).
       const { data: ciphertext, error: encErr } = await supabase.rpc(
         'encrypt_bot_token',
-        { plaintext: bot_token_plaintext },
+        { token: bot_token_plaintext, enc_key: encKey },
       )
       if (encErr) {
         throw new Error(`encrypt_bot_token rpc failed: ${encErr.message}`)
@@ -148,6 +175,7 @@ export function createOnboardingStore(opts: {
     },
 
     async getDecryptedBotToken(customer_id) {
+      const encKey = requireEncKey()
       // Step 1: read the ciphertext via service-role (column-level
       // REVOKE blocks anon, but service-role bypasses RLS + grants).
       const { data, error: selErr } = await supabase
@@ -162,7 +190,7 @@ export function createOnboardingStore(opts: {
       // Step 2: decrypt via RPC.
       const { data: plaintext, error: decErr } = await supabase.rpc(
         'decrypt_bot_token',
-        { ciphertext },
+        { encrypted: ciphertext, enc_key: encKey },
       )
       if (decErr) {
         throw new Error(`decrypt_bot_token rpc failed: ${decErr.message}`)

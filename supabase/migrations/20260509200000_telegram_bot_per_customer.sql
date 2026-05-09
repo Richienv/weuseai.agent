@@ -1,16 +1,31 @@
 -- Pair-flow Option A: per-customer Telegram bot.
 --
 -- Spec: docs/bugs/2026-05-09-pair-flow-investigation.md (the RCA + fix-path
--- analysis) + the architecture diagram in the PR description.
+-- analysis) + the architecture diagram in PR #9.
+--
+-- ┌─────────────────────────────────────────────────────────────────────┐
+-- │ POST-DEPLOY REWRITE 2026-05-09                                      │
+-- │                                                                     │
+-- │ This file was rewritten in-place AFTER PR #9 merged to match what   │
+-- │ founder actually applied via Dashboard SQL Editor:                  │
+-- │                                                                     │
+-- │   * Helper functions take the encryption key as an RPC PARAMETER    │
+-- │     (token+enc_key, encrypted+enc_key) — NOT from a Postgres GUC.   │
+-- │   * No ALTER DATABASE step needed.                                  │
+-- │   * Edge Functions read BOT_TOKEN_ENC_KEY from Supabase secrets and │
+-- │     pass it on every RPC call.                                      │
+-- │                                                                     │
+-- │ Original v1 (GUC-based) was never applied to production. This v2    │
+-- │ matches what's actually live. Fresh-database setups should run this │
+-- │ file.                                                               │
+-- └─────────────────────────────────────────────────────────────────────┘
 --
 -- What ships in this migration:
 --   1. pgcrypto extension (encrypted-at-rest bot tokens).
 --   2. customers.telegram_bot_username (plaintext, for display + deeplink).
---   3. encrypt_bot_token() + decrypt_bot_token() helper functions.
---      Both read the encryption key from `current_setting('app.bot_token_enc_key')`
---      which must be set on the database BEFORE the migration is applied:
---          ALTER DATABASE postgres SET app.bot_token_enc_key = '<32+ char base64>';
---      Generate the key once: `openssl rand -base64 32`.
+--   3. encrypt_bot_token(token, enc_key) + decrypt_bot_token(encrypted, enc_key)
+--      helper functions. Edge Function reads BOT_TOKEN_ENC_KEY from Supabase
+--      secrets and passes via the enc_key param.
 --   4. REVOKE SELECT on customers.telegram_bot_token FROM anon
 --      (defense-in-depth — onboarding page already only selects safe columns,
 --       but column-level revoke prevents accidental SELECT * leaks).
@@ -30,53 +45,45 @@ create extension if not exists pgcrypto;
 alter table customers
   add column if not exists telegram_bot_username text;
 
--- Helper: encrypt a bot token using the GUC key.
+-- Helper: encrypt a bot token. Key passed as enc_key param (NOT from GUC).
 -- Returns base64-encoded ciphertext (text) so the existing
 -- customers.telegram_bot_token column (already text) can hold it without
 -- a type change.
-create or replace function encrypt_bot_token(plaintext text)
+create or replace function public.encrypt_bot_token(token text, enc_key text)
 returns text
 language plpgsql
 security definer
 as $$
-declare
-  key text;
 begin
-  if plaintext is null then
+  if token is null then
     return null;
   end if;
-  key := current_setting('app.bot_token_enc_key', true);
-  if key is null or length(key) < 32 then
+  if enc_key is null or length(enc_key) < 32 then
     raise exception
-      'app.bot_token_enc_key not configured. Run: ALTER DATABASE postgres SET app.bot_token_enc_key = ''<32+ char base64>'';';
+      'encrypt_bot_token: enc_key required (≥32 chars). Pass via Supabase secret BOT_TOKEN_ENC_KEY.';
   end if;
   -- pgp_sym_encrypt returns bytea; encode as base64 for text storage.
-  return encode(pgp_sym_encrypt(plaintext, key), 'base64');
+  return encode(pgp_sym_encrypt(token, enc_key), 'base64');
 end;
 $$;
 
--- Helper: decrypt. Used by the provisioning service when writing the
--- token to a customer's VPS .env file. Edge Functions use service-role
--- so they can call this; anon role cannot (the function is SECURITY
--- DEFINER but the column-level REVOKE below blocks the column read,
--- which is what anon would attempt).
-create or replace function decrypt_bot_token(ciphertext text)
+-- Helper: decrypt. Edge Functions (service-role) call this with the same
+-- enc_key. Anon cannot — the column-level REVOKE below blocks the
+-- ciphertext read, which is the prerequisite for decryption.
+create or replace function public.decrypt_bot_token(encrypted text, enc_key text)
 returns text
 language plpgsql
 security definer
 as $$
-declare
-  key text;
 begin
-  if ciphertext is null then
+  if encrypted is null then
     return null;
   end if;
-  key := current_setting('app.bot_token_enc_key', true);
-  if key is null or length(key) < 32 then
+  if enc_key is null or length(enc_key) < 32 then
     raise exception
-      'app.bot_token_enc_key not configured. Run: ALTER DATABASE postgres SET app.bot_token_enc_key = ''<32+ char base64>'';';
+      'decrypt_bot_token: enc_key required (≥32 chars). Pass via Supabase secret BOT_TOKEN_ENC_KEY.';
   end if;
-  return pgp_sym_decrypt(decode(ciphertext, 'base64'), key);
+  return pgp_sym_decrypt(decode(encrypted, 'base64'), enc_key);
 end;
 $$;
 
