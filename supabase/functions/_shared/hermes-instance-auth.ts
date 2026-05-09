@@ -32,6 +32,8 @@
 // Web Crypto is available in both Deno (Edge Functions) and Node 20+
 // (test runner via tsx). No npm dependency needed.
 
+import { constantTimeEqual } from './constant-time-equal.ts'
+
 const TOKEN_HEX_LEN = 64 // SHA-256 = 32 bytes = 64 hex chars
 
 /** Compute the per-customer HMAC token. Returns lowercase hex (64 chars).
@@ -115,13 +117,5 @@ function bytesToHex(bytes: Uint8Array): string {
   return hex
 }
 
-/** Constant-time string equality. Both inputs must already be
- *  length-validated by the caller. */
-function constantTimeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false
-  let diff = 0
-  for (let i = 0; i < a.length; i++) {
-    diff |= a.charCodeAt(i) ^ b.charCodeAt(i)
-  }
-  return diff === 0
-}
+// Sesi D P1-1: constantTimeEqual lives in ./constant-time-equal.ts
+// (single source of truth). Imported at top of file.
