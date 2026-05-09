@@ -283,6 +283,26 @@ export interface ITelegramClient {
     chatId: number | string,
     text: string,
   ): Promise<void>
+
+  /** Phase 5-5b: send text + inline keyboard markup as a specific bot.
+   *  Used by approval-queue post-create dispatch to surface Approve/Reject
+   *  buttons to the customer. `replyMarkup` is the Telegram Bot API
+   *  `reply_markup` payload (e.g. { inline_keyboard: [[...]] }). */
+  sendMessageWithButtonsAs(
+    botToken: string,
+    chatId: number | string,
+    text: string,
+    replyMarkup: { inline_keyboard: { text: string; callback_data: string }[][] },
+  ): Promise<void>
+
+  /** Phase 5-5b: answer a callback_query (acknowledges the button press
+   *  so Telegram dismisses the loading state). Optional `text` shows a
+   *  brief toast on the customer's screen. */
+  answerCallbackQuery(input: {
+    botToken: string
+    callbackQueryId: string
+    text?: string
+  }): Promise<void>
 }
 
 // ─── Provisioning client (extended) ───

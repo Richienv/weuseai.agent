@@ -51,6 +51,9 @@ class FakeTelegram implements ITelegramClient {
     }
   }
   async sendMessageAs() {}
+  // Phase 5-5b: no-op stubs.
+  async sendMessageWithButtonsAs() {}
+  async answerCallbackQuery() {}
 }
 
 const PUBLIC_BASE = 'https://weuseai-agent.vercel.app'

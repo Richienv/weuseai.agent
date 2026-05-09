@@ -43,6 +43,10 @@ class FakeTelegram implements ITelegramClient {
   ): Promise<void> {
     this.replies.push({ chatId, text })
   }
+  // Phase 5-5b: no-op stubs (this legacy /pair handler test doesn't
+  // exercise the new approval surfaces).
+  async sendMessageWithButtonsAs() {}
+  async answerCallbackQuery() {}
 }
 
 const SECRET = 'super-secret-token'

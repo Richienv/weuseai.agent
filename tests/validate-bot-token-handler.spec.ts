@@ -49,6 +49,9 @@ class FakeTelegram implements ITelegramClient {
     this.deleteWebhookCalls.push(token)
   }
   async sendMessageAs() {}
+  // Phase 5-5b: no-op stubs (this test doesn't exercise approval surfaces).
+  async sendMessageWithButtonsAs() {}
+  async answerCallbackQuery() {}
 }
 
 const SECRET = 'super-secret-pair-webhook-token-12345678'

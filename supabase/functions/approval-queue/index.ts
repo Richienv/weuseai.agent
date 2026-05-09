@@ -28,6 +28,8 @@ import {
   type ApprovalStatus,
   type HandlerInput,
 } from '../_shared/approval-queue-handler.ts'
+import { formatApprovalRequest } from '../_shared/approval-telegram-formatter.ts'
+import { TelegramBotClient } from '../_shared/telegram-client.ts'
 
 // @ts-ignore — Deno global available at runtime
 declare const Deno: {
@@ -37,10 +39,16 @@ declare const Deno: {
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+const BOT_TOKEN_ENC_KEY = Deno.env.get('BOT_TOKEN_ENC_KEY') ?? ''
 
 const supabase = createClient(SUPABASE_URL, SERVICE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
 })
+
+// Phase 5-5b: Telegram dispatch client. Constructed with empty platform
+// token because we only call sendMessageWithButtonsAs(botToken, ...) —
+// the platform token is unused in this Edge Function.
+const telegram = new TelegramBotClient({ token: '' })
 
 // ─── Injected dependencies ─────────────────────────────────────────
 
@@ -91,6 +99,59 @@ const mutator: ApprovalRowMutator = async (id, updates) => {
   return { ok: true, row: data as ApprovalRow }
 }
 
+/** Phase 5-5b: dispatch the formatted approval message + inline keyboard
+ *  to the customer's Telegram chat. Best-effort — caller wraps in try/catch
+ *  and never fails the create response on dispatch errors. */
+async function dispatchApprovalToTelegram(row: ApprovalRow): Promise<void> {
+  // 1. Look up the customer's bot token (encrypted) + chat id
+  const { data: customer, error } = await supabase
+    .from('customers')
+    .select('telegram_chat_id, telegram_bot_token')
+    .eq('id', row.customer_id)
+    .maybeSingle()
+  if (error || !customer) {
+    throw new Error(`customer lookup failed: ${error?.message ?? 'no row'}`)
+  }
+  const chatId = (customer as { telegram_chat_id: string | null }).telegram_chat_id
+  const encryptedToken = (customer as { telegram_bot_token: string | null }).telegram_bot_token
+  if (!chatId || !encryptedToken) {
+    // Customer hasn't completed pairing yet — silent skip; row stays in
+    // the queue so the customer can review via dashboard later.
+    return
+  }
+  if (!BOT_TOKEN_ENC_KEY) {
+    throw new Error('BOT_TOKEN_ENC_KEY env var unset')
+  }
+
+  // 2. Decrypt the bot token via the pgcrypto RPC helper (Block 2.5)
+  const { data: decrypted, error: rpcErr } = await supabase.rpc(
+    'decrypt_bot_token',
+    { encrypted: encryptedToken, enc_key: BOT_TOKEN_ENC_KEY },
+  )
+  if (rpcErr || typeof decrypted !== 'string' || !decrypted) {
+    throw new Error(`decrypt_bot_token failed: ${rpcErr?.message ?? 'no token'}`)
+  }
+  const botToken = decrypted
+
+  // 3. Format + dispatch
+  const formatted = formatApprovalRequest(
+    {
+      id: row.id,
+      action_kind: row.action_kind,
+      action_summary: row.action_summary,
+      proposed_by_agent: row.proposed_by_agent,
+      expires_at: row.expires_at,
+    },
+    new Date().toISOString(),
+  )
+  await telegram.sendMessageWithButtonsAs(
+    botToken,
+    chatId,
+    formatted.text,
+    formatted.reply_markup,
+  )
+}
+
 // ─── Deno entry ────────────────────────────────────────────────────
 
 Deno.serve(async (req) => {
@@ -137,6 +198,28 @@ Deno.serve(async (req) => {
     mutator,
     now: () => new Date().toISOString(),
   })
+
+  // ─── Phase 5-5b: post-create Telegram dispatch (best-effort) ──
+  // After a successful create, look up the customer's bot token + chat
+  // id, format the approval message, and send via inline-keyboard.
+  // Failures are logged but never fail the create — the approval row
+  // is the source of truth, the Telegram surface is convenience.
+  if (
+    result.ok &&
+    result.status === 201 &&
+    'row' in result.body
+  ) {
+    const row = result.body.row
+    try {
+      await dispatchApprovalToTelegram(row)
+    } catch (e) {
+      console.error('approval-queue: telegram dispatch failed', {
+        approval_id: row.id,
+        customer_id: row.customer_id,
+        error: e instanceof Error ? e.message : String(e),
+      })
+    }
+  }
 
   if (!result.ok) {
     return withCors(
