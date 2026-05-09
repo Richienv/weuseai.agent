@@ -3416,7 +3416,7 @@
               animate={{ filter: 'blur(0px)', opacity: 1, y: 0 }}
               transition={{ duration: 0.6, ease: EASE, delay: 0.95 }}
               className="mt-5 font-mono uppercase tracking-[0.18em] text-[10px] md:text-[11px] text-white/55">
-              Bayar setup sekali · Garansi 14 hari* · Cancel kapan aja
+              Bayar setup sekali · Cancel kapan aja
             </Mot.p>
 
             <Mot.div
@@ -3440,9 +3440,6 @@
                   Konsultasi gratis (15 menit)
                 </a>
               </div>
-              <a href="#snk-garansi" className="text-[10px] font-mono tracking-[0.10em] no-underline" style={{ color: '#E5322D' }}>
-                *S&K berlaku — lihat detail
-              </a>
             </Mot.div>
 
             <div className="mt-12 md:mt-auto pb-6 md:pb-12 pt-12 md:pt-20 w-full max-w-5xl mx-auto">
@@ -5173,8 +5170,8 @@
               <span className="live-dot" />
               <span>Agen kamu bekerja</span>
             </div>
-            <h2 className="db-headline">Satu super-agent. Growing skills. Create apa aja yang kamu mau.</h2>
-            <p className="db-sub">Agent pro-actively chat kamu — bukan kamu chat agent. Cukup say yes / no. Gak perlu jadi prompt expert.</p>
+            <h2 className="db-headline">Satu super-agent. Growing skills.<br className="hidden md:inline" /> Create Anything You Want.</h2>
+            <p className="db-sub">Agent pro-actively reach you out — bukan kamu yang daily chat. Automate Everything. Gak perlu pusing mikirin prompt.</p>
           </div>
 
           <div className="db-frame">
@@ -5357,7 +5354,7 @@
               </div>
               <BlurText
                 as="h2"
-                text="No need for trial and error. Ready to use, incorporate workflow kamu langsung."
+                text="No need for trial and error. Incorporate workflow kamu langsung."
                 className="mt-5 md:mt-6 text-3xl md:text-5xl lg:text-6xl font-heading text-white tracking-tight leading-[1.0] md:leading-[0.95] max-w-4xl"
                 style={{ letterSpacing: '-0.04em' }}
                 delay={70}
@@ -6240,7 +6237,7 @@
               </span>
             </div>
             <p className="mt-2 text-[10px] font-mono uppercase tracking-[0.12em] text-white/45">
-              Diskon launch · Garansi 14 hari · Cancel kapan aja
+              Diskon launch · Cancel kapan aja
             </p>
           </div>
 
@@ -7168,7 +7165,7 @@
               className="text-4xl md:text-6xl lg:text-7xl font-heading leading-[0.92] md:leading-[0.85] tracking-tight max-w-4xl"
               delay={90} />
             <p className="mt-6 md:mt-8 max-w-xl text-white/70 font-body font-light text-sm md:text-base px-2">
-              Lihat agen yang cocok dengan kebutuhan kamu. 5 menit setup, atau 14 hari garansi — kamu yang pilih.
+              Lihat agen yang cocok dengan kebutuhan kamu. 5 menit setup, langsung jalan.
             </p>
             <div className="mt-8 md:mt-10 flex items-center gap-3 md:gap-4 flex-wrap justify-center">
               <a href="checkout.html" className="bg-white text-black rounded-full px-5 md:px-6 py-3 text-sm font-medium flex items-center gap-2 no-underline">
@@ -7183,54 +7180,14 @@
               <a href="https://cal.com/weuseai.agent/15min" target="_blank" rel="noopener" className="text-white/75 hover:text-white underline-offset-2 hover:underline">Jadwalkan panggilan</a>
             </p>
 
-            {/* Garansi 14 hari T&C — anchored from the hero "*S&K berlaku" link */}
-            <div id="snk-garansi" className="mt-16 md:mt-24 max-w-2xl w-full text-left">
-              <div className="liquid-glass rounded-2xl p-6 md:p-8">
-                <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-white/45 mb-3">
-                  Syarat & Ketentuan
-                </div>
-                <h3 className="text-xl md:text-2xl font-heading text-white tracking-tight mb-4" style={{ letterSpacing: '-0.02em' }}>
-                  Garansi 14 hari uang kembali — syarat:
-                </h3>
-                <ul className="space-y-2.5 list-none">
-                  {[
-                    'Klaim dalam 14 hari pertama setelah setup selesai',
-                    'Belum pakai self-extension (belum bikin skill custom baru)',
-                    'Refund hanya untuk biaya setup, bukan hosting yang sudah berjalan',
-                    'Klaim via WhatsApp support, proses 3–5 hari kerja',
-                    'Berlaku 1× per akun',
-                  ].map((line, i) => (
-                    <li key={i} className="flex items-start gap-2.5 text-sm font-body font-light leading-relaxed text-white/80">
-                      <span aria-hidden="true" className="mt-[7px] block w-1 h-1 flex-shrink-0 rounded-full" style={{ background: '#E5322D' }} />
-                      <span>{line}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-
-            {/* WhatsApp support pill (Konsultasi/booking moved to hero). */}
-            <div className="mt-20 md:mt-32 w-full flex justify-center">
-              <a href="https://wa.me/6282154902561?text=Halo%20weuseai%2C%20saya%20mau%20tanya%20tentang%20agent" target="_blank" rel="noopener" className="liquid-glass rounded-2xl px-5 py-3 flex items-center gap-3 no-underline" style={{ borderColor: 'rgba(34, 197, 94, 0.30)' }}>
-                <span className="relative flex w-2 h-2 flex-shrink-0">
-                  <span className="absolute inline-flex w-full h-full rounded-full opacity-75" style={{ background: '#22c55e', animation: 'wseaiPulse 2s ease-in-out infinite' }} />
-                  <span className="relative inline-flex w-2 h-2 rounded-full" style={{ background: '#22c55e' }} />
-                </span>
-                <div className="text-left">
-                  <div className="text-white font-body font-medium text-[13px] md:text-sm leading-tight">WhatsApp support</div>
-                  <div className="text-white/55 font-body font-light text-[11px] md:text-xs mt-0.5 leading-tight">+62 821 5490 2561 · Sen-Sab 9-21 WIB</div>
-                </div>
-              </a>
-            </div>
-
-            <div className="mt-12 md:mt-16 pt-6 md:pt-8 border-t border-white/5 w-full flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0 text-[11px] text-white/30 font-body font-light">
+            <div className="mt-20 md:mt-28 pt-6 md:pt-8 border-t border-white/5 w-full flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0 text-[11px] text-white/30 font-body font-light">
               <span>© 2026 weuseai.agent</span>
               <div className="flex items-center gap-4 md:gap-5">
-                <a href="#" className="text-white/30 hover:text-white/55 transition-colors no-underline">privasi</a>
+                <a href="/privasi.html" className="text-white/30 hover:text-white/55 transition-colors no-underline">privasi</a>
                 <span className="text-white/15">·</span>
-                <a href="#" className="text-white/30 hover:text-white/55 transition-colors no-underline">syarat</a>
+                <a href="/syarat.html" className="text-white/30 hover:text-white/55 transition-colors no-underline">syarat</a>
                 <span className="text-white/15">·</span>
-                <a href="#" className="text-white/30 hover:text-white/55 transition-colors no-underline">kontak</a>
+                <a href="/kontak.html" className="text-white/30 hover:text-white/55 transition-colors no-underline">kontak</a>
               </div>
             </div>
           </div>

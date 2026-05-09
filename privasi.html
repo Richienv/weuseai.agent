@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Privasi — weuseai.agent</title>
+  <meta name="description" content="Kebijakan privasi weuseai.agent — data apa yang dikumpulkan, gimana disimpan, kapan dihapus.">
+  <meta name="theme-color" content="#0a0a0a">
+  <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <style>
+    :root { color-scheme: dark; }
+    html, body { background: #0a0a0a; color: #f5f5f5; }
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      font-weight: 300;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      margin: 0;
+      min-height: 100vh;
+    }
+    .heading-serif { font-family: 'Instrument Serif', 'Times New Roman', serif; font-weight: 400; letter-spacing: -0.02em; }
+    .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+    .container { max-width: 720px; margin: 0 auto; padding: 0 24px; }
+    a.brand-link {
+      color: #f5f5f5;
+      text-decoration: underline;
+      text-decoration-color: rgba(229, 50, 45, 0.45);
+      text-underline-offset: 3px;
+      transition: text-decoration-color 180ms ease;
+    }
+    a.brand-link:hover { text-decoration-color: #E5322D; }
+    header.site {
+      padding: 28px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    main { padding: 64px 0 96px; }
+    h1 { font-size: clamp(36px, 6vw, 56px); margin: 0 0 18px; }
+    h2 { font-size: clamp(20px, 3vw, 26px); margin: 48px 0 14px; }
+    p, li { font-size: 15px; color: rgba(245, 245, 245, 0.75); }
+    p + p { margin-top: 14px; }
+    ul { padding-left: 22px; margin: 14px 0; }
+    li + li { margin-top: 8px; }
+    .eyebrow {
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(245, 245, 245, 0.45);
+      margin-bottom: 14px;
+    }
+    .lead {
+      font-size: 17px;
+      color: rgba(245, 245, 245, 0.85);
+      max-width: 640px;
+    }
+    .updated {
+      font-size: 12px;
+      color: rgba(245, 245, 245, 0.4);
+      margin-top: 8px;
+    }
+    footer.site {
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      padding: 24px 0;
+      font-size: 11px;
+      color: rgba(245, 245, 245, 0.35);
+    }
+    footer.site .row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+    footer.site a {
+      color: rgba(245, 245, 245, 0.45);
+      text-decoration: none;
+      margin: 0 6px;
+    }
+    footer.site a:hover { color: rgba(245, 245, 245, 0.75); }
+  </style>
+</head>
+<body>
+  <header class="site">
+    <div class="container" style="display: flex; align-items: center; justify-content: space-between;">
+      <a href="/" style="color: #f5f5f5; text-decoration: none; font-size: 14px; letter-spacing: -0.01em;">
+        ← weuseai.agent
+      </a>
+      <span class="mono" style="font-size: 11px; color: rgba(245,245,245,0.4); text-transform: uppercase; letter-spacing: 0.18em;">privasi</span>
+    </div>
+  </header>
+
+  <main>
+    <div class="container">
+      <div class="eyebrow">Privasi</div>
+      <h1 class="heading-serif">Kebijakan Privasi</h1>
+      <p class="updated mono">Berlaku 9 Mei 2026</p>
+
+      <p class="lead" style="margin-top: 28px;">
+        Kami menghargai privasi kamu. Halaman ini ngerangkum data apa yang kami kumpulin, gimana disimpan, kapan dihapus, dan hak kamu sebagai pelanggan.
+      </p>
+
+      <h2 class="heading-serif">1. Data yang kami kumpulin</h2>
+      <ul>
+        <li><strong>Data akun:</strong> nama, email, nomor WhatsApp (buat support + invoice).</li>
+        <li><strong>Data pembayaran:</strong> kami pakai Xendit untuk QRIS / e-wallet — kami sendiri gak nyimpen detail kartu atau saldo wallet kamu, hanya konfirmasi sukses/gagal.</li>
+        <li><strong>Data agent:</strong> kredensial yang kamu kasih ke agent (Telegram bot token, LLM API key) disimpen di VPS kamu sendiri, ter-enkripsi di file <code>.env</code>. Kami gak akses tanpa permintaan eksplisit dari kamu.</li>
+        <li><strong>Log teknis:</strong> uptime, error pipeline, performance metric — buat troubleshooting + improvement. Anonim, gak ngandung isi pesan kamu.</li>
+      </ul>
+
+      <h2 class="heading-serif">2. Yang gak kami kumpulin</h2>
+      <ul>
+        <li>Isi percakapan kamu sama agent — itu antara kamu, agent kamu, dan LLM provider kamu.</li>
+        <li>File yang kamu upload ke agent — disimpen di storage VPS kamu, bukan di server kami.</li>
+        <li>Behavioral tracking lintas situs — gak ada Facebook Pixel, gak ada Google Analytics yang tracking lintas page (kalau kami pasang analytics, hanya self-hosted Plausible / Umami yang anonim).</li>
+      </ul>
+
+      <h2 class="heading-serif">3. Penyimpanan + retensi</h2>
+      <ul>
+        <li>Data akun + payment record disimpan di Supabase (region Singapura) selama akun aktif + 12 bulan setelah cancel (buat compliance audit).</li>
+        <li>VPS agent kamu hidup di IDCloudHost (region Jakarta). Data agent dihapus 30 hari setelah kamu cancel hosting.</li>
+        <li>Backup harian VPS dihapus 7 hari setelah pembuatannya (rolling window).</li>
+      </ul>
+
+      <h2 class="heading-serif">4. Berbagi data</h2>
+      <p>Kami gak jual data kamu ke pihak ketiga. Data hanya dibagi sama:</p>
+      <ul>
+        <li><strong>Xendit</strong> — buat process payment.</li>
+        <li><strong>IDCloudHost</strong> — buat host VPS agent kamu.</li>
+        <li><strong>Supabase</strong> — buat simpen account + transaction record.</li>
+        <li><strong>Pemerintah Indonesia</strong> — kalau diminta sesuai hukum yang berlaku (PERDIRJEN, putusan pengadilan).</li>
+      </ul>
+
+      <h2 class="heading-serif">5. Hak kamu</h2>
+      <ul>
+        <li><strong>Akses:</strong> minta export semua data kamu via email — kami kirim dalam 7 hari kerja.</li>
+        <li><strong>Koreksi:</strong> ubah data akun kapan aja dari dashboard. Untuk record pembayaran, kirim email.</li>
+        <li><strong>Penghapusan:</strong> minta hapus akun + semua data terkait. Kami proses dalam 14 hari (kecuali yang wajib disimpan secara hukum, e.g. invoice 5 tahun per UU PPN).</li>
+      </ul>
+
+      <h2 class="heading-serif">6. Cookies</h2>
+      <p>Landing page ini gak pakai cookies tracking. Dashboard pakai cookies functional aja (login session, preference). Kamu bisa hapus dari setting browser kapan aja — gak akan nge-break aplikasi, cuma kamu perlu login lagi.</p>
+
+      <h2 class="heading-serif">7. Perubahan kebijakan</h2>
+      <p>Kalau kami update kebijakan ini, perubahan material kami umumin via email 14 hari sebelum berlaku. Pakai layanan setelah update = setuju sama versi baru.</p>
+
+      <h2 class="heading-serif">8. Pertanyaan</h2>
+      <p>Tanya privasi atau request penghapusan data: <a class="brand-link" href="mailto:kidnovell.richie@gmail.com">kidnovell.richie@gmail.com</a> atau via <a class="brand-link" href="/kontak.html">halaman kontak</a>.</p>
+    </div>
+  </main>
+
+  <footer class="site">
+    <div class="container row">
+      <span>© 2026 weuseai.agent</span>
+      <div>
+        <a href="/privasi.html">privasi</a>·
+        <a href="/syarat.html">syarat</a>·
+        <a href="/kontak.html">kontak</a>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>
