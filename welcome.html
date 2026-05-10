@@ -42,6 +42,26 @@
     .serif { font-family: 'Instrument Serif', 'Times New Roman', serif; font-weight: 400; letter-spacing: -0.02em; }
     .mono { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace; }
 
+    /* ─── State gating (welcome-guard fix, 2026-05-10) ───
+       Sections marked .verified-only render only when payment is confirmed
+       (states B, C, C2, D, F). Sections marked .unverified-only render only
+       in pre-verification or invalid-cid states (A, E, G). The state machine
+       in renderState() drives `body[data-state]`; CSS toggles visibility.
+
+       Default (no data-state set yet) = treat as unverified → guard-friendly,
+       no premature "Pembayaran berhasil" announcement before we've checked. */
+    .verified-only, .unverified-only { display: none; }
+    body[data-state="B"]  .verified-only,
+    body[data-state="C"]  .verified-only,
+    body[data-state="C2"] .verified-only,
+    body[data-state="D"]  .verified-only,
+    body[data-state="F"]  .verified-only { display: revert; }
+    body:not([data-state]) .unverified-only,
+    body[data-state=""]   .unverified-only,
+    body[data-state="A"]  .unverified-only,
+    body[data-state="E"]  .unverified-only,
+    body[data-state="G"]  .unverified-only { display: revert; }
+
     /* Layout primitives ------------------------------------------------ */
     .container { max-width: 720px; margin: 0 auto; padding: 0 24px; }
 
@@ -269,8 +289,8 @@
 
   <main>
     <div class="container">
-      <!-- ─── HERO ─── -->
-      <section style="text-align: center;">
+      <!-- ─── HERO (verified) — only when payment confirmed ─── -->
+      <section class="verified-only" style="text-align: center;">
         <span class="pill">
           <span class="dot" aria-hidden="true"></span>
           Pembayaran berhasil
@@ -281,6 +301,21 @@
         </h1>
         <p class="lead">
           Dalam 5–7 menit, satu pesan akan masuk ke Telegram kamu — tanda agent siap bekerja.
+        </p>
+      </section>
+
+      <!-- ─── HERO (unverified) — neutral framing while we check ─── -->
+      <section class="unverified-only" style="text-align: center;">
+        <span class="pill">
+          <span class="dot" aria-hidden="true"></span>
+          Konfirmasi pembayaran
+        </span>
+        <h1 class="serif h-hero">
+          Sebentar.<br />
+          Sedang memeriksa pembayaran kamu.
+        </h1>
+        <p class="lead">
+          Kalau kamu baru saja bayar, status akan muncul di bawah dalam beberapa detik.
         </p>
       </section>
 
@@ -295,8 +330,8 @@
         <!-- Filled by JS: see renderState() -->
       </section>
 
-      <!-- ─── STEPS ─── -->
-      <section style="margin-top: 48px;">
+      <!-- ─── STEPS — only when payment confirmed ─── -->
+      <section class="verified-only" style="margin-top: 48px;">
         <div class="eyebrow" style="margin-bottom: 18px;">Yang akan terjadi</div>
         <ol class="step-list">
           <li>
@@ -373,6 +408,13 @@
     let currentState = null;
     let pollTimer = null;
     let startedAt = Date.now();
+    // welcome-guard fix (2026-05-10): if cid is present but pollOnce
+    // returns null (no subscription row found), give the Xendit webhook
+    // ≤NULL_GRACE_MS to write the row before flipping to INVALID_CID.
+    // Without this, a legit paying customer who lands on welcome.html
+    // before the webhook fires sees the "salah link" guard for one cycle
+    // (10s) which is alarming enough to bounce.
+    const NULL_GRACE_MS = 30_000;
 
     // Pre-fill WhatsApp message with cid when present
     (function injectCidIntoWhatsApp() {
@@ -396,6 +438,13 @@
 
     function renderState(state, opts = {}) {
       currentState = state;
+      // welcome-guard fix (2026-05-10): drives the .verified-only /
+      // .unverified-only CSS gate so the success HERO + STEPS only show
+      // for verified states (B/C/C2/D/F), and the neutral HERO shows
+      // pre-verification (A) + invalid-cid (E) + network-error (G).
+      // Prevents the bug where the success messaging and the "salah link"
+      // guard rendered simultaneously.
+      document.body.dataset.state = state;
       let html = '';
 
       switch (state) {
@@ -528,17 +577,11 @@
           `;
           break;
 
-        case 'G': // POLL_ERROR — silent retry, render same B layout with note
+        case 'G': // POLL_ERROR — neutral retry, do NOT imply payment verified
           html = `
-            <div class="fade-in">
-              <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
-                <span class="pulse-dot" aria-hidden="true"></span>
-                <span style="font-size:14px; color:rgba(245,245,245,0.85);">VPS sedang disiapkan...</span>
-              </div>
-              <div class="progress-track" role="progressbar" aria-label="Progress provisioning agent">
-                <div class="progress-fill" style="width: 35%;"></div>
-              </div>
-              <div style="margin-top:14px; font-size:12px; font-style:italic; color:rgba(245,245,245,0.4);">Memeriksa koneksi...</div>
+            <div class="fade-in" style="display:flex; align-items:center; gap:12px; color:rgba(245,245,245,0.85);">
+              <span class="pulse-dot" aria-hidden="true"></span>
+              <span style="font-size:14px;">Koneksi sedang lambat. Mencoba lagi...</span>
             </div>
           `;
           break;
@@ -611,7 +654,17 @@
             renderState('B');
           }
         } else if (status == null) {
-          renderState('E');
+          // Subscription row not yet visible. Two reasons:
+          //   (1) Xendit webhook hasn't fired/landed → race, will resolve
+          //   (2) cid is fabricated/stale or X-CID mismatch → never resolves
+          // Hold in pre-verification (state A) for the grace window so
+          // legit (1) cases don't see the guard. After grace expires,
+          // flip to E so (2) cases get a clear message.
+          if (Date.now() - startedAt < NULL_GRACE_MS) {
+            renderState('A');
+          } else {
+            renderState('E');
+          }
         } else {
           // Unknown status — treat as still pending
           renderState('B');
