@@ -22,26 +22,36 @@ test('step 1 form has editable Name input (no readonly attribute)', () => {
   )
 })
 
-test('step 1 form Email input is readonly + prefilled from checkout (Track 4 post-pair polish 2026-05-10)', () => {
-  // Pre-Track-4 the field was editable so customers could correct an
-  // email typo from checkout. Founder feedback from fresh-customer test:
-  // duplicate ask felt like a bureaucratic form, and any divergence
-  // between the two values silently created a data inconsistency
-  // (receipts go to one address, account email is another). Now: email
-  // is readonly + prefilled from customers.email; corrections route
-  // through WhatsApp support (link is visible right below the form).
+test('step 1 form Email input is editable + required (regression-fix 2026-05-10)', () => {
+  // History: Track 4 of post-pair polish made this readonly +
+  // prefilled-from-server. That broke EVERY customer because anon
+  // SELECT on customers.email is REVOKED per Sesi D P0-2 — the
+  // browser couldn't read the email back, so the field was readonly
+  // AND empty AND validation rejected empty. Customers were locked
+  // out of step 1.
+  //
+  // Fix: editable again, prefill best-effort from localStorage cache
+  // that checkout.html writes on Bayar Sekarang submit. Save-onboarding-
+  // profile-handler accepts email updates and writes back via service-
+  // role. Customers who type a different email here than at checkout
+  // get the customers.email row updated — no silent inconsistency.
   const src = fs.readFileSync(ONBOARDING, 'utf8')
   const m = src.match(/<input[^>]*id="f-email"[^>]*>/)
   assert.ok(m, 'must find <input id="f-email">')
   assert.ok(
-    /\breadonly\b/.test(m[0]),
-    `f-email input must be readonly per Track 4 (was: ${m[0]})`,
+    !/\breadonly\b/.test(m[0]),
+    `f-email input must NOT be readonly (regression of Track 4 readonly): ${m[0]}`,
   )
-  // Help text must point customers at the correction path.
+  assert.ok(
+    /\brequired\b/.test(m[0]),
+    `f-email input must be required: ${m[0]}`,
+  )
+  // Prefill mechanism: render path reads from localStorage when
+  // customer.email is empty (covers Sesi-D-P0-2 anon-REVOKE case).
   assert.match(
     src,
-    /Email dari checkout/,
-    'help text must explain why email is locked + how to fix',
+    /onboarding_checkout_email/,
+    'render path must consult localStorage cache for email prefill',
   )
 })
 

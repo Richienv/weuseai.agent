@@ -563,16 +563,29 @@
             </div>
           </div>
 
-          <div class="form-section-header">Detail kamu</div>
-
-          <div class="field-group">
-            <label class="field-label" for="name">Nama lengkap</label>
-            <input class="field-input" type="text" id="name" name="name" placeholder="Nama yang muncul di invoice" autocomplete="name" required>
+          <div class="form-section-header" style="font-weight: 600; font-size: 15px; color: var(--text-primary, #141413); margin-top: 8px;">
+            Detail kamu
+          </div>
+          <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">
+            Wajib diisi — Xendit butuh email untuk receipt + 3-D Secure.
           </div>
 
           <div class="field-group">
-            <label class="field-label" for="email">Email</label>
+            <label class="field-label" for="name">
+              <span style="font-weight: 500;">1. Nama lengkap</span>
+              <span aria-hidden="true" style="color:#e5322d; margin-left: 2px;">*</span>
+            </label>
+            <input class="field-input" type="text" id="name" name="name" placeholder="Nama yang muncul di invoice" autocomplete="name" required>
+            <p id="nameError" class="field-error" aria-live="polite" style="display:none; margin-top: 6px; font-size: 12px; color: #e5322d;"></p>
+          </div>
+
+          <div class="field-group">
+            <label class="field-label" for="email">
+              <span style="font-weight: 500;">2. Email</span>
+              <span aria-hidden="true" style="color:#e5322d; margin-left: 2px;">*</span>
+            </label>
             <input class="field-input" type="email" id="email" name="email" placeholder="you@company.com" autocomplete="email" required>
+            <p id="emailError" class="field-error" aria-live="polite" style="display:none; margin-top: 6px; font-size: 12px; color: #e5322d;"></p>
           </div>
 
           <div class="field-group">
@@ -902,15 +915,78 @@
       const SUPABASE_FUNCTIONS_URL = 'https://gtjgsligllbjcisiyrah.supabase.co/functions/v1';
       const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd0amdzbGlnbGxiamNpc2l5cmFoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0Njc2NjUsImV4cCI6MjA5MzA0MzY2NX0.krPAvB3kyxcqsBS5dyDahFMqCB_4MZKaz6FEB0RfjtY';
 
+      // Pre-validate required fields BEFORE the create-invoice call.
+      // Pre-fix: empty Detail-kamu fields blew up at Xendit with a
+      // generic invalid_email error — customer had no idea which field
+      // was empty. Now: each empty/invalid field gets a red border +
+      // inline error message, and the submit short-circuits.
+      function setFieldError(input, errEl, msg) {
+        input.style.borderColor = '#e5322d';
+        input.style.boxShadow = '0 0 0 3px rgba(229,50,45,0.10)';
+        errEl.textContent = msg;
+        errEl.style.display = 'block';
+      }
+      function clearFieldError(input, errEl) {
+        input.style.borderColor = '';
+        input.style.boxShadow = '';
+        errEl.textContent = '';
+        errEl.style.display = 'none';
+      }
+      const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      // Clear field-level errors as the customer corrects them.
+      ['name', 'email'].forEach((id) => {
+        const inp = document.getElementById(id);
+        const err = document.getElementById(`${id}Error`);
+        inp.addEventListener('input', () => clearFieldError(inp, err));
+      });
+
       document.getElementById('payForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = document.getElementById('payBtn');
         const errEl = document.getElementById('payError');
         const origLabel = btn.innerHTML;
+
+        // Field-level pre-validation. Surface ALL errors at once so the
+        // customer fixes them in one pass, then validates against the
+        // first invalid field for focus.
+        const nameInp = document.getElementById('name');
+        const emailInp = document.getElementById('email');
+        const nameErr = document.getElementById('nameError');
+        const emailErr = document.getElementById('emailError');
+        clearFieldError(nameInp, nameErr);
+        clearFieldError(emailInp, emailErr);
+        const name = nameInp.value.trim();
+        const email = emailInp.value.trim();
+        let firstInvalid = null;
+        if (!name) {
+          setFieldError(nameInp, nameErr, 'Nama wajib diisi.');
+          firstInvalid = firstInvalid || nameInp;
+        }
+        if (!email) {
+          setFieldError(emailInp, emailErr, 'Email wajib diisi.');
+          firstInvalid = firstInvalid || emailInp;
+        } else if (!EMAIL_RE.test(email)) {
+          setFieldError(emailInp, emailErr, 'Format email belum benar (mis. kamu@email.com).');
+          firstInvalid = firstInvalid || emailInp;
+        }
+        if (firstInvalid) {
+          firstInvalid.focus();
+          firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          return;
+        }
+
         btn.disabled = true;
         btn.textContent = 'Mempersiapkan pembayaran...';
         errEl.style.display = 'none';
         errEl.textContent = '';
+
+        // Cache email so onboarding step 1 can prefill (anon SELECT
+        // on customers.email is REVOKED per Sesi D P0-2 — without
+        // this cache, customer has to retype email on the post-payment
+        // page even though they just typed it here).
+        try {
+          localStorage.setItem(`onboarding_checkout_email`, email);
+        } catch { /* localStorage may be disabled */ }
 
         try {
           const res = await fetch(`${SUPABASE_FUNCTIONS_URL}/create-invoice`, {
@@ -920,8 +996,8 @@
               'authorization': `Bearer ${SUPABASE_ANON_KEY}`,
             },
             body: JSON.stringify({
-              email: document.getElementById('email').value.trim(),
-              displayName: document.getElementById('name').value.trim(),
+              email: email,
+              displayName: name,
               plan: state.planKey,
               alwaysOn: state.alwaysOn,
               methodId: state.methodId,
