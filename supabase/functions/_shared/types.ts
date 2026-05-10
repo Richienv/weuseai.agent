@@ -360,6 +360,15 @@ export type RefreshEnvInput = {
    *  spinUp doesn't have soulMdContent yet, so SOUL.md was empty on
    *  disk — Hermes had no persona to load on first start). */
   soulMdContent?: string
+  /** Optional: pre-approve customer's Telegram chat_id. When provided,
+   *  written into /home/weuseai/.hermes/pairing/telegram-approved.json
+   *  before hermes-gateway restart so the customer's first /start
+   *  lands directly on the in-character agent (skips Hermes upstream's
+   *  pairing-code prompt). Idempotent. */
+  telegramChatId?: string
+  /** Optional: cosmetic display name for the pre-approve entry.
+   *  Defaults to 'Customer' when omitted. */
+  telegramUserName?: string
   /** Caller-supplied UUID for idempotency. Same id within 10 min →
    *  cached outcome instead of re-SSH. */
   requestId: string

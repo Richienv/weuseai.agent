@@ -112,6 +112,10 @@ export class OnboardingProvisioningClient implements IOnboardingProvisioningClie
       // Optional: SOUL.md content (dry-run Stage 7 fix). Provisioning
       // service writes to /home/weuseai/.hermes/SOUL.md when present.
       ...(input.soulMdContent ? { soul_md_content: input.soulMdContent } : {}),
+      // Optional: pre-approve customer's Telegram chat_id so first
+      // /start lands directly on the in-character agent.
+      ...(input.telegramChatId ? { telegram_chat_id: input.telegramChatId } : {}),
+      ...(input.telegramUserName ? { telegram_user_name: input.telegramUserName } : {}),
       request_id: input.requestId,
     }
     let r: Response
