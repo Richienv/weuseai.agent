@@ -17,6 +17,8 @@ import { MockSshProvisioner } from './ssh/mock-ssh-provisioner.js'
 import { OpenRouterKeyMinter } from './llm/openrouter-minter.js'
 import { MockLlmKeyMinter } from './llm/mock-minter.js'
 import { tierBump, type TierBumpRouteRequest } from './routes/tier-bump.js'
+import { refreshEnvHandler, type RefreshEnvRequest } from './routes/refresh-env.js'
+import { createRefreshEnvStore } from './stores/refresh-env-supabase-store.js'
 
 const PORT = Number(process.env.PORT ?? 8080)
 const AUTH_TOKEN = process.env.PROVISIONING_AUTH_TOKEN
@@ -122,6 +124,58 @@ app.post('/tier-bump', async (req, res) => {
     const msg = e instanceof Error ? e.message : String(e)
     console.error('tier-bump failed:', msg)
     res.status(500).json({ ok: false, error: msg })
+  }
+})
+
+// Track 3a (2026-05-10): /refresh-env. SSHes into the customer's
+// existing VPS to rewrite .env (TELEGRAM_BOT_TOKEN at minimum) +
+// restart hermes-gateway + verify it came back up. Closes the
+// architectural gap where spinUp's idempotency returned existing VPS
+// without updating .env. See docs/design/2026-05-10-vps-config-refresh.md.
+const refreshEnvStore = process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY && process.env.BOT_TOKEN_ENC_KEY
+  ? createRefreshEnvStore({
+      supabaseUrl: process.env.SUPABASE_URL,
+      serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+      botTokenEncKey: process.env.BOT_TOKEN_ENC_KEY,
+    })
+  : null
+
+app.post('/refresh-env', async (req, res) => {
+  if (!refreshEnvStore) {
+    return res.status(500).json({
+      ok: false,
+      error: 'internal',
+      detail: 'refresh-env requires SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY + BOT_TOKEN_ENC_KEY env vars',
+    })
+  }
+  const body = req.body as Partial<RefreshEnvRequest>
+  try {
+    const result = await refreshEnvHandler(
+      {
+        customer_id: body.customer_id ?? '',
+        env_keys: body.env_keys,
+        request_id: body.request_id ?? '',
+      },
+      {
+        fleetPrivateKey: FLEET_SSH_PRIVATE_KEY,
+        store: refreshEnvStore,
+      },
+    )
+    if (!result.ok) {
+      // Map error → status code per design.
+      const status =
+        result.error === 'no_active_vps' ? 404
+        : result.error === 'invalid_field' ? 400
+        : result.error === 'ssh_unreachable' ? 503
+        : result.error === 'ssh_auth_failed' ? 502
+        : 500
+      return res.status(status).json(result)
+    }
+    res.json(result)
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    console.error('refresh-env failed:', msg)
+    res.status(500).json({ ok: false, error: 'internal', detail: msg })
   }
 })
 
