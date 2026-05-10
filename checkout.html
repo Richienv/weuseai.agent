@@ -564,24 +564,24 @@
           </div>
 
           <div class="form-section-header" style="font-weight: 600; font-size: 15px; color: var(--text-primary, #141413); margin-top: 8px;">
-            Detail kamu
+            Email kamu
           </div>
+          <!-- Track 1 (post-CORS-hotfix cascade, 2026-05-10): name field
+               removed from checkout. Xendit's createInvoice only requires
+               payer_email; the customer.given_names block was already
+               unused server-side (see supabase/functions/create-invoice
+               /index.ts — payload at line 120 sends payer_email only).
+               Display name + WhatsApp are collected on onboarding step 1
+               (already wired via save-onboarding-profile-handler).
+               Founder rationale: shorter checkout = less abandonment;
+               name + WA are post-payment data, not pre-payment. -->
           <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">
-            Wajib diisi — Xendit butuh email untuk receipt + 3-D Secure.
-          </div>
-
-          <div class="field-group">
-            <label class="field-label" for="name">
-              <span style="font-weight: 500;">1. Nama lengkap</span>
-              <span aria-hidden="true" style="color:#e5322d; margin-left: 2px;">*</span>
-            </label>
-            <input class="field-input" type="text" id="name" name="name" placeholder="Nama yang muncul di invoice" autocomplete="name" required>
-            <p id="nameError" class="field-error" aria-live="polite" style="display:none; margin-top: 6px; font-size: 12px; color: #e5322d;"></p>
+            Receipt + status agent kamu kami kirim ke email ini.
           </div>
 
           <div class="field-group">
             <label class="field-label" for="email">
-              <span style="font-weight: 500;">2. Email</span>
+              <span style="font-weight: 500;">Email</span>
               <span aria-hidden="true" style="color:#e5322d; margin-left: 2px;">*</span>
             </label>
             <input class="field-input" type="email" id="email" name="email" placeholder="you@company.com" autocomplete="email" required>
@@ -934,11 +934,11 @@
       }
       const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       // Clear field-level errors as the customer corrects them.
-      ['name', 'email'].forEach((id) => {
-        const inp = document.getElementById(id);
-        const err = document.getElementById(`${id}Error`);
-        inp.addEventListener('input', () => clearFieldError(inp, err));
-      });
+      // Track 1 cascade (2026-05-10): only `email` remains — name field
+      // moved to onboarding step 1.
+      const _emailInpInit = document.getElementById('email');
+      const _emailErrInit = document.getElementById('emailError');
+      _emailInpInit.addEventListener('input', () => clearFieldError(_emailInpInit, _emailErrInit));
 
       document.getElementById('payForm').addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -946,22 +946,15 @@
         const errEl = document.getElementById('payError');
         const origLabel = btn.innerHTML;
 
-        // Field-level pre-validation. Surface ALL errors at once so the
-        // customer fixes them in one pass, then validates against the
-        // first invalid field for focus.
-        const nameInp = document.getElementById('name');
+        // Field-level pre-validation. Email is the only required field
+        // at checkout now (Track 1 cascade 2026-05-10) — Xendit needs
+        // payer_email for receipt + 3DS callback. Name + WhatsApp are
+        // collected on onboarding step 1.
         const emailInp = document.getElementById('email');
-        const nameErr = document.getElementById('nameError');
         const emailErr = document.getElementById('emailError');
-        clearFieldError(nameInp, nameErr);
         clearFieldError(emailInp, emailErr);
-        const name = nameInp.value.trim();
         const email = emailInp.value.trim();
         let firstInvalid = null;
-        if (!name) {
-          setFieldError(nameInp, nameErr, 'Nama wajib diisi.');
-          firstInvalid = firstInvalid || nameInp;
-        }
         if (!email) {
           setFieldError(emailInp, emailErr, 'Email wajib diisi.');
           firstInvalid = firstInvalid || emailInp;
@@ -997,13 +990,14 @@
             },
             body: JSON.stringify({
               email: email,
-              displayName: name,
+              // displayName omitted 2026-05-10 (Track 1 cascade post-CORS-hotfix);
+              // collected on onboarding step 1 instead. Server handler
+              // accepts undefined displayName per create-invoice-handler.ts:50.
               plan: state.planKey,
               alwaysOn: state.alwaysOn,
               methodId: state.methodId,
               country: document.getElementById('country').value,
-              // postal omitted 2026-05-10 (Track 4); send empty for
-              // server-side compatibility while DB column drains.
+              // postal omitted 2026-05-10 (PR #66 Track 4); same rationale.
               postal: '',
             }),
           });
