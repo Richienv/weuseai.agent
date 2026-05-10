@@ -750,32 +750,64 @@
       try {
         const status = await pollOnce();
         if (status === 'active') {
-          // With &job: gate C2 on real readiness probe (Track 1 post-pair
-          // UX polish, 2026-05-10). Subscription.status='active' only
-          // proves payment + provisioning ack; it doesn't prove Hermes
-          // booted with the right bot token + pairing approved + SOUL.md.
-          // Pre-fix: customer landed on C2 ("klik Buka Telegram"), sent
-          // /start, agent silent because it wasn't actually ready.
-          // Now: hold in B until probe.ready=true.
+          // Probe-first state machine (2026-05-10 onboarding-loop fix).
           //
-          // Without &job: customer hasn't completed onboarding yet —
-          // route them to /onboarding (state C). No probe needed.
-          if (job) {
-            const probe = await pollReadinessProbe();
-            if (!probe || !probe.ready) {
-              // Probe says agent not yet usable. Hold in B (or F if past
-              // timeout) just like pending_provision.
+          // The customer-readiness probe is the source of truth for
+          // "is this agent actually ready to chat?" — it doesn't depend
+          // on URL params. We call it BEFORE branching on &job so that
+          // already-onboarded customers (bookmark, tab refresh, browser
+          // back-button, complete-onboarding 409 redirect) are routed
+          // to state C2 rather than the "Lengkapi profil" CTA which
+          // would loop them back through onboarding.
+          //
+          // History: pre-fix the &job URL param was a proxy for "we
+          // know provisioning was kicked off." Reliable for fresh
+          // customers but broke for already-onboarded ones because
+          // their landing URL has no &job. See
+          // docs/investigation/2026-05-10-onboarding-loop.md.
+          //
+          // Decision tree on probe result:
+          //   probe.ready=true            → C2 (Buka Telegram CTA)
+          //   probe.ready=false + job set → wait state (B / F on timeout)
+          //   probe.ready=false, no job   → C (genuinely needs onboarding)
+          //   probe call failed (null)    → preserve original behavior
+          //                                  (job ? B : C) so a network
+          //                                  blip doesn't strand the
+          //                                  customer on the wrong screen
+          const probe = await pollReadinessProbe();
+          if (probe && probe.ready) {
+            // Agent is genuinely ready — show "Buka Telegram" regardless
+            // of how the customer arrived here.
+            await ensureBotUsername();
+            renderState('C2');
+          } else if (probe && !probe.ready) {
+            // Probe responded but says not ready yet.
+            if (job) {
+              // Provisioning was kicked off — show wait state until
+              // ready or until we hit timeout.
               if (Date.now() - startedAt > TIMEOUT_MS) {
                 renderState('F');
               } else {
                 renderState('B');
               }
             } else {
-              await ensureBotUsername();
-              renderState('C2');
+              // No job kicked off yet AND probe says not ready → the
+              // customer genuinely hasn't completed onboarding.
+              renderState('C');
             }
           } else {
-            renderState('C');
+            // Probe call failed (null). Fall back to pre-fix behavior
+            // so a transient network issue doesn't break the page.
+            // Customer can retry by waiting for the next 10s tick.
+            if (job) {
+              if (Date.now() - startedAt > TIMEOUT_MS) {
+                renderState('F');
+              } else {
+                renderState('B');
+              }
+            } else {
+              renderState('C');
+            }
           }
         } else if (status === 'failed') {
           renderState('D');
