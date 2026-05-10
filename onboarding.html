@@ -500,11 +500,34 @@
         <form id="step1-form" style="margin-top: 28px; display: flex; flex-direction: column; gap: 16px;" novalidate>
           <div>
             <label class="field-label" for="f-name">Nama</label>
-            <input id="f-name" class="field-input readonly" readonly aria-readonly="true" value="" />
+            <input
+              id="f-name"
+              class="field-input focus-ring"
+              type="text"
+              autocomplete="name"
+              placeholder="Nama lengkap kamu"
+              maxlength="80"
+              required
+            />
+            <p id="f-name-help" class="field-help">
+              Dipakai untuk tagihan dan kontak support.
+            </p>
+            <p id="f-name-error" class="field-error" aria-live="polite"></p>
           </div>
           <div>
             <label class="field-label" for="f-email">Email</label>
-            <input id="f-email" class="field-input readonly" readonly aria-readonly="true" value="" type="email" />
+            <input
+              id="f-email"
+              class="field-input focus-ring"
+              type="email"
+              autocomplete="email"
+              placeholder="kamu@email.com"
+              required
+            />
+            <p id="f-email-help" class="field-help">
+              Dipakai untuk receipt dan kabar penting agent kamu.
+            </p>
+            <p id="f-email-error" class="field-error" aria-live="polite"></p>
           </div>
           <div>
             <label class="field-label" for="f-whatsapp">Nomor WhatsApp</label>
@@ -643,9 +666,26 @@
 
         <div class="pair-code-wrap">
           <div class="eyebrow" style="margin-bottom: 10px;">Kode pasangan kamu</div>
-          <div id="pair-code" class="pair-code" aria-label="Kode pasangan 6 digit" role="img"></div>
+          <div id="pair-code" class="pair-code" aria-label="Kode pasangan 6 digit" role="img" aria-live="polite">
+            <!-- Loading placeholder (Track 4 P0 fix, 2026-05-10): visible
+                 until rotatePairingCode resolves, then renderPairingCode
+                 overwrites this with the digit cells. Without this the
+                 box is empty for ~5s and customers think it's broken. -->
+            <span data-pair-code-loading style="display:inline-flex; align-items:center; gap:10px; font-size:14px; color:rgba(245,245,245,0.65); font-family:'Inter',sans-serif; font-weight:300; letter-spacing:0;">
+              <span class="pulse-dot" aria-hidden="true"></span>
+              <span>Membuat kode pasangan…</span>
+            </span>
+          </div>
           <div id="pair-expiry" class="mono" style="font-size: 12px; color: rgba(245,245,245,0.5); margin-top: 14px;">
             Kode kadaluarsa dalam: <span data-mmss>—:—</span>
+          </div>
+          <!-- Soft-timeout slot (filled by JS after PAIR_CODE_SLOW_MS). -->
+          <div
+            id="pair-code-slow"
+            data-pair-code-slow
+            style="display:none; margin-top:12px; font-size:12px; font-style:italic; color:rgba(245,245,245,0.55);"
+          >
+            Sedang lambat — coba refresh halaman, atau hubungi support kalau tidak muncul juga.
           </div>
         </div>
 
@@ -1175,19 +1215,102 @@
       if (customer.whatsapp_number) $whatsapp.value = customer.whatsapp_number;
     }
 
-    $step1Form.addEventListener('submit', (e) => {
+    /**
+     * Step 1 server-side persist (2026-05-10 P0 fix). Customers can complete
+     * checkout without filling Name + WhatsApp. Step 1 is now the
+     * canonical capture point — POSTs to save-onboarding-profile (service
+     * role) before advancing. Without this, Name/WhatsApp lived only in
+     * localStorage until final submit, so a customer who closed the tab
+     * after step 1 lost both fields.
+     */
+    const $nameErr     = document.getElementById('f-name-error');
+    const $emailErr    = document.getElementById('f-email-error');
+
+    function clearStep1Errors() {
+      if ($nameErr) $nameErr.textContent = '';
+      if ($emailErr) $emailErr.textContent = '';
+      $whatsappErr.textContent = '';
+    }
+
+    function validEmailFormat(s) {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
+    }
+
+    async function saveStep1Profile(payload) {
+      const r = await fetch(`${SUPABASE_URL}/functions/v1/save-onboarding-profile`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ customer_id: cid, ...payload }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        const err = new Error(`save-onboarding-profile: ${r.status}`);
+        err.field = data && data.field;
+        err.payload = data;
+        throw err;
+      }
+      return data;
+    }
+
+    $step1Form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const wa = $whatsapp.value;
+      clearStep1Errors();
+
+      const name = ($name.value || '').trim();
+      const email = ($email.value || '').trim();
+      const wa = ($whatsapp.value || '').trim();
+
+      // Client-side validation mirrors save-onboarding-profile-handler so
+      // we surface friendly inline errors before the server round-trip.
+      if (!name) {
+        if ($nameErr) $nameErr.textContent = 'Nama wajib diisi.';
+        $name.focus();
+        return;
+      }
+      if (!validEmailFormat(email)) {
+        if ($emailErr) $emailErr.textContent = 'Format email belum benar.';
+        $email.focus();
+        return;
+      }
       if (!validWhatsappFormat(wa)) {
         $whatsappErr.textContent = 'Format nomor belum benar. Mulai dengan 08 atau +62.';
         $whatsapp.focus();
         return;
       }
-      $whatsappErr.textContent = '';
-      // Persist WA in-memory + localStorage so a tab refresh after Step 1
-      // doesn't lose it (we only PATCH it server-side at final submit).
-      customer.whatsapp_number = wa.trim();
-      try { localStorage.setItem(`onboarding_wa_${cid}`, customer.whatsapp_number); } catch {}
+
+      const cta = document.getElementById('step1-cta');
+      if (cta) cta.disabled = true;
+      try {
+        await saveStep1Profile({
+          display_name: name,
+          email: email,
+          whatsapp_number: wa,
+        });
+      } catch (err) {
+        const field = err && err.field;
+        const target =
+          field === 'display_name' ? $nameErr :
+          field === 'email' ? $emailErr :
+          field === 'whatsapp_number' ? $whatsappErr :
+          null;
+        if (target) {
+          target.textContent = 'Tidak bisa menyimpan. Coba lagi atau hubungi support.';
+        } else if ($whatsappErr) {
+          $whatsappErr.textContent = 'Koneksi gagal. Coba lagi.';
+        }
+        if (cta) cta.disabled = false;
+        return;
+      }
+
+      // Mirror to in-memory + localStorage so other steps see the values
+      // without re-hydrating from server.
+      customer.display_name = name;
+      customer.email = email;
+      customer.whatsapp_number = wa;
+      try { localStorage.setItem(`onboarding_wa_${cid}`, wa); } catch {}
+
+      if (cta) cta.disabled = false;
+
       // Pair-flow Option A routing (2026-05-09):
       //  - already paired (chat_id set) → Step 4 (expectations) — full resume
       //  - bot token already validated (username set) but not yet paired → Step 3
@@ -1252,7 +1375,32 @@
 
     // ─── STEP 2: Pasangkan Telegram ─────────────────────────────
 
+    // Track 4 P0 fix (2026-05-10): soft-timeout that surfaces a "lambat"
+    // hint if rotate-pairing-code takes >10s. Without this, customers
+    // see "Membuat kode pasangan…" indefinitely on slow networks and
+    // assume the page is broken.
+    const PAIR_CODE_SLOW_MS = 10_000;
+    let pairCodeSlowTimer = null;
+
+    function clearPairCodeSlowTimer() {
+      if (pairCodeSlowTimer) {
+        clearTimeout(pairCodeSlowTimer);
+        pairCodeSlowTimer = null;
+      }
+      const slow = document.querySelector('[data-pair-code-slow]');
+      if (slow) slow.style.display = 'none';
+    }
+
+    function armPairCodeSlowTimer() {
+      clearPairCodeSlowTimer();
+      pairCodeSlowTimer = setTimeout(() => {
+        const slow = document.querySelector('[data-pair-code-slow]');
+        if (slow) slow.style.display = 'block';
+      }, PAIR_CODE_SLOW_MS);
+    }
+
     async function startPairing() {
+      armPairCodeSlowTimer();
       try {
         // Resume check: if pairing already complete (chat_id set), jump
         // straight to Step 4 (expectations). Pair-flow Option A renumbered:
@@ -1260,6 +1408,7 @@
         const fresh = await fetchCustomer();
         customer = { ...customer, ...fresh, whatsapp_number: customer.whatsapp_number };
         if (customer.telegram_chat_id) {
+          clearPairCodeSlowTimer();
           setStep('4');
           return;
         }
@@ -1269,10 +1418,12 @@
         pairingCode = data.code;
         pairingExpiry = new Date(data.expires_at);
 
+        clearPairCodeSlowTimer();
         renderPairingCode(pairingCode);
         startExpiryTicker();
         startPairingPoll();
       } catch (err) {
+        clearPairCodeSlowTimer();
         // Friendly retry — most likely cause is a transient network blip.
         $pairStatus.innerHTML = `
           <span style="font-size: 14px; color: rgba(245,245,245,0.85); flex: 1;">Gagal menyiapkan kode pasangan.</span>
