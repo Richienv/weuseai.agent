@@ -109,6 +109,9 @@ export class OnboardingProvisioningClient implements IOnboardingProvisioningClie
     const wire = {
       customer_id: input.customerId,
       env_values: input.envValues,
+      // Optional: SOUL.md content (dry-run Stage 7 fix). Provisioning
+      // service writes to /home/weuseai/.hermes/SOUL.md when present.
+      ...(input.soulMdContent ? { soul_md_content: input.soulMdContent } : {}),
       request_id: input.requestId,
     }
     let r: Response

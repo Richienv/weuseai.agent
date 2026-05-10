@@ -61,6 +61,13 @@ export type RefreshEnvRequest = {
    * the encryption key entirely within Supabase.
    */
   env_values: Partial<Record<AllowedEnvKey, string>>
+  /** Optional SOUL.md content. When provided, written to
+   *  /home/weuseai/.hermes/SOUL.md before hermes-gateway restart.
+   *  Closes the dry-run Stage 7 gap where xendit-webhook's first
+   *  spinUp doesn't have soulMdContent yet, so the file is empty
+   *  on disk until complete-onboarding step 8a sends it via this
+   *  field. Per docs/investigation/2026-05-10-fresh-provision-dry-run.md. */
+  soul_md_content?: string
   /** Caller-supplied UUID for idempotency. If the same id is replayed
    *  within 10 min, server returns the cached outcome. */
   request_id: string
@@ -154,6 +161,7 @@ export type RefreshEnvDeps = {
  */
 export function buildRefreshEnvCommand(
   envValues: Partial<Record<AllowedEnvKey, string>>,
+  opts: { soulMdContent?: string } = {},
 ): string {
   const entries = Object.entries(envValues) as Array<[AllowedEnvKey, string]>
   if (entries.length === 0) {
@@ -190,11 +198,57 @@ export function buildRefreshEnvCommand(
     })
     .join('\n\n')
 
+  // Optional SOUL.md write. Heredoc with random delimiter to avoid
+  // collisions if customer's persona contains common shell tokens.
+  // Per dry-run Stage 7: closes the gap where SOUL.md never reaches
+  // the VPS through the canonical xendit-webhook path.
+  const soulBlock = opts.soulMdContent
+    ? `
+# Write SOUL.md (caller-supplied persona content).
+SOUL_PATH=/home/weuseai/.hermes/SOUL.md
+sudo mkdir -p /home/weuseai/.hermes
+sudo tee "$SOUL_PATH" > /dev/null <<'WEUSEAI_SOUL_REFRESH_EOF'
+${opts.soulMdContent}
+WEUSEAI_SOUL_REFRESH_EOF
+sudo chown weuseai:weuseai "$SOUL_PATH"
+sudo chmod 0644 "$SOUL_PATH"
+`
+    : ''
+
+  // Auto-install hermes-gateway if absent. Closes the dry-run Stage 5
+  // gap: when xendit-webhook's first spinUp ran with hasTelegram=false
+  // (Fix #1), setup-script SKIPPED the gateway install + start. This
+  // refresh call is the first time we have a real bot token, so install
+  // the gateway here if it's not already present.
+  // Idempotent: 'gateway install' is safe to re-run; we use systemctl
+  // list-unit-files to detect presence cheaply.
+  const installIfMissingBlock = `
+# Detect + install hermes-gateway if missing (post-Fix-#1 self-heal).
+HERMES_BIN=/home/weuseai/.local/bin/hermes
+GATEWAY_UNIT=/etc/systemd/system/hermes-gateway.service
+if [ ! -f "$GATEWAY_UNIT" ]; then
+  echo "hermes-gateway unit missing — installing now..." >&2
+  if [ ! -x "$HERMES_BIN" ]; then
+    echo "ERROR: hermes binary not found at $HERMES_BIN — cannot install gateway" >&2
+    exit 4
+  fi
+  sudo "$HERMES_BIN" gateway install --system --run-as-user weuseai >&2 || {
+    echo "ERROR: gateway install failed" >&2
+    exit 5
+  }
+  sudo "$HERMES_BIN" gateway start --system >&2 || {
+    echo "ERROR: gateway start failed" >&2
+    exit 6
+  }
+  echo "hermes-gateway installed + started" >&2
+fi
+`
+
   return `set -euo pipefail
 ENV_FILE=/home/weuseai/.hermes/.env
 
 ${rewrites}
-
+${soulBlock}${installIfMissingBlock}
 sudo systemctl restart hermes-gateway
 
 # Assert hermes-gateway is back up after restart. Exit with a known
@@ -383,7 +437,9 @@ export async function refreshEnvHandler(
   await deps.store.recordRefreshRequestStart(req.request_id, req.customer_id)
 
   // ── SSH ──
-  const command = buildRefreshEnvCommand(envValues)
+  const command = buildRefreshEnvCommand(envValues, {
+    soulMdContent: req.soul_md_content,
+  })
   const runSsh = deps.runSsh ?? defaultRunSsh
   const { path, cleanup } = writePrivateKeyTmpfile(deps.fleetPrivateKey)
   let sshResult: { ok: true; stdout: string } | { ok: false; error: string }

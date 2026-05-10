@@ -228,6 +228,13 @@ export async function handleCompleteOnboarding(
   const refreshResult = await deps.provisioning.refreshEnv({
     customerId: customer_id,
     envValues: { TELEGRAM_BOT_TOKEN: customerBotToken },
+    // Dry-run Stage 7 fix: pass SOUL.md content too. Without this, the
+    // canonical xendit-webhook → onboarding flow leaves SOUL.md empty
+    // on disk (setup-script writes it from spinUp's soulMdContent
+    // param, which xendit-webhook doesn't have at first provision).
+    // Provisioning service writes the file + restarts hermes in the
+    // same SSH round-trip.
+    soulMdContent: soulMdText,
     requestId: cryptoRandomUuid(),
   })
   if (!refreshResult.ok) {
