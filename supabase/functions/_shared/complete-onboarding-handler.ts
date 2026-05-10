@@ -19,6 +19,7 @@ import {
   sanitizeExpectations,
   sha256Hex,
 } from './soul-md-template.ts'
+import { properDeleteWebhook } from './proper-delete-webhook.ts'
 
 export type CompleteOnboardingDeps = {
   db: IOnboardingStore
@@ -30,6 +31,9 @@ export type CompleteOnboardingDeps = {
   telegram: ITelegramClient
   publicBase: string                 // e.g. https://weuseai-agent.vercel.app
   now?: () => Date
+  /** Test seam — properDeleteWebhook backoff sleep. Production omits;
+   *  tests pass `() => {}` to avoid real 2-8s sleeps on retry paths. */
+  webhookDeleteSleepMs?: (ms: number) => Promise<void> | void
 }
 
 export type CompleteOnboardingBody = {
@@ -214,9 +218,30 @@ export async function handleCompleteOnboarding(
   // to pair-customer-bot-webhook. Now that pairing is done AND
   // provisioning has been triggered, delete the webhook so Hermes
   // (which will boot on the VPS in 5-7 min) can call getUpdates
-  // cleanly. Best-effort: failure here doesn't block onboarding —
-  // Hermes will call deleteWebhook itself defensively on boot.
-  await safeDeleteWebhook(deps.telegram, customerBotToken)
+  // cleanly.
+  //
+  // 2026-05-10 hardening: replaced the prior safeDeleteWebhook (which
+  // silently swallowed every error) with properDeleteWebhook. Customer
+  // e282ce25 hit the silent-failure path: bot kept replying to all
+  // messages with REPLY_ALREADY_PAIRED because Telegram still routed
+  // updates to our webhook even though deleteWebhook had been called.
+  // properDeleteWebhook retries with exponential backoff and verifies
+  // via getWebhookInfo. On final failure we surface a non-fatal
+  // warning in the response so the frontend can show "Setup belum
+  // selesai — tim kami sedang memperbaiki" instead of a misleading
+  // success state, and log to function logs for support to retry via
+  // admin tooling (Track 3 admin-customer-vps-refresh).
+  const webhookResult = await properDeleteWebhook(
+    deps.telegram,
+    customerBotToken,
+    { sleepMs: deps.webhookDeleteSleepMs },
+  )
+  if (!webhookResult.ok) {
+    console.error(
+      `[complete-onboarding] properDeleteWebhook failed for ${customer_id}: ` +
+        `attempts=${webhookResult.attempts} error="${webhookResult.finalError}"`,
+    )
+  }
 
   // ─── 9. Flip subscription to active ───────────────────────────────
   await deps.db.updateSubscription(subscription.id, {
@@ -225,9 +250,23 @@ export async function handleCompleteOnboarding(
   })
 
   // ─── 10. Done — redirect to welcome with job id ───────────────────
+  // webhook_warning surfaces the partial-failure to the client so it
+  // can show a "Setup belum selesai" hint without blocking the redirect
+  // (the customer is still good — admin can retry the webhook delete
+  // later via the admin rescue path).
   return json({
     provisioning_job_id: spinResult.jobId,
     redirect_url: `${deps.publicBase}/welcome.html?cid=${customer_id}&job=${spinResult.jobId}`,
+    ...(webhookResult.ok
+      ? {}
+      : {
+          webhook_warning: {
+            message:
+              'Webhook bot belum berhasil di-clear. Agent kamu mungkin belum bisa terima pesan langsung. Tim kami akan retry otomatis.',
+            attempts: webhookResult.attempts,
+            error: webhookResult.finalError,
+          },
+        }),
   })
 }
 
@@ -267,16 +306,11 @@ async function safeRevoke(minter: ILlmKeyMinter, hash: string): Promise<void> {
   }
 }
 
-async function safeDeleteWebhook(
-  telegram: ITelegramClient,
-  botToken: string,
-): Promise<void> {
-  try {
-    await telegram.deleteWebhook(botToken)
-  } catch {
-    /* swallow — Hermes calls deleteWebhook defensively on its own boot */
-  }
-}
+// safeDeleteWebhook removed 2026-05-10 — replaced by properDeleteWebhook
+// (with retry + getWebhookInfo verification). Kept as a comment for git
+// blame: the old impl silently swallowed every error including 5xx and
+// "webhook still set after delete", which is what put customer e282ce25
+// into the broken state where every message kept hitting our webhook.
 
 async function safeUpdateSubscription(
   db: IOnboardingStore,

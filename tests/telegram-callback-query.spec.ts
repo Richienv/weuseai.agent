@@ -57,6 +57,9 @@ function makeStubTelegram(): {
     async deleteWebhook() {
       /* unused */
     },
+    async getWebhookInfo() {
+      return { url: '' }
+    },
     async sendMessageAs(botToken, chatId, text) {
       sends.push({ botToken, chatId, text })
     },

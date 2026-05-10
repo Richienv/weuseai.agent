@@ -54,6 +54,7 @@ class FakeTelegram implements ITelegramClient {
   // Phase 5-5b: no-op stubs.
   async sendMessageWithButtonsAs() {}
   async answerCallbackQuery() {}
+  async getWebhookInfo(_token: string): Promise<{ url: string }> { return { url: '' } }
 }
 
 const PUBLIC_BASE = 'https://weuseai-agent.vercel.app'
@@ -320,21 +321,34 @@ test('happy path also calls deleteWebhook on customer bot after spinUp ACK', asy
   assert.equal(provisioning.calls[0].telegramBotToken, TEST_BOT_TOKEN)
 })
 
-test('deleteWebhook failure does not fail onboarding (Hermes retries on its own boot)', async () => {
+test('deleteWebhook 5xx → properDeleteWebhook retries → onboarding still 200', async () => {
+  // 2026-05-10: replaced the prior safeDeleteWebhook (silent swallow)
+  // with properDeleteWebhook (3 attempts + getWebhookInfo verify).
+  // Failing the first attempt should now trigger a retry and ultimately
+  // succeed without blocking onboarding.
   const { db, minter, provisioning, telegram } = setupHappyPath()
-  telegram.failNextDeleteWebhook = true
+  telegram.failNextDeleteWebhook = true   // attempt 1 throws, attempt 2 ok
   const res = await handleCompleteOnboarding(
     buildReq({
       customer_id: 'cust-1',
       whatsapp: '08123456789',
       expectations_text: 'Bantu briefing pagi.',
     }),
-    { db, minter, provisioning, telegram, publicBase: PUBLIC_BASE },
+    {
+      db,
+      minter,
+      provisioning,
+      telegram,
+      publicBase: PUBLIC_BASE,
+      webhookDeleteSleepMs: () => {},   // skip the 2s backoff in test
+    },
   )
-  // Still 200 — onboarding succeeded; webhook will be cleaned up
-  // defensively when Hermes calls deleteWebhook on VPS boot.
   assert.equal(res.status, 200)
-  assert.equal(telegram.deleteWebhookCalls.length, 1)
+  // Two attempts: attempt 1 throws (5xx), attempt 2 succeeds.
+  assert.equal(telegram.deleteWebhookCalls.length, 2)
+  const body = (await res.json()) as { webhook_warning?: unknown }
+  // Retry succeeded → no warning.
+  assert.equal(body.webhook_warning, undefined)
 })
 
 test('not paired: 409 telegram_not_paired', async () => {
