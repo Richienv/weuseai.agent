@@ -197,5 +197,19 @@ export function createOnboardingStore(opts: {
       }
       return typeof plaintext === 'string' ? plaintext : null
     },
+
+    async clearBotPairing(customer_id) {
+      // Wrong-bot recovery (2026-05-10 P0 fix). Service-role UPDATE wipes
+      // all three bot-pairing fields atomically. Idempotent.
+      const { error } = await supabase
+        .from('customers')
+        .update({
+          telegram_bot_token: null,
+          telegram_bot_username: null,
+          telegram_chat_id: null,
+        })
+        .eq('id', customer_id)
+      if (error) throw error
+    },
   }
 }

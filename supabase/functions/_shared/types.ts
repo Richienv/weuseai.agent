@@ -200,6 +200,13 @@ export interface IOnboardingStore {
   // their VPS .env. Calls SQL decrypt_bot_token(). Service-role only.
   // Returns null if the customer has no bot token set yet.
   getDecryptedBotToken(customer_id: string): Promise<string | null>
+
+  // Wrong-bot recovery (2026-05-10 P0 fix): clears all three bot-pairing
+  // fields atomically (telegram_bot_token, telegram_bot_username,
+  // telegram_chat_id). Used by reset-bot-pairing edge fn so a customer
+  // who pasted a wrong-bot token can re-paste a different one. Idempotent
+  // — safe to call when fields are already null.
+  clearBotPairing(customer_id: string): Promise<void>
 }
 
 // ─── LLM key minter (decoupled from Phase 2A merge) ───

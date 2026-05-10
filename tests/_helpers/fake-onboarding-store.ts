@@ -174,4 +174,18 @@ export class FakeOnboardingStore implements IOnboardingStore {
     if (!ciphertext) return null
     return ciphertext.startsWith('enc:') ? ciphertext.slice(4) : null
   }
+
+  async clearBotPairing(customer_id: string): Promise<void> {
+    // Mirror the production UPDATE: wipes ciphertext + telegram_bot_username
+    // + telegram_chat_id. Idempotent.
+    this.botTokensCiphertext.delete(customer_id)
+    const existing = this.customers.get(customer_id)
+    if (existing) {
+      this.customers.set(customer_id, {
+        ...existing,
+        telegram_bot_username: null,
+        telegram_chat_id: null,
+      })
+    }
+  }
 }
