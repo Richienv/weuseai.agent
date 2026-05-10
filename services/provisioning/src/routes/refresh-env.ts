@@ -68,6 +68,17 @@ export type RefreshEnvRequest = {
    *  on disk until complete-onboarding step 8a sends it via this
    *  field. Per docs/investigation/2026-05-10-fresh-provision-dry-run.md. */
   soul_md_content?: string
+  /** Optional pre-approve. Customer's Telegram chat_id. When provided,
+   *  written to /home/weuseai/.hermes/pairing/telegram-approved.json
+   *  before hermes-gateway restart. Skips Hermes upstream's pairing-
+   *  code flow ("Hi~ I don't recognize you yet, ask owner to approve
+   *  code XYZ") so the customer's first /start lands directly on the
+   *  in-character agent. Idempotent — same chat_id → same disk state. */
+  telegram_chat_id?: string
+  /** Optional cosmetic display name for the pre-approve entry.
+   *  Defaults to 'Customer' when omitted. Only affects what shows
+   *  in `hermes pairing list`. */
+  telegram_user_name?: string
   /** Caller-supplied UUID for idempotency. If the same id is replayed
    *  within 10 min, server returns the cached outcome. */
   request_id: string
@@ -161,7 +172,11 @@ export type RefreshEnvDeps = {
  */
 export function buildRefreshEnvCommand(
   envValues: Partial<Record<AllowedEnvKey, string>>,
-  opts: { soulMdContent?: string } = {},
+  opts: {
+    soulMdContent?: string
+    telegramChatId?: string
+    telegramUserName?: string
+  } = {},
 ): string {
   const entries = Object.entries(envValues) as Array<[AllowedEnvKey, string]>
   if (entries.length === 0) {
@@ -215,6 +230,60 @@ sudo chmod 0644 "$SOUL_PATH"
 `
     : ''
 
+  // Optional pre-approve. Writes customer's chat_id directly into
+  // /home/weuseai/.hermes/pairing/telegram-approved.json so Hermes
+  // recognises them on first /start (skips the
+  // "Hi~ I don't recognize you yet, here's a pairing code" prompt).
+  // Atomic via python tempfile + os.rename. Idempotent — same chat_id
+  // → same disk content (preserves existing approved_at). Validates
+  // chat_id is digits-only to defend against shell/JSON injection.
+  const preApproveBlock = opts.telegramChatId
+    ? (() => {
+        if (!/^\d+$/.test(opts.telegramChatId)) {
+          throw new Error(
+            `buildRefreshEnvCommand: telegramChatId must be digits-only (got: ${opts.telegramChatId.slice(0, 30)})`,
+          )
+        }
+        const userName = (opts.telegramUserName ?? 'Customer').replace(
+          /[^A-Za-z0-9 ._-]/g,
+          '',
+        ).slice(0, 80) || 'Customer'
+        return `
+# Pre-approve customer's Telegram chat_id so Hermes skips the
+# pairing-code flow on first /start. Atomic JSON merge via python.
+PAIRING_DIR=/home/weuseai/.hermes/pairing
+APPROVED_PATH="$PAIRING_DIR/telegram-approved.json"
+sudo -u weuseai mkdir -p "$PAIRING_DIR"
+sudo -u weuseai python3 - <<'WEUSEAI_PREAPPROVE_EOF'
+import json, os, time, tempfile
+path = "/home/weuseai/.hermes/pairing/telegram-approved.json"
+data = {}
+if os.path.exists(path):
+    try:
+        with open(path) as f:
+            data = json.load(f)
+    except (json.JSONDecodeError, OSError):
+        data = {}  # corrupt or unreadable → start fresh; safer than abort
+chat_id = "${opts.telegramChatId}"
+if chat_id not in data:
+    data[chat_id] = {"user_name": "${userName}", "approved_at": time.time()}
+    fd, tmp = tempfile.mkstemp(dir=os.path.dirname(path), prefix=".approved.", suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w") as f:
+            json.dump(data, f)
+        os.replace(tmp, path)
+        print(f"pre-approved chat_id={chat_id}")
+    except Exception:
+        try: os.unlink(tmp)
+        except OSError: pass
+        raise
+else:
+    print(f"chat_id={chat_id} already approved — no-op")
+WEUSEAI_PREAPPROVE_EOF
+`
+      })()
+    : ''
+
   // Auto-install hermes-gateway if absent. Closes the dry-run Stage 5
   // gap: when xendit-webhook's first spinUp ran with hasTelegram=false
   // (Fix #1), setup-script SKIPPED the gateway install + start. This
@@ -248,7 +317,7 @@ fi
 ENV_FILE=/home/weuseai/.hermes/.env
 
 ${rewrites}
-${soulBlock}${installIfMissingBlock}
+${soulBlock}${preApproveBlock}${installIfMissingBlock}
 sudo systemctl restart hermes-gateway
 
 # Assert hermes-gateway is back up after restart. Exit with a known
@@ -437,9 +506,23 @@ export async function refreshEnvHandler(
   await deps.store.recordRefreshRequestStart(req.request_id, req.customer_id)
 
   // ── SSH ──
-  const command = buildRefreshEnvCommand(envValues, {
-    soulMdContent: req.soul_md_content,
-  })
+  let command: string
+  try {
+    command = buildRefreshEnvCommand(envValues, {
+      soulMdContent: req.soul_md_content,
+      telegramChatId: req.telegram_chat_id,
+      telegramUserName: req.telegram_user_name,
+    })
+  } catch (e) {
+    // buildRefreshEnvCommand throws on bad telegram_chat_id (non-digits)
+    // so an attacker can't inject shell/JSON via that field.
+    return {
+      ok: false,
+      error: 'invalid_field',
+      detail: e instanceof Error ? e.message : String(e),
+      request_id: req.request_id,
+    }
+  }
   const runSsh = deps.runSsh ?? defaultRunSsh
   const { path, cleanup } = writePrivateKeyTmpfile(deps.fleetPrivateKey)
   let sshResult: { ok: true; stdout: string } | { ok: false; error: string }

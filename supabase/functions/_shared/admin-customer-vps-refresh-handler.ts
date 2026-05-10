@@ -80,6 +80,17 @@ export async function handleAdminCustomerVpsRefresh(
   const refreshResult = await deps.provisioning.refreshEnv({
     customerId: body.customer_id,
     envValues: { TELEGRAM_BOT_TOKEN: botToken },
+    // Pass SOUL.md too so admin rescue produces an in-character agent.
+    // When customer has no soul_md_text yet (rare — would mean step 4
+    // never ran), refreshEnv just skips the SOUL.md write.
+    soulMdContent: customer.soul_md_text ?? undefined,
+    // Pre-approve customer's chat_id so first /start lands directly
+    // on the in-character agent (skips Hermes upstream's pairing-code
+    // prompt). chat_id is whatever was captured during step 3 /pair
+    // (or null if pairing never completed — refreshEnv just skips
+    // pre-approve in that case).
+    telegramChatId: customer.telegram_chat_id ?? undefined,
+    telegramUserName: customer.display_name ?? undefined,
     requestId,
   })
 

@@ -159,6 +159,8 @@ app.post('/refresh-env', async (req, res) => {
         customer_id: body.customer_id ?? '',
         env_values: body.env_values ?? {},
         soul_md_content: body.soul_md_content,
+        telegram_chat_id: body.telegram_chat_id,
+        telegram_user_name: body.telegram_user_name,
         request_id: body.request_id ?? '',
       },
       {

@@ -235,6 +235,14 @@ export async function handleCompleteOnboarding(
     // Provisioning service writes the file + restarts hermes in the
     // same SSH round-trip.
     soulMdContent: soulMdText,
+    // Pre-approve customer's Telegram chat_id so first /start lands
+    // directly on the in-character agent (skips Hermes upstream's
+    // pairing-code prompt). chat_id is captured during onboarding
+    // step 3 /pair flow; non-null by the time we reach step 8a per
+    // the early telegram_not_paired check above. display_name is the
+    // cosmetic label that appears in `hermes pairing list`.
+    telegramChatId: customer.telegram_chat_id ?? undefined,
+    telegramUserName: customer.display_name ?? undefined,
     requestId: cryptoRandomUuid(),
   })
   if (!refreshResult.ok) {
