@@ -1,7 +1,17 @@
 # VPS config refresh — design (2026-05-10)
 
-> Track 0 of the agent-activation-gap fix cascade. **Awaiting founder
-> review** before any Track 3 code lands.
+> Track 0 of the agent-activation-gap fix cascade. Founder-approved
+> 2026-05-10 with all 4 defaults locked.
+>
+> **Pivot 2026-05-10 during 3a implementation**: provisioning service
+> is now a "dumb pipe" that takes caller-supplied `env_values` rather
+> than decrypting bot tokens server-side. Reasoning: `BOT_TOKEN_ENC_KEY`
+> is a Supabase Edge Function secret and isn't on Fly. Rather than
+> copy the encryption key to a second secret store, callers (which
+> already have the decrypted values in scope) pass them in. This is
+> strictly safer (key in one place) and architecturally cleaner.
+> Tracked inline at `services/provisioning/src/routes/refresh-env.ts`
+> RefreshEnvRequest docstring.
 >
 > Context: `docs/investigation/2026-05-10-agent-activation-gap.md`
 > (Bug #3 — VPS .env stale because `provisioning.spinUp` is

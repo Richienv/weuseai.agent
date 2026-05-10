@@ -1,11 +1,14 @@
 /**
  * Supabase-backed implementation of IRefreshEnvStore (Track 3a, 2026-05-10).
  *
- * Reads vps_instances, refresh_env_requests, and decrypts the customer's
- * bot token via Supabase RPC (decrypt_bot_token, defined in migration
- * 20260509200000_telegram_bot_per_customer.sql).
+ * Reads vps_instances + refresh_env_requests via service-role.
  *
- * All ops use the service-role key; no anon RLS surface.
+ * Pivot 2026-05-10: this store no longer decrypts the customer's bot
+ * token. Provisioning is a "dumb pipe" — callers (complete-onboarding-
+ * handler, admin-customer-vps-refresh) decrypt + supply env values
+ * directly. Closes a credential-leak surface (encryption key never
+ * leaves Supabase secrets) and means provisioning has no read path on
+ * customers.telegram_bot_token.
  */
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
@@ -14,9 +17,6 @@ import type { IRefreshEnvStore } from '../routes/refresh-env.js'
 export type RefreshEnvStoreDeps = {
   supabaseUrl: string
   serviceRoleKey: string
-  /** Same key used by complete-onboarding-handler.deps.botTokenEncKey
-   *  — passed as enc_key to the decrypt_bot_token RPC. */
-  botTokenEncKey: string
 }
 
 export function createRefreshEnvStore(
@@ -27,9 +27,6 @@ export function createRefreshEnvStore(
   }
   if (!deps.serviceRoleKey) {
     throw new Error('createRefreshEnvStore: missing SUPABASE_SERVICE_ROLE_KEY')
-  }
-  if (!deps.botTokenEncKey) {
-    throw new Error('createRefreshEnvStore: missing BOT_TOKEN_ENC_KEY')
   }
 
   const supabase: SupabaseClient = createClient(
@@ -98,29 +95,6 @@ export function createRefreshEnvStore(
         })
         .eq('request_id', requestId)
       if (error) throw error
-    },
-
-    async getDecryptedBotToken(customerId) {
-      // Step 1: read the encrypted column via service-role.
-      const { data, error } = await supabase
-        .from('customers')
-        .select('telegram_bot_token')
-        .eq('id', customerId)
-        .maybeSingle()
-      if (error) throw error
-      const ciphertext = (data as { telegram_bot_token: string | null } | null)
-        ?.telegram_bot_token ?? null
-      if (!ciphertext) return null
-      // Step 2: decrypt via RPC. Mirrors onboarding-store-supabase.ts
-      // getDecryptedBotToken — same enc_key contract.
-      const { data: plaintext, error: rpcErr } = await supabase.rpc(
-        'decrypt_bot_token',
-        { encrypted: ciphertext, enc_key: deps.botTokenEncKey },
-      )
-      if (rpcErr) {
-        throw new Error(`decrypt_bot_token rpc failed: ${rpcErr.message}`)
-      }
-      return typeof plaintext === 'string' ? plaintext : null
     },
   }
 }

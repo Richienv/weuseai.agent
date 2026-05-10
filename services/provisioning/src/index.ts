@@ -128,15 +128,19 @@ app.post('/tier-bump', async (req, res) => {
 })
 
 // Track 3a (2026-05-10): /refresh-env. SSHes into the customer's
-// existing VPS to rewrite .env (TELEGRAM_BOT_TOKEN at minimum) +
-// restart hermes-gateway + verify it came back up. Closes the
-// architectural gap where spinUp's idempotency returned existing VPS
-// without updating .env. See docs/design/2026-05-10-vps-config-refresh.md.
-const refreshEnvStore = process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY && process.env.BOT_TOKEN_ENC_KEY
+// existing VPS to rewrite .env (caller-supplied env_values) + restart
+// hermes-gateway + verify it came back up. Closes the architectural
+// gap where spinUp's idempotency returned existing VPS without
+// updating .env. See docs/design/2026-05-10-vps-config-refresh.md.
+//
+// Pivot 2026-05-10: provisioning is a "dumb pipe" — does NOT decrypt
+// or source values. Callers (complete-onboarding-handler step 8a,
+// admin-customer-vps-refresh) supply env_values directly. Keeps the
+// encryption key in Supabase secrets only, never on Fly.
+const refreshEnvStore = process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
   ? createRefreshEnvStore({
       supabaseUrl: process.env.SUPABASE_URL,
       serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
-      botTokenEncKey: process.env.BOT_TOKEN_ENC_KEY,
     })
   : null
 
@@ -145,7 +149,7 @@ app.post('/refresh-env', async (req, res) => {
     return res.status(500).json({
       ok: false,
       error: 'internal',
-      detail: 'refresh-env requires SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY + BOT_TOKEN_ENC_KEY env vars',
+      detail: 'refresh-env requires SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY env vars',
     })
   }
   const body = req.body as Partial<RefreshEnvRequest>
@@ -153,7 +157,7 @@ app.post('/refresh-env', async (req, res) => {
     const result = await refreshEnvHandler(
       {
         customer_id: body.customer_id ?? '',
-        env_keys: body.env_keys,
+        env_values: body.env_values ?? {},
         request_id: body.request_id ?? '',
       },
       {
