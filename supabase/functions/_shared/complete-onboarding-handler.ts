@@ -77,6 +77,18 @@ export async function handleCompleteOnboarding(
 
   // ─── 2. Idempotency (edit G) ──────────────────────────────────────
   // Already onboarded → return 409 with redirect URL. Client follows it.
+  //
+  // The synthetic &job=already-onboarded marker (added 2026-05-10) is a
+  // cheap signal that flips welcome.html away from state C ("Lengkapi
+  // profil agent") and into the readiness-probe branch — without it, an
+  // already-onboarded customer who re-submits step 4 lands back on
+  // /welcome with no &job, sees the same "Lengkapi profil" CTA, clicks
+  // it, lands on /onboarding step 4 again, and loops indefinitely.
+  // See docs/investigation/2026-05-10-onboarding-loop.md.
+  //
+  // The value isn't pattern-matched anywhere — welcome.html only checks
+  // truthy/falsy on the `job` URL param. "already-onboarded" is human-
+  // readable in case it shows in support logs.
   if (
     customer.telegram_chat_id &&
     customer.soul_md_text &&
@@ -85,7 +97,7 @@ export async function handleCompleteOnboarding(
     return json(
       {
         error: 'already_onboarded',
-        redirect: `${deps.publicBase}/welcome.html?cid=${customer_id}`,
+        redirect: `${deps.publicBase}/welcome.html?cid=${customer_id}&job=already-onboarded`,
       },
       409,
     )

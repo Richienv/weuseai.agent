@@ -264,7 +264,15 @@ test('idempotent: already-onboarded returns 409 with redirect, no double mint', 
   assert.equal(res.status, 409)
   const data = await readJson(res)
   assert.equal(data.error, 'already_onboarded')
-  assert.equal(data.redirect, `${PUBLIC_BASE}/welcome.html?cid=cust-X`)
+  // 2026-05-10 onboarding-loop fix: redirect must include &job synthetic
+  // marker so welcome.html's tick() doesn't fall into state C "Lengkapi
+  // profil agent" and bounce the customer back into the loop. Pre-fix
+  // the redirect was just `?cid=...`. See
+  // docs/investigation/2026-05-10-onboarding-loop.md.
+  assert.equal(
+    data.redirect,
+    `${PUBLIC_BASE}/welcome.html?cid=cust-X&job=already-onboarded`,
+  )
 
   // No new mint, no new provisioning call
   assert.equal(minter.minted.length, 0)
