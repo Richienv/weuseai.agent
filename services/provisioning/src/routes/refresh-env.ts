@@ -46,9 +46,21 @@ export type AllowedEnvKey = (typeof ALLOWED_ENV_KEYS)[number]
 
 export type RefreshEnvRequest = {
   customer_id: string
-  /** Optional explicit set of keys to update. Defaults to
-   *  ['TELEGRAM_BOT_TOKEN'] (the only one with a stable source today). */
-  env_keys?: ReadonlyArray<AllowedEnvKey>
+  /**
+   * Caller-supplied env values. The provisioning service is a "dumb pipe"
+   * — it does NOT decrypt or source values from the customers row.
+   * Keeping the encryption key in one place (Supabase Edge Function
+   * secrets, never on Fly) closes a credential-leak surface and means
+   * provisioning has no read path on customers.telegram_bot_token.
+   *
+   * Callers (complete-onboarding-handler step 8a, admin-customer-vps-
+   * refresh) are responsible for decrypting + sourcing values before
+   * invoking this route. Pivot from initial design (2026-05-10):
+   * the route used to call decrypt_bot_token RPC itself + needed
+   * BOT_TOKEN_ENC_KEY as a Fly secret. Caller-supplies-values keeps
+   * the encryption key entirely within Supabase.
+   */
+  env_values: Partial<Record<AllowedEnvKey, string>>
   /** Caller-supplied UUID for idempotency. If the same id is replayed
    *  within 10 min, server returns the cached outcome. */
   request_id: string
@@ -66,7 +78,6 @@ export type RefreshEnvSuccess = {
 
 export type RefreshEnvFailureError =
   | 'no_active_vps'
-  | 'no_bot_token'
   | 'ssh_unreachable'
   | 'ssh_auth_failed'
   | 'env_write_failed'
@@ -114,10 +125,6 @@ export interface IRefreshEnvStore {
 
   /** Update the row with the response body once SSH completes. */
   recordRefreshRequestComplete(requestId: string, outcome: unknown): Promise<void>
-
-  /** Decrypts the customer's bot token via Supabase RPC
-   *  (decrypt_bot_token). Returns null when no token persisted. */
-  getDecryptedBotToken(customerId: string): Promise<string | null>
 }
 
 export type RefreshEnvDeps = {
@@ -290,13 +297,39 @@ export async function refreshEnvHandler(
   if (typeof req.request_id !== 'string' || req.request_id.length === 0) {
     return { ok: false, error: 'invalid_field', detail: 'invalid request_id' }
   }
-  const envKeys: ReadonlyArray<AllowedEnvKey> = req.env_keys ?? ['TELEGRAM_BOT_TOKEN']
-  for (const k of envKeys) {
+  // env_values must be a non-empty object whose keys are all allowed.
+  if (!req.env_values || typeof req.env_values !== 'object') {
+    return {
+      ok: false,
+      error: 'invalid_field',
+      detail: 'env_values must be an object mapping allowed env keys → string values',
+      request_id: req.request_id,
+    }
+  }
+  const submittedKeys = Object.keys(req.env_values) as AllowedEnvKey[]
+  if (submittedKeys.length === 0) {
+    return {
+      ok: false,
+      error: 'invalid_field',
+      detail: 'env_values must include at least one key',
+      request_id: req.request_id,
+    }
+  }
+  for (const k of submittedKeys) {
     if (!ALLOWED_ENV_KEYS.includes(k)) {
       return {
         ok: false,
         error: 'invalid_field',
         detail: `unknown env key: ${k}`,
+        request_id: req.request_id,
+      }
+    }
+    const v = req.env_values[k]
+    if (typeof v !== 'string' || v.length === 0) {
+      return {
+        ok: false,
+        error: 'invalid_field',
+        detail: `env_values.${k} must be a non-empty string`,
         request_id: req.request_id,
       }
     }
@@ -340,36 +373,10 @@ export async function refreshEnvHandler(
     }
   }
 
-  // ── Source env values ──
-  // Today the only sourced key is TELEGRAM_BOT_TOKEN (decrypted via
-  // Supabase RPC). OPENROUTER_API_KEY is in the allowlist for future
-  // use but not yet mapped to a source — reject if requested for now.
+  // ── Caller-supplied env values (no decryption here) ──
   const envValues: Partial<Record<AllowedEnvKey, string>> = {}
-  for (const key of envKeys) {
-    if (key === 'TELEGRAM_BOT_TOKEN') {
-      const tok = await deps.store.getDecryptedBotToken(req.customer_id)
-      if (!tok) {
-        const out: RefreshEnvFailure = {
-          ok: false,
-          error: 'no_bot_token',
-          detail: 'customer has no decryptable bot token',
-          request_id: req.request_id,
-        }
-        await recordOutcome(deps.store, req.request_id, req.customer_id, out)
-        return out
-      }
-      envValues.TELEGRAM_BOT_TOKEN = tok
-    } else if (key === 'OPENROUTER_API_KEY') {
-      // Future: source from customers.openrouter_api_key (or the
-      // openrouter_keys table). For now, reject so we never write
-      // garbage to the VPS.
-      return {
-        ok: false,
-        error: 'invalid_field',
-        detail: `${key} not yet wired to a source — currently TELEGRAM_BOT_TOKEN only`,
-        request_id: req.request_id,
-      }
-    }
+  for (const k of submittedKeys) {
+    envValues[k] = req.env_values[k]
   }
 
   // ── Record start ──

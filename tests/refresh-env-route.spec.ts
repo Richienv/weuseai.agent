@@ -115,9 +115,7 @@ class FakeStore {
       this.refreshRequests.set(requestId, { ...existing, outcome, completedAt: new Date() })
     }
   }
-  async getDecryptedBotToken(_cid: string): Promise<string | null> {
-    return VALID_TOKEN
-  }
+  // Pivot 2026-05-10: store no longer decrypts. Caller supplies values.
 }
 
 function makeDeps(opts: {
@@ -135,7 +133,7 @@ function makeDeps(opts: {
 
 const HAPPY_REQ: RefreshEnvRequest = {
   customer_id: 'cust-1',
-  env_keys: ['TELEGRAM_BOT_TOKEN'],
+  env_values: { TELEGRAM_BOT_TOKEN: VALID_TOKEN },
   request_id: 'req-aaa',
 }
 
@@ -235,26 +233,23 @@ test('different request_id triggers fresh SSH (no over-broad dedup)', async () =
   assert.equal(sshInvocations, 2)
 })
 
-test('default env_keys to [TELEGRAM_BOT_TOKEN] when omitted', async () => {
-  const sshCalls: string[] = []
-  const deps = makeDeps({
-    ssh: async (args) => { sshCalls.push(args.command); return { ok: true, stdout: 'ok' } },
-  })
+test('empty env_values → 400 invalid_field', async () => {
+  // Pivot 2026-05-10: caller must supply values; no default-source.
+  const deps = makeDeps({})
   const res = await refreshEnvHandler(
-    { customer_id: 'cust-1', request_id: 'req-no-keys' },
+    { customer_id: 'cust-1', env_values: {}, request_id: 'req-empty' },
     deps,
   )
-  assert.equal(res.ok, true)
-  assert.match(sshCalls[0]!, /TELEGRAM_BOT_TOKEN/)
+  assert.equal(res.ok, false)
 })
 
-test('invalid env_keys (unknown key) → 400 invalid_field', async () => {
+test('invalid env_values key (not in allowlist) → 400 invalid_field', async () => {
   const deps = makeDeps({})
   const res = await refreshEnvHandler(
     {
       customer_id: 'cust-1',
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      env_keys: ['HACK_KEY' as any],
+      env_values: { HACK_KEY: 'pwned' as string } as any,
       request_id: 'req-bad',
     },
     deps,
@@ -269,19 +264,23 @@ test('invalid env_keys (unknown key) → 400 invalid_field', async () => {
 test('missing customer_id → invalid_field', async () => {
   const deps = makeDeps({})
   const res = await refreshEnvHandler(
-    { customer_id: '', env_keys: ['TELEGRAM_BOT_TOKEN'], request_id: 'req-no-cid' },
+    { customer_id: '', env_values: { TELEGRAM_BOT_TOKEN: VALID_TOKEN }, request_id: 'req-no-cid' },
     deps,
   )
   assert.equal(res.ok, false)
 })
 
-test('decryption failure (no bot token in row) → internal error', async () => {
-  const store = new FakeStore()
-  store.vps.set('cust-1', { ip: '1.2.3.4', status: 'running' })
-  store.getDecryptedBotToken = async () => null
-  const deps = makeDeps({ store })
-  const res = await refreshEnvHandler(HAPPY_REQ, deps)
+test('empty bot token value in env_values → 400 invalid_field', async () => {
+  // Pivot 2026-05-10: handler rejects empty values up-front so we
+  // never write a zero-length env var to the VPS .env. Replaces the
+  // old "no decryptable bot token" path (decryption now happens in
+  // caller, not in this handler).
+  const deps = makeDeps({})
+  const res = await refreshEnvHandler(
+    { customer_id: 'cust-1', env_values: { TELEGRAM_BOT_TOKEN: '' }, request_id: 'req-empty-tok' },
+    deps,
+  )
   assert.equal(res.ok, false)
   if (res.ok) return
-  assert.match(res.error, /no_bot_token|internal/)
+  assert.equal(res.error, 'invalid_field')
 })
