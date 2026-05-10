@@ -100,7 +100,7 @@ const validUpdate = {
 
 // ─── happy path ───────────────────────────────────────────────────
 
-test('valid /pair: links chat_id, clears pairing fields, replies success via customer bot', async () => {
+test('valid /pair: links chat_id, clears pairing fields, sends NO reply (silent success per Track 3 post-pair polish 2026-05-10)', async () => {
   const { db, telegram } = await setupValidPairing()
 
   const res = await handlePairCustomerBotWebhook(buildReq(validUpdate), {
@@ -115,11 +115,13 @@ test('valid /pair: links chat_id, clears pairing fields, replies success via cus
   assert.equal(c?.pairing_code, null)
   assert.equal(c?.pairing_code_expires_at, null)
 
-  // Reply was sent via the CUSTOMER'S OWN bot (token + chat id match).
-  assert.equal(telegram.replies.length, 1)
-  assert.equal(telegram.replies[0].botToken, VALID_TOKEN)
-  assert.equal(telegram.replies[0].chatId, 6805409051)
-  assert.equal(telegram.replies[0].text, PAIR_CUSTOMER_BOT_REPLIES.success)
+  // Track 3 of post-pair UX polish (2026-05-10): pair success is silent.
+  // Pre-fix the bot replied with REPLY_SUCCESS ("Pairing berhasil...") —
+  // now removed because the proactive greeting (Track 2) carries the
+  // "agent ready" signal in-character once Hermes boots. The canned
+  // line in between added a confusing third voice from a placeholder
+  // bot before the real agent personality came online.
+  assert.equal(telegram.replies.length, 0, 'no Telegram reply on pair success')
 })
 
 // ─── auth ─────────────────────────────────────────────────────────

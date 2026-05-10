@@ -677,6 +677,46 @@
      * has no username yet (which would be a legit pre-validate-bot-token
      * race, though state C2 should only fire after step 2 ran).
      */
+    /**
+     * Poll the customer-readiness Edge Fn for the agent's actual readiness.
+     *
+     * Track 1 of post-pair UX polish (2026-05-10). Founder feedback from
+     * fresh-customer test: welcome page said "agent ready" before agent
+     * was actually ready → user clicked Buka Telegram, sent /start, sat
+     * waiting in confused silence. This helper gates the C2 transition
+     * on `ready === true` (critical checks: hermes_systemd_active,
+     * hermes_pairing_approved, soul_md_present).
+     *
+     * Returns { ready: boolean, checks?: object } or null on error.
+     * Best-effort — null is treated as "still building" (state B), not
+     * an error, so a transient probe failure doesn't bounce the user
+     * out of the wait state.
+     */
+    async function pollReadinessProbe() {
+      if (!cid) return null;
+      try {
+        const r = await fetch(
+          `${SUPABASE_URL}/functions/v1/customer-readiness`,
+          {
+            method: 'POST',
+            headers: {
+              apikey: SUPABASE_ANON_KEY,
+              Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+              'X-CID': cid,
+              'content-type': 'application/json',
+            },
+            body: JSON.stringify({ customer_id: cid }),
+          }
+        );
+        if (!r.ok) return null;
+        const j = await r.json();
+        if (!j || typeof j !== 'object') return null;
+        return { ready: j.ready === true, checks: j.checks ?? {} };
+      } catch {
+        return null;
+      }
+    }
+
     async function ensureBotUsername() {
       if (botUsername) return botUsername;
       if (!cid) return null;
@@ -710,14 +750,33 @@
       try {
         const status = await pollOnce();
         if (status === 'active') {
-          // Resolve the customer's per-bot Telegram username before
-          // rendering C2 so the "Buka Telegram" CTA points at their
-          // actual bot, not telegram.org generic. Best-effort —
-          // ensureBotUsername swallows errors and returns null; the
-          // C2 renderer falls back to a "Mengambil link bot kamu…"
-          // hint until the next tick fills it in.
-          if (job) await ensureBotUsername();
-          renderState(job ? 'C2' : 'C');
+          // With &job: gate C2 on real readiness probe (Track 1 post-pair
+          // UX polish, 2026-05-10). Subscription.status='active' only
+          // proves payment + provisioning ack; it doesn't prove Hermes
+          // booted with the right bot token + pairing approved + SOUL.md.
+          // Pre-fix: customer landed on C2 ("klik Buka Telegram"), sent
+          // /start, agent silent because it wasn't actually ready.
+          // Now: hold in B until probe.ready=true.
+          //
+          // Without &job: customer hasn't completed onboarding yet —
+          // route them to /onboarding (state C). No probe needed.
+          if (job) {
+            const probe = await pollReadinessProbe();
+            if (!probe || !probe.ready) {
+              // Probe says agent not yet usable. Hold in B (or F if past
+              // timeout) just like pending_provision.
+              if (Date.now() - startedAt > TIMEOUT_MS) {
+                renderState('F');
+              } else {
+                renderState('B');
+              }
+            } else {
+              await ensureBotUsername();
+              renderState('C2');
+            }
+          } else {
+            renderState('C');
+          }
         } else if (status === 'failed') {
           renderState('D');
         } else if (status === 'pending_provision' || status === 'pending') {

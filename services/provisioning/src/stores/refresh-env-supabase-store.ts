@@ -13,15 +13,20 @@
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import type { IRefreshEnvStore } from '../routes/refresh-env.js'
+import type { IReadinessStore } from '../routes/customer-readiness-probe.js'
 
 export type RefreshEnvStoreDeps = {
   supabaseUrl: string
   serviceRoleKey: string
 }
 
+/** Combined store. createRefreshEnvStore now also satisfies IReadinessStore
+ *  so /customer-readiness-probe can reuse the same Supabase client. */
+export type CombinedStore = IRefreshEnvStore & IReadinessStore
+
 export function createRefreshEnvStore(
   deps: RefreshEnvStoreDeps,
-): IRefreshEnvStore {
+): CombinedStore {
   if (!deps.supabaseUrl) {
     throw new Error('createRefreshEnvStore: missing SUPABASE_URL')
   }
@@ -95,6 +100,21 @@ export function createRefreshEnvStore(
         })
         .eq('request_id', requestId)
       if (error) throw error
+    },
+
+    // ─── IReadinessStore ───────────────────────────────────────────
+    // Reads telegram_chat_id only (not the bot token, not soul_md_text).
+    // Used by /customer-readiness-probe to verify pairing-approved.json
+    // contains the customer's chat_id.
+    async findTelegramChatId(customerId) {
+      const { data, error } = await supabase
+        .from('customers')
+        .select('telegram_chat_id')
+        .eq('id', customerId)
+        .maybeSingle()
+      if (error) throw error
+      if (!data) return null
+      return (data as { telegram_chat_id: string | null }).telegram_chat_id
     },
   }
 }

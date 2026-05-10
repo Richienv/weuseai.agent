@@ -18,6 +18,10 @@ import { OpenRouterKeyMinter } from './llm/openrouter-minter.js'
 import { MockLlmKeyMinter } from './llm/mock-minter.js'
 import { tierBump, type TierBumpRouteRequest } from './routes/tier-bump.js'
 import { refreshEnvHandler, type RefreshEnvRequest } from './routes/refresh-env.js'
+import {
+  readinessProbeHandler,
+  type ReadinessProbeRequest,
+} from './routes/customer-readiness-probe.js'
 import { createRefreshEnvStore } from './stores/refresh-env-supabase-store.js'
 
 const PORT = Number(process.env.PORT ?? 8080)
@@ -182,6 +186,45 @@ app.post('/refresh-env', async (req, res) => {
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
     console.error('refresh-env failed:', msg)
+    res.status(500).json({ ok: false, error: 'internal', detail: msg })
+  }
+})
+
+// Track 1 (post-pair UX polish, 2026-05-10): /customer-readiness-probe.
+// Returns 8-check JSON describing whether a customer's agent is fully
+// usable. welcome.html polls this every 10s during state A/B and only
+// transitions to "klik Buka Telegram" when critical checks pass
+// (hermes_systemd_active + hermes_pairing_approved + soul_md_present).
+//
+// Reuses the same Supabase store as /refresh-env (CombinedStore).
+app.post('/customer-readiness-probe', async (req, res) => {
+  if (!refreshEnvStore) {
+    return res.status(500).json({
+      ok: false,
+      error: 'internal',
+      detail: 'customer-readiness-probe requires SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY env vars',
+    })
+  }
+  const body = req.body as Partial<ReadinessProbeRequest>
+  try {
+    const result = await readinessProbeHandler(
+      { customer_id: body.customer_id ?? '' },
+      {
+        fleetPrivateKey: FLEET_SSH_PRIVATE_KEY,
+        store: refreshEnvStore,
+      },
+    )
+    if (!result.ok) {
+      const status =
+        result.error === 'invalid_field' ? 400
+        : result.error === 'no_active_vps' ? 404
+        : 500
+      return res.status(status).json(result)
+    }
+    res.json(result)
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    console.error('customer-readiness-probe failed:', msg)
     res.status(500).json({ ok: false, error: 'internal', detail: msg })
   }
 })

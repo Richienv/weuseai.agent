@@ -32,6 +32,7 @@ const BROWSER_CALLABLE = [
   'complete-onboarding',      // onboarding.html step 4
   'reset-bot-pairing',        // onboarding.html step 3 recovery (PR #56)
   'save-onboarding-profile',  // onboarding.html step 1 (PR #57)
+  'customer-readiness',       // welcome.html readiness probe wrapper (post-pair Track 1)
 ] as const
 
 // External-webhook callable (Telegram / Xendit servers, no Supabase JWT).
