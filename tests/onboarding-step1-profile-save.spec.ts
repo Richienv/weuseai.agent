@@ -22,13 +22,26 @@ test('step 1 form has editable Name input (no readonly attribute)', () => {
   )
 })
 
-test('step 1 form has editable Email input (no readonly attribute)', () => {
+test('step 1 form Email input is readonly + prefilled from checkout (Track 4 post-pair polish 2026-05-10)', () => {
+  // Pre-Track-4 the field was editable so customers could correct an
+  // email typo from checkout. Founder feedback from fresh-customer test:
+  // duplicate ask felt like a bureaucratic form, and any divergence
+  // between the two values silently created a data inconsistency
+  // (receipts go to one address, account email is another). Now: email
+  // is readonly + prefilled from customers.email; corrections route
+  // through WhatsApp support (link is visible right below the form).
   const src = fs.readFileSync(ONBOARDING, 'utf8')
   const m = src.match(/<input[^>]*id="f-email"[^>]*>/)
   assert.ok(m, 'must find <input id="f-email">')
   assert.ok(
-    !/\breadonly\b/.test(m[0]),
-    `f-email input must not be readonly (was: ${m[0]})`,
+    /\breadonly\b/.test(m[0]),
+    `f-email input must be readonly per Track 4 (was: ${m[0]})`,
+  )
+  // Help text must point customers at the correction path.
+  assert.match(
+    src,
+    /Email dari checkout/,
+    'help text must explain why email is locked + how to fix',
   )
 })
 

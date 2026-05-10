@@ -523,9 +523,12 @@
               autocomplete="email"
               placeholder="kamu@email.com"
               required
+              readonly
+              aria-readonly="true"
+              style="background: rgba(0,0,0,0.025); color: var(--text-muted); cursor: not-allowed;"
             />
             <p id="f-email-help" class="field-help">
-              Dipakai untuk receipt dan kabar penting agent kamu.
+              Email dari checkout — kalau salah, kontak tim via WhatsApp di bawah.
             </p>
             <p id="f-email-error" class="field-error" aria-live="polite"></p>
           </div>
@@ -719,7 +722,26 @@
           <li>
             <span class="num">02</span>
             <div class="body">
-              <div class="text">Kirim pesan: <span class="mono" style="color: rgba(245,245,245,0.95);">/pair <span data-pair-inline>—</span></span></div>
+              <!-- Track 5 of post-pair UX polish (2026-05-10): hint added
+                   so customers know to /start the bot before sending /pair.
+                   Without /start, Telegram blocks bot replies (which are
+                   silent now per Track 3 anyway, but the bot also can't
+                   READ the user's first message until they /start). -->
+              <div class="text" style="color: rgba(245,245,245,0.65); font-size: 13px; margin-bottom: 6px;">
+                Klik <span class="mono" style="color: rgba(245,245,245,0.85);">/start</span> di bot dulu, baru kirim:
+              </div>
+              <div class="text" style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <span class="mono" style="color: rgba(245,245,245,0.95);">/pair <span data-pair-inline>—</span></span>
+                <button
+                  type="button"
+                  data-copy-pair-cmd
+                  class="btn-secondary focus-ring"
+                  style="padding: 4px 10px; font-size: 12px; min-width: 64px;"
+                  aria-label="Salin perintah /pair ke clipboard"
+                >
+                  <span data-copy-pair-label>Salin</span>
+                </button>
+              </div>
             </div>
           </li>
           <li>
@@ -1472,6 +1494,56 @@
       $pairCode.setAttribute('aria-label', `Kode pasangan ${code.split('').join(' ')}`);
       if ($pairInline) $pairInline.textContent = code;
     }
+
+    /**
+     * Track 5 of post-pair UX polish (2026-05-10): copy "/pair <code>"
+     * to clipboard so customers can paste straight into Telegram instead
+     * of retyping (especially fiddly on mobile). Falls back to a
+     * textarea + execCommand for environments without async clipboard
+     * (older mobile webviews).
+     */
+    (function wireCopyPairButton() {
+      const btn = document.querySelector('[data-copy-pair-cmd]');
+      const label = document.querySelector('[data-copy-pair-label]');
+      if (!btn) return;
+      btn.addEventListener('click', async () => {
+        const code = $pairInline?.textContent?.trim();
+        if (!code || code === '—' || !/^\d{6}$/.test(code)) {
+          // Code not yet rendered (still rotating) — nudge politely.
+          if (label) {
+            label.textContent = 'Tunggu kode';
+            setTimeout(() => { label.textContent = 'Salin'; }, 1200);
+          }
+          return;
+        }
+        const cmd = `/pair ${code}`;
+        let ok = false;
+        try {
+          if (navigator.clipboard?.writeText) {
+            await navigator.clipboard.writeText(cmd);
+            ok = true;
+          } else {
+            // Fallback: textarea + execCommand. Required on iOS Safari
+            // when accessed without a secure-context-mediated clipboard
+            // (e.g. preview deploys before HTTPS is in the cache).
+            const ta = document.createElement('textarea');
+            ta.value = cmd;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            ok = document.execCommand('copy');
+            document.body.removeChild(ta);
+          }
+        } catch {
+          ok = false;
+        }
+        if (label) {
+          label.textContent = ok ? 'Disalin ✓' : 'Gagal salin';
+          setTimeout(() => { label.textContent = 'Salin'; }, 1500);
+        }
+      });
+    })();
 
     function startExpiryTicker() {
       const $mmss = $pairExpiry.querySelector('[data-mmss]');

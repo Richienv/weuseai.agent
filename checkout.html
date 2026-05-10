@@ -586,7 +586,12 @@
               <option value="AU">Australia</option>
               <option value="JP">Japan</option>
             </select>
-            <input class="field-input" type="text" id="postal" placeholder="Postal code" autocomplete="postal-code" style="margin-top:10px;">
+            <!-- Postal code removed 2026-05-10 (Track 4 of post-pair UX polish):
+                 not legally required for digital services in Indonesia,
+                 not used by Xendit for QRIS / e-wallet / VA flows, and
+                 added a friction step with no payoff. The hidden field is
+                 retained as a JS-only "" so existing create-invoice
+                 server logic doesn't choke on missing postal field. -->
           </div>
 
           <button class="pay-btn" type="submit" id="payBtn">Bayar Sekarang · <span id="payBtnAmount">Rp 1.398.723</span></button>
@@ -921,7 +926,9 @@
               alwaysOn: state.alwaysOn,
               methodId: state.methodId,
               country: document.getElementById('country').value,
-              postal: document.getElementById('postal').value.trim(),
+              // postal omitted 2026-05-10 (Track 4); send empty for
+              // server-side compatibility while DB column drains.
+              postal: '',
             }),
           });
           const data = await res.json();

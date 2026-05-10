@@ -154,6 +154,14 @@ verify_jwt = false
 [functions.save-onboarding-profile]
 verify_jwt = false
 
+# Track 1 (post-pair UX polish, 2026-05-10): browser-callable readiness
+# probe wrapper. welcome.html polls this every 10s during state A/B and
+# only transitions to "klik Buka Telegram" when critical checks pass.
+# Authz: customer_id must be UUID + map to existing customer with
+# subscription. No PII in response (just 8 booleans + vps_id + ip).
+[functions.customer-readiness]
+verify_jwt = false
+
 # Track 3c (2026-05-10): admin-only manual rescue path. Service-role
 # JWT required. Gateway verifies bearer (verify_jwt=true), then
 # isServiceRoleCaller in the handler extracts role from the verified

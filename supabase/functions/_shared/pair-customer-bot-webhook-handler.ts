@@ -46,6 +46,11 @@ export type PairCustomerBotUpdate = {
   }
 }
 
+// Track 3 of post-pair UX polish (2026-05-10): no longer sent. Pair
+// success is silent now — the proactive greeting (Track 2) carries the
+// "agent ready" signal in-character. Kept exported for tests that
+// assert REPLIES.success exists; if you remove the export, update
+// tests/pair-customer-bot-webhook-handler.spec.ts too.
 const REPLY_SUCCESS =
   'Pairing berhasil. Agent kamu sedang dibangun — tunggu pesan halo dalam 5–7 menit.'
 
@@ -162,9 +167,20 @@ export async function handlePairCustomerBotWebhook(
     pairing_code_expires_at: null,
   })
 
-  // ─── 10. Reply success via customer's bot ─────────────────────────
-  await safeReply(deps.telegram, botToken, message.chat.id, REPLY_SUCCESS)
-  return ok({ replied: 'paired' })
+  // ─── 10. Silent success ───────────────────────────────────────────
+  // Track 3 of post-pair UX polish (2026-05-10): no canned reply on
+  // pair success. Pre-fix: bot replied "Pairing berhasil. Agent kamu
+  // sedang dibangun..." which is now redundant noise — welcome.html
+  // tells the customer the agent is being built (state B), and the
+  // proactive greeting (Track 2) sends an in-character first message
+  // once Hermes is actually ready. The canned line in between added
+  // a confusing third voice from a "wrong" persona (the placeholder bot
+  // before the real agent boots).
+  //
+  // Telegram still gets 200 — webhook is acked, no retry — we just don't
+  // sendMessage. The webhook is then deleted by complete-onboarding step
+  // 8b so Hermes can long-poll cleanly.
+  return ok({ replied: 'paired_silent' })
 }
 
 async function safeReply(

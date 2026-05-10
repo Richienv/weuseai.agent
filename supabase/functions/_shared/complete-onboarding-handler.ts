@@ -20,6 +20,7 @@ import {
   sha256Hex,
 } from './soul-md-template.ts'
 import { properDeleteWebhook } from './proper-delete-webhook.ts'
+import { sendProactiveGreeting } from './proactive-greeting.ts'
 
 export type CompleteOnboardingDeps = {
   db: IOnboardingStore
@@ -282,6 +283,36 @@ export async function handleCompleteOnboarding(
       `[complete-onboarding] properDeleteWebhook failed for ${customer_id}: ` +
         `attempts=${webhookResult.attempts} error="${webhookResult.finalError}"`,
     )
+  }
+
+  // ─── 8c. Proactive in-character greeting (Track 2 post-pair polish 2026-05-10) ──
+  // After refreshEnv + webhook delete both succeed, the customer's bot
+  // is fully wired (per-customer token in VPS .env, Hermes long-poll
+  // unblocked, chat_id pre-approved). Send a quick greeting AS the
+  // customer's bot so they see "agent already messaged me" instead of
+  // having to send /start to wake it up. Best-effort — never blocks
+  // the redirect, never throws (sendProactiveGreeting catches all).
+  //
+  // Only fires when both 8a + 8b succeeded. If either failed, the agent
+  // isn't actually reachable yet so a greeting would land in a void.
+  let greetingResult: { ok: boolean; source: string; error?: string } | null = null
+  if (refreshResult.ok && webhookResult.ok) {
+    greetingResult = await sendProactiveGreeting(
+      {
+        chatId: customer.telegram_chat_id,
+        botToken: customerBotToken,
+        soulMdText,
+        customerName,
+        openrouterApiKey: mintResult.key,
+      },
+      { telegram: deps.telegram },
+    )
+    if (!greetingResult.ok) {
+      console.error(
+        `[complete-onboarding] proactive greeting failed for ${customer_id}: ` +
+          `source=${greetingResult.source} error=${greetingResult.error ?? 'n/a'}`,
+      )
+    }
   }
 
   // ─── 9. Flip subscription to active ───────────────────────────────
