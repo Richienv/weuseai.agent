@@ -416,6 +416,12 @@
     // (10s) which is alarming enough to bounce.
     const NULL_GRACE_MS = 30_000;
 
+    // Customer's per-bot Telegram username — populated lazily by
+    // ensureBotUsername() the first time we render state C2 (the
+    // "Buka Telegram" CTA). Cached after first successful read so
+    // re-renders don't re-fetch.
+    let botUsername = null;
+
     // Pre-fill WhatsApp message with cid when present
     (function injectCidIntoWhatsApp() {
       const link = document.getElementById('wa-link');
@@ -490,25 +496,44 @@
           `;
           break;
 
-        case 'C2': // active, with &job → ready for Telegram
+        case 'C2': { // active, with &job → ready for Telegram
+          // Build the deeplink from the cached bot username (resolved
+          // by ensureBotUsername() in tick()). If still null, show a
+          // disabled CTA + a loading hint instead of sending the
+          // customer to telegram.org generic.
+          const tgHref = botUsername
+            ? `https://t.me/${encodeURIComponent(botUsername)}`
+            : null;
+          const ctaInner = tgHref
+            ? `
+              <a
+                href="${tgHref}"
+                data-bot-deeplink
+                class="btn-primary focus-ring"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Buka Telegram @${botUsername}
+                <span aria-hidden="true">→</span>
+              </a>
+            `
+            : `
+              <div data-bot-deeplink-loading style="font-size:13px; color:rgba(245,245,245,0.55); display:flex; align-items:center; gap:10px;">
+                <span class="pulse-dot" aria-hidden="true"></span>
+                Mengambil link bot kamu…
+              </div>
+            `;
           html = `
             <div class="fade-in">
               <div style="font-size:14px; color:rgba(245,245,245,0.85); margin-bottom:18px; line-height:1.6;">
                 <span style="color:#fff; font-weight:500;">Agent kamu siap.</span>
                 Buka Telegram dan kirim <span class="mono" style="color:rgba(245,245,245,0.95);">/start</span> ke bot kamu.
               </div>
-              <a
-                href="https://t.me/"
-                class="btn-primary focus-ring"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Buka Telegram
-                <span aria-hidden="true">→</span>
-              </a>
+              ${ctaInner}
             </div>
           `;
           break;
+        }
 
         case 'D': // failed
           html = `
@@ -636,6 +661,47 @@
       return rows[0]?.status ?? null;
     }
 
+    /**
+     * Resolve the customer's per-bot Telegram username so the
+     * "Buka Telegram" CTA in state C2 deeplinks to t.me/<their-bot>
+     * instead of telegram.org generic.
+     *
+     * Pre-fix bug (2026-05-10): state C2 hardcoded `href="https://t.me/"`,
+     * sending paying customers to telegram.org with no idea which bot
+     * to talk to.
+     *
+     * X-CID header per Sesi D P0-2 RLS — without it the SELECT
+     * returns 0 rows even for the row that matches.
+     *
+     * Returns null if cid is missing, fetch fails, or the customer row
+     * has no username yet (which would be a legit pre-validate-bot-token
+     * race, though state C2 should only fire after step 2 ran).
+     */
+    async function ensureBotUsername() {
+      if (botUsername) return botUsername;
+      if (!cid) return null;
+      try {
+        const r = await fetch(
+          `${SUPABASE_URL}/rest/v1/customers?id=eq.${encodeURIComponent(cid)}` +
+            `&select=telegram_bot_username`,
+          {
+            headers: {
+              apikey: SUPABASE_ANON_KEY,
+              Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+              'X-CID': cid,
+            },
+          }
+        );
+        if (!r.ok) return null;
+        const rows = await r.json();
+        const u = rows[0]?.telegram_bot_username;
+        if (u) botUsername = u;
+        return botUsername;
+      } catch {
+        return null;
+      }
+    }
+
     function isTerminal(state) {
       return state === 'C' || state === 'C2' || state === 'D' || state === 'E' || state === 'F';
     }
@@ -644,6 +710,13 @@
       try {
         const status = await pollOnce();
         if (status === 'active') {
+          // Resolve the customer's per-bot Telegram username before
+          // rendering C2 so the "Buka Telegram" CTA points at their
+          // actual bot, not telegram.org generic. Best-effort —
+          // ensureBotUsername swallows errors and returns null; the
+          // C2 renderer falls back to a "Mengambil link bot kamu…"
+          // hint until the next tick fills it in.
+          if (job) await ensureBotUsername();
           renderState(job ? 'C2' : 'C');
         } else if (status === 'failed') {
           renderState('D');
