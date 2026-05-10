@@ -25,3 +25,7 @@ supabase/.temp
 supabase/.branches
 .fly
 fly.toml.bak
+
+# macOS metadata sidecar files (Extreme SSD HFS+ artifacts)
+._*
+**/._*

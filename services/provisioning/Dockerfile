@@ -43,6 +43,12 @@ RUN npm ci --include=dev && npm cache clean --force
 # Source.
 COPY services/ ./services/
 COPY packages/ ./packages/
+# customer-flow.ts imports signCustomerToken from supabase/functions/_shared/
+# hermes-instance-auth (Phase 5-3.c HMAC token rollout). Production hotfix
+# 2026-05-10: image was missing supabase/, causing crashloop on first
+# /spin-up call (hidden because auto_stop_machines kept the broken image
+# dormant — surfaced when Track 3a deploy woke the machine).
+COPY supabase/ ./supabase/
 COPY tsconfig.json ./
 
 EXPOSE 8081
