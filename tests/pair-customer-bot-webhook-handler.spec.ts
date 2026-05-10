@@ -50,12 +50,12 @@ function setupValidPairing() {
     display_name: 'Sarah Tanaka',
     pairing_code: '977841',
     pairing_code_expires_at: '2099-01-01T00:00:00.000Z',
-    telegram_bot_username: 'welcomeuseaibot',
+    telegram_bot_username: 'weuseai_e2e_fixture_bot',
   })
   // Seed encrypted token via the store's setBotTokenAndUsername (round-trips
   // via fake-store's enc: prefix).
   return (async () => {
-    await db.setBotTokenAndUsername('cust-1', VALID_TOKEN, 'welcomeuseaibot')
+    await db.setBotTokenAndUsername('cust-1', VALID_TOKEN, 'weuseai_e2e_fixture_bot')
     return { db, telegram }
   })()
 }
@@ -226,7 +226,7 @@ test('/pair with bot username suffix: matches', async () => {
   const { db, telegram } = await setupValidPairing()
   const update = {
     message: {
-      text: '/pair@welcomeuseaibot 977841',
+      text: '/pair@weuseai_e2e_fixture_bot 977841',
       chat: { id: 6805409051 },
     },
   }

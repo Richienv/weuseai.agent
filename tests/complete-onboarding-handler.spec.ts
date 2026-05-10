@@ -61,7 +61,7 @@ const PUBLIC_BASE = 'https://weuseai-agent.vercel.app'
 // Per-customer bot token used in test setups. Mirrors the format
 // founder-pasted in the diagnostic step so tests track production-shape.
 const TEST_BOT_TOKEN = '8734001154:AAGGTR0PRNCy03aaVPb5qi9hWzxCe5yr_Ek'
-const TEST_BOT_USERNAME = 'welcomeuseaibot'
+const TEST_BOT_USERNAME = 'weuseai_e2e_fixture_bot'
 
 function buildReq(body: unknown, method = 'POST'): Request {
   const init: RequestInit = {

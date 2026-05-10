@@ -18,7 +18,7 @@ class FakeTelegram implements ITelegramClient {
   // getMe behavior is configurable per test
   getMeImpl: (token: string) => Promise<
     { id: number; username: string } | null
-  > = async () => ({ id: 8734001154, username: 'welcomeuseaibot' })
+  > = async () => ({ id: 8734001154, username: 'weuseai_e2e_fixture_bot' })
   setWebhookCalls: Array<{
     botToken: string
     url: string
@@ -92,11 +92,11 @@ test('valid token: persists encrypted token + username, sets webhook, returns us
   )
   assert.equal(res.status, 200)
   const body = (await res.json()) as { bot_username: string }
-  assert.equal(body.bot_username, 'welcomeuseaibot')
+  assert.equal(body.bot_username, 'weuseai_e2e_fixture_bot')
 
   // Username stored as plaintext on customer row
   const c = await db.findCustomerById('cust-1')
-  assert.equal(c?.telegram_bot_username, 'welcomeuseaibot')
+  assert.equal(c?.telegram_bot_username, 'weuseai_e2e_fixture_bot')
 
   // Token stored as ciphertext (round-trips via fake-store's enc: prefix)
   assert.equal(await db.getDecryptedBotToken('cust-1'), VALID_TOKEN)
