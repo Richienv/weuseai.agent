@@ -108,3 +108,31 @@ test('renderState B no longer hardcodes width: 35% (progress is now real)', () =
     'progress fill must not start at hardcoded 35%',
   )
 })
+
+test('no false email-notify promises in customer-facing copy (Resend not yet wired)', () => {
+  const src = fs.readFileSync(WELCOME, 'utf8')
+  // Track 2 honesty fix (post-CORS-hotfix cascade 2026-05-10).
+  // Previous copy promised "kami kabari via email" / "menghubungi via
+  // email dalam 30 menit" — false because Resend integration isn't
+  // wired. Pulling them out keeps the page honest until transactional
+  // email lands (Sesi B P0 buildlist).
+  //
+  // Strip code comments before searching so the docstring history
+  // markers ("dropped 'kami kabari via email'") don't trigger false
+  // positives. Comments are <!-- … --> and // … patterns.
+  const stripHtmlComments = src.replace(/<!--[\s\S]*?-->/g, '')
+  const stripJsComments = stripHtmlComments.replace(/\/\/[^\n]*\n/g, '\n')
+
+  const banned = [
+    /kami kabari via email/i,
+    /menghubungi via email/i,
+    /kami email saat siap/i,
+  ]
+  for (const re of banned) {
+    assert.equal(
+      re.test(stripJsComments),
+      false,
+      `false email promise still present in welcome.html: pattern ${re}`,
+    )
+  }
+})
