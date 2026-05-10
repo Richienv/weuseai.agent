@@ -354,6 +354,12 @@ export type SpinUpResult =
 export type RefreshEnvInput = {
   customerId: string
   envValues: { TELEGRAM_BOT_TOKEN?: string; OPENROUTER_API_KEY?: string }
+  /** Optional: SOUL.md persona content. When provided, written to
+   *  /home/weuseai/.hermes/SOUL.md on the VPS before hermes-gateway
+   *  restart. Closes the dry-run Stage 7 gap (xendit-webhook's first
+   *  spinUp doesn't have soulMdContent yet, so SOUL.md was empty on
+   *  disk — Hermes had no persona to load on first start). */
+  soulMdContent?: string
   /** Caller-supplied UUID for idempotency. Same id within 10 min →
    *  cached outcome instead of re-SSH. */
   requestId: string

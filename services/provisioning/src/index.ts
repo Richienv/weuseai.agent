@@ -158,6 +158,7 @@ app.post('/refresh-env', async (req, res) => {
       {
         customer_id: body.customer_id ?? '',
         env_values: body.env_values ?? {},
+        soul_md_content: body.soul_md_content,
         request_id: body.request_id ?? '',
       },
       {

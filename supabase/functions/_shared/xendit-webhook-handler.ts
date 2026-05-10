@@ -103,6 +103,17 @@ async function handlePaid(
     const result = await deps.provisioning.spinUp({
       customerId: subscription.customer_id,
       tier: subscription.tier,
+      // Explicit empty string — keeps the key PRESENT in the JSON body so
+      // spin-up-helpers.ts treats this as "caller deliberately said no
+      // bot token" instead of falling back to env.TELEGRAM_BOT_TOKEN
+      // (the shared @weuseaibot platform token). Without this empty
+      // string, fresh provisions install + start hermes-gateway with the
+      // shared token and log Telegram 409s for the entire onboarding
+      // window. The customer's own bot token gets installed later when
+      // complete-onboarding step 8a calls refreshEnv.
+      // Per docs/investigation/2026-05-10-fresh-provision-dry-run.md
+      // Stage 4.
+      customerTelegramBotToken: '',
       alwaysOnEnabled: subscription.always_on_enabled,
       useStarterCredits: subscription.tier === 'starter',
     })
