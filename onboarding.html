@@ -499,7 +499,10 @@
 
         <form id="step1-form" style="margin-top: 28px; display: flex; flex-direction: column; gap: 16px;" novalidate>
           <div>
-            <label class="field-label" for="f-name">Nama</label>
+            <label class="field-label" for="f-name">
+              <span style="font-weight: 500;">1. Nama</span>
+              <span aria-hidden="true" style="color:#e5322d; margin-left: 2px;">*</span>
+            </label>
             <input
               id="f-name"
               class="field-input focus-ring"
@@ -515,7 +518,10 @@
             <p id="f-name-error" class="field-error" aria-live="polite"></p>
           </div>
           <div>
-            <label class="field-label" for="f-email">Email</label>
+            <label class="field-label" for="f-email">
+              <span style="font-weight: 500;">2. Email</span>
+              <span aria-hidden="true" style="color:#e5322d; margin-left: 2px;">*</span>
+            </label>
             <input
               id="f-email"
               class="field-input focus-ring"
@@ -523,17 +529,17 @@
               autocomplete="email"
               placeholder="kamu@email.com"
               required
-              readonly
-              aria-readonly="true"
-              style="background: rgba(0,0,0,0.025); color: var(--text-muted); cursor: not-allowed;"
             />
             <p id="f-email-help" class="field-help">
-              Email dari checkout — kalau salah, kontak tim via WhatsApp di bawah.
+              Email kamu — dipakai untuk receipt + kabar penting. Pastikan benar.
             </p>
             <p id="f-email-error" class="field-error" aria-live="polite"></p>
           </div>
           <div>
-            <label class="field-label" for="f-whatsapp">Nomor WhatsApp</label>
+            <label class="field-label" for="f-whatsapp">
+              <span style="font-weight: 500;">3. Nomor WhatsApp</span>
+              <span aria-hidden="true" style="color:#e5322d; margin-left: 2px;">*</span>
+            </label>
             <input
               id="f-whatsapp"
               class="field-input focus-ring"
@@ -1233,7 +1239,27 @@
 
     function renderStep1() {
       $name.value = customer.display_name ?? '';
-      $email.value = customer.email ?? '';
+      // Email: prefill from localStorage cache (checkout writes it on
+      // Bayar Sekarang submit) since anon SELECT on customers.email is
+      // REVOKED per Sesi D P0-2 — the browser cannot read the email
+      // back from the server. If neither cache nor customer object has
+      // it, leave blank for the customer to type. The save-onboarding-
+      // profile call on submit will UPSERT the value to customers row.
+      //
+      // This restores editable behavior intentionally (was readonly +
+      // empty in the prior cascade — locked debug-reset customers out
+      // of completing step 1).
+      let prefillEmail = customer.email ?? '';
+      if (!prefillEmail) {
+        try {
+          // checkout.html stores under a CID-less key (the cid isn't
+          // known at checkout time — it's minted by xendit-webhook
+          // after payment). Same browser session continues to onboarding
+          // where we read it back here.
+          prefillEmail = localStorage.getItem('onboarding_checkout_email') ?? '';
+        } catch { /* localStorage may be disabled */ }
+      }
+      $email.value = prefillEmail;
       if (customer.whatsapp_number) $whatsapp.value = customer.whatsapp_number;
     }
 
@@ -1252,7 +1278,35 @@
       if ($nameErr) $nameErr.textContent = '';
       if ($emailErr) $emailErr.textContent = '';
       $whatsappErr.textContent = '';
+      // Clear red-border highlight on all step-1 inputs.
+      [$name, $email, $whatsapp].forEach((inp) => {
+        if (!inp) return;
+        inp.style.borderColor = '';
+        inp.style.boxShadow = '';
+      });
     }
+
+    /**
+     * Mark a field as invalid: red border + inline error message.
+     * Track 2 of post-pair UX polish (2026-05-10): checkout + step 1
+     * use the same prominence treatment for consistency.
+     */
+    function markStep1FieldInvalid(input, errEl, msg) {
+      if (input) {
+        input.style.borderColor = '#e5322d';
+        input.style.boxShadow = '0 0 0 3px rgba(229,50,45,0.10)';
+      }
+      if (errEl) errEl.textContent = msg;
+    }
+
+    // Clear red-border highlight as the customer corrects the field.
+    [$name, $email, $whatsapp].forEach((inp) => {
+      if (!inp) return;
+      inp.addEventListener('input', () => {
+        inp.style.borderColor = '';
+        inp.style.boxShadow = '';
+      });
+    });
 
     function validEmailFormat(s) {
       return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
@@ -1299,18 +1353,26 @@
 
       // Client-side validation mirrors save-onboarding-profile-handler so
       // we surface friendly inline errors before the server round-trip.
+      // Track 2 prominence (2026-05-10): also paint red border on the
+      // first invalid input so the customer can see WHERE the problem
+      // is at a glance, not just the inline error.
       if (!name) {
-        if ($nameErr) $nameErr.textContent = 'Nama wajib diisi.';
+        markStep1FieldInvalid($name, $nameErr, 'Nama wajib diisi.');
         $name.focus();
         return;
       }
+      if (!email) {
+        markStep1FieldInvalid($email, $emailErr, 'Email wajib diisi.');
+        $email.focus();
+        return;
+      }
       if (!validEmailFormat(email)) {
-        if ($emailErr) $emailErr.textContent = 'Format email belum benar.';
+        markStep1FieldInvalid($email, $emailErr, 'Format email belum benar (mis. kamu@email.com).');
         $email.focus();
         return;
       }
       if (!validWhatsappFormat(wa)) {
-        $whatsappErr.textContent = 'Format nomor belum benar. Mulai dengan 08 atau +62.';
+        markStep1FieldInvalid($whatsapp, $whatsappErr, 'Format nomor belum benar. Mulai dengan 08 atau +62.');
         $whatsapp.focus();
         return;
       }
