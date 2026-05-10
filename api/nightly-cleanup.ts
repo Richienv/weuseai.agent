@@ -39,6 +39,8 @@
 
 // ─── env ────────────────────────────────────────────────────────────────
 
+import { isValidBearer } from './_shared/timing-safe-bearer.js'
+
 const CRON_SECRET = process.env.CRON_SECRET ?? ''
 const IDCH_KEY = process.env.IDCLOUDHOST_API_KEY ?? ''
 const IDCH_REGION = process.env.IDCLOUDHOST_REGION ?? ''
@@ -231,7 +233,10 @@ export default async function handler(
   // accept that exact secret. Without CRON_SECRET set in env this
   // function is unreachable (not a security failure — fail closed).
   const auth = (req.headers.authorization ?? '') as string
-  if (!CRON_SECRET || auth !== `Bearer ${CRON_SECRET}`) {
+  // Sesi D pass-2 P1: timing-safe bearer comparison (was plain `!==`).
+  // isValidBearer() returns false on empty secret, preserving the
+  // pre-fix fail-closed semantics when CRON_SECRET is unset.
+  if (!isValidBearer(auth, CRON_SECRET)) {
     res.status(401).send({ error: 'unauthorized' })
     return
   }
