@@ -463,20 +463,39 @@
           `;
           break;
 
-        case 'B': // pending / pending_provision
+        case 'B': { // pending / pending_provision (Track 2 observability 2026-05-10: stage-aware)
+          // Stage label is set INSIDE renderState by reading lastProbe.progress.
+          // We emit a placeholder here so the DOM nodes exist before the
+          // stage-driven update fires below.
           html = `
             <div class="fade-in">
               <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
                 <span class="pulse-dot" aria-hidden="true"></span>
-                <span id="b-label" style="font-size:14px; color:rgba(245,245,245,0.85);">VPS sedang disiapkan...</span>
+                <span id="b-label" style="font-size:14px; color:rgba(245,245,245,0.85);">Memeriksa status agent…</span>
               </div>
-              <div class="progress-track" role="progressbar" aria-label="Progress provisioning agent" aria-valuemin="0" aria-valuemax="100">
-                <div class="progress-fill" style="width: 35%;"></div>
+              <div class="progress-track" role="progressbar" aria-label="Progress provisioning agent" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                <div id="b-progress-fill" class="progress-fill" style="width: 0%;"></div>
               </div>
-              <div style="margin-top:14px; font-size:12px; color:rgba(245,245,245,0.45);">Estimasi 5–7 menit total. Kamu boleh tutup tab ini — kami kabari via email.</div>
+              <div id="b-eta-line" style="margin-top:14px; font-size:12px; color:rgba(245,245,245,0.45);">Estimasi 5–7 menit total. Kamu boleh tutup tab ini — kami kabari via email.</div>
+              <!-- Soft escalation hint: shown only when current stage exceeds
+                   1.5x its expected duration. Founder copy may iterate. -->
+              <div id="b-soft-hint" hidden style="margin-top:12px; padding:10px 12px; background:rgba(229,170,40,0.08); border:1px solid rgba(229,170,40,0.25); border-radius:6px; font-size:12px; color:rgba(229,170,40,0.95);">
+                Sedang lebih lama dari biasanya. Kalau berjam-jam tetap di sini, hubungi tim via WhatsApp.
+              </div>
+              <!-- Hard escalation: 3x expected stage duration. Surfaces a
+                   WhatsApp deeplink with cid + current stage in the message. -->
+              <div id="b-hard-hint" hidden style="margin-top:12px; padding:12px 14px; background:rgba(229,50,45,0.08); border:1px solid rgba(229,50,45,0.30); border-radius:6px; font-size:13px; color:rgba(245,245,245,0.95);">
+                <div style="font-weight:500; margin-bottom:6px;">Sedang lambat — tim sudah diberi tahu.</div>
+                <div style="font-size:12px; color:rgba(245,245,245,0.65); margin-bottom:10px;">Kamu bisa tutup tab ini, kami email saat siap. Atau hubungi tim sekarang kalau urgent.</div>
+                <a id="b-hard-wa" href="#" target="_blank" rel="noopener noreferrer" class="btn-secondary focus-ring" style="font-size:12px; padding:6px 12px;">
+                  Hubungi tim via WhatsApp
+                  <span aria-hidden="true">→</span>
+                </a>
+              </div>
             </div>
           `;
           break;
+        }
 
         case 'C': // active, no &job → CTA to onboarding
           html = `
@@ -623,19 +642,121 @@
       }
     }
 
-    // Rotate the state-B label between three lines while polling
-    const B_LABELS = [
-      'VPS sedang disiapkan...',
-      'Hermes sedang dipasang...',
-      'Skill kamu di-tune...',
-    ];
-    let bLabelIdx = 0;
+    // ─── Stage-aware B-state (Track 2 observability 2026-05-10) ──
+    //
+    // Pre-fix: the `B_LABELS` array cycled three hardcoded strings on a
+    // 3.5s setInterval — pure animation, no connection to actual stage.
+    // A customer stuck for 30 seconds saw the same cycle as one stuck
+    // for 8 hours. See docs/investigation/2026-05-10-stuck-tuning-observability.md.
+    //
+    // Now: the probe's `progress.current_stage` drives the label, the
+    // progress bar reflects `stages_completed.length / total_stages`,
+    // and per-stage elapsed time fires two soft escalation tiers:
+    //   - 1.5x expected_current_stage_duration_seconds → yellow "lebih
+    //     lama dari biasanya" hint inline
+    //   - 3x expected_current_stage_duration_seconds → red WhatsApp
+    //     escalation card
+    // Existing 15-min F-state hard cliff in tick() retained as last
+    // resort.
+    //
+    // Stage labels are static here (no localization runtime) — founder
+    // can edit the strings via PR review without touching probe code.
+
+    /** Bahasa label per stage. Founder-tunable. */
+    const STAGE_LABEL = {
+      vps_provisioning: 'Menyiapkan VPS Jakarta…',
+      vps_booting:      'VPS booting (~30 detik)…',
+      hermes_starting:  'Memasang otak agent…',
+      persona_writing:  'Menulis kepribadian agent…',
+      pairing_approval: 'Menyambungkan Telegram…',
+      ready:            'Siap.',
+    };
+
+    /** Last probe response captured by tick(). renderState('B') reads
+     *  from this; per-stage elapsed-tracker uses the timestamp. */
+    let lastProbe = null;
+    let currentStageStartedAt = null;
+    let lastSeenStage = null;
+
+    /**
+     * Fold the latest probe.progress snapshot into the B-state DOM:
+     *   - update label + progress bar from current_stage
+     *   - reset the per-stage start time when current_stage changes
+     *   - fire 1.5x / 3x escalation hints based on elapsed
+     * Pure DOM update — safe to call from tick() AND from a UI
+     * keep-alive interval that doesn't re-poll the probe.
+     */
+    function applyStageProgressToB(progress) {
+      if (currentState !== 'B' || !progress) return;
+      const $label = document.getElementById('b-label');
+      const $fill  = document.getElementById('b-progress-fill');
+      const $soft  = document.getElementById('b-soft-hint');
+      const $hard  = document.getElementById('b-hard-hint');
+      const $wa    = document.getElementById('b-hard-wa');
+      const $eta   = document.getElementById('b-eta-line');
+
+      // Reset per-stage timer on stage transition.
+      if (lastSeenStage !== progress.current_stage) {
+        lastSeenStage = progress.current_stage;
+        currentStageStartedAt = Date.now();
+        if ($soft) $soft.hidden = true;
+        if ($hard) $hard.hidden = true;
+      }
+
+      if ($label) {
+        $label.textContent =
+          STAGE_LABEL[progress.current_stage] ?? 'Sedang menyiapkan agent…';
+      }
+      if ($fill) {
+        const total = progress.total_stages || 1;
+        const done = (progress.stages_completed?.length ?? 0);
+        const pct = Math.min(100, Math.max(5, Math.round((done / total) * 100)));
+        $fill.style.width = pct + '%';
+        const $bar = $fill.parentElement;
+        if ($bar) $bar.setAttribute('aria-valuenow', String(pct));
+      }
+      if ($eta && typeof progress.estimated_seconds_remaining === 'number') {
+        const eta = progress.estimated_seconds_remaining;
+        if (eta <= 0) {
+          $eta.textContent = 'Hampir siap. Sebentar lagi.';
+        } else {
+          const min = Math.max(1, Math.ceil(eta / 60));
+          $eta.textContent =
+            `Estimasi ${min} menit lagi. Kamu boleh tutup tab ini — kami kabari via email.`;
+        }
+      }
+
+      // Escalation tiers based on elapsed in the CURRENT stage.
+      const expected = (progress.expected_current_stage_duration_seconds || 0) * 1000;
+      const elapsed = Date.now() - (currentStageStartedAt || Date.now());
+      if (expected > 0) {
+        if ($soft) $soft.hidden = !(elapsed > 1.5 * expected && elapsed <= 3 * expected);
+        if ($hard) {
+          const hardOn = elapsed > 3 * expected;
+          $hard.hidden = !hardOn;
+          if (hardOn && $wa && cid) {
+            const stage = progress.current_stage;
+            const blocker = progress.current_stage_blocker?.detail ?? '';
+            const msg =
+              `Halo tim weuseai, agent saya stuck di tahap "${stage}" lebih dari beberapa menit.` +
+              ` Customer ID: ${cid}.` +
+              (blocker ? ` Detail: ${blocker.slice(0, 200)}` : '');
+            $wa.href = `https://wa.me/6282154902561?text=${encodeURIComponent(msg)}`;
+          }
+        }
+      }
+    }
+
+    /**
+     * UI keep-alive: re-evaluate escalation hints every 5s using the
+     * last probe snapshot. Without this, the soft/hard hint timing
+     * would only refresh on each 10s probe poll — too coarse for the
+     * "lebih lama dari biasanya" perception of progress.
+     */
     setInterval(() => {
-      if (currentState !== 'B') return;
-      bLabelIdx = (bLabelIdx + 1) % B_LABELS.length;
-      const el = document.getElementById('b-label');
-      if (el) el.textContent = B_LABELS[bLabelIdx];
-    }, 3500);
+      if (currentState !== 'B' || !lastProbe?.progress) return;
+      applyStageProgressToB(lastProbe.progress);
+    }, 5000);
 
     // ─── Polling ──────────────────────────────────────────────
 
@@ -711,7 +832,14 @@
         if (!r.ok) return null;
         const j = await r.json();
         if (!j || typeof j !== 'object') return null;
-        return { ready: j.ready === true, checks: j.checks ?? {} };
+        // Track 2 observability (2026-05-10): include the full progress
+        // object so renderState('B') can drive the label + progress bar
+        // from real stage state instead of the cosmetic B_LABELS cycle.
+        return {
+          ready: j.ready === true,
+          checks: j.checks ?? {},
+          progress: j.progress ?? null,
+        };
       } catch {
         return null;
       }
@@ -775,6 +903,10 @@
           //                                  blip doesn't strand the
           //                                  customer on the wrong screen
           const probe = await pollReadinessProbe();
+          // Track 2 observability (2026-05-10): cache the latest probe
+          // snapshot so the B-state DOM updater can read progress without
+          // re-polling. Cleared on terminal-state transitions.
+          lastProbe = probe;
           if (probe && probe.ready) {
             // Agent is genuinely ready — show "Buka Telegram" regardless
             // of how the customer arrived here.
@@ -789,6 +921,7 @@
                 renderState('F');
               } else {
                 renderState('B');
+                applyStageProgressToB(probe.progress);
               }
             } else {
               // No job kicked off yet AND probe says not ready → the
@@ -804,6 +937,8 @@
                 renderState('F');
               } else {
                 renderState('B');
+                // No progress data this tick — keep the placeholder
+                // label. Next successful poll will update it.
               }
             } else {
               renderState('C');
