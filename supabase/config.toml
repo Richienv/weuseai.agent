@@ -121,3 +121,35 @@ verify_jwt = false
 
 [functions.customer-tier-bump]
 verify_jwt = false
+
+# Per-customer Telegram bot pairing flow (Phase 1, Pair-flow Option A —
+# 2026-05-09). All four bypass Supabase JWT — see comments above for the
+# auth-pattern rationale (cid + paid subscription verified server-side
+# for browser-callable; Telegram secret-token header for the webhook).
+#
+# History note (2026-05-10): validate-bot-token + pair-customer-bot-webhook
+# were missing from this file at one point and got 401-ed in prod after a
+# deploy that flipped them back to verify_jwt=true. Same regression class
+# as the 2026-05-02 xendit-webhook incident referenced at the top of this
+# file. tests/edge-fn-verify-jwt-config.spec.ts now pins this shut.
+#
+#   - validate-bot-token        → onboarding step 2 (browser pastes the
+#                                  customer's BotFather token)
+#   - pair-customer-bot-webhook → Telegram → customer's own bot when they
+#                                  send /pair <code>; auth = secret-token
+#                                  header on setWebhook
+#   - reset-bot-pairing         → onboarding step 3 "Bukan bot kamu —
+#                                  Ganti bot" recovery (PR #56)
+#   - save-onboarding-profile   → onboarding step 1 capture of Name +
+#                                  Email + WhatsApp post-payment (PR #57)
+[functions.validate-bot-token]
+verify_jwt = false
+
+[functions.pair-customer-bot-webhook]
+verify_jwt = false
+
+[functions.reset-bot-pairing]
+verify_jwt = false
+
+[functions.save-onboarding-profile]
+verify_jwt = false
