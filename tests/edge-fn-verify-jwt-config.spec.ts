@@ -41,6 +41,13 @@ const WEBHOOK_CALLABLE = [
   'pair-customer-bot-webhook',
 ] as const
 
+// Admin-only functions: caller MUST send Supabase service-role JWT.
+// Gateway verifies bearer (verify_jwt=true), then isServiceRoleCaller
+// in the handler trusts the role claim. Per docs/security/jwt-role-pattern.md.
+const ADMIN_CALLABLE_VERIFY_JWT = [
+  'admin-customer-vps-refresh',  // Track 3c (2026-05-10) — manual VPS rescue
+] as const
+
 function parseVerifyJwtSection(toml: string, fnName: string): boolean | null {
   // TOML section: `[functions.<name>]` followed by config lines until next `[`.
   const re = new RegExp(
@@ -55,6 +62,23 @@ function parseVerifyJwtSection(toml: string, fnName: string): boolean | null {
 test('supabase/config.toml exists', () => {
   assert.ok(fs.existsSync(CONFIG), 'supabase/config.toml must exist')
 })
+
+for (const fn of ADMIN_CALLABLE_VERIFY_JWT) {
+  test(`${fn} is registered in config.toml with verify_jwt = true (admin-only)`, () => {
+    const toml = fs.readFileSync(CONFIG, 'utf8')
+    const verifyJwt = parseVerifyJwtSection(toml, fn)
+    assert.notEqual(
+      verifyJwt,
+      null,
+      `[functions.${fn}] section missing from config.toml — admin functions need explicit verify_jwt=true`,
+    )
+    assert.equal(
+      verifyJwt,
+      true,
+      `[functions.${fn}] must have verify_jwt = true so the gateway verifies the service-role bearer (got verify_jwt = ${verifyJwt})`,
+    )
+  })
+}
 
 for (const fn of [...BROWSER_CALLABLE, ...WEBHOOK_CALLABLE]) {
   test(`${fn} is registered in config.toml with verify_jwt = false`, () => {

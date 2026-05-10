@@ -212,6 +212,32 @@ export async function handleCompleteOnboarding(
     )
   }
 
+  // ─── 8a. Self-heal VPS .env (Track 3b 2026-05-10) ─────────────────
+  // spinUp's idempotency returns the existing VPS without updating
+  // .env when a customer re-onboards. Pre-fix: customer e282ce25 paid
+  // 2026-05-06, then re-onboarded today with a NEW bot token that
+  // never reached the VPS — Hermes kept polling Telegram for the
+  // wrong / no bot. Always-call refreshEnv with the current bot
+  // token so the on-disk .env matches the DB state, idempotent on
+  // disk content (no-op when value unchanged).
+  //
+  // Best-effort: if /refresh-env fails, surface a webhook-style
+  // warning in the response so the frontend can show "Setup belum
+  // selesai — tim kami sedang memperbaiki" without blocking the
+  // redirect (admin can rescue via admin-customer-vps-refresh).
+  const refreshResult = await deps.provisioning.refreshEnv({
+    customerId: customer_id,
+    envValues: { TELEGRAM_BOT_TOKEN: customerBotToken },
+    requestId: cryptoRandomUuid(),
+  })
+  if (!refreshResult.ok) {
+    console.error(
+      `[complete-onboarding] refreshEnv failed for ${customer_id}: ` +
+        `status=${refreshResult.status} error=${refreshResult.error ?? 'n/a'} ` +
+        `body=${refreshResult.body.slice(0, 200)}`,
+    )
+  }
+
   // ─── 8b. Free the customer's bot for Hermes long-poll ─────────────
   // Pair-flow Option A: the webhook on the customer's bot was set
   // during validate-bot-token (Step 2) so /pair messages could route
@@ -267,7 +293,23 @@ export async function handleCompleteOnboarding(
             error: webhookResult.finalError,
           },
         }),
+    ...(refreshResult.ok
+      ? {}
+      : {
+          vps_refresh_warning: {
+            message:
+              'Konfigurasi agent belum berhasil di-update. Agent kamu mungkin pakai bot lama. Tim kami akan retry otomatis.',
+            status: refreshResult.status,
+            error: refreshResult.error,
+          },
+        }),
   })
+}
+
+/** crypto.randomUUID() wrapper — defined separately so older Deno
+ *  / test runtimes that lack it can be polyfilled in one place. */
+function cryptoRandomUuid(): string {
+  return crypto.randomUUID()
 }
 
 // ─── helpers ──────────────────────────────────────────────────────
