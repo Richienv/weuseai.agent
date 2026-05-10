@@ -15,6 +15,8 @@ import type {
   IOnboardingProvisioningClient,
   SpinUpInput,
   SpinUpResult,
+  RefreshEnvInput,
+  RefreshEnvResult,
 } from './types.ts'
 
 export class OnboardingProvisioningClient implements IOnboardingProvisioningClient {
@@ -98,5 +100,68 @@ export class OnboardingProvisioningClient implements IOnboardingProvisioningClie
       }
     }
     return { ok: true, jobId }
+  }
+
+  /** Track 3b 2026-05-10: POST to /refresh-env on the provisioning
+   *  service. Caller (complete-onboarding step 8a, admin rescue)
+   *  supplies the env values directly. */
+  async refreshEnv(input: RefreshEnvInput): Promise<RefreshEnvResult> {
+    const wire = {
+      customer_id: input.customerId,
+      env_values: input.envValues,
+      request_id: input.requestId,
+    }
+    let r: Response
+    try {
+      r = await fetch(`${this.baseUrl}/refresh-env`, {
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${this.authToken}`,
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify(wire),
+      })
+    } catch (e) {
+      return {
+        ok: false,
+        status: 0,
+        body: e instanceof Error ? e.message : String(e),
+      }
+    }
+    let body: unknown
+    try {
+      body = await r.json()
+    } catch {
+      body = null
+    }
+    if (!r.ok) {
+      const errBody = body as { error?: string; detail?: string } | null
+      return {
+        ok: false,
+        status: r.status,
+        body: JSON.stringify(errBody ?? {}).slice(0, 1000),
+        error: errBody?.error,
+      }
+    }
+    const ok = body as {
+      vps_id?: string
+      ip_address?: string
+      applied?: { TELEGRAM_BOT_TOKEN?: 'updated' | 'unchanged'; OPENROUTER_API_KEY?: 'updated' | 'unchanged' }
+      hermes_restart_at?: string
+    }
+    if (!ok.vps_id || !ok.ip_address) {
+      return {
+        ok: false,
+        status: 502,
+        body: 'refresh-env response missing vps_id/ip_address',
+      }
+    }
+    return {
+      ok: true,
+      vpsId: ok.vps_id,
+      ipAddress: ok.ip_address,
+      applied: ok.applied ?? {},
+      hermesRestartAt: ok.hermes_restart_at ?? new Date().toISOString(),
+    }
   }
 }

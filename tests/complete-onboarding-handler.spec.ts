@@ -22,10 +22,23 @@ import type {
 class FakeProvisioning implements IOnboardingProvisioningClient {
   calls: SpinUpInput[] = []
   next: SpinUpResult = { ok: true, jobId: 'job-test-1' }
+  // Track 3b 2026-05-10: refreshEnv calls captured + tunable response.
+  refreshCalls: import('../supabase/functions/_shared/types.ts').RefreshEnvInput[] = []
+  refreshNext: import('../supabase/functions/_shared/types.ts').RefreshEnvResult = {
+    ok: true,
+    vpsId: 'vps-test-1',
+    ipAddress: '10.0.0.1',
+    applied: { TELEGRAM_BOT_TOKEN: 'updated' },
+    hermesRestartAt: '2026-05-10T08:00:00Z',
+  }
 
   async spinUp(input: SpinUpInput): Promise<SpinUpResult> {
     this.calls.push(input)
     return this.next
+  }
+  async refreshEnv(input: import('../supabase/functions/_shared/types.ts').RefreshEnvInput) {
+    this.refreshCalls.push(input)
+    return this.refreshNext
   }
 }
 

@@ -346,6 +346,37 @@ export type SpinUpResult =
   | { ok: true; jobId: string }
   | { ok: false; status: number; body: string }
 
+// Track 3b (2026-05-10): self-healing for cloud-init env drift.
+// Caller (complete-onboarding step 8a, admin rescue) supplies the
+// env values directly — provisioning service is a "dumb pipe", does
+// NOT decrypt or source values. Per the pivot in design doc:
+// docs/design/2026-05-10-vps-config-refresh.md.
+export type RefreshEnvInput = {
+  customerId: string
+  envValues: { TELEGRAM_BOT_TOKEN?: string; OPENROUTER_API_KEY?: string }
+  /** Caller-supplied UUID for idempotency. Same id within 10 min →
+   *  cached outcome instead of re-SSH. */
+  requestId: string
+}
+
+export type RefreshEnvResult =
+  | {
+      ok: true
+      vpsId: string
+      ipAddress: string
+      applied: { TELEGRAM_BOT_TOKEN?: 'updated' | 'unchanged'; OPENROUTER_API_KEY?: 'updated' | 'unchanged' }
+      hermesRestartAt: string
+    }
+  | {
+      ok: false
+      status: number
+      body: string
+      error?: string
+    }
+
 export interface IOnboardingProvisioningClient {
   spinUp(input: SpinUpInput): Promise<SpinUpResult>
+  /** Track 3b 2026-05-10: refresh customer's VPS .env + restart hermes
+   *  to close the spinUp-idempotency-doesn't-update-env gap. */
+  refreshEnv(input: RefreshEnvInput): Promise<RefreshEnvResult>
 }
