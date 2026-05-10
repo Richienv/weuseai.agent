@@ -122,6 +122,34 @@ export class TelegramBotClient implements ITelegramClient {
     }
   }
 
+  async getWebhookInfo(botToken: string): Promise<{ url: string }> {
+    // Used by properDeleteWebhook to verify deletion actually cleared
+    // the webhook on Telegram's side. Required as part of the 2026-05-10
+    // agent-activation-gap fix (silent webhook-delete-failure path).
+    const r = await fetch(`${TELEGRAM_API}/bot${botToken}/getWebhookInfo`, {
+      method: 'GET',
+      headers: { accept: 'application/json' },
+    })
+    if (!r.ok) {
+      const txt = await r.text().catch(() => '')
+      throw new Error(
+        `Telegram getWebhookInfo -> ${r.status}: ${txt.slice(0, 300)}`,
+      )
+    }
+    const data = (await r.json()) as {
+      ok: boolean
+      result?: { url?: string }
+    }
+    if (!data.ok || !data.result) {
+      throw new Error(
+        `Telegram getWebhookInfo: malformed response: ${JSON.stringify(
+          data,
+        ).slice(0, 200)}`,
+      )
+    }
+    return { url: typeof data.result.url === 'string' ? data.result.url : '' }
+  }
+
   async sendMessageAs(
     botToken: string,
     chatId: number | string,

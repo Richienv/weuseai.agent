@@ -283,6 +283,14 @@ export interface ITelegramClient {
   /** Call /deleteWebhook on an arbitrary token. Idempotent. */
   deleteWebhook(botToken: string): Promise<void>
 
+  /** Call /getWebhookInfo on an arbitrary token. Used by
+   *  properDeleteWebhook to verify a delete actually cleared the
+   *  webhook (Telegram's deleteWebhook is "fire and forget" — there
+   *  are observed cases where it returns ok but the webhook url is
+   *  still set on subsequent reads). Returns at minimum `{ url: '' }`
+   *  when no webhook is configured. */
+  getWebhookInfo(botToken: string): Promise<{ url: string }>
+
   /** Send text as a specific bot. Used for the pairing-success reply
    *  on the customer's own bot. */
   sendMessageAs(
