@@ -232,19 +232,51 @@ test('happy path: tier-specific credit cap (starter=300, studio=3000)', async ()
 
 // ─── idempotency (edit G) ──────────────────────────────────────────
 
-test('idempotent: already-onboarded returns 409 with redirect, no double mint', async () => {
+// Helper for the branched-idempotency tests: render a SOUL.md from the
+// SAME template + inputs the handler will use, so we can pre-seed
+// customer.soul_md_text matching what the handler will compute on
+// re-submit. Without this the hash check at line 4b in the handler
+// can't see "no change" and falls through to persona-refresh.
+async function renderSeedSoulMd(args: { customerName: string; expectationsText: string }): Promise<string> {
+  const { renderSoulMd, sanitizeExpectations } = await import(
+    '../supabase/functions/_shared/soul-md-template.ts'
+  )
+  const sanitized = sanitizeExpectations(args.expectationsText)
+  if (!sanitized.ok) throw new Error(`renderSeedSoulMd: invalid input — ${sanitized.reason}`)
+  return renderSoulMd({
+    customerName: args.customerName,
+    expectationsClean: sanitized.clean,
+  })
+}
+
+test('idempotent: re-submit with SAME expectations returns 409 + &job, no double mint, no refreshEnv', async () => {
+  // Track 1 persona-refinement (2026-05-10): the binary 409 short-circuit
+  // is now branched. Same-text re-submit (tab refresh, double-click
+  // Lanjut) still 409s because the freshly-rendered SOUL.md hash matches
+  // the persisted one. NEW-text re-submit takes the persona-refresh
+  // path (tested below).
   const db = new FakeOnboardingStore()
   const minter = new MockLlmKeyMinter()
   const provisioning = new FakeProvisioning()
   const telegram = new FakeTelegram()
+
+  const expectations = 'Bantu saya untuk briefing pagi dan email triage harian.'
+  // Seed soul_md_text matching what renderSoulMd would produce for these
+  // inputs — that's how the handler detects "no change" and 409s.
+  const seededSoul = await renderSeedSoulMd({
+    customerName: 'Already Done',
+    expectationsText: expectations,
+  })
 
   db.seedCustomer({
     id: 'cust-X',
     email: 'x@example.com',
     display_name: 'Already Done',
     telegram_chat_id: '111',
-    soul_md_text: '# About me\n…already rendered…',
+    telegram_bot_username: TEST_BOT_USERNAME,
+    soul_md_text: seededSoul,
   })
+  await db.setBotTokenAndUsername('cust-X', TEST_BOT_TOKEN, TEST_BOT_USERNAME)
   db.seedSubscription({
     id: 'sub-X',
     customer_id: 'cust-X',
@@ -256,7 +288,7 @@ test('idempotent: already-onboarded returns 409 with redirect, no double mint', 
     buildReq({
       customer_id: 'cust-X',
       whatsapp: '08123456789',
-      expectations_text: 'tries to onboard again',
+      expectations_text: expectations,  // identical to seed
     }),
     { db, minter, provisioning, telegram, publicBase: PUBLIC_BASE },
   )
@@ -266,17 +298,92 @@ test('idempotent: already-onboarded returns 409 with redirect, no double mint', 
   assert.equal(data.error, 'already_onboarded')
   // 2026-05-10 onboarding-loop fix: redirect must include &job synthetic
   // marker so welcome.html's tick() doesn't fall into state C "Lengkapi
-  // profil agent" and bounce the customer back into the loop. Pre-fix
-  // the redirect was just `?cid=...`. See
-  // docs/investigation/2026-05-10-onboarding-loop.md.
+  // profil agent" and bounce the customer back into the loop.
   assert.equal(
     data.redirect,
     `${PUBLIC_BASE}/welcome.html?cid=cust-X&job=already-onboarded`,
   )
 
-  // No new mint, no new provisioning call
+  // No new mint, no new provisioning call, NO refreshEnv call —
+  // truly idempotent path skips everything.
   assert.equal(minter.minted.length, 0)
   assert.equal(provisioning.calls.length, 0)
+  assert.equal(provisioning.refreshCalls.length, 0)
+})
+
+test('persona-refresh: re-submit with NEW expectations writes new soul_md + calls refreshEnv, no spinUp/mint/webhook/greeting', async () => {
+  // Track 1 persona-refinement (2026-05-10): the missing capability
+  // founder hit on e282ce25 — edit step 4 expectations to refine the
+  // agent persona, expect the new persona to land on the VPS.
+  // Pre-fix: silent discard, SOUL.md mtime stays at first-onboarding
+  // time, customer's edits never reach disk.
+  const db = new FakeOnboardingStore()
+  const minter = new MockLlmKeyMinter()
+  const provisioning = new FakeProvisioning()
+  const telegram = new FakeTelegram()
+
+  // Seed with the OLD persona text.
+  const oldExpectations = 'Briefing pagi saja.'
+  const oldSoul = await renderSeedSoulMd({
+    customerName: 'Sarah Test',
+    expectationsText: oldExpectations,
+  })
+
+  db.seedCustomer({
+    id: 'cust-X',
+    email: 'sarah@example.com',
+    display_name: 'Sarah Test',
+    telegram_chat_id: '6805409051',
+    telegram_bot_username: TEST_BOT_USERNAME,
+    soul_md_text: oldSoul,
+  })
+  await db.setBotTokenAndUsername('cust-X', TEST_BOT_TOKEN, TEST_BOT_USERNAME)
+  db.seedSubscription({
+    id: 'sub-X',
+    customer_id: 'cust-X',
+    tier: 'pro',
+    status: 'active',
+  })
+
+  // Submit NEW expectations.
+  const newExpectations = 'Briefing pagi DAN code review harian, plus content drafting.'
+  const res = await handleCompleteOnboarding(
+    buildReq({
+      customer_id: 'cust-X',
+      whatsapp: '08123456789',
+      expectations_text: newExpectations,
+    }),
+    { db, minter, provisioning, telegram, publicBase: PUBLIC_BASE },
+  )
+
+  assert.equal(res.status, 200, 'persona-refresh path returns 200, not 409')
+  const data = await readJson(res)
+  assert.equal(data.persona_refreshed, true)
+  assert.equal(data.provisioning_job_id, 'persona-refresh')
+  assert.equal(
+    data.redirect_url,
+    `${PUBLIC_BASE}/welcome.html?cid=cust-X&job=persona-refresh`,
+  )
+  assert.ok(typeof data.soul_md_sha256 === 'string' && data.soul_md_sha256.length === 64)
+
+  // DB row updated with new SOUL.md.
+  const updated = await db.findCustomerById('cust-X')
+  assert.notEqual(updated?.soul_md_text, oldSoul, 'soul_md_text must change')
+  assert.match(updated?.soul_md_text ?? '', /code review/, 'new persona must contain new expectations text')
+
+  // refreshEnv called with NEW soul_md content + chat_id pre-approve.
+  assert.equal(provisioning.refreshCalls.length, 1)
+  const refreshCall = provisioning.refreshCalls[0]
+  assert.equal(refreshCall.customerId, 'cust-X')
+  assert.equal(refreshCall.envValues.TELEGRAM_BOT_TOKEN, TEST_BOT_TOKEN)
+  assert.match(refreshCall.soulMdContent ?? '', /code review/)
+  assert.equal(refreshCall.telegramChatId, '6805409051')
+  assert.equal(refreshCall.telegramUserName, 'Sarah Test')
+
+  // One-time-cost stages MUST NOT be re-run on persona refresh.
+  assert.equal(minter.minted.length, 0, 'no second OpenRouter key mint')
+  assert.equal(provisioning.calls.length, 0, 'no second spinUp call')
+  assert.equal(telegram.deleteWebhookCalls.length, 0, 'no second deleteWebhook call')
 })
 
 // ─── pairing precondition ─────────────────────────────────────────

@@ -20,8 +20,12 @@ import {
   isReady,
   readinessProbeHandler,
   CRITICAL_CHECKS,
+  STAGE_PROGRESSION,
+  EXPECTED_STAGE_DURATION_SECONDS,
+  deriveStage,
   type IReadinessStore,
   type ReadinessProbeDeps,
+  type ReadinessChecks,
 } from '../services/provisioning/src/routes/customer-readiness-probe.js'
 
 // Long enough to satisfy `fleetPrivateKey.length < 64` guard.
@@ -300,5 +304,146 @@ test('SSH failure — checks fall back to false but probe response is still ok=t
     assert.equal(r.checks.vps_reachable, true)  // TCP was OK
     assert.equal(r.checks.hermes_systemd_active, false)
     assert.match(r.details.hermes_systemd_active ?? '', /ssh failed/)
+  }
+})
+
+// ─── Stage-aware progress (Track 2 observability 2026-05-10) ──────
+
+function checks(over: Partial<ReadinessChecks> = {}): ReadinessChecks {
+  return {
+    vps_provisioned: false,
+    vps_reachable: false,
+    hermes_systemd_active: false,
+    hermes_telegram_connected: false,
+    hermes_pairing_approved: false,
+    openrouter_key_valid: false,
+    soul_md_present: false,
+    hermes_responded_to_first_message: false,
+    ...over,
+  }
+}
+
+test('STAGE_PROGRESSION ends in ready (terminal state)', () => {
+  assert.equal(STAGE_PROGRESSION[STAGE_PROGRESSION.length - 1], 'ready')
+})
+
+test('EXPECTED_STAGE_DURATION_SECONDS has an entry for every stage', () => {
+  for (const s of STAGE_PROGRESSION) {
+    assert.ok(
+      typeof EXPECTED_STAGE_DURATION_SECONDS[s] === 'number',
+      `missing duration for stage ${s}`,
+    )
+  }
+})
+
+test('deriveStage: nothing started → vps_provisioning, no completed', () => {
+  const p = deriveStage(checks(), {})
+  assert.equal(p.current_stage, 'vps_provisioning')
+  assert.deepEqual(p.stages_completed, [])
+  assert.equal(p.total_stages, STAGE_PROGRESSION.length)
+  assert.equal(p.stages_pending[0], 'vps_provisioning')
+  // ETA should be roughly the sum of all expected durations.
+  const totalExpected = Object.values(EXPECTED_STAGE_DURATION_SECONDS).reduce(
+    (a, b) => a + b,
+    0,
+  )
+  assert.equal(p.estimated_seconds_remaining, totalExpected)
+})
+
+test('deriveStage: vps_provisioned only → vps_booting current', () => {
+  const p = deriveStage(checks({ vps_provisioned: true }), {})
+  assert.equal(p.current_stage, 'vps_booting')
+  assert.deepEqual(p.stages_completed, ['vps_provisioning'])
+})
+
+test('deriveStage: TCP reachable but hermes inactive → hermes_starting', () => {
+  const p = deriveStage(
+    checks({ vps_provisioned: true, vps_reachable: true }),
+    {},
+  )
+  assert.equal(p.current_stage, 'hermes_starting')
+  assert.deepEqual(p.stages_completed, ['vps_provisioning', 'vps_booting'])
+})
+
+test('deriveStage: hermes active but no SOUL.md → persona_writing', () => {
+  const p = deriveStage(
+    checks({
+      vps_provisioned: true,
+      vps_reachable: true,
+      hermes_systemd_active: true,
+    }),
+    {},
+  )
+  assert.equal(p.current_stage, 'persona_writing')
+})
+
+test('deriveStage: SOUL present but pairing not approved → pairing_approval', () => {
+  const p = deriveStage(
+    checks({
+      vps_provisioned: true,
+      vps_reachable: true,
+      hermes_systemd_active: true,
+      soul_md_present: true,
+    }),
+    {},
+  )
+  assert.equal(p.current_stage, 'pairing_approval')
+})
+
+test('deriveStage: all critical pass → ready terminal, ETA=0', () => {
+  const p = deriveStage(
+    checks({
+      vps_provisioned: true,
+      vps_reachable: true,
+      hermes_systemd_active: true,
+      soul_md_present: true,
+      hermes_pairing_approved: true,
+    }),
+    {},
+  )
+  assert.equal(p.current_stage, 'ready')
+  assert.equal(p.estimated_seconds_remaining, 0)
+  assert.equal(p.stages_completed.length, STAGE_PROGRESSION.length - 1)
+})
+
+test('deriveStage: blocker surfaces only when current-stage check has a detail', () => {
+  // vps_provisioning blocked but no detail (just waiting on IDCH) →
+  // blocker is null, customer is "still working" not "failed".
+  const waiting = deriveStage(checks(), {})
+  assert.equal(waiting.current_stage_blocker, null)
+
+  // hermes_starting blocked WITH detail (e.g. SSH auth failure) →
+  // blocker surfaces so welcome.html can render an honest message.
+  const blocked = deriveStage(
+    checks({ vps_provisioned: true, vps_reachable: true }),
+    { hermes_systemd_active: 'ssh failed: Permission denied' },
+  )
+  assert.equal(blocked.current_stage, 'hermes_starting')
+  assert.equal(blocked.current_stage_blocker?.check_name, 'hermes_systemd_active')
+  assert.match(blocked.current_stage_blocker?.detail ?? '', /Permission denied/)
+})
+
+test('handler success response includes progress object', async () => {
+  const r = await readinessProbeHandler(
+    { customer_id: 'cust-1' },
+    {
+      fleetPrivateKey: FAKE_FLEET_KEY,
+      store: fakeStore({}),
+      tcpProbe: async () => true,
+      runSsh: fakeSshOk(`hermes_systemd_active=true
+hermes_telegram_connected=true
+hermes_pairing_approved=true
+openrouter_key_valid=true
+soul_md_present=true
+hermes_responded_to_first_message=true
+__probe_done__
+`),
+    },
+  )
+  assert.equal(r.ok, true)
+  if (r.ok) {
+    assert.ok(r.progress, 'progress field must be present on success')
+    assert.equal(r.progress.current_stage, 'ready')
+    assert.equal(r.progress.estimated_seconds_remaining, 0)
   }
 })

@@ -66,6 +66,87 @@ export type ReadinessChecks = {
   hermes_responded_to_first_message: boolean
 }
 
+// ─── Stage-aware progress (Track 2 observability 2026-05-10) ──────
+//
+// Welcome.html drives its B-state UI from these structured stages
+// instead of the prior cosmetic B_LABELS animation. Stages are derived
+// purely from the existing `checks` snapshot — no extra SSH or DB
+// calls, just a deterministic mapping.
+//
+// Stage progression (walked in order; current_stage = first incomplete):
+//
+//   1. vps_provisioning  — DB row exists, status != 'running'
+//   2. vps_booting       — running + IP set, but TCP :22 unreachable
+//                          (cloud-init still running)
+//   3. hermes_starting   — TCP OK, but hermes-gateway systemd inactive
+//   4. persona_writing   — hermes active, but SOUL.md missing/empty
+//   5. pairing_approval  — SOUL present, but chat_id not in approved.json
+//   6. ready             — all critical checks pass (terminal)
+//
+// Founder-tunable fields:
+//   - `expected_stage_duration_seconds` per stage drives welcome.html's
+//     soft-escalation timing (1.5x → "lebih lama dari biasanya" hint,
+//     3x → escalation with WhatsApp CTA).
+//   - Stage labels are surfaced to welcome.html via a static constant
+//     there; this server response only emits the stage IDs.
+
+export type ReadinessStage =
+  | 'vps_provisioning'
+  | 'vps_booting'
+  | 'hermes_starting'
+  | 'persona_writing'
+  | 'pairing_approval'
+  | 'ready'
+
+/** Walked top-to-bottom by deriveStage(). Order matters. */
+export const STAGE_PROGRESSION: ReadinessStage[] = [
+  'vps_provisioning',
+  'vps_booting',
+  'hermes_starting',
+  'persona_writing',
+  'pairing_approval',
+  'ready',
+]
+
+/** P50/P75 wall-clock duration observed in real provisioning runs.
+ *  Welcome.html uses 1.5x and 3x of these for the two escalation tiers.
+ *  Updates over time as we collect telemetry; conservative defaults
+ *  so we don't escalate too eagerly on a healthy slow build. */
+export const EXPECTED_STAGE_DURATION_SECONDS: Record<ReadinessStage, number> = {
+  vps_provisioning: 240,   // ~3-5 min observed for IDCH spin
+  vps_booting:      90,    // ~30-90s cloud-init
+  hermes_starting:  120,   // ~60-120s setup-script + systemd start
+  persona_writing:  15,    // SSH write + restart roundtrip
+  pairing_approval: 10,    // SSH write
+  ready:            0,     // terminal
+}
+
+export type ReadinessProgress = {
+  current_stage: ReadinessStage
+  /** Stage IDs that have completed (subset of STAGE_PROGRESSION before
+   *  current_stage). Always a strict prefix of the progression. */
+  stages_completed: ReadinessStage[]
+  /** Stage IDs still ahead, including current_stage. Strict suffix. */
+  stages_pending: ReadinessStage[]
+  /** Total stages (constant — emitted for client-side progress %). */
+  total_stages: number
+  /** Conservative ETA in seconds: sum of expected durations for all
+   *  pending stages including current. 0 when current_stage='ready'. */
+  estimated_seconds_remaining: number
+  /** Expected duration for the current stage. Welcome.html uses this
+   *  with its per-stage start-time tracker to fire 1.5x and 3x soft
+   *  escalation hints. */
+  expected_current_stage_duration_seconds: number
+  /** When the current stage is blocked by a specific check, surface
+   *  the check name + detail so welcome.html can render an honest
+   *  failure message instead of "still working...". Null when the
+   *  stage is genuinely in progress (e.g. early VPS spin). */
+  current_stage_blocker: {
+    check_name: keyof ReadinessChecks
+    detail: string
+  } | null
+}
+
 export type ReadinessProbeResult = {
   ok: true
   customer_id: string
@@ -76,6 +157,10 @@ export type ReadinessProbeResult = {
   /** Per-check error detail when a check is false. Useful for support
    *  triage; not surfaced to the customer. Keys = check names. */
   details: Partial<Record<keyof ReadinessChecks, string>>
+  /** Stage-aware progress data (Track 2 observability 2026-05-10).
+   *  Always present alongside `checks` — derived deterministically
+   *  from the same snapshot. */
+  progress: ReadinessProgress
   probed_at: string
 } | {
   ok: false
@@ -125,6 +210,93 @@ export const CRITICAL_CHECKS: Array<keyof ReadinessChecks> = [
 
 export function isReady(checks: ReadinessChecks): boolean {
   return CRITICAL_CHECKS.every((k) => checks[k] === true)
+}
+
+// ─── pure: derive stage progress from checks snapshot ──────────────
+
+/**
+ * Deterministic mapping of (checks, details) → ReadinessProgress.
+ *
+ * Pure function — no I/O. Tested directly. Walks STAGE_PROGRESSION
+ * top-to-bottom and returns the first incomplete stage as
+ * `current_stage`. The "incomplete" predicate per stage:
+ *
+ *   vps_provisioning  → !checks.vps_provisioned
+ *   vps_booting       → !checks.vps_reachable
+ *   hermes_starting   → !checks.hermes_systemd_active
+ *   persona_writing   → !checks.soul_md_present
+ *   pairing_approval  → !checks.hermes_pairing_approved
+ *   ready             → terminal — emitted when all of the above pass
+ *
+ * `current_stage_blocker` is set when the current stage maps to a
+ * concrete failed check + has a detail string from the probe. For
+ * pre-stage states (e.g. waiting on IDCH to mark VPS running, no
+ * detail yet), blocker is null — the customer is just waiting,
+ * not failing.
+ */
+export function deriveStage(
+  checks: ReadinessChecks,
+  details: Partial<Record<keyof ReadinessChecks, string>>,
+): ReadinessProgress {
+  // Map each stage to the check that gates it. Walked in order.
+  const STAGE_CHECK: Record<ReadinessStage, keyof ReadinessChecks | null> = {
+    vps_provisioning: 'vps_provisioned',
+    vps_booting:      'vps_reachable',
+    hermes_starting:  'hermes_systemd_active',
+    persona_writing:  'soul_md_present',
+    pairing_approval: 'hermes_pairing_approved',
+    ready:            null,  // terminal
+  }
+
+  let currentStage: ReadinessStage = 'ready'
+  const completed: ReadinessStage[] = []
+  for (const stage of STAGE_PROGRESSION) {
+    const checkName = STAGE_CHECK[stage]
+    if (checkName === null) {
+      // ready — only reached when all prior stages pass
+      currentStage = 'ready'
+      break
+    }
+    if (checks[checkName]) {
+      completed.push(stage)
+      continue
+    }
+    currentStage = stage
+    break
+  }
+
+  const currentIdx = STAGE_PROGRESSION.indexOf(currentStage)
+  const pending = STAGE_PROGRESSION.slice(currentIdx)
+
+  // ETA = sum of expected durations for all pending stages.
+  let etaSeconds = 0
+  for (const s of pending) {
+    etaSeconds += EXPECTED_STAGE_DURATION_SECONDS[s]
+  }
+
+  // Blocker only set if the gating check has a detail string. When
+  // the stage is blocked but no detail was emitted (e.g. VPS just
+  // started provisioning, no failure yet), customer is genuinely
+  // waiting — not failed. welcome.html distinguishes these visually.
+  const currentCheckName = STAGE_CHECK[currentStage]
+  let blocker: ReadinessProgress['current_stage_blocker'] = null
+  if (currentCheckName && details[currentCheckName]) {
+    blocker = {
+      check_name: currentCheckName,
+      detail: details[currentCheckName] as string,
+    }
+  }
+
+  return {
+    current_stage: currentStage,
+    stages_completed: completed,
+    stages_pending: pending,
+    total_stages: STAGE_PROGRESSION.length,
+    estimated_seconds_remaining: etaSeconds,
+    expected_current_stage_duration_seconds:
+      EXPECTED_STAGE_DURATION_SECONDS[currentStage],
+    current_stage_blocker: blocker,
+  }
 }
 
 // ─── pure: build remote bash script ────────────────────────────────
@@ -403,14 +575,19 @@ export async function readinessProbeHandler(
   if (!vps) {
     // No VPS row at all → return early with all-false checks. welcome.html
     // shows "Sedang membangun..." in this state.
+    const checks = allFalseChecks()
+    const details: Partial<Record<keyof ReadinessChecks, string>> = {
+      vps_provisioned: 'no vps_instances row for customer',
+    }
     return {
       ok: true,
       customer_id: req.customer_id,
       vps_id: null,
       ip_address: null,
       ready: false,
-      checks: allFalseChecks(),
-      details: { vps_provisioned: 'no vps_instances row for customer' },
+      checks,
+      details,
+      progress: deriveStage(checks, details),
       probed_at: probedAt,
     }
   }
@@ -418,18 +595,21 @@ export async function readinessProbeHandler(
   const vpsProvisioned = vps.status === 'running'
   if (!vpsProvisioned || !vps.ip_address) {
     // VPS row exists but not yet running OR no IP yet → still "building".
+    const checks = { ...allFalseChecks(), vps_provisioned: vpsProvisioned }
+    const details: Partial<Record<keyof ReadinessChecks, string>> = {
+      vps_provisioned: vpsProvisioned
+        ? 'ok'
+        : `vps status=${vps.status}, ip=${vps.ip_address ?? 'null'}`,
+    }
     return {
       ok: true,
       customer_id: req.customer_id,
       vps_id: vps.vps_id,
       ip_address: vps.ip_address,
       ready: false,
-      checks: { ...allFalseChecks(), vps_provisioned: vpsProvisioned },
-      details: {
-        vps_provisioned: vpsProvisioned
-          ? 'ok'
-          : `vps status=${vps.status}, ip=${vps.ip_address ?? 'null'}`,
-      },
+      checks,
+      details,
+      progress: deriveStage(checks, details),
       probed_at: probedAt,
     }
   }
@@ -442,18 +622,23 @@ export async function readinessProbeHandler(
   ])
 
   if (!vpsReachable) {
+    const checks = {
+      ...allFalseChecks(),
+      vps_provisioned: true,
+      vps_reachable: false,
+    }
+    const details: Partial<Record<keyof ReadinessChecks, string>> = {
+      vps_reachable: 'TCP connect to :22 failed (5s timeout)',
+    }
     return {
       ok: true,
       customer_id: req.customer_id,
       vps_id: vps.vps_id,
       ip_address: vps.ip_address,
       ready: false,
-      checks: {
-        ...allFalseChecks(),
-        vps_provisioned: true,
-        vps_reachable: false,
-      },
-      details: { vps_reachable: 'TCP connect to :22 failed (5s timeout)' },
+      checks,
+      details,
+      progress: deriveStage(checks, details),
       probed_at: probedAt,
     }
   }
@@ -495,18 +680,23 @@ export async function readinessProbeHandler(
   if (!sshResult.ok) {
     // SSH failed entirely. vps_reachable=true (TCP OK) but auth/script
     // broken → SSH-needing checks all false.
+    const checks = {
+      ...allFalseChecks(),
+      vps_provisioned: true,
+      vps_reachable: true,
+    }
+    const details: Partial<Record<keyof ReadinessChecks, string>> = {
+      hermes_systemd_active: `ssh failed: ${sshResult.error}`,
+    }
     return {
       ok: true,
       customer_id: req.customer_id,
       vps_id: vps.vps_id,
       ip_address: vps.ip_address,
       ready: false,
-      checks: {
-        ...allFalseChecks(),
-        vps_provisioned: true,
-        vps_reachable: true,
-      },
-      details: { hermes_systemd_active: `ssh failed: ${sshResult.error}` },
+      checks,
+      details,
+      progress: deriveStage(checks, details),
       probed_at: probedAt,
     }
   }
@@ -526,6 +716,7 @@ export async function readinessProbeHandler(
     ready: isReady(checks),
     checks,
     details: sshDetails,
+    progress: deriveStage(checks, sshDetails),
     probed_at: probedAt,
   }
 }

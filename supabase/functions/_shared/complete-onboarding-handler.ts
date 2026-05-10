@@ -75,33 +75,33 @@ export async function handleCompleteOnboarding(
     return json({ error: 'no_paid_subscription' }, 404)
   }
 
-  // ─── 2. Idempotency (edit G) ──────────────────────────────────────
-  // Already onboarded → return 409 with redirect URL. Client follows it.
+  // ─── 2. Idempotency — BRANCHED (Track 1 persona-refinement 2026-05-10) ──
+  // Pre-fix: any customer with chat_id + soul_md_text + active subscription
+  // got 409 → redirect, BEFORE the new expectations text was sanitized
+  // or the new SOUL.md was rendered. So a customer who edited step-4
+  // expectations to refine their agent's persona had their change
+  // silently discarded — DB unchanged, VPS untouched.
+  // See docs/investigation/2026-05-10-stuck-tuning-observability.md.
   //
-  // The synthetic &job=already-onboarded marker (added 2026-05-10) is a
-  // cheap signal that flips welcome.html away from state C ("Lengkapi
-  // profil agent") and into the readiness-probe branch — without it, an
-  // already-onboarded customer who re-submits step 4 lands back on
-  // /welcome with no &job, sees the same "Lengkapi profil" CTA, clicks
-  // it, lands on /onboarding step 4 again, and loops indefinitely.
-  // See docs/investigation/2026-05-10-onboarding-loop.md.
-  //
-  // The value isn't pattern-matched anywhere — welcome.html only checks
-  // truthy/falsy on the `job` URL param. "already-onboarded" is human-
-  // readable in case it shows in support logs.
-  if (
-    customer.telegram_chat_id &&
-    customer.soul_md_text &&
+  // Branched approach:
+  //   isReonboarding = customer is fully onboarded (chat_id + soul_md
+  //                    + active sub).
+  //   When set, we still compute the new SOUL.md from the submitted
+  //   expectations. We then branch:
+  //     - If new SOUL.md hash MATCHES persisted soul_md_text hash →
+  //       true idempotent re-submit (e.g. tab refresh, double-click on
+  //       Lanjut button). Return 409 with &job=already-onboarded so
+  //       welcome.html flips to the readiness-probe branch.
+  //     - If new SOUL.md hash DIFFERS → persona refinement. Persist the
+  //       new soul_md_text + audit row, then call refreshEnv to push
+  //       the new persona to the VPS. Skip mint/spinUp/webhook delete
+  //       (one-time-cost stages — re-running double-charges or spawns
+  //       a duplicate webhook delete that hides the working state).
+  //       Return success with &job=persona-refresh.
+  const isReonboarding =
+    !!customer.telegram_chat_id &&
+    !!customer.soul_md_text &&
     subscription.status === 'active'
-  ) {
-    return json(
-      {
-        error: 'already_onboarded',
-        redirect: `${deps.publicBase}/welcome.html?cid=${customer_id}&job=already-onboarded`,
-      },
-      409,
-    )
-  }
 
   // ─── 3. Pairing must have completed BEFORE submit ─────────────────
   if (!customer.telegram_chat_id) {
@@ -150,11 +150,37 @@ export async function handleCompleteOnboarding(
   })
   const soulMdSha256 = await sha256Hex(soulMdText)
 
+  // ─── 4b. Re-onboarding hash check ─────────────────────────────────
+  // For an already-onboarded customer who re-submits without changing
+  // their expectations (tab refresh, double-click, browser back), we
+  // skip everything and return 409 — same behavior as the pre-Track-1
+  // binary idempotency. The persisted soul_md_text equals the freshly-
+  // rendered one, so there's nothing to update.
+  //
+  // For an already-onboarded customer who DID change expectations, we
+  // fall through to step 5 and persist the new persona, then later
+  // skip the one-time-cost stages (mint, spinUp, webhook delete,
+  // proactive greeting) and only run refreshEnv to push the new
+  // SOUL.md to the VPS.
+  if (isReonboarding && customer.soul_md_text === soulMdText) {
+    return json(
+      {
+        error: 'already_onboarded',
+        redirect: `${deps.publicBase}/welcome.html?cid=${customer_id}&job=already-onboarded`,
+      },
+      409,
+    )
+  }
+
   // ─── 5. Persist customer fields + audit row BEFORE provisioning ──
   // We commit the persona before calling the external provisioning
   // service. If provisioning fails, we rollback the LLM key (which IS
   // cheap and external) but leave soul_md_text intact — the retry
   // worker should reuse the same persona, not regenerate.
+  //
+  // Re-onboarding path: this is also where the persona-refinement
+  // change lands in the DB. The customers row carries the new
+  // soul_md_text; the audit row records the new sha256.
   const trimmedWhatsapp = whatsapp.trim()
   await deps.db.updateCustomer(customer_id, {
     whatsapp_number: trimmedWhatsapp,
@@ -166,6 +192,52 @@ export async function handleCompleteOnboarding(
     customer_id,
     soul_md_sha256: soulMdSha256,
   })
+
+  // ─── 5b. Re-onboarding fast-path (Track 1 persona-refinement 2026-05-10) ──
+  // Already-onboarded + new expectations: persist landed (above), now
+  // push the new SOUL.md to the VPS via refreshEnv. Skip mint, spinUp,
+  // webhook delete, and proactive greeting — those are one-time-cost
+  // stages. The VPS already has Hermes running with the customer's bot
+  // token, the OpenRouter key is already minted, the webhook was
+  // cleared on first onboarding, and the customer has already received
+  // their proactive greeting (a second one would be spammy when they're
+  // just refining the persona).
+  if (isReonboarding) {
+    const refreshResult = await deps.provisioning.refreshEnv({
+      customerId: customer_id,
+      // No env_values needed — we're not changing the bot token here.
+      // Defensive: re-supply TELEGRAM_BOT_TOKEN so a customer who
+      // did change tokens between sessions still gets the latest in
+      // .env.
+      envValues: { TELEGRAM_BOT_TOKEN: customerBotToken },
+      soulMdContent: soulMdText,
+      telegramChatId: customer.telegram_chat_id ?? undefined,
+      telegramUserName: customer.display_name ?? undefined,
+      requestId: cryptoRandomUuid(),
+    })
+    if (!refreshResult.ok) {
+      console.error(
+        `[complete-onboarding] persona-refresh refreshEnv failed for ${customer_id}: ` +
+          `status=${refreshResult.status} error=${refreshResult.error ?? 'n/a'}`,
+      )
+    }
+    return json({
+      provisioning_job_id: 'persona-refresh',
+      redirect_url: `${deps.publicBase}/welcome.html?cid=${customer_id}&job=persona-refresh`,
+      persona_refreshed: true,
+      soul_md_sha256: soulMdSha256,
+      ...(refreshResult.ok
+        ? {}
+        : {
+            vps_refresh_warning: {
+              message:
+                'Persona baru belum berhasil sampai ke agent kamu. Tim kami akan retry otomatis.',
+              status: refreshResult.status,
+              error: refreshResult.error,
+            },
+          }),
+    })
+  }
 
   // ─── 6. Mint LLM key (Mock in dev, OpenRouter in prod) ────────────
   let mintResult
