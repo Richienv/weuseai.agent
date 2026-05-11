@@ -51,6 +51,11 @@ function makeFakeInvoiceStore(seed: {
     async findCustomerByEmail() {
       return null
     },
+    async findCustomerById() {
+      // Receipt-email dep is not wired in these tests; method exists to
+      // satisfy IInvoiceStore (Sesi B P0 #7).
+      return null
+    },
     async insertCustomer({ email }) {
       return { id: `cust_${email}`, email }
     },

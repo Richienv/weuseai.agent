@@ -208,3 +208,98 @@ export function buildInvoiceEmailBody(args: {
     ].join('\n'),
   }
 }
+
+// ─── helper: payment receipt email body (Sesi B P0 #7) ─────────────────
+//
+// Sent from xendit-webhook after a successful PAID event. BI primary,
+// calm-premium, no exclamation marks, no banned words. Doubles as the
+// customer's audit trail for accounting + refund eligibility window.
+
+function formatIdr(amount_idr: number): string {
+  return 'Rp ' + amount_idr.toLocaleString('id-ID', { maximumFractionDigits: 0 })
+}
+
+function formatPaidAt(iso: string): string {
+  // Format like "12 Mei 2026" in WIB-friendly Indonesian. Avoid
+  // toLocaleString locale variation across Node/Deno by hand-building.
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return iso
+  const months = [
+    'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
+  ]
+  return `${d.getUTCDate()} ${months[d.getUTCMonth()]} ${d.getUTCFullYear()}`
+}
+
+export function buildPaymentReceiptEmailBody(args: {
+  invoice_id: string
+  tier: string
+  amount_idr: number
+  payment_method: string
+  paid_at_iso: string
+}): { subject: string; text: string } {
+  const formattedTotal = formatIdr(args.amount_idr)
+  const formattedDate = formatPaidAt(args.paid_at_iso)
+  return {
+    subject: `Bukti pembayaran — weuseai.agent (${args.invoice_id})`,
+    text: [
+      `Halo,`,
+      ``,
+      `Pembayaran setup weuseai.agent kamu sudah kami terima. Terima kasih.`,
+      ``,
+      `Ringkasan:`,
+      `  • Paket: ${args.tier}`,
+      `  • Invoice: ${args.invoice_id}`,
+      `  • Total: ${formattedTotal}`,
+      `  • Metode: ${args.payment_method}`,
+      `  • Tanggal: ${formattedDate}`,
+      ``,
+      `Agent kamu sedang disiapkan. Begitu siap, kami kirim email`,
+      `aktivasi terpisah dengan link ke dashboard onboarding.`,
+      ``,
+      `Butuh bantuan atau perlu pengembalian dana? Lihat`,
+      `https://weuseai-agent.vercel.app/refund-policy atau balas email ini.`,
+      ``,
+      `— weuseai.agent`,
+      `Dioperasikan oleh Richie Kidnovell, berbasis di Jakarta.`,
+    ].join('\n'),
+  }
+}
+
+// ─── helper: welcome email body (Sesi B P0 #7) ─────────────────────────
+//
+// Sent from complete-onboarding handler after Hermes activates. BI
+// primary. Encourages customer to send their first message to the
+// Telegram bot.
+
+export function buildWelcomeEmailBody(args: {
+  display_name: string
+  bot_username: string | null
+  tier: string
+}): { subject: string; text: string } {
+  const botLine = args.bot_username
+    ? `https://t.me/${args.bot_username}`
+    : 'Buka Telegram dan cari bot kamu (sudah di-pair lewat onboarding).'
+  return {
+    subject: `Agent kamu sudah aktif — weuseai.agent`,
+    text: [
+      `Halo ${args.display_name},`,
+      ``,
+      `Agent weuseai.agent kamu (paket ${args.tier}) sudah aktif.`,
+      ``,
+      `Kirim pesan pertama ke bot Telegram kamu:`,
+      `  ${botLine}`,
+      ``,
+      `Beberapa hal yang bisa kamu coba di pesan pertama:`,
+      `  • "Halo, kenalan dulu" — agent akan ingat preferensi kamu`,
+      `  • "Bantu aku draft email ke klien" — produktivitas dasar`,
+      `  • "Apa yang kamu bisa bantu?" — daftar kemampuan`,
+      ``,
+      `Kalau agent belum membalas dalam 5 menit, cek dashboard atau`,
+      `hubungi kami via WhatsApp di +62 821-5490-2561.`,
+      ``,
+      `— weuseai.agent`,
+      `Dioperasikan oleh Richie Kidnovell, berbasis di Jakarta.`,
+    ].join('\n'),
+  }
+}

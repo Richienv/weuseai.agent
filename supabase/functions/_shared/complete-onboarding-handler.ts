@@ -21,6 +21,7 @@ import {
 } from './soul-md-template.ts'
 import { properDeleteWebhook } from './proper-delete-webhook.ts'
 import { sendProactiveGreeting } from './proactive-greeting.ts'
+import { buildWelcomeEmailBody } from './email-delivery.ts'
 
 export type CompleteOnboardingDeps = {
   db: IOnboardingStore
@@ -35,6 +36,17 @@ export type CompleteOnboardingDeps = {
   /** Test seam — properDeleteWebhook backoff sleep. Production omits;
    *  tests pass `() => {}` to avoid real 2-8s sleeps on retry paths. */
   webhookDeleteSleepMs?: (ms: number) => Promise<void> | void
+  /**
+   * Sesi B P0 #7 (2026-05-12): optional welcome email on success path.
+   * Best-effort — any throw is swallowed. Production wires this to
+   * sendEmail() from email-delivery.ts (stub-tolerant when
+   * RESEND_API_KEY is missing).
+   */
+  sendWelcomeEmail?: (args: {
+    to: string
+    subject: string
+    text: string
+  }) => Promise<{ ok: boolean }>
 }
 
 export type CompleteOnboardingBody = {
@@ -432,6 +444,23 @@ export async function handleCompleteOnboarding(
     status: 'active',
     hosting_active: true,
   })
+
+  // ─── 9a. Welcome email (Sesi B P0 #7, 2026-05-12) ──────────────────
+  // Best-effort — any throw is swallowed so the onboarding response
+  // shape is unaffected. Stub mode (no RESEND_API_KEY) is handled
+  // inside email-delivery.ts.
+  if (deps.sendWelcomeEmail && customer.email) {
+    try {
+      const { subject, text } = buildWelcomeEmailBody({
+        display_name: customer.display_name ?? customer.email,
+        bot_username: customer.telegram_bot_username,
+        tier: subscription.tier,
+      })
+      await deps.sendWelcomeEmail({ to: customer.email, subject, text })
+    } catch {
+      // Swallow — welcome email is not blocking.
+    }
+  }
 
   // ─── 10. Done — redirect to welcome with job id ───────────────────
   // webhook_warning surfaces the partial-failure to the client so it
