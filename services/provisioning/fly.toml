@@ -7,9 +7,20 @@
 #     and hard-capped at one machine if traffic spikes
 #
 # Secrets set separately via `fly secrets set` (NOT in this file):
-#   IDCLOUDHOST_API_KEY, IDCLOUDHOST_BILLING_ACCOUNT_ID, IDCLOUDHOST_REGION,
-#   TELEGRAM_BOT_TOKEN, DEFAULT_TELEGRAM_CHAT_ID, PROVISIONING_AUTH_TOKEN,
-#   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, RICHIE_CHAT_ID
+#   Provider routing (Vultr-migration cascade 2026-05-11, PR #75 cutover):
+#     VPS_PROVIDER                    # 'vultr' (post-cutover default) | 'idcloudhost' (rollback)
+#     VULTR_API_KEY                   # generated at my.vultr.com/settings/#settingsapi
+#     VULTR_REGION                    # 'sgp' (Singapore — capacity-stable since 2014)
+#     VULTR_FLEET_SSH_KEY_ID          # uuid from POST /v2/ssh-keys (FLEET_SSH_PUBKEY upload)
+#     DIGITALOCEAN_API_KEY            # for failover when Vultr capacity exhausted
+#     DIGITALOCEAN_REGION             # 'sgp1' (DO Singapore — NOTE: NOT same code as Vultr's 'sgp')
+#     DIGITALOCEAN_FLEET_SSH_KEY_ID   # id from POST /v2/account/keys
+#   Grandfathered (read-only — kept so existing Renita + e282ce25 VPSes work):
+#     IDCLOUDHOST_API_KEY, IDCLOUDHOST_BILLING_ACCOUNT_ID, IDCLOUDHOST_REGION
+#   Service auth + Telegram + Supabase (unchanged):
+#     TELEGRAM_BOT_TOKEN, DEFAULT_TELEGRAM_CHAT_ID, PROVISIONING_AUTH_TOKEN,
+#     SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, RICHIE_CHAT_ID,
+#     FLEET_SSH_PRIVATE_KEY, FLEET_SSH_PUBKEY
 
 app = "weuseai-provisioning"
 primary_region = "sin"
