@@ -13,7 +13,19 @@
 export type SshSetupOpts = {
   host: string
   user: string
-  password: string
+  /** Password auth (IDCloudHost legacy path — provisioner sets a
+   *  customer-specific password via the IDCH API). Required when
+   *  privateKeyPath is not provided. */
+  password?: string
+  /** Path to a PEM-formatted SSH private key file (Vultr / DO path —
+   *  fleet key uploaded once to the provider via SSH-key API, then
+   *  passed in `sshkey_id` array on instance create). Required when
+   *  password is not provided. Mutually-exclusive with password in
+   *  practice; if both are set, key auth wins.
+   *
+   *  Added 2026-05-11 (Vultr migration cascade). IDCloudHost continues
+   *  to use the password path; Vultr/DO use the key path. */
+  privateKeyPath?: string
   script: string
   /** Hard cap on the SSH command (real impl). Default 10 min. */
   timeoutMs?: number
