@@ -249,11 +249,28 @@ const LIVENESS_PING_TEXT =
 
 function llmEnvLines(p: SetupScriptParams): string[] {
   // Phase 2A: ALL tiers route through OpenRouter (single key per customer
-  // minted by the provisioning service). Hermes is OpenAI-compatible — we
-  // just point it at openrouter.ai/api/v1 and pass the key as OPENAI_API_KEY.
+  // minted by the provisioning service). Hermes's primary chat-completion
+  // path is OpenAI-compatible — we point it at openrouter.ai/api/v1 and
+  // pass the key as OPENAI_API_KEY.
+  //
+  // Hermes auxiliary tasks (context compression, title generation) read
+  // from OPENROUTER_API_KEY specifically — different env var name, same
+  // sub-key value. Without this Hermes prints two warnings on every
+  // message:
+  //
+  //   "No auxiliary LLM provider configured — context compression will
+  //    drop middle turns without a summary. Run hermes setup or set
+  //    OPENROUTER_API_KEY."
+  //   "Auxiliary title generation failed: No LLM provider configured for
+  //    task=title_generation provider=auto."
+  //
+  // Fix: emit both env vars pointing at the same OpenRouter sub-key.
+  // 2026-05-12 — see Fix 2 of post-Vultr-migration polish cascade.
   if (!p.openRouterKey) return []
   return [
     `OPENAI_API_KEY=${p.openRouterKey}`,
+    // Same value, different name — Hermes auxiliary path reads this.
+    `OPENROUTER_API_KEY=${p.openRouterKey}`,
     `OPENAI_BASE_URL=${OPENROUTER_BASE_URL}`,
     `OPENAI_MODEL=${OPENROUTER_DEFAULT_MODEL}`,
   ]

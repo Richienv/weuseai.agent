@@ -39,7 +39,17 @@ import { join } from 'node:path'
  * below. Intentionally narrow — refresh-env is NOT a generic "exec
  * arbitrary script on customer VPS" endpoint.
  */
-export const ALLOWED_ENV_KEYS = ['TELEGRAM_BOT_TOKEN', 'OPENROUTER_API_KEY'] as const
+// OPENAI_API_KEY added 2026-05-12: it's the canonical name Hermes's
+// primary chat-completion path reads (Phase 2A architecture), where
+// the value is the OpenRouter sub-key. OPENROUTER_API_KEY (already
+// here from a prior latent-bug-noted pass) is what Hermes auxiliary
+// tasks read. Both names point at the same key. Allowing both lets
+// admin tooling rotate or set them together.
+export const ALLOWED_ENV_KEYS = [
+  'TELEGRAM_BOT_TOKEN',
+  'OPENAI_API_KEY',
+  'OPENROUTER_API_KEY',
+] as const
 export type AllowedEnvKey = (typeof ALLOWED_ENV_KEYS)[number]
 
 // ─── request / response types ──────────────────────────────────────

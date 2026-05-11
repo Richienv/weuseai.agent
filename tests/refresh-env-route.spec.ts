@@ -90,6 +90,46 @@ test('builds command for multiple keys atomically', () => {
   assert.equal(restarts.length, 1, 'restart hermes only once even with multiple keys')
 })
 
+test('builds command for OpenAI + OpenRouter dual-name key (2026-05-12 Fix 2)', () => {
+  // Phase 2A architecture: same OpenRouter sub-key, two env var names.
+  // OPENAI_API_KEY = Hermes primary chat path (OpenAI-compatible).
+  // OPENROUTER_API_KEY = Hermes auxiliary path (compression + titles).
+  // refreshEnv must accept both via ALLOWED_ENV_KEYS so admin tooling
+  // can rewrite both at once.
+  const cmd = buildRefreshEnvCommand({
+    OPENAI_API_KEY: 'sk-or-v1-same-value',
+    OPENROUTER_API_KEY: 'sk-or-v1-same-value',
+  })
+  assert.match(cmd, /OPENAI_API_KEY/)
+  assert.match(cmd, /OPENROUTER_API_KEY/)
+  // Both rewrites must complete before the single hermes restart.
+  const restarts = cmd.match(/systemctl restart hermes-gateway/g) ?? []
+  assert.equal(restarts.length, 1, 'one restart regardless of key count')
+})
+
+test('ALLOWED_ENV_KEYS list (2026-05-12 Fix 2): TELEGRAM_BOT_TOKEN + OPENAI_API_KEY + OPENROUTER_API_KEY', async () => {
+  const { ALLOWED_ENV_KEYS } = await import(
+    '../services/provisioning/src/routes/refresh-env.ts'
+  )
+  assert.deepEqual(
+    [...ALLOWED_ENV_KEYS].sort(),
+    ['OPENAI_API_KEY', 'OPENROUTER_API_KEY', 'TELEGRAM_BOT_TOKEN'].sort(),
+    'OPENAI_API_KEY must be in the allowlist (Phase 2A canonical name for OpenRouter sub-key)',
+  )
+})
+
+test('rejects unknown env key not in ALLOWED_ENV_KEYS (defense)', () => {
+  // Guard against accidental shell injection via key name.
+  assert.throws(
+    () =>
+      buildRefreshEnvCommand({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ['SOME_RANDOM_KEY' as any]: 'evil',
+      }),
+    /unknown env key/i,
+  )
+})
+
 // ─── Layer 2: refreshEnvHandler ────────────────────────────────────
 
 const VALID_TOKEN = '8734001154:AAGGTR0PRNCy03aaVPb5qi9hWzxCe5yr_Ek'
