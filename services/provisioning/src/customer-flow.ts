@@ -88,7 +88,7 @@ export type SpinUpDeps = {
   llmMinter: ILlmKeyMinter
   /** Custom polling/timeout hooks (tests override; prod uses defaults). */
   waitForSshOpen?: (host: string, opts: { timeoutMs: number; pollIntervalMs: number }) => Promise<void>
-  providerName?: 'idcloudhost' | 'mock'
+  providerName?: 'idcloudhost' | 'vultr' | 'digitalocean' | 'mock' | string
   billingAccountId?: string
   region?: string | null
   alertChatId?: string
@@ -245,13 +245,52 @@ export async function spinUpCustomer(
       log('✓ SSH port open')
 
       log('Running setup script over SSH (sends halo first, then installs Hermes)...')
-      const sshResult = await deps.ssh.runSetup({
-        host: publicIp,
-        user: 'liren',
-        password: sshPassword,
-        script: setupScript,
-        timeoutMs: 12 * 60 * 1000, // Hermes install can take 5+ min
-      })
+      // Vultr-migration cascade 2026-05-11: branch SSH config by provider.
+      //   - idcloudhost → user='liren' + sshpass + password (legacy)
+      //   - vultr / digitalocean → user='root' + ssh -i fleet-key (key auth)
+      // The fleet private key for Vultr/DO is written to a tmpfile
+      // (mode 0600) and removed in the finally block. Pre-fix, the
+      // hardcoded `liren` user + password path failed exit 5 on Vultr
+      // because Vultr's default user is `linuxuser` (not liren), so
+      // password auth had no matching account.
+      const isKeyAuth = inferredProvider === 'vultr' || inferredProvider === 'digitalocean'
+      let keyPath: string | undefined
+      if (isKeyAuth) {
+        const fleetKey = process.env.FLEET_SSH_PRIVATE_KEY ?? ''
+        if (!fleetKey) {
+          throw new Error(
+            `SSH setup needs FLEET_SSH_PRIVATE_KEY env for provider=${inferredProvider}`,
+          )
+        }
+        const { mkdtempSync, writeFileSync, chmodSync } = await import('node:fs')
+        const { tmpdir } = await import('node:os')
+        const { join } = await import('node:path')
+        const dir = mkdtempSync(join(tmpdir(), 'weuseai-fleet-'))
+        keyPath = join(dir, 'id_fleet')
+        const normalised = fleetKey.endsWith('\n') ? fleetKey : fleetKey + '\n'
+        writeFileSync(keyPath, normalised, { encoding: 'utf8' })
+        chmodSync(keyPath, 0o600)
+      }
+      let sshResult
+      try {
+        sshResult = await deps.ssh.runSetup({
+          host: publicIp,
+          user: isKeyAuth ? 'root' : 'liren',
+          ...(isKeyAuth
+            ? { privateKeyPath: keyPath }
+            : { password: sshPassword }),
+          script: setupScript,
+          timeoutMs: 12 * 60 * 1000, // Hermes install can take 5+ min
+        })
+      } finally {
+        if (keyPath) {
+          try {
+            const { rmSync } = await import('node:fs')
+            const { dirname } = await import('node:path')
+            rmSync(dirname(keyPath), { recursive: true, force: true })
+          } catch {/* best effort */}
+        }
+      }
       if (!sshResult.ok) {
         throw new Error(
           `SSH setup failed (exit ${sshResult.exitCode}): ${sshResult.stderr.slice(0, 500)}`,

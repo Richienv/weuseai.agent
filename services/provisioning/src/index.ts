@@ -50,7 +50,14 @@ const sharedDeps: SpinUpDeps = {
   broker: createMessageBroker(),
   ssh,
   llmMinter,
-  providerName: isDryRun ? 'mock' : 'idcloudhost',
+  // Vultr-migration cascade 2026-05-11: read provider name from
+  // VPS_PROVIDER env (same value the factory uses) so vps_instances.provider
+  // stamping matches the actual factory choice. Pre-fix this was
+  // hardcoded to 'idcloudhost' which produced misleading DB rows for
+  // post-cutover customers.
+  providerName: isDryRun
+    ? 'mock'
+    : (process.env.VPS_PROVIDER ?? 'idcloudhost'),
   alertChatId: process.env.RICHIE_CHAT_ID,
 }
 

@@ -19,29 +19,56 @@ import type {
 export class ExecSshProvisioner implements ISshProvisioner {
   async runSetup(opts: SshSetupOpts): Promise<SshSetupResult> {
     const timeoutMs = opts.timeoutMs ?? 10 * 60 * 1000
+    // Branch on auth method (2026-05-11 Vultr migration cascade):
+    //   - privateKeyPath set → ssh -i <key> (Vultr / DO)
+    //   - password set       → sshpass -e ssh (IDCloudHost legacy)
+    //   - both set           → key wins (preferred)
+    //   - neither            → error (no transport)
+    const useKey = !!opts.privateKeyPath
+    const usePassword = !useKey && !!opts.password
+    if (!useKey && !usePassword) {
+      return {
+        ok: false,
+        stdout: '',
+        stderr: 'ExecSshProvisioner: neither privateKeyPath nor password supplied',
+        exitCode: -1,
+      }
+    }
     return new Promise((resolve) => {
-      // Pass password via env var (sshpass -e). Avoids it landing in argv
-      // / process listings. SSH itself reads the script from stdin —
-      // we feed the full bash via `bash -s` on the remote.
-      const proc = spawn(
-        'sshpass',
-        [
-          '-e',
-          'ssh',
-          '-o', 'StrictHostKeyChecking=no',
-          '-o', 'UserKnownHostsFile=/dev/null',
-          '-o', `ConnectTimeout=15`,
-          '-o', 'ServerAliveInterval=30',
-          '-o', 'ServerAliveCountMax=10',
-          '-T', // disable pseudo-tty (we're piping a script)
-          `${opts.user}@${opts.host}`,
-          'sudo bash -s',
-        ],
-        {
-          env: { ...process.env, SSHPASS: opts.password },
-          stdio: ['pipe', 'pipe', 'pipe'],
-        },
-      )
+      // Common SSH options. Identical for key + password paths so the
+      // resulting remote behavior matches.
+      const sshArgs = [
+        '-o', 'StrictHostKeyChecking=no',
+        '-o', 'UserKnownHostsFile=/dev/null',
+        '-o', `ConnectTimeout=15`,
+        '-o', 'ServerAliveInterval=30',
+        '-o', 'ServerAliveCountMax=10',
+        '-T', // disable pseudo-tty (we're piping a script)
+      ]
+      if (useKey) {
+        // Key auth: -i <path>. BatchMode prevents fallback to password
+        // prompts when key auth fails (we want a clean exit code).
+        sshArgs.push(
+          '-i', opts.privateKeyPath as string,
+          '-o', 'BatchMode=yes',
+          '-o', 'IdentitiesOnly=yes',
+        )
+      }
+      sshArgs.push(`${opts.user}@${opts.host}`, 'sudo bash -s')
+
+      // For Vultr's `root` default user, `sudo bash` is a no-op (already
+      // root). For IDCloudHost's `liren` user, sudo escalates as before.
+      // Either way the script runs with full privileges.
+      const cmd = useKey ? 'ssh' : 'sshpass'
+      const args = useKey ? sshArgs : ['-e', 'ssh', ...sshArgs]
+      const env = useKey
+        ? { ...process.env }
+        : { ...process.env, SSHPASS: opts.password as string }
+
+      const proc = spawn(cmd, args, {
+        env,
+        stdio: ['pipe', 'pipe', 'pipe'],
+      })
 
       let stdout = ''
       let stderr = ''
