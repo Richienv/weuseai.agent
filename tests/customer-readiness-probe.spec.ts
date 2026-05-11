@@ -447,3 +447,39 @@ __probe_done__
     assert.equal(r.progress.estimated_seconds_remaining, 0)
   }
 })
+
+test('no-VPS shape: fresh customer (no vps_instances row) returns vps_id=null + current_stage=vps_provisioning + blocker', async () => {
+  // Pin the contract welcome.html relies on for fresh-customer
+  // disambiguation (2026-05-11 fix). Pre-fix welcome.html never asked
+  // the probe on the pending_provision branch — now it does, and uses
+  // these three fields together to decide "no VPS yet → state C
+  // (onboarding CTA)" vs "real provisioning → state B (wait + progress)".
+  // See docs/investigation/2026-05-11-fresh-customer-stuck.md.
+  const r = await readinessProbeHandler(
+    { customer_id: 'fresh-customer-no-vps' },
+    {
+      fleetPrivateKey: FAKE_FLEET_KEY,
+      store: fakeStore({ vps: null }),
+      tcpProbe: async () => true,
+      runSsh: fakeSshOk(''),
+    },
+  )
+  assert.equal(r.ok, true)
+  if (r.ok) {
+    assert.equal(r.vps_id, null, 'vps_id must be null when no row exists')
+    assert.equal(r.ip_address, null)
+    assert.equal(r.ready, false)
+    assert.equal(r.progress.current_stage, 'vps_provisioning')
+    assert.equal(r.progress.stages_completed.length, 0)
+    // Blocker carries the "no row" detail so welcome.html's UI can
+    // distinguish "just paid" from "stuck waiting on IDCH spinUp."
+    assert.equal(
+      r.progress.current_stage_blocker?.check_name,
+      'vps_provisioned',
+    )
+    assert.match(
+      r.progress.current_stage_blocker?.detail ?? '',
+      /no vps_instances row/,
+    )
+  }
+})

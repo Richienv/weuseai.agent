@@ -109,6 +109,78 @@ test('renderState B no longer hardcodes width: 35% (progress is now real)', () =
   )
 })
 
+// ─── Fresh-customer-stuck fix (2026-05-11) ────────────────────────
+
+test('pending_provision branch calls pollReadinessProbe before deciding state', () => {
+  const src = fs.readFileSync(WELCOME, 'utf8')
+  // Pre-fix the `else if (status === 'pending_provision' || status ===
+  // 'pending')` branch unconditionally renderState('B') without ever
+  // calling the probe. So fresh customers (no VPS row, no onboarding
+  // submitted) sat at the "Memeriksa status agent…" placeholder until
+  // the 15-min TIMEOUT_MS cliff. The fix: probe-aware disambiguation,
+  // same pattern PR #69 added to the active branch.
+  // See docs/investigation/2026-05-11-fresh-customer-stuck.md.
+  const branch = src.match(
+    /else if \(status === 'pending_provision' \|\| status === 'pending'\)[^]*?else if \(status == null\)/,
+  )
+  assert.ok(branch, 'must find the pending_provision branch')
+  assert.match(
+    branch[0],
+    /pollReadinessProbe\(\)/,
+    'pending_provision branch must call pollReadinessProbe (was unconditional renderState B pre-fix)',
+  )
+})
+
+test('pending_provision + no VPS + vps_provisioning stage → state C (onboarding CTA)', () => {
+  const src = fs.readFileSync(WELCOME, 'utf8')
+  // The disambiguation rule: when probe reports no vps_id AND the
+  // current_stage is still vps_provisioning, the customer hasn't
+  // started onboarding yet — render state C with the "Lengkapi profil
+  // agent" CTA. Otherwise (vps_id set OR stage past vps_provisioning),
+  // real provisioning is in flight → state B is correct.
+  const branch = src.match(
+    /else if \(status === 'pending_provision' \|\| status === 'pending'\)[^]*?else if \(status == null\)/,
+  )
+  assert.ok(branch)
+  // Look for the no-VPS check + corresponding renderState('C').
+  assert.match(
+    branch[0],
+    /!probe\.vps_id[^]*current_stage[^]*===\s*['"]vps_provisioning['"][^]*renderState\('C'\)/,
+    'no-VPS + vps_provisioning stage must lead to renderState("C")',
+  )
+})
+
+test('pending_provision branch forwards probe.progress to applyStageProgressToB', () => {
+  const src = fs.readFileSync(WELCOME, 'utf8')
+  // Bonus fix: when state B IS the right call (case 2 — real
+  // provisioning in flight), the progress data should drive the stage
+  // label + escalation tiers. Pre-fix the branch never asked the probe
+  // so progress data was unavailable for in-progress customers.
+  const branch = src.match(
+    /else if \(status === 'pending_provision' \|\| status === 'pending'\)[^]*?else if \(status == null\)/,
+  )
+  assert.ok(branch)
+  assert.match(
+    branch[0],
+    /renderState\('B'\)[^]*applyStageProgressToB\(probe\.progress\)/,
+    'state B path must forward probe.progress to applyStageProgressToB',
+  )
+})
+
+test('pollReadinessProbe forwards vps_id alongside ready/checks/progress', () => {
+  const src = fs.readFileSync(WELCOME, 'utf8')
+  // The pending_provision disambiguation needs vps_id at the helper's
+  // return shape. Pre-fix the helper only forwarded ready/checks/progress.
+  // Pin the literal forwarding line — anchored to the line just below
+  // `progress: j.progress` so we don't match coincidental `vps_id` refs
+  // elsewhere in the file.
+  assert.match(
+    src,
+    /progress\s*:\s*j\.progress\s*\?\?\s*null\s*,\s*\n\s*vps_id\s*:\s*j\.vps_id/,
+    'pollReadinessProbe return shape must forward vps_id from j.vps_id',
+  )
+})
+
 test('no false email-notify promises in customer-facing copy (Resend not yet wired)', () => {
   const src = fs.readFileSync(WELCOME, 'utf8')
   // Track 2 honesty fix (post-CORS-hotfix cascade 2026-05-10).
