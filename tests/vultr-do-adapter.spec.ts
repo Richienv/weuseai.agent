@@ -374,6 +374,85 @@ test('Failover: primary auth error → throws, secondary NOT tried (no silent ma
   assert.equal(fp.lastCreatedWith, null)
 })
 
+test('Factory: VPS_PROVIDER=vultr WITHOUT DIGITALOCEAN_API_KEY returns Vultr alone (no FailoverVPSProvider, no DO construction)', async () => {
+  // 2026-05-11 hotfix: pre-fix the factory eager-constructed
+  // DigitalOceanVPSProvider whose constructor throws on missing
+  // DIGITALOCEAN_API_KEY. Cutover with VPS_PROVIDER=vultr + DO secrets
+  // deferred → crashloop. The fix is conditional construction —
+  // factory returns Vultr alone when DO key absent.
+  const saved = {
+    VPS_PROVIDER: process.env.VPS_PROVIDER,
+    VULTR_API_KEY: process.env.VULTR_API_KEY,
+    VULTR_FLEET_SSH_KEY_ID: process.env.VULTR_FLEET_SSH_KEY_ID,
+    DIGITALOCEAN_API_KEY: process.env.DIGITALOCEAN_API_KEY,
+    DIGITALOCEAN_FLEET_SSH_KEY_ID: process.env.DIGITALOCEAN_FLEET_SSH_KEY_ID,
+    ENABLE_REAL_PROVISIONING: process.env.ENABLE_REAL_PROVISIONING,
+  }
+  try {
+    process.env.VPS_PROVIDER = 'vultr'
+    process.env.VULTR_API_KEY = 'fake-vultr-key-for-test'
+    process.env.VULTR_FLEET_SSH_KEY_ID = 'fake-uuid'
+    delete process.env.DIGITALOCEAN_API_KEY
+    delete process.env.DIGITALOCEAN_FLEET_SSH_KEY_ID
+    delete process.env.ENABLE_REAL_PROVISIONING
+
+    const { createVPSProvider } = await import(
+      '../services/provisioning/src/providers/index.ts'
+    )
+    // Should NOT throw. Returns VultrVPSProvider directly, not a
+    // FailoverVPSProvider — verify by checking absence of failover
+    // shape.
+    const provider = createVPSProvider()
+    assert.ok(provider, 'must return a provider')
+    assert.equal(
+      (provider as { lastCreatedWith?: unknown }).lastCreatedWith,
+      undefined,
+      'no FailoverVPSProvider wrapping when DO key missing',
+    )
+  } finally {
+    for (const [k, v] of Object.entries(saved)) {
+      if (v === undefined) delete process.env[k]
+      else process.env[k] = v
+    }
+  }
+})
+
+test('Factory: VPS_PROVIDER=vultr WITH DIGITALOCEAN_API_KEY returns FailoverVPSProvider', async () => {
+  const saved = {
+    VPS_PROVIDER: process.env.VPS_PROVIDER,
+    VULTR_API_KEY: process.env.VULTR_API_KEY,
+    VULTR_FLEET_SSH_KEY_ID: process.env.VULTR_FLEET_SSH_KEY_ID,
+    DIGITALOCEAN_API_KEY: process.env.DIGITALOCEAN_API_KEY,
+    DIGITALOCEAN_FLEET_SSH_KEY_ID: process.env.DIGITALOCEAN_FLEET_SSH_KEY_ID,
+    ENABLE_REAL_PROVISIONING: process.env.ENABLE_REAL_PROVISIONING,
+  }
+  try {
+    process.env.VPS_PROVIDER = 'vultr'
+    process.env.VULTR_API_KEY = 'fake-vultr-key'
+    process.env.VULTR_FLEET_SSH_KEY_ID = 'fake-vultr-uuid'
+    process.env.DIGITALOCEAN_API_KEY = 'fake-do-token'
+    process.env.DIGITALOCEAN_FLEET_SSH_KEY_ID = 'fake-do-key-id'
+    delete process.env.ENABLE_REAL_PROVISIONING
+
+    const { createVPSProvider } = await import(
+      '../services/provisioning/src/providers/index.ts'
+    )
+    const provider = createVPSProvider() as {
+      lastCreatedWith?: unknown
+      primaryName?: string
+      secondaryName?: string
+    }
+    assert.equal(provider.lastCreatedWith, null, 'FailoverVPSProvider exposes lastCreatedWith=null pre-create')
+    assert.equal(provider.primaryName, 'vultr')
+    assert.equal(provider.secondaryName, 'digitalocean')
+  } finally {
+    for (const [k, v] of Object.entries(saved)) {
+      if (v === undefined) delete process.env[k]
+      else process.env[k] = v
+    }
+  }
+})
+
 test('classifyFailoverError: captures Vultr + DO + IDCloudHost capacity patterns', () => {
   assert.equal(classifyFailoverError('out of stock in sgp'), 'capacity')
   assert.equal(classifyFailoverError('Sold out region'), 'capacity')
