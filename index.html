@@ -2,9 +2,10 @@
 <html lang="id">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>weuseai.agent — Enable AI Agent dalam hidup kamu, sekarang.</title>
   <meta name="description" content="Catch-up sama AI wave sebelum terlambat. Hand-built, ready to use out-the-box. 8 menit dari bayar ke first message.">
+  <link rel="canonical" href="https://weuseai-agent.vercel.app/" />
 
   <!-- Open Graph -->
   <meta property="og:type" content="website">
@@ -3359,7 +3360,7 @@
       return (
         <header className="fixed top-3 md:top-4 left-0 right-0 z-50 px-4 md:px-8 lg:px-16 py-3">
           <div className="flex items-center justify-between gap-3">
-            <a href="#" className="flex items-center gap-2">
+            <a href="/" aria-label="weuseai.agent — beranda" className="flex items-center gap-2">
               <span className="rounded-full nav-clean grid place-items-center px-4 py-2 md:px-5 md:py-2.5">
                 <img src="assets/logo.svg" alt="weuseai.agent" className="block h-4 md:h-5 w-auto" />
               </span>
@@ -7199,15 +7200,22 @@
               <a href="https://cal.com/weuseai.agent/15min" target="_blank" rel="noopener" className="text-white/75 hover:text-white underline-offset-2 hover:underline">Jadwalkan panggilan</a>
             </p>
 
-            <div className="mt-20 md:mt-28 pt-6 md:pt-8 border-t border-white/5 w-full flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0 text-[11px] text-white/55 font-body font-light">
-              <span>© 2026 weuseai.agent</span>
-              <div className="flex items-center gap-4 md:gap-5">
-                <a href="/privasi" className="text-white/55 hover:text-white/85 transition-colors no-underline">privasi</a>
-                <span className="text-white/25">·</span>
-                <a href="/syarat" className="text-white/55 hover:text-white/85 transition-colors no-underline">syarat</a>
-                <span className="text-white/25">·</span>
-                <a href="/kontak" className="text-white/55 hover:text-white/85 transition-colors no-underline">kontak</a>
+            <div className="mt-20 md:mt-28 pt-6 md:pt-8 border-t border-white/10 w-full flex flex-col gap-4 text-[11px] text-white/65 font-body font-light">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0">
+                <span>© 2026 weuseai.agent</span>
+                <div className="flex items-center gap-4 md:gap-5 flex-wrap justify-center">
+                  <a href="/privacy" className="text-white/65 hover:text-white transition-colors no-underline">privasi</a>
+                  <span className="text-white/35">·</span>
+                  <a href="/terms" className="text-white/65 hover:text-white transition-colors no-underline">syarat</a>
+                  <span className="text-white/35">·</span>
+                  <a href="/refund-policy" className="text-white/65 hover:text-white transition-colors no-underline">pengembalian</a>
+                  <span className="text-white/35">·</span>
+                  <a href="/contact" className="text-white/65 hover:text-white transition-colors no-underline">kontak</a>
+                </div>
               </div>
+              <p className="text-white/65 text-center sm:text-left leading-relaxed max-w-2xl">
+                Dioperasikan oleh Richie Kidnovell, berbasis di Jakarta. Kontak: <a href="mailto:support@weuseai.agent" className="text-white/85 hover:text-white no-underline">support@weuseai.agent</a>.
+              </p>
             </div>
           </div>
         </section>
