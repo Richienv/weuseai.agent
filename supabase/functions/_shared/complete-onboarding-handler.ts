@@ -303,7 +303,7 @@ export async function handleCompleteOnboarding(
     //
     // Match pattern is the IDCloudHost server message verbatim — they
     // emit this exact string when the region's compute pool is exhausted.
-    const isCapacityExhausted = isIdcloudhostCapacityError(spinResult.body)
+    const isCapacityExhausted = isProviderCapacityError(spinResult.body)
     return json(
       {
         error: isCapacityExhausted
@@ -515,24 +515,54 @@ async function safeUpdateSubscription(
 }
 
 /**
- * IDCloudHost capacity-exhaustion detector. Examines the body string
- * returned by provisioning.spinUp on failure and matches the verbatim
- * IDCloudHost server message:
+ * Provider-agnostic capacity-exhaustion detector. Examines the body
+ * string returned by provisioning.spinUp on failure and matches the
+ * documented capacity-error phrasings from all supported providers:
  *
- *   {"errors": {"Error": "Compute resources temporarily unavailable
- *   due to high demand. If possible, choose a different region or
- *   location."}}
+ *   IDCloudHost: {"errors": {"Error": "Compute resources temporarily
+ *                unavailable due to high demand…"}}
+ *   Vultr:       documented as "out of stock" / "plan/region combination
+ *                is unavailable" (HTTP 503)
+ *   DigitalOcean: "not available" / "Sold out" (HTTP 422)
  *
- * The substring "Compute resources temporarily unavailable" is what
- * IDCloudHost emits — stable across their JSON shape changes (we don't
- * depend on a specific JSON path). Conservative: only matches when the
- * exact phrase is present.
+ * Substring-matched (not JSON-shape-dependent) so it survives provider
+ * API tweaks. Conservative: only matches phrases that ONLY appear in
+ * legitimate capacity exhaustion responses (false-positive on auth or
+ * malformed-request errors would mask real bugs behind the friendly
+ * customer copy).
+ *
+ * Originally named `isIdcloudhostCapacityError` (PR #73). Renamed
+ * 2026-05-11 (Vultr migration cascade) to `isProviderCapacityError`.
+ * Old name kept as deprecated alias for back-compat.
  *
  * Exported so tests can pin both directions (positive + negative).
  */
+export function isProviderCapacityError(body: string): boolean {
+  if (typeof body !== 'string' || body.length === 0) return false
+  // IDCloudHost
+  if (body.includes('Compute resources temporarily unavailable')) return true
+  // Vultr — match the documented capacity phrasings. Both word boundaries
+  // and a contextual phrase to reduce false positives on unrelated "out
+  // of stock" mentions (e.g. an old IDCH error message that happens to
+  // contain similar wording).
+  if (/out of stock/i.test(body)) return true
+  if (/plan.*region.*unavailable|region.*plan.*unavailable/i.test(body)) return true
+  if (/insufficient.*capacity/i.test(body)) return true
+  // DigitalOcean
+  if (/sold.*out/i.test(body)) return true
+  // Note: DO's "not available" is too generic alone — only count it when
+  // paired with capacity-context words. Keep narrow.
+  if (/size.*not available/i.test(body)) return true
+  if (/region.*not available/i.test(body)) return true
+  return false
+}
+
+/**
+ * @deprecated 2026-05-11 — use `isProviderCapacityError`. Kept as alias
+ * for back-compat with any external callers; removed when no usages.
+ */
 export function isIdcloudhostCapacityError(body: string): boolean {
-  if (typeof body !== 'string') return false
-  return body.includes('Compute resources temporarily unavailable')
+  return isProviderCapacityError(body)
 }
 
 function errMessage(e: unknown): string {

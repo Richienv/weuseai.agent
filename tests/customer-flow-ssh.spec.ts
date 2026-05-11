@@ -102,7 +102,10 @@ test('flow: ssh.runSetup is called with the public IP from getPublicIp', async (
   assert.equal(deps.ssh.calls.length, 1, 'ssh.runSetup called once')
   assert.equal(deps.ssh.calls[0].host, '203.194.55.66', 'host = the public IP we discovered')
   assert.equal(deps.ssh.calls[0].user, 'liren', 'user = liren (IDCH default)')
-  assert.ok(deps.ssh.calls[0].password.length > 0, 'password is the one we passed at create time')
+  // Password is optional now (Vultr/DO use privateKeyPath instead) — for
+  // IDCH path, asserting truthiness is enough since SshSetupOpts.password
+  // is typed as optional string.
+  assert.ok((deps.ssh.calls[0].password ?? '').length > 0, 'password is the one we passed at create time')
 })
 
 test('flow: ssh.runSetup script contains halo curl + Hermes install + OpenRouter key', async () => {
