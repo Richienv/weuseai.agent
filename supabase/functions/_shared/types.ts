@@ -353,7 +353,15 @@ export type SpinUpResult =
 // docs/design/2026-05-10-vps-config-refresh.md.
 export type RefreshEnvInput = {
   customerId: string
-  envValues: { TELEGRAM_BOT_TOKEN?: string; OPENROUTER_API_KEY?: string }
+  envValues: {
+    TELEGRAM_BOT_TOKEN?: string
+    // Same value, two names: Hermes's primary chat path reads
+    // OPENAI_API_KEY; auxiliary tasks (compression / title generation)
+    // read OPENROUTER_API_KEY. Both should be set to the OpenRouter
+    // sub-key to silence aux warnings on every message (2026-05-12).
+    OPENAI_API_KEY?: string
+    OPENROUTER_API_KEY?: string
+  }
   /** Optional: SOUL.md persona content. When provided, written to
    *  /home/weuseai/.hermes/SOUL.md on the VPS before hermes-gateway
    *  restart. Closes the dry-run Stage 7 gap (xendit-webhook's first
@@ -379,7 +387,11 @@ export type RefreshEnvResult =
       ok: true
       vpsId: string
       ipAddress: string
-      applied: { TELEGRAM_BOT_TOKEN?: 'updated' | 'unchanged'; OPENROUTER_API_KEY?: 'updated' | 'unchanged' }
+      applied: {
+        TELEGRAM_BOT_TOKEN?: 'updated' | 'unchanged'
+        OPENAI_API_KEY?: 'updated' | 'unchanged'
+        OPENROUTER_API_KEY?: 'updated' | 'unchanged'
+      }
       hermesRestartAt: string
     }
   | {

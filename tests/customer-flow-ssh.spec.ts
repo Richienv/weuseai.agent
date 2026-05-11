@@ -129,6 +129,17 @@ test('flow: ssh.runSetup script contains halo curl + Hermes install + OpenRouter
   assert.match(script, /install\.sh/, 'Hermes installer')
   assert.match(script, /OPENAI_API_KEY=sk-or-v1-mock-/, 'minted OpenRouter key written into script')
   assert.match(script, /OPENAI_BASE_URL=https:\/\/openrouter\.ai\/api\/v1/, 'OpenRouter base URL')
+  // 2026-05-12 — Fix 2 of post-Vultr polish: setup-script writes the
+  // OpenRouter sub-key under BOTH OPENAI_API_KEY (Hermes primary chat
+  // path, OpenAI-compatible) AND OPENROUTER_API_KEY (Hermes auxiliary
+  // tasks: context compression, title generation). Without the second
+  // name Hermes logged "No auxiliary LLM provider configured" warnings
+  // on every message.
+  assert.match(
+    script,
+    /OPENROUTER_API_KEY=sk-or-v1-mock-/,
+    'OpenRouter sub-key ALSO written under OPENROUTER_API_KEY name (silences Hermes aux warnings)',
+  )
 })
 
 test('flow: vps_instances row gets ip_address populated from getPublicIp', async () => {

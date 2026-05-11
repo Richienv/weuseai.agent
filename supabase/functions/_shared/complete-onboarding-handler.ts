@@ -330,7 +330,17 @@ export async function handleCompleteOnboarding(
   // redirect (admin can rescue via admin-customer-vps-refresh).
   const refreshResult = await deps.provisioning.refreshEnv({
     customerId: customer_id,
-    envValues: { TELEGRAM_BOT_TOKEN: customerBotToken },
+    envValues: {
+      TELEGRAM_BOT_TOKEN: customerBotToken,
+      // 2026-05-12 — Phase 2A architecture writes the OpenRouter sub-key
+      // under OPENAI_API_KEY (Hermes primary chat path is OpenAI-compat).
+      // Hermes aux tasks (context compression, title generation) read
+      // OPENROUTER_API_KEY specifically — same value, different name.
+      // Pushing both silences the "No auxiliary LLM provider configured"
+      // warnings that fire on every message otherwise.
+      OPENAI_API_KEY: mintResult.key,
+      OPENROUTER_API_KEY: mintResult.key,
+    },
     // Dry-run Stage 7 fix: pass SOUL.md content too. Without this, the
     // canonical xendit-webhook → onboarding flow leaves SOUL.md empty
     // on disk (setup-script writes it from spinUp's soulMdContent
