@@ -38,11 +38,28 @@ export function createVPSProvider(): IVPSProvider {
       return new MockVPSProvider()
     case 'idcloudhost':
       return new IDCloudHostVPSProvider()
-    case 'vultr':
-      return new FailoverVPSProvider(
-        new VultrVPSProvider(),
-        new DigitalOceanVPSProvider(),
+    case 'vultr': {
+      // DO failover is opt-in: when DIGITALOCEAN_API_KEY is set, we wrap
+      // Vultr (primary) + DO (failover) in FailoverVPSProvider. When it
+      // isn't set, the factory returns Vultr alone — no failover.
+      //
+      // History (2026-05-11 hotfix): the original PR #74 factory always
+      // eager-constructed DigitalOceanVPSProvider, whose constructor
+      // throws on missing DIGITALOCEAN_API_KEY. Cutover deploys with
+      // VPS_PROVIDER=vultr but DO secrets deferred → provisioning service
+      // crashlooped on startup. This conditional construction lets the
+      // founder ship the Vultr-only cutover today + add DO failover
+      // later (the "small task" deferral founder mentioned).
+      const vultr = new VultrVPSProvider()
+      const doKey = process.env.DIGITALOCEAN_API_KEY
+      if (doKey && doKey.length > 0) {
+        return new FailoverVPSProvider(vultr, new DigitalOceanVPSProvider())
+      }
+      console.warn(
+        '[providers] VPS_PROVIDER=vultr but DIGITALOCEAN_API_KEY not set — running Vultr-only (no DO failover). Set DO secrets to enable failover.',
       )
+      return vultr
+    }
     case 'digitalocean':
       // DO-only path — for testing or as the hot-swap if Vultr SGP becomes
       // structurally unreliable. Not the default production path.
