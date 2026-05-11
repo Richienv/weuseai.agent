@@ -1818,6 +1818,19 @@
         $expectationsErr.textContent = 'Ada karakter yang ditolak. Tulis ulang tanpa tag/kode.';
         return;
       }
+      // IDCloudHost capacity-exhaustion path (2026-05-11 honest-error fix).
+      // Pre-fix this fell through to the generic "Belum jadi. Ada kendala
+      // teknis." popup, which read as "you did something wrong." But the
+      // capacity error is a transient platform issue (Jakarta region full)
+      // — customer should be told it's not their fault + given an honest
+      // wait window. See docs/investigation/2026-05-11-pair-failure.md.
+      if (r.status === 503 && data?.error === 'vps_capacity_exhausted') {
+        showSubmitError(
+          'Server VPS lagi penuh. Ini bukan kesalahan kamu — coba refresh halaman ini dalam 5–10 menit, atau hubungi tim di WhatsApp.',
+          true,
+        );
+        return;
+      }
       // 502 / 503 / 500 / unknown
       showSubmitError('Ada kendala teknis. Coba lagi dalam 1 menit, atau hubungi tim via WhatsApp.', true);
     }

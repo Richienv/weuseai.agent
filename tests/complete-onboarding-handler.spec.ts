@@ -690,6 +690,66 @@ test('provisioning unreachable: 503, rolls back OpenRouter key, parks subscripti
   assert.ok(c?.soul_md_text)
 })
 
+test('vps_capacity_exhausted: 503 with distinct error code when provisioning body matches IDCloudHost capacity message (2026-05-11 honest-error fix)', async () => {
+  // Pre-fix: every spinUp failure surfaced as generic 'provisioning_unreachable'
+  // → onboarding.html rendered "Belum jadi. Ada kendala teknis." which read
+  // as "you did something wrong." But IDCloudHost's "Compute resources
+  // temporarily unavailable" is a transient platform issue (Jakarta region
+  // full). Customer should be told it's not their fault. Customer e282ce25 +
+  // a3827996 hit this in fresh-customer e2e testing 2026-05-10/11.
+  // See docs/investigation/2026-05-11-pair-failure.md.
+  const { db, minter, provisioning, telegram } = setupHappyPath()
+  provisioning.next = {
+    ok: false,
+    status: 500,
+    // Verbatim IDCloudHost server message (passed through by provisioning service).
+    body: 'IDCloudHost POST /vm -> 500: {"errors": {"Error": "Compute resources temporarily unavailable due to high demand. If possible, choose a different region or location."}}',
+  }
+
+  const res = await handleCompleteOnboarding(
+    buildReq({
+      customer_id: 'cust-1',
+      whatsapp: '08123456789',
+      expectations_text: 'Bantu briefing pagi.',
+    }),
+    { db, minter, provisioning, telegram, publicBase: PUBLIC_BASE },
+  )
+
+  assert.equal(res.status, 503)
+  const data = await readJson(res)
+  assert.equal(
+    data.error,
+    'vps_capacity_exhausted',
+    'must return distinct code (not generic provisioning_unreachable)',
+  )
+
+  // Same rollback semantics as other spinUp failures.
+  assert.equal(minter.minted.length, 1)
+  assert.equal(minter.wasRevoked(minted(minter, 0).hash), true)
+  const sub = await db.findActiveOrPendingSubscriptionByCustomer('cust-1')
+  assert.equal(sub?.status, 'pending_provision')
+})
+
+test('isIdcloudhostCapacityError pure helper: positive + negative cases', async () => {
+  const { isIdcloudhostCapacityError } = await import(
+    '../supabase/functions/_shared/complete-onboarding-handler.ts'
+  )
+  // Positive: real IDCloudHost capacity error (verbatim from production
+  // Fly logs 2026-05-11).
+  assert.equal(
+    isIdcloudhostCapacityError(
+      'IDCloudHost POST /vm -> 500: {"errors": {"Error": "Compute resources temporarily unavailable due to high demand. If possible, choose a different region or location."}}',
+    ),
+    true,
+  )
+  // Negative: other 5xx provisioning failures (must NOT misclassify and
+  // hide real bugs behind the friendly capacity copy).
+  assert.equal(isIdcloudhostCapacityError('connection refused'), false)
+  assert.equal(isIdcloudhostCapacityError('SSH auth failed'), false)
+  assert.equal(isIdcloudhostCapacityError(''), false)
+  assert.equal(isIdcloudhostCapacityError('IDCloudHost POST /vm -> 401: unauthorized'), false)
+})
+
 test('mint failure: 502, no provisioning called, no key persisted', async () => {
   const { db, provisioning, telegram } = setupHappyPath()
   // Minter that always throws
