@@ -10,6 +10,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2'
 
 import { handleXenditWebhook } from '../_shared/xendit-webhook-handler.ts'
 import { handleCors, withCors, webhookCorsHeaders } from '../_shared/cors.ts'
+import { sendEmail } from '../_shared/email-delivery.ts'
 import type {
   IInvoiceStore,
   IProvisioningClient,
@@ -39,6 +40,14 @@ const db: IInvoiceStore = {
       .from('customers')
       .select('id, email')
       .eq('email', email)
+      .maybeSingle()
+    return data ?? null
+  },
+  async findCustomerById(customerId) {
+    const { data } = await supabase
+      .from('customers')
+      .select('id, email, display_name')
+      .eq('id', customerId)
       .maybeSingle()
     return data ?? null
   },
@@ -151,6 +160,10 @@ Deno.serve(async (req) => {
     webhookToken: WEBHOOK_TOKEN,
     alertChatId: ALERT_CHAT_ID,
     alertSend,
+    // Sesi B P0 #7 (2026-05-12): receipt email on PAID. Stub-tolerant —
+    // sendEmail returns ok:true with stub:true when RESEND_API_KEY is
+    // absent, so this is safe to leave wired in all environments.
+    sendReceiptEmail: async (args) => sendEmail(args),
   })
   return withCors(res, webhookCorsHeaders)
 })

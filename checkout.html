@@ -1,10 +1,11 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Checkout — weuseai.agent</title>
-  <meta name="description" content="Secure checkout for weuseai.agent. One-time setup, lifetime use.">
+  <meta name="description" content="Halaman pembayaran weuseai.agent — setup sekali bayar, hosting bulanan transparan.">
+  <link rel="canonical" href="https://weuseai-agent.vercel.app/checkout" />
   <meta name="theme-color" content="#0a0a0a">
   <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
   <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
@@ -607,6 +608,29 @@
                  server logic doesn't choke on missing postal field. -->
           </div>
 
+          <!-- Consent block (Sesi B P0 buildlist #5, 2026-05-12).
+               ToS-acceptance is required; marketing opt-in is unchecked
+               by default per UU PDP + best practice for ID e-commerce. -->
+          <div class="consent-block" style="margin: 18px 0 4px; padding: 14px 16px; border: 1px solid var(--border, #e5e7eb); border-radius: 8px; background: rgba(0,0,0,0.02);">
+            <label for="acceptTos" style="display: flex; gap: 10px; align-items: flex-start; cursor: pointer; font-size: 13px; color: var(--text, #141413); line-height: 1.55;">
+              <input type="checkbox" id="acceptTos" name="acceptTos" required style="margin-top: 3px; flex-shrink: 0;" />
+              <span>
+                Saya menyetujui
+                <a href="/terms" target="_blank" rel="noopener" style="color: var(--text, #141413); text-decoration: underline;">Syarat dan Ketentuan</a>,
+                <a href="/privacy" target="_blank" rel="noopener" style="color: var(--text, #141413); text-decoration: underline;">Kebijakan Privasi</a>,
+                dan
+                <a href="/refund-policy" target="_blank" rel="noopener" style="color: var(--text, #141413); text-decoration: underline;">Kebijakan Pengembalian Dana</a>
+                weuseai.agent. <span style="color:#e5322d;" aria-hidden="true">*</span>
+              </span>
+            </label>
+            <p id="tosError" class="field-error" aria-live="polite" style="display:none; margin: 8px 0 0 26px; font-size: 12px; color: #e5322d;"></p>
+
+            <label for="acceptMarketing" style="display: flex; gap: 10px; align-items: flex-start; cursor: pointer; font-size: 13px; color: var(--text-muted, #6b7c93); line-height: 1.55; margin-top: 10px;">
+              <input type="checkbox" id="acceptMarketing" name="acceptMarketing" style="margin-top: 3px; flex-shrink: 0;" />
+              <span>Saya bersedia menerima email pemberitahuan produk dan tips pemakaian (opsional, bisa unsubscribe kapan saja).</span>
+            </label>
+          </div>
+
           <button class="pay-btn" type="submit" id="payBtn">Bayar Sekarang · <span id="payBtnAmount">Rp 1.398.723</span></button>
 
           <p style="font-size: 12px; color: var(--text-muted); margin: 10px 0 0; text-align: center; line-height: 1.5;">
@@ -622,10 +646,15 @@
           <div class="footer-line">
             <div class="powered">Payments by <b>weuseai.agent</b></div>
             <div style="display:flex; gap:14px;">
-              <a href="#">Terms</a>
-              <a href="#">Privacy</a>
+              <a href="/terms">Syarat</a>
+              <a href="/privacy">Privasi</a>
+              <a href="/contact">Kontak</a>
             </div>
           </div>
+          <p style="margin: 14px 0 0; font-size: 11px; color: var(--text-muted, #6b7c93); text-align: center; line-height: 1.5;">
+            Dioperasikan oleh Richie Kidnovell, berbasis di Jakarta.
+            Kontak: <a href="mailto:support@weuseai.agent" style="color: var(--text-muted, #6b7c93); text-decoration: underline;">support@weuseai.agent</a>.
+          </p>
         </form>
       </div>
     </main>
@@ -962,6 +991,22 @@
           setFieldError(emailInp, emailErr, 'Format email belum benar (mis. kamu@email.com).');
           firstInvalid = firstInvalid || emailInp;
         }
+        // ToS acceptance check (Sesi B P0 buildlist #5, 2026-05-12).
+        // Required by Indonesian e-commerce norms + payment processor
+        // dispute defense. Marketing opt-in is read but separately stored.
+        const tosInp = document.getElementById('acceptTos');
+        const tosErr = document.getElementById('tosError');
+        if (tosErr) { tosErr.style.display = 'none'; tosErr.textContent = ''; }
+        if (!tosInp.checked) {
+          if (tosErr) {
+            tosErr.textContent = 'Wajib menyetujui Syarat dan Ketentuan untuk lanjut.';
+            tosErr.style.display = 'block';
+          }
+          firstInvalid = firstInvalid || tosInp;
+        }
+        const marketingInp = document.getElementById('acceptMarketing');
+        const acceptMarketing = !!(marketingInp && marketingInp.checked);
+
         if (firstInvalid) {
           firstInvalid.focus();
           firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -979,6 +1024,13 @@
         // page even though they just typed it here).
         try {
           localStorage.setItem(`onboarding_checkout_email`, email);
+          // ToS-acceptance + marketing opt-in cached client-side for
+          // audit trail (Sesi B P0 buildlist #5). Backend
+          // create-invoice does not yet read these; storing here means
+          // future Resend marketing pipeline can pick the consent flag
+          // without a schema migration.
+          localStorage.setItem('onboarding_accept_tos_at', new Date().toISOString());
+          localStorage.setItem('onboarding_accept_marketing', acceptMarketing ? '1' : '0');
         } catch { /* localStorage may be disabled */ }
 
         try {

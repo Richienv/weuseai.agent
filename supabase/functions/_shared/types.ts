@@ -39,6 +39,10 @@ export const PAYMENT_METHOD_FEES: Record<PaymentMethodId, PaymentMethodFee> = {
 // to @supabase/supabase-js; tests inject a fake.
 export interface IInvoiceStore {
   findCustomerByEmail(email: string): Promise<{ id: string; email: string } | null>
+  /** Sesi B P0 #7 (2026-05-12): customer lookup by id for receipt email. */
+  findCustomerById(
+    customerId: string,
+  ): Promise<{ id: string; email: string; display_name: string | null } | null>
   insertCustomer(input: {
     email: string
     display_name?: string

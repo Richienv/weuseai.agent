@@ -1,6 +1,7 @@
 // Pure handler for xendit-webhook. Web Platform APIs only.
 
 import { constantTimeEqual } from './constant-time-equal.ts'
+import { buildPaymentReceiptEmailBody } from './email-delivery.ts'
 import {
   STARTER_CREDITS_USD_CENTS,
   type IInvoiceStore,
@@ -9,12 +10,32 @@ import {
   type XenditInvoiceEvent,
 } from './types.ts'
 
+/**
+ * Sesi B P0 #7 (2026-05-12): optional receipt-email dep.
+ *
+ * Signature matches what the handler needs (resolved email body + recipient).
+ * Default impl in supabase/functions/xendit-webhook/index.ts wires this to
+ * sendEmail() in email-delivery.ts — that module is stub-tolerant when
+ * RESEND_API_KEY is missing, so this dep can stay set in all environments.
+ */
+export type SendReceiptEmailFn = (args: {
+  to: string
+  subject: string
+  text: string
+}) => Promise<{ ok: boolean }>
+
 export type WebhookDeps = {
   db: IInvoiceStore
   provisioning: IProvisioningClient
   webhookToken: string
   alertChatId?: string
   alertSend?: (chatId: string, text: string) => Promise<void>
+  /**
+   * Optional. When provided AND the customer row carries an email
+   * address, a receipt is sent on the PAID branch (best-effort — any
+   * throw is caught + ignored so Xendit doesn't see a 5xx).
+   */
+  sendReceiptEmail?: SendReceiptEmailFn
   now?: () => Date
 }
 
@@ -135,11 +156,49 @@ async function handlePaid(
         `[provisioning alert]\nspin-up failed for ${subscription.customer_id} (sub ${subscription.id}): ${provisionFailureReason}\nSubscription marked pending_provision — retry worker should pick up.`,
       )
     }
+    // Still send receipt — payment is real, customer deserves audit trail
+    // regardless of provisioning outcome.
+    await trySendReceipt(event, subscription, deps)
     // 200, NOT 500 — payment is real, don't have Xendit retry-storm us.
     return json({ ok: true, provision_deferred: true })
   }
 
+  await trySendReceipt(event, subscription, deps)
+
   return json({ ok: true })
+}
+
+/**
+ * Sesi B P0 #7 (2026-05-12): best-effort receipt email.
+ *
+ * Resolution order:
+ *   1. deps.sendReceiptEmail missing → skip silently (back-compat).
+ *   2. customer lookup misses or email blank → skip silently (logged in
+ *      future when we add an alert hook; for now we don't want noisy
+ *      stub-mode logs every PAID).
+ *   3. Any thrown error from sendReceiptEmail → caught + swallowed. The
+ *      webhook MUST return 200 to Xendit.
+ */
+async function trySendReceipt(
+  event: XenditInvoiceEvent,
+  subscription: SubscriptionRow,
+  deps: WebhookDeps,
+): Promise<void> {
+  if (!deps.sendReceiptEmail) return
+  try {
+    const customer = await deps.db.findCustomerById(subscription.customer_id)
+    if (!customer?.email) return
+    const { subject, text } = buildPaymentReceiptEmailBody({
+      invoice_id: event.id,
+      tier: subscription.tier,
+      amount_idr: event.amount ?? 0,
+      payment_method: event.payment_method ?? 'unknown',
+      paid_at_iso: event.paid_at ?? new Date().toISOString(),
+    })
+    await deps.sendReceiptEmail({ to: customer.email, subject, text })
+  } catch {
+    // Best-effort — never block webhook on email send.
+  }
 }
 
 async function handleFailed(

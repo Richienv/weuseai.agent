@@ -1,0 +1,13 @@
+# weuseai.agent — public crawl directives.
+# Onboarding + welcome are session-bound and not useful to crawlers;
+# admin tooling under /admin/ is never indexable.
+
+User-agent: *
+Allow: /
+Disallow: /onboarding
+Disallow: /onboarding.html
+Disallow: /welcome
+Disallow: /welcome.html
+Disallow: /admin/
+
+Sitemap: https://weuseai-agent.vercel.app/sitemap.xml
