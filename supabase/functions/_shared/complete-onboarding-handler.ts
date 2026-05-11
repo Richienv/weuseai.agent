@@ -291,8 +291,26 @@ export async function handleCompleteOnboarding(
       status: 'pending_provision',
       hosting_active: false,
     })
+
+    // Distinguish IDCloudHost capacity exhaustion from other provisioning
+    // failures (2026-05-11 honest-error fix). Pre-fix every spinUp failure
+    // surfaced as generic "Belum jadi. Ada kendala teknis." which read as
+    // "you did something wrong" — but the IDCloudHost capacity error is
+    // a transient platform issue (jakarta region full, retry in 5-10 min).
+    // Customer e282ce25 + a3827996 both hit this in fresh-customer e2e
+    // testing 2026-05-10/11. See
+    // docs/investigation/2026-05-11-pair-failure.md.
+    //
+    // Match pattern is the IDCloudHost server message verbatim — they
+    // emit this exact string when the region's compute pool is exhausted.
+    const isCapacityExhausted = isIdcloudhostCapacityError(spinResult.body)
     return json(
-      { error: 'provisioning_unreachable', upstream_status: spinResult.status },
+      {
+        error: isCapacityExhausted
+          ? 'vps_capacity_exhausted'
+          : 'provisioning_unreachable',
+        upstream_status: spinResult.status,
+      },
       503,
     )
   }
@@ -494,6 +512,27 @@ async function safeUpdateSubscription(
   } catch {
     /* swallow — DB write failure during rollback is logged via Edge logs */
   }
+}
+
+/**
+ * IDCloudHost capacity-exhaustion detector. Examines the body string
+ * returned by provisioning.spinUp on failure and matches the verbatim
+ * IDCloudHost server message:
+ *
+ *   {"errors": {"Error": "Compute resources temporarily unavailable
+ *   due to high demand. If possible, choose a different region or
+ *   location."}}
+ *
+ * The substring "Compute resources temporarily unavailable" is what
+ * IDCloudHost emits — stable across their JSON shape changes (we don't
+ * depend on a specific JSON path). Conservative: only matches when the
+ * exact phrase is present.
+ *
+ * Exported so tests can pin both directions (positive + negative).
+ */
+export function isIdcloudhostCapacityError(body: string): boolean {
+  if (typeof body !== 'string') return false
+  return body.includes('Compute resources temporarily unavailable')
 }
 
 function errMessage(e: unknown): string {
