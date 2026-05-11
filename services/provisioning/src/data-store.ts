@@ -23,7 +23,12 @@ export type Subscription = {
   status: 'active' | 'paused' | 'canceled'
 }
 
-export type VPSProvider = 'idcloudhost' | 'mock'
+// Vultr-migration cascade 2026-05-11: 'vultr' + 'digitalocean' added.
+// 'idcloudhost' retained for grandfathered customers (Renita + e282ce25)
+// per docs/research/2026-05-11-vultr-migration-validation.md §5 hybrid
+// strategy. New customers route to 'vultr' (with DO failover) once Step
+// 2 cutover flips the VPS_PROVIDER Fly secret.
+export type VPSProvider = 'idcloudhost' | 'vultr' | 'digitalocean' | 'mock'
 
 export type VPSInstanceRecord = {
   id: string

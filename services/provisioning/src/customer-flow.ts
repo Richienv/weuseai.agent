@@ -206,10 +206,20 @@ export async function spinUpCustomer(
   log(`✓ VPS created: ${vps.uuid}`)
 
   // ── DB row (status=provisioning, no IP yet) ──
+  // Vultr-migration cascade 2026-05-11: when the factory returned a
+  // FailoverVPSProvider, the actual provider that served the create
+  // (primary Vultr or secondary DigitalOcean) is exposed via
+  // `lastCreatedWith`. Record THAT in the row so tear-down + refresh-env
+  // route to the right adapter via createVPSProviderByName. Without this
+  // a Vultr-failed → DO-succeeded customer would have their VPS recorded
+  // as `vultr` and subsequent ops would hit the wrong API.
+  const inferredProvider =
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (deps.vps as any).lastCreatedWith ?? deps.providerName ?? 'idcloudhost'
   await deps.store.createVPSInstance({
     customer_id: opts.customerId,
     vps_id: vps.uuid,
-    provider: deps.providerName ?? 'idcloudhost',
+    provider: inferredProvider,
     ip_address: null,
     region,
     status: 'provisioning',
