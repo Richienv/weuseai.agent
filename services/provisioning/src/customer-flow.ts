@@ -18,6 +18,7 @@
 
 import type { IVPSProvider, VPSInfo, VPSSpec } from './vps-provider.js'
 import type { IDataStore } from './data-store.js'
+import { createVPSProviderByName } from './providers/index.js'
 import type { IMessageBroker } from '../../hermes/src/adapters/message-broker.js'
 import type { ISshProvisioner } from './ssh-provisioner.js'
 import type { ILlmKeyMinter } from './llm-key-minter.js'
@@ -293,7 +294,31 @@ export async function tearDownCustomer(
 ): Promise<{ ok: boolean; reason?: string }> {
   const existing = await deps.store.findActiveVPSByCustomer(customerId)
   if (!existing) return { ok: false, reason: 'no_vps_found' }
-  await deps.vps.delete(existing.vps_id)
+
+  // Vultr-migration cascade 2026-05-11: per-customer routing. The
+  // grandfathered IDCH customers (Renita 42c024ce + e282ce25) have
+  // vps_instances.provider='idcloudhost' rows whose vps_ids are
+  // IDCloudHost UUIDs. Calling deps.vps.delete() on a global factory
+  // wrapped in FailoverVPSProvider (Vultr+DO) post-cutover would route
+  // to Vultr's DELETE /v2/instances/{idch-uuid} → 404. Route by stored
+  // provider instead — same pattern createVPSProviderByName() is meant
+  // for. See services/provisioning/src/providers/index.ts.
+  //
+  // Fallback to deps.vps for backward-compat with callers that pass
+  // a specific adapter (e.g. tests using MockVPSProvider directly).
+  let adapter: IVPSProvider = deps.vps
+  if (existing.provider && existing.provider !== 'mock') {
+    try {
+      adapter = createVPSProviderByName(existing.provider)
+    } catch (e) {
+      // Unknown provider name → fall back to deps.vps. Log so future
+      // VPSes with new provider values are caught in monitoring.
+      console.warn(
+        `[tearDownCustomer] couldn't construct provider="${existing.provider}" — falling back to deps.vps: ${e instanceof Error ? e.message : String(e)}`,
+      )
+    }
+  }
+  await adapter.delete(existing.vps_id)
   await deps.store.updateVPSInstance(existing.vps_id, { status: 'stopped' })
   return { ok: true }
 }
