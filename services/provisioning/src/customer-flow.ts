@@ -120,7 +120,15 @@ export async function spinUpCustomer(
   const sshReadyTimeoutMs = deps.sshReadyTimeoutMs ?? 5 * 60 * 1000
   const billingAccountId =
     deps.billingAccountId ?? process.env.IDCLOUDHOST_BILLING_ACCOUNT_ID ?? ''
-  const region = deps.region ?? process.env.IDCLOUDHOST_REGION ?? null
+  // Region stamp depends on the active provider so vps_instances.region
+  // matches reality. Pre-Vultr-cascade this read only IDCLOUDHOST_REGION
+  // which was misleading for Vultr-routed VPSes (jkt01 stamp on sgp VPS).
+  const activeProvider = deps.providerName ?? process.env.VPS_PROVIDER ?? 'idcloudhost'
+  const regionEnvKey =
+    activeProvider === 'vultr' ? process.env.VULTR_REGION
+    : activeProvider === 'digitalocean' ? process.env.DIGITALOCEAN_REGION
+    : process.env.IDCLOUDHOST_REGION
+  const region = deps.region ?? regionEnvKey ?? null
   const waitForSshOpen = deps.waitForSshOpen ?? defaultWaitForSshOpen
 
   // ── Idempotency ──

@@ -730,24 +730,40 @@ test('vps_capacity_exhausted: 503 with distinct error code when provisioning bod
   assert.equal(sub?.status, 'pending_provision')
 })
 
-test('isIdcloudhostCapacityError pure helper: positive + negative cases', async () => {
-  const { isIdcloudhostCapacityError } = await import(
+test('isProviderCapacityError: positive + negative across IDCloudHost + Vultr + DO (2026-05-11 Vultr cascade)', async () => {
+  const { isProviderCapacityError, isIdcloudhostCapacityError } = await import(
     '../supabase/functions/_shared/complete-onboarding-handler.ts'
   )
-  // Positive: real IDCloudHost capacity error (verbatim from production
-  // Fly logs 2026-05-11).
+  // Positive: IDCloudHost (verbatim from production Fly logs 2026-05-11).
   assert.equal(
-    isIdcloudhostCapacityError(
+    isProviderCapacityError(
       'IDCloudHost POST /vm -> 500: {"errors": {"Error": "Compute resources temporarily unavailable due to high demand. If possible, choose a different region or location."}}',
     ),
     true,
   )
+  // Positive: Vultr documented capacity phrasings.
+  assert.equal(
+    isProviderCapacityError('Vultr POST /v2/instances -> 503: "plan and region combination is unavailable"'),
+    true,
+  )
+  assert.equal(isProviderCapacityError('vc2-1c-1gb is out of stock in sgp'), true)
+  assert.equal(isProviderCapacityError('insufficient capacity in region'), true)
+  // Positive: DigitalOcean.
+  assert.equal(isProviderCapacityError('Droplet size is not available in this region'), true)
+  assert.equal(isProviderCapacityError('region is not available'), true)
+  assert.equal(isProviderCapacityError('Sold out'), true)
   // Negative: other 5xx provisioning failures (must NOT misclassify and
   // hide real bugs behind the friendly capacity copy).
-  assert.equal(isIdcloudhostCapacityError('connection refused'), false)
-  assert.equal(isIdcloudhostCapacityError('SSH auth failed'), false)
-  assert.equal(isIdcloudhostCapacityError(''), false)
-  assert.equal(isIdcloudhostCapacityError('IDCloudHost POST /vm -> 401: unauthorized'), false)
+  assert.equal(isProviderCapacityError('connection refused'), false)
+  assert.equal(isProviderCapacityError('SSH auth failed'), false)
+  assert.equal(isProviderCapacityError(''), false)
+  assert.equal(isProviderCapacityError('IDCloudHost POST /vm -> 401: unauthorized'), false)
+  // Back-compat alias from PR #73.
+  assert.equal(
+    isIdcloudhostCapacityError('Compute resources temporarily unavailable'),
+    true,
+    'deprecated alias still works',
+  )
 })
 
 test('mint failure: 502, no provisioning called, no key persisted', async () => {
