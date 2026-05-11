@@ -842,10 +842,15 @@
         // Track 2 observability (2026-05-10): include the full progress
         // object so renderState('B') can drive the label + progress bar
         // from real stage state instead of the cosmetic B_LABELS cycle.
+        // Fresh-customer-stuck fix (2026-05-11): forward vps_id so the
+        // pending_provision branch can disambiguate "no VPS yet, customer
+        // hasn't onboarded" (vps_id=null) from "real provisioning in
+        // flight" (vps_id set).
         return {
           ready: j.ready === true,
           checks: j.checks ?? {},
           progress: j.progress ?? null,
+          vps_id: j.vps_id ?? null,
         };
       } catch {
         return null;
@@ -954,10 +959,44 @@
         } else if (status === 'failed') {
           renderState('D');
         } else if (status === 'pending_provision' || status === 'pending') {
-          if (Date.now() - startedAt > TIMEOUT_MS) {
+          // Fresh-customer-stuck fix (2026-05-11). pending_provision
+          // fires from two distinct lifecycle moments:
+          //   (1) Right after xendit-webhook creates the subscription —
+          //       no vps_instances row, no SOUL.md, customer hasn't
+          //       started onboarding yet. Should see state C "Lengkapi
+          //       profil agent" CTA → /onboarding.
+          //   (2) After complete-onboarding called spinUp but before
+          //       the subscription.status='active' flip — vps_instances
+          //       row exists, real provisioning in progress. State B
+          //       with stage-aware progress is correct.
+          //
+          // Pre-fix: this branch unconditionally renderState('B') with
+          // no probe call, so case (1) customers sat at the placeholder
+          // "Memeriksa status agent…" label until the 15-min TIMEOUT_MS
+          // cliff flipped them to the misleading state F. Their email
+          // was the only profile field set; they had no path to the
+          // onboarding CTA.
+          //
+          // Now: probe disambiguates. vps_id=null + current_stage=
+          // 'vps_provisioning' means "no VPS row yet" → state C.
+          // Otherwise → state B (with progress data so labels +
+          // escalation tiers work for in-progress customers too).
+          // See docs/investigation/2026-05-11-fresh-customer-stuck.md.
+          const probe = await pollReadinessProbe();
+          lastProbe = probe;
+          if (
+            probe &&
+            !probe.vps_id &&
+            probe.progress?.current_stage === 'vps_provisioning'
+          ) {
+            // Case 1: fresh customer, no VPS row yet — they need the
+            // onboarding CTA, not the wait state.
+            renderState('C');
+          } else if (Date.now() - startedAt > TIMEOUT_MS) {
             renderState('F');
           } else {
             renderState('B');
+            if (probe?.progress) applyStageProgressToB(probe.progress);
           }
         } else if (status == null) {
           // Subscription row not yet visible. Two reasons:
