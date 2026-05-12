@@ -586,13 +586,22 @@ trap "kill $HEARTBEAT_PID 2>/dev/null" EXIT
 ${haloCurl}
 
 # ─── 2. Base packages (HF-2: timeouts on every apt op) ──────────────────
+# HF-2b (2026-05-12): timeout(1) takes the COMMAND as its first
+# positional arg; a shell env-var prefix BEFORE the command name does
+# NOT work because timeout sees the assignment string as its command
+# name. Use 'env VAR=val ...' so the env-var is exported into the
+# timeout's child process. Verified on live customer VPS 2026-05-12:
+# the pre-2b layout aborted setup-script with the message
+#   "timeout: failed to run command 'DEBIAN_FRONTEND=noninteractive':
+#    No such file or directory"
+# at line 590 before halo / Hermes install ever ran.
 log "Updating apt (timeout 90 sec)..."
-if ! timeout 90 DEBIAN_FRONTEND=noninteractive apt-get update -qq >> "$LOG" 2>&1; then
+if ! timeout 90 env DEBIAN_FRONTEND=noninteractive apt-get update -qq >> "$LOG" 2>&1; then
   log "✗ apt-get update timed out or failed after 90 sec"
   exit 5
 fi
 log "Installing base packages (timeout 180 sec)..."
-if ! timeout 180 DEBIAN_FRONTEND=noninteractive apt-get install -y -qq curl ca-certificates python3 sudo >> "$LOG" 2>&1; then
+if ! timeout 180 env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq curl ca-certificates python3 sudo >> "$LOG" 2>&1; then
   log "✗ apt-get install timed out or failed after 180 sec"
   exit 6
 fi

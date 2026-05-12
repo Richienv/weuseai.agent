@@ -54,14 +54,35 @@ test('Hermes install: curl uses --max-time 30 (network-level)', () => {
   )
 })
 
-test('apt-get update: wrapped in `timeout 90`', () => {
+test('apt-get update: wrapped in `timeout 90 env DEBIAN_FRONTEND=...`', () => {
   const s = buildSetupScript(baseParams)
-  assert.match(s, /timeout\s+90\s+(?:DEBIAN_FRONTEND=noninteractive\s+)?apt-get update/)
+  // HF-2b regression guard (2026-05-12): the env-var MUST be inside
+  // an `env VAR=val` clause AFTER `timeout 90`. The pre-2b layout
+  // `timeout 90 DEBIAN_FRONTEND=... apt-get update` made timeout(1)
+  // try to run the literal string "DEBIAN_FRONTEND=noninteractive"
+  // as its command — "No such file or directory" abort, customer
+  // VPS provisioning blocked at apt step.
+  assert.match(s, /timeout\s+90\s+env\s+DEBIAN_FRONTEND=noninteractive\s+apt-get update/)
 })
 
-test('apt-get install: wrapped in `timeout 180`', () => {
+test('apt-get install: wrapped in `timeout 180 env DEBIAN_FRONTEND=...`', () => {
   const s = buildSetupScript(baseParams)
-  assert.match(s, /timeout\s+180\s+(?:DEBIAN_FRONTEND=noninteractive\s+)?apt-get install/)
+  assert.match(s, /timeout\s+180\s+env\s+DEBIAN_FRONTEND=noninteractive\s+apt-get install/)
+})
+
+test('HF-2b regression: env-var prefix never directly follows `timeout N`', () => {
+  const s = buildSetupScript(baseParams)
+  // Catches the exact shape that broke prod on the customer VPS at
+  // 08:22 (e282ce25 / 4268f02b on Vultr SGP):
+  //   timeout 90 DEBIAN_FRONTEND=noninteractive apt-get update
+  //              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  // timeout(1) parses VAR=val as its command name. Fix is the `env`
+  // wrapper. This negative-match keeps drift caught at PR time.
+  assert.equal(
+    /timeout\s+\d+\s+[A-Z_]+=/.test(s),
+    false,
+    'setup-script has a "timeout N VAR=val ..." pattern — timeout(1) treats VAR=val as its command name. Use "timeout N env VAR=val ..." instead.',
+  )
 })
 
 // ─── post-install verification ─────────────────────────────────────────
