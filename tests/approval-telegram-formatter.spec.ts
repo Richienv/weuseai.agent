@@ -87,7 +87,7 @@ function makeRow(): ApprovalRowSlim {
     id: APPR_ID,
     action_kind: 'incorporate',
     action_summary: 'Sign akta notaris untuk PT founders',
-    proposed_by_agent: 'business-director',
+    proposed_by_agent: 'all-in-one-business-agent',
     expires_at: '2026-05-23T13:00:00.000Z',
   }
 }
@@ -96,7 +96,7 @@ test('formatApprovalRequest produces BI brand-voice copy + 2-button keyboard', (
   const out = formatApprovalRequest(makeRow(), NOW)
 
   // Text contains key fields
-  assert.match(out.text, /Approval diminta dari business-director/)
+  assert.match(out.text, /Approval diminta dari all-in-one-business-agent/)
   assert.match(out.text, /Action: Incorporate/)
   assert.match(out.text, /Sign akta notaris untuk PT founders/)
   assert.match(out.text, /expires dalam 14 hari/)

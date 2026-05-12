@@ -7,7 +7,7 @@ import type { SkillSpec, GraduationArtifacts } from '../types.ts'
 import { renderSkillMd, buildManifestEntry } from '../lib/skill-md.ts'
 
 export type GraduateOpts = {
-  /** Target agent-pack slug (e.g. 'web-master'). */
+  /** Target agent-pack slug (e.g. 'web-app-builder'). */
   targetBundleSlug: string
   /** Tier eligibility for the manifest entry. */
   enabledForTiers: ('starter' | 'pro' | 'studio')[]

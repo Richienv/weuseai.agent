@@ -103,12 +103,12 @@ export type Manifest = {
 export const KNOWN_PERSONA_SLUGS = [
   'the-pro',
   'deep-researcher',
-  'web-master',          // display name "Web Creator" in v2; slug retained
+  'web-app-builder',          // display name "Web Creator" in v2; slug retained
   'doc-expert',
   'slide-master',
   'trade-pro',
   'project-conductor',   // v2 — renamed from 'macro-strategist'
-  'business-director',
+  'all-in-one-business-agent',
   'video-producer',
   'social-conductor',
 ] as const

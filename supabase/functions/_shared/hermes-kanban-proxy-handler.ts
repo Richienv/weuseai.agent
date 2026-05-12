@@ -21,12 +21,12 @@
 export const PERSONA_SLUGS = [
   'the-pro',
   'deep-researcher',
-  'web-master',
+  'web-app-builder',
   'doc-expert',
   'slide-master',
   'trade-pro',
   'project-conductor',
-  'business-director',
+  'all-in-one-business-agent',
   'video-producer',
   'social-conductor',
 ] as const

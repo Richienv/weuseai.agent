@@ -2,9 +2,9 @@
 //
 // Asserts the 5 dept-dispatch skills (sales/marketing/engineering/legal/finance)
 // are coherent across:
-//   - business-director/manifest.json (entry exists, Studio-tier-only,
+//   - all-in-one-business-agent/manifest.json (entry exists, Studio-tier-only,
 //     handler_ref:hermes-skill:<id>-dispatch)
-//   - business-director/skills/<id>-dispatch/SKILL.md (file exists, has
+//   - all-in-one-business-agent/skills/<id>-dispatch/SKILL.md (file exists, has
 //     correct Bundle/Tier/Handler header lines)
 //   - department-task-spawner is GONE (replaced by 5 dept packs)
 //   - The legacy/new substitution doesn't break manifest-validator's
@@ -17,7 +17,7 @@ import * as fs from 'node:fs'
 import * as path from 'node:path'
 
 const ROOT = path.resolve(process.cwd())
-const BD_DIR = path.join(ROOT, 'agent-packs/business-director')
+const BD_DIR = path.join(ROOT, 'agent-packs/all-in-one-business-agent')
 
 const DEPT_PACKS = [
   'sales',
@@ -112,7 +112,7 @@ test('every dept-dispatch SKILL.md has correct Bundle/Tier/Handler header lines'
     const md = fs.readFileSync(p, 'utf8')
     // Must mention business-director bundle
     assert.ok(
-      /Bundle:\s*business-director/.test(md),
+      /Bundle:\s*all-in-one-business-agent/.test(md),
       `${dept}-dispatch SKILL.md missing Bundle: business-director`,
     )
     // Studio tier (Q3=A)

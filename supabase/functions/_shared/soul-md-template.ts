@@ -7,7 +7,7 @@
 // docs/plans/2026-05-06-onboarding-page-spec.md (edit H). The Pro is now
 // the canonical default — every customer who doesn't pick a different
 // persona at onboarding gets The Pro voice. Other 9 personas (Deep
-// Researcher, Web Creator [folder slug 'web-master'], Doc Expert,
+// Researcher, Web Creator [folder slug 'web-app-builder'], Doc Expert,
 // Slide Master, Trade Pro, Project Conductor [renamed 2026-05-09 from
 // Macro Strategist; folder slug 'project-conductor'], Business Director,
 // Video Producer, Social Conductor) plug into the same machinery via
@@ -825,12 +825,12 @@ Mau mulai dengan apa?"
 export const PERSONA_SLUGS = [
   'the-pro',
   'deep-researcher',
-  'web-master',
+  'web-app-builder',
   'doc-expert',
   'slide-master',
   'trade-pro',
   'project-conductor',
-  'business-director',
+  'all-in-one-business-agent',
   'video-producer',
   'social-conductor',
 ] as const
@@ -840,12 +840,12 @@ export type PersonaSlug = typeof PERSONA_SLUGS[number]
 const PERSONAS: Record<string, string> = {
   'the-pro': THE_PRO_SCAFFOLD,
   'deep-researcher': DEEP_RESEARCHER_SCAFFOLD,
-  'web-master': WEB_MASTER_SCAFFOLD,
+  'web-app-builder': WEB_MASTER_SCAFFOLD,
   'doc-expert': DOC_EXPERT_SCAFFOLD,
   'slide-master': SLIDE_MASTER_SCAFFOLD,
   'trade-pro': TRADE_PRO_SCAFFOLD,
   'project-conductor': PROJECT_CONDUCTOR_SCAFFOLD,
-  'business-director': BUSINESS_DIRECTOR_SCAFFOLD,
+  'all-in-one-business-agent': BUSINESS_DIRECTOR_SCAFFOLD,
   'video-producer': VIDEO_PRODUCER_SCAFFOLD,
   'social-conductor': SOCIAL_CONDUCTOR_SCAFFOLD,
 }
