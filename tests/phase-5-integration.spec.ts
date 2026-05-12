@@ -92,7 +92,7 @@ test('Phase 5-3.a migration contains all 6 decision_kinds in CHECK', () => {
 
 test('BD v3 SOUL.md references all 5 dept dispatch skills by exact id', () => {
   const md = fs.readFileSync(
-    path.join(ROOT, 'agent-packs/all-in-one-business-agent/SOUL.md'),
+    path.join(ROOT, 'agent-packs/business-agent/SOUL.md'),
     'utf8',
   )
   for (const dept of DEPT_PACKS) {
@@ -105,7 +105,7 @@ test('BD v3 SOUL.md references all 5 dept dispatch skills by exact id', () => {
 
 test('BD v3 SOUL.md references all 4 action_kinds by exact name', () => {
   const md = fs.readFileSync(
-    path.join(ROOT, 'agent-packs/all-in-one-business-agent/SOUL.md'),
+    path.join(ROOT, 'agent-packs/business-agent/SOUL.md'),
     'utf8',
   )
   for (const kind of ACTION_KINDS) {
@@ -115,7 +115,7 @@ test('BD v3 SOUL.md references all 4 action_kinds by exact name', () => {
 
 test('BD v3 SOUL.md references the locked Q4=C expiry numbers', () => {
   const md = fs.readFileSync(
-    path.join(ROOT, 'agent-packs/all-in-one-business-agent/SOUL.md'),
+    path.join(ROOT, 'agent-packs/business-agent/SOUL.md'),
     'utf8',
   )
   // Q4=C: incorporate=14d, contract_sign=14d, public_emission=24h, regulatory_filing=48h
@@ -165,7 +165,7 @@ test('approval-queue-handler ACTION_EXPIRY_HOURS matches Q4=C lock', () => {
 
 test('5-stage-checklist references all 20 deliverable ids from stages.ts', () => {
   const md = fs.readFileSync(
-    path.join(ROOT, 'agent-packs/all-in-one-business-agent/templates/roadmap/5-stage-checklist.md'),
+    path.join(ROOT, 'agent-packs/business-agent/templates/roadmap/5-stage-checklist.md'),
     'utf8',
   )
   // Re-read stages.ts to pull the canonical ids
@@ -237,7 +237,7 @@ test('department_threads schema can link to hermes_kanban_boards (Phase 4-5b)', 
 test('all 5 dept-dispatch SKILL.md files declare Studio tier (Q3=A locked)', () => {
   for (const dept of DEPT_PACKS) {
     const md = fs.readFileSync(
-      path.join(ROOT, `agent-packs/all-in-one-business-agent/skills/${dept}-dispatch/SKILL.md`),
+      path.join(ROOT, `agent-packs/business-agent/skills/${dept}-dispatch/SKILL.md`),
       'utf8',
     )
     assert.ok(
@@ -267,8 +267,8 @@ test('customers.phase_5_enabled column added in Phase 5-1.a migration', () => {
 test('department-task-spawner is purged from all Phase 5+ references', () => {
   // Check key files where we know the deprecated reference would appear
   const filesToCheck = [
-    'agent-packs/all-in-one-business-agent/SOUL.md',
-    'agent-packs/all-in-one-business-agent/manifest.json',
+    'agent-packs/business-agent/SOUL.md',
+    'agent-packs/business-agent/manifest.json',
     'supabase/functions/_shared/soul-md-template.ts',
   ]
   for (const file of filesToCheck) {
@@ -284,7 +284,7 @@ test('department-task-spawner is purged from all Phase 5+ references', () => {
 
 test('legal-dispatch surfaces contract_sign approval gate', () => {
   const md = fs.readFileSync(
-    path.join(ROOT, 'agent-packs/all-in-one-business-agent/skills/legal-dispatch/SKILL.md'),
+    path.join(ROOT, 'agent-packs/business-agent/skills/legal-dispatch/SKILL.md'),
     'utf8',
   )
   assert.ok(md.includes('contract_sign'), 'legal-dispatch should surface contract_sign')
@@ -292,7 +292,7 @@ test('legal-dispatch surfaces contract_sign approval gate', () => {
 
 test('marketing-dispatch surfaces public_emission approval gate', () => {
   const md = fs.readFileSync(
-    path.join(ROOT, 'agent-packs/all-in-one-business-agent/skills/marketing-dispatch/SKILL.md'),
+    path.join(ROOT, 'agent-packs/business-agent/skills/marketing-dispatch/SKILL.md'),
     'utf8',
   )
   assert.ok(md.includes('public_emission'), 'marketing-dispatch should surface public_emission')
@@ -300,7 +300,7 @@ test('marketing-dispatch surfaces public_emission approval gate', () => {
 
 test('finance-dispatch surfaces regulatory_filing approval gate', () => {
   const md = fs.readFileSync(
-    path.join(ROOT, 'agent-packs/all-in-one-business-agent/skills/finance-dispatch/SKILL.md'),
+    path.join(ROOT, 'agent-packs/business-agent/skills/finance-dispatch/SKILL.md'),
     'utf8',
   )
   assert.ok(md.includes('regulatory_filing'), 'finance-dispatch should surface regulatory_filing')

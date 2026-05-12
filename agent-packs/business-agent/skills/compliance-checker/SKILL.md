@@ -1,6 +1,6 @@
 # compliance-checker — Hermes skill
 
-Bundle: all-in-one-business-agent (v2)
+Bundle: business-agent (v2)
 Tier: studio
 Handler: `hermes-skill:compliance-checker`
 

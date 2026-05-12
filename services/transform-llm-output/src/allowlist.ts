@@ -15,13 +15,13 @@ import type { AllowlistEntry, PiiKind, TransformContext } from './types.ts'
 
 export const ALLOWLIST: readonly AllowlistEntry[] = [
   {
-    personaSlug: 'all-in-one-business-agent',
+    personaSlug: 'business-agent',
     skillId: 'incorporation-advisor',
     // PT/CV setup explanations cite NPWP examples from official docs.
     allowedPii: ['npwp'],
   },
   {
-    personaSlug: 'all-in-one-business-agent',
+    personaSlug: 'business-agent',
     skillId: 'compliance-checker',
     // SPT/PPh explanations cite both NPWP + KTP placeholder samples.
     allowedPii: ['npwp', 'ktp'],

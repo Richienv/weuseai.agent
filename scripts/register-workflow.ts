@@ -40,7 +40,7 @@ const INVOICE_GENERATOR: WorkflowSeed = {
   slug: 'invoice-generator',
   name_id: 'Generator Invoice',
   description_id: 'Bikin invoice HTML dari list item dan info klien — siap kirim atau cetak.',
-  agent_slugs: ['doc-expert', 'all-in-one-business-agent'],
+  agent_slugs: ['doc-expert', 'business-agent'],
   category: 'template',
   parameters_schema: {
     type: 'object',

@@ -36,10 +36,10 @@ test('transform: clean text passes unchanged with modified=false', () => {
 
 // ─── allowlist ──────────────────────────────────────────────────────
 
-test('transform: all-in-one-business-agent/incorporation-advisor passes NPWP through', () => {
+test('transform: business-agent/incorporation-advisor passes NPWP through', () => {
   const r = transformLlmOutput({
     text: 'NPWP contoh: 12.345.678.9-012.345 — wajib untuk PT.',
-    personaSlug: 'all-in-one-business-agent',
+    personaSlug: 'business-agent',
     skillId: 'incorporation-advisor',
   })
   assert.match(r.text, /12\.345\.678\.9-012\.345/, 'NPWP should be preserved')
@@ -47,20 +47,20 @@ test('transform: all-in-one-business-agent/incorporation-advisor passes NPWP thr
   assert.ok(r.piiMatches.some((m) => m.kind === 'npwp'))
 })
 
-test('transform: all-in-one-business-agent/compliance-checker passes NPWP + KTP', () => {
+test('transform: business-agent/compliance-checker passes NPWP + KTP', () => {
   const r = transformLlmOutput({
     text: 'KTP: 1234567890123456, NPWP: 12.345.678.9-012.345',
-    personaSlug: 'all-in-one-business-agent',
+    personaSlug: 'business-agent',
     skillId: 'compliance-checker',
   })
   assert.match(r.text, /1234567890123456/)
   assert.match(r.text, /12\.345\.678\.9-012\.345/)
 })
 
-test('transform: all-in-one-business-agent/compliance-checker still redacts non-allowlisted PII', () => {
+test('transform: business-agent/compliance-checker still redacts non-allowlisted PII', () => {
   const r = transformLlmOutput({
     text: 'Email tukang pajak: tax@kantorpajak.go.id',
-    personaSlug: 'all-in-one-business-agent',
+    personaSlug: 'business-agent',
     skillId: 'compliance-checker',
   })
   assert.match(r.text, /\[EMAIL_REDACTED\]/, 'email NOT in allowlist → should redact')
@@ -69,7 +69,7 @@ test('transform: all-in-one-business-agent/compliance-checker still redacts non-
 test('transform: NON-allowlisted skill in business-director still redacts NPWP', () => {
   const r = transformLlmOutput({
     text: 'NPWP: 12.345.678.9-012.345',
-    personaSlug: 'all-in-one-business-agent',
+    personaSlug: 'business-agent',
     skillId: 'business-roadmap-tracker',   // NOT on allowlist
   })
   assert.match(r.text, /\[NPWP_REDACTED\]/)
@@ -89,7 +89,7 @@ test('transform: other personas always redact NPWP regardless of skill id', () =
 test('resolveAllowedPii: exact persona+skill match returns allowedPii', () => {
   const allowed = resolveAllowedPii({
     text: 'x',
-    personaSlug: 'all-in-one-business-agent',
+    personaSlug: 'business-agent',
     skillId: 'incorporation-advisor',
   })
   assert.deepEqual([...allowed], ['npwp'])
@@ -111,8 +111,8 @@ test('ALLOWLIST: covers exactly the locked Q4 entries', () => {
   assert.equal(ALLOWLIST.length, 2)
   const ids = ALLOWLIST.map((e) => `${e.personaSlug}/${e.skillId}`).sort()
   assert.deepEqual(ids, [
-    'all-in-one-business-agent/compliance-checker',
-    'all-in-one-business-agent/incorporation-advisor',
+    'business-agent/compliance-checker',
+    'business-agent/incorporation-advisor',
   ])
 })
 
@@ -121,7 +121,7 @@ test('ALLOWLIST: covers exactly the locked Q4 entries', () => {
 test('transform: reports all PII matches even when allowlisted (audit trail)', () => {
   const r = transformLlmOutput({
     text: 'NPWP A: 12.345.678.9-012.345, NPWP B: 11.222.333.4-555.666',
-    personaSlug: 'all-in-one-business-agent',
+    personaSlug: 'business-agent',
     skillId: 'incorporation-advisor',
   })
   // Both NPWP found in matches; both pass through in text.

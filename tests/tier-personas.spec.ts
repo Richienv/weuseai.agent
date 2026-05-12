@@ -38,7 +38,7 @@ test('Pro gets 8 personas: Starter + 5', () => {
   ])
 })
 
-test('Studio gets 10 personas: Pro + web-app-builder + all-in-one-business-agent', () => {
+test('Studio gets 10 personas: Pro + web-app-builder + business-agent', () => {
   assert.deepEqual(TIER_PERSONAS.studio, [
     'the-pro',
     'doc-expert',
@@ -49,7 +49,7 @@ test('Studio gets 10 personas: Pro + web-app-builder + all-in-one-business-agent
     'video-producer',
     'social-conductor',
     'web-app-builder',
-    'all-in-one-business-agent',
+    'business-agent',
   ])
 })
 

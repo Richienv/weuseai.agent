@@ -70,7 +70,7 @@ create table if not exists hermes_kanban_tasks (
     'slide-master',
     'trade-pro',
     'project-conductor',
-    'all-in-one-business-agent',
+    'business-agent',
     'video-producer',
     'social-conductor'
   )),

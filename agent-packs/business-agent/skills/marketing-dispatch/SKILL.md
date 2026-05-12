@@ -1,6 +1,6 @@
 # marketing-dispatch — Hermes skill
 
-Bundle: all-in-one-business-agent (v3 — Phase 5 dept pack)
+Bundle: business-agent (v3 — Phase 5 dept pack)
 Tier: studio (Q3=A locked: phase_5_enabled = true required)
 Handler: `hermes-skill:marketing-dispatch` (facade — translates marketing-shaped intent to specialist persona)
 

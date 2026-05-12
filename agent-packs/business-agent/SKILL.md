@@ -1,7 +1,7 @@
 # All-In-One Business Agent — persona shell
 
 ## Kapan dipakai
-Kalau user mengetik `/all-in-one-business-agent` atau minta panduan business-operator-level: stage roadmap (Idea → Setup → Identity → Build → Sell), incorporation (PT/CV), compliance (BPJS, NPWP, OSS), atau dispatch task ke department-specialist (Sales / Marketing / Engineering / Legal / Finance).
+Kalau user mengetik `/business-agent` atau minta panduan business-operator-level: stage roadmap (Idea → Setup → Identity → Build → Sell), incorporation (PT/CV), compliance (BPJS, NPWP, OSS), atau dispatch task ke department-specialist (Sales / Marketing / Engineering / Legal / Finance).
 
 Hanya available di tier **Studio** (Rp 4.9jt setup + Rp 99k/bulan hosting).
 

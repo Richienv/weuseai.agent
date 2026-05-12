@@ -39,7 +39,7 @@ export type VoiceFinding =
  *  legitimately surface NPWP/KTP examples in OSS / SPT explanations.
  *  Other skills get hard-replace behavior. */
 export type AllowlistEntry = {
-  /** Persona slug — e.g. 'all-in-one-business-agent'. */
+  /** Persona slug — e.g. 'business-agent'. */
   personaSlug: string
   /** Skill id — e.g. 'incorporation-advisor'. */
   skillId: string
