@@ -470,7 +470,7 @@ test('every pilot manifest skill handler_ref points to a known edge function, he
     'slide-master',
     'trade-pro',
     'project-conductor',
-    'all-in-one-business-agent',
+    'business-agent',
     'social-conductor',
   ]) {
     const m = readJson(`agent-packs/${slug}/manifest.json`) as Manifest

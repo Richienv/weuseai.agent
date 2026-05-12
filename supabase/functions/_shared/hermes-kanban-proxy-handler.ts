@@ -26,7 +26,7 @@ export const PERSONA_SLUGS = [
   'slide-master',
   'trade-pro',
   'project-conductor',
-  'all-in-one-business-agent',
+  'business-agent',
   'video-producer',
   'social-conductor',
 ] as const

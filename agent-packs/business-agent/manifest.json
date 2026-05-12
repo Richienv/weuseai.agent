@@ -1,6 +1,6 @@
 {
   "$schema": "../_manifest.schema.json",
-  "agent_slug": "all-in-one-business-agent",
+  "agent_slug": "business-agent",
   "version": "3.0.0",
   "description_id": "Master Agent Business Director v3 (Phase 5). Panduin pelanggan Indonesia dari ide ke launched company dengan first 10 paying customers. 5-tahap roadmap (Idea → Setup → Identity → Build → Sell) — state persisted di business_roadmap_state. Dispatch ke 5 department packs (Sales, Marketing, Engineering, Legal, Finance) facade-routing ke specialist persona. Approval queue untuk irreversible actions (incorporate, contract_sign, public_emission, regulatory_filing) dengan per-action expiry. Cross-session memory via bd_decisions_log. Studio-tier only (phase_5_enabled gate).",
   "skills": [

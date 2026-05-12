@@ -830,7 +830,7 @@ export const PERSONA_SLUGS = [
   'slide-master',
   'trade-pro',
   'project-conductor',
-  'all-in-one-business-agent',
+  'business-agent',
   'video-producer',
   'social-conductor',
 ] as const
@@ -845,7 +845,7 @@ const PERSONAS: Record<string, string> = {
   'slide-master': SLIDE_MASTER_SCAFFOLD,
   'trade-pro': TRADE_PRO_SCAFFOLD,
   'project-conductor': PROJECT_CONDUCTOR_SCAFFOLD,
-  'all-in-one-business-agent': BUSINESS_DIRECTOR_SCAFFOLD,
+  'business-agent': BUSINESS_DIRECTOR_SCAFFOLD,
   'video-producer': VIDEO_PRODUCER_SCAFFOLD,
   'social-conductor': SOCIAL_CONDUCTOR_SCAFFOLD,
 }

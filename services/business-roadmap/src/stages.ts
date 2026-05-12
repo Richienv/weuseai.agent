@@ -9,7 +9,7 @@
 // business_roadmap_state.deliverables_completed jsonb column AND
 // referenced by department-pack SKILL.md routing in 5-2.a/b. Renaming
 // requires a coordinated migration + drift sweep. See
-// agent-packs/all-in-one-business-agent/templates/roadmap/5-stage-checklist.md
+// agent-packs/business-agent/templates/roadmap/5-stage-checklist.md
 // (introduced in 5-2.a) for the customer-facing names matched to these.
 //
 // Naming convention: `<stage>_<short_snake_case>` — the stage prefix is

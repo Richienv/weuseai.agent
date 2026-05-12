@@ -33,7 +33,7 @@ export type PersonaSlug =
   | 'slide-master'
   | 'trade-pro'
   | 'project-conductor'
-  | 'all-in-one-business-agent'
+  | 'business-agent'
   | 'video-producer'
   | 'social-conductor'
 
@@ -161,7 +161,7 @@ export const DEFAULT_COLUMNS: { title: string; order: number }[] = [
 
 /** Persona owner default mapping — persona-suggester for task-decomposer
  *  output. Mirrors the suggested specialist mapping from
- *  agent-packs/all-in-one-business-agent/skills/department-task-spawner/SKILL.md. */
+ *  agent-packs/business-agent/skills/department-task-spawner/SKILL.md. */
 export const TASK_OWNER_DEFAULTS: Partial<Record<string, PersonaSlug>> = {
   // Marketing / brand
   'launch announcement': 'social-conductor',
@@ -173,7 +173,7 @@ export const TASK_OWNER_DEFAULTS: Partial<Record<string, PersonaSlug>> = {
   'web app': 'web-app-builder',
   // Strategy / coordination
   'project plan': 'project-conductor',
-  'kpi tracking': 'all-in-one-business-agent',
+  'kpi tracking': 'business-agent',
   // Default fallback
   'research': 'deep-researcher',
   'briefing': 'the-pro',

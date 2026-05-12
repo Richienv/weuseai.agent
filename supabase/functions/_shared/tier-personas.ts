@@ -58,7 +58,7 @@ export const TIER_PERSONAS: { readonly [T in Tier]: readonly string[] } = {
     'video-producer',
     'social-conductor',
     'web-app-builder',
-    'all-in-one-business-agent',
+    'business-agent',
   ],
 }
 

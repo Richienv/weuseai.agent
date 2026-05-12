@@ -108,7 +108,7 @@ export const KNOWN_PERSONA_SLUGS = [
   'slide-master',
   'trade-pro',
   'project-conductor',   // v2 — renamed from 'macro-strategist'
-  'all-in-one-business-agent',
+  'business-agent',
   'video-producer',
   'social-conductor',
 ] as const

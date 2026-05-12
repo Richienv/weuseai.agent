@@ -2,7 +2,7 @@
 //
 // Single import surface for the state machine. Used by:
 //   - supabase/functions/_shared/roadmap-state-handler.ts (5-3.b)
-//   - agent-packs/all-in-one-business-agent/skills/roadmap-tracker/ (5-2.a)
+//   - agent-packs/business-agent/skills/roadmap-tracker/ (5-2.a)
 //
 // Runtime exports use .js extension (NodeNext-style) — same convention
 // as packages/observability/src/index.ts to support Vercel's @vercel/node

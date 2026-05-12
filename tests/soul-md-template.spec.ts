@@ -352,7 +352,7 @@ test('PERSONA_SLUGS includes all 10 personas', () => {
     'slide-master',
     'trade-pro',
     'project-conductor',
-    'all-in-one-business-agent',
+    'business-agent',
     'video-producer',
     'social-conductor',
   ]) {
@@ -551,11 +551,11 @@ test('drift check: /agent-packs/project-conductor/SOUL.md matches inlined scaffo
 
 // ─── Business Director ──
 
-test('render: personaSlug="all-in-one-business-agent" produces Business Director v3 scaffold', () => {
+test('render: personaSlug="business-agent" produces Business Director v3 scaffold', () => {
   const out = renderSoulMd({
     customerName: 'Sarah Tanaka',
     expectationsClean: sanitizedSample,
-    personaSlug: 'all-in-one-business-agent',
+    personaSlug: 'business-agent',
   })
   assert.match(
     out,
@@ -572,15 +572,15 @@ test('render: personaSlug="all-in-one-business-agent" produces Business Director
   assert.match(out, /Studio/i)
 })
 
-test('drift check: /agent-packs/all-in-one-business-agent/SOUL.md matches inlined scaffold', () => {
+test('drift check: /agent-packs/business-agent/SOUL.md matches inlined scaffold', () => {
   const onDisk = readFileSync(
-    resolve(REPO_ROOT, 'agent-packs/all-in-one-business-agent/SOUL.md'),
+    resolve(REPO_ROOT, 'agent-packs/business-agent/SOUL.md'),
     'utf8',
   )
   assert.equal(
     onDisk,
     __INTERNAL_BUSINESS_DIRECTOR_SCAFFOLD,
-    'agent-packs/all-in-one-business-agent/SOUL.md drifted from BUSINESS_DIRECTOR_SCAFFOLD',
+    'agent-packs/business-agent/SOUL.md drifted from BUSINESS_DIRECTOR_SCAFFOLD',
   )
 })
 
