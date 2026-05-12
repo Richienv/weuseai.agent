@@ -18,6 +18,7 @@ import { OpenRouterKeyMinter } from './llm/openrouter-minter.js'
 import { MockLlmKeyMinter } from './llm/mock-minter.js'
 import { tierBump, type TierBumpRouteRequest } from './routes/tier-bump.js'
 import { refreshEnvHandler, type RefreshEnvRequest } from './routes/refresh-env.js'
+import { restartHermesHandler, type RestartHermesRequest } from './routes/restart-hermes.js'
 import {
   readinessProbeHandler,
   type ReadinessProbeRequest,
@@ -193,6 +194,48 @@ app.post('/refresh-env', async (req, res) => {
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
     console.error('refresh-env failed:', msg)
+    res.status(500).json({ ok: false, error: 'internal', detail: msg })
+  }
+})
+
+// D1 multi-persona webhook push (2026-05-12): /restart-hermes minimal
+// route. Called by Supabase bundle-version-bump-broadcast Edge Function
+// when a persona ships an update. SSHes into the customer's VPS and
+// runs `sudo systemctl restart hermes-gateway` — triggers ExecStartPre
+// = weuseai-bundle-pull which fetches the new version + installs.
+app.post('/restart-hermes', async (req, res) => {
+  if (!refreshEnvStore) {
+    return res.status(500).json({
+      ok: false,
+      error: 'internal',
+      detail: 'restart-hermes requires SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY env vars (uses refresh-env store)',
+    })
+  }
+  const body = req.body as Partial<RestartHermesRequest>
+  try {
+    const result = await restartHermesHandler(
+      {
+        customer_id: body.customer_id ?? '',
+        reason: body.reason,
+      },
+      {
+        fleetSshPrivateKey: FLEET_SSH_PRIVATE_KEY,
+        store: {
+          findVpsByCustomerId: async (customerId: string) => {
+            // Reuse refresh-env's existing query — only one row per customer
+            // by design (vps_instances.customer_id is unique post-PR #75 hardening).
+            return await refreshEnvStore.findActiveVPSByCustomer(customerId)
+          },
+        },
+      },
+    )
+    if (!result.ok) {
+      return res.status(result.status).json(result)
+    }
+    res.json(result)
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    console.error('restart-hermes failed:', msg)
     res.status(500).json({ ok: false, error: 'internal', detail: msg })
   }
 })
