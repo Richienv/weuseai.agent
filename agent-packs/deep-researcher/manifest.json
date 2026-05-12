@@ -1,0 +1,19 @@
+{
+  "$schema": "../_manifest.schema.json",
+  "agent_slug": "deep-researcher",
+  "version": "1.0.0",
+  "description_id": "Bundle persona Deep Researcher. Literature review, market analysis, competitor scan, kebijakan/regulasi research dengan source citation per claim. Pakai Hermes built-in research tools (arxiv, blogwatcher, llm-wiki) — tidak ada sub-skill khusus.",
+  "skills": [
+    {
+      "id": "extend-capabilities",
+      "description_id": "Saat user minta kemampuan baru yang belum ada, draft skill markdown + template ke /var/lib/weuseai/customer-grown/. Tidak menyentuh bundle yang shipped — semua tambahan customer-grown saja.",
+      "description_en": "When user requests a capability the agent doesn't have, draft a new skill markdown + template into /var/lib/weuseai/customer-grown/. Bundled scaffolds remain untouched — only customer-grown additions are written.",
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:extend-capabilities",
+      "tier": "starter"
+    }
+  ],
+  "templates": [],
+  "self_extend": true,
+  "extension_dir": "/var/lib/weuseai/customer-grown"
+}
