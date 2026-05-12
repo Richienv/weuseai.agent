@@ -117,6 +117,25 @@ const db: IInvoiceStore = {
       updated_at: new Date().toISOString(),
     })
   },
+  // HF-1 (2026-05-12 founder Q1 lock): wipe stale pair state on every
+  // pending → active subscription transition. See xendit-webhook-handler.ts
+  // handlePaid() for the full rationale. Service-role UPDATE — anon
+  // can't trigger this through any path (Sesi D P0-2 column REVOKEs +
+  // RLS on customers).
+  async clearStalePairState(customerId) {
+    const { error } = await supabase
+      .from('customers')
+      .update({
+        telegram_bot_token: null,
+        telegram_bot_username: null,
+        telegram_chat_id: null,
+        soul_md_text: null,
+        pairing_code: null,
+        pairing_code_expires_at: null,
+      })
+      .eq('id', customerId)
+    if (error) throw error
+  },
 }
 
 const provisioning: IProvisioningClient = {

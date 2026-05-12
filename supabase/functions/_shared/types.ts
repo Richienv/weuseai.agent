@@ -78,6 +78,29 @@ export interface IInvoiceStore {
   ): Promise<void>
 
   addStarterCredits(customerId: string, cents: number): Promise<void>
+
+  /**
+   * HF-1 (2026-05-12): wipe stale pair state on `customers` row.
+   * Called by xendit-webhook.handlePaid on every pending → active
+   * subscription transition. Founder Q1 lock: "new subscription = clean
+   * wipe" — covers BOTH the email-reused test case AND the renewed-
+   * after-cancel case. The idempotent retry path (already-active sub)
+   * short-circuits BEFORE this is called, so persona-refresh flow
+   * preserved.
+   *
+   * Wipes (per founder cascade brief):
+   *   - telegram_bot_token (encrypted column)
+   *   - telegram_bot_username
+   *   - telegram_chat_id
+   *   - soul_md_text
+   *   - pairing_code
+   *   - pairing_code_expires_at
+   *
+   * Service-role only; anon callers can't trigger this through any path.
+   * Best-effort: caller (xendit-webhook handler) catches throws so a
+   * wipe failure does not turn into a 5xx that would Xendit-retry.
+   */
+  clearStalePairState(customerId: string): Promise<void>
 }
 
 export type SubscriptionRow = {

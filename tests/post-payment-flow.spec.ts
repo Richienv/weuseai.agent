@@ -95,6 +95,11 @@ function makeFakeInvoiceStore(seed: {
     async addStarterCredits(customerId, cents) {
       creditsAdds.push({ customerId, cents })
     },
+    async clearStalePairState() {
+      // HF-1 (2026-05-12): no-op for these tests. The dedicated
+      // wipe-semantics tests live in
+      // tests/xendit-webhook-wipe-stale-pair.spec.ts.
+    },
   }
 }
 

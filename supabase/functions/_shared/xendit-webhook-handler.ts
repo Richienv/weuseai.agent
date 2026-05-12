@@ -99,6 +99,29 @@ async function handlePaid(
   const now = deps.now?.() ?? new Date()
   const nextBilling = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
 
+  // HF-1 (2026-05-12 founder Q1 lock): wipe stale pair state on every
+  // pending → active transition. Reaches this path ONLY when the
+  // subscription was previously 'pending' (the idempotent-retry path
+  // short-circuits at the "existing.status === 'active'" branch in
+  // handleXenditWebhook before we get here). So:
+  //   - new customer + new sub → wipe is a no-op (fields already NULL)
+  //   - reused-email customer + new sub → wipe clears stale chat_id /
+  //     bot_username / soul_md_text from previous test cycle
+  //   - renewed sub after a cancel → wipe clears whatever lingered
+  //   - idempotent re-delivery on an already-active sub → never reaches
+  //     here (caller returns idempotent: true earlier)
+  //
+  // Best-effort: a wipe failure must NOT turn the webhook into a 5xx
+  // (would trigger Xendit retry storm + re-fire spinUp). Log + continue.
+  try {
+    await deps.db.clearStalePairState(subscription.customer_id)
+  } catch (err) {
+    console.error(
+      `[xendit-webhook] clearStalePairState failed for ${subscription.customer_id}: ` +
+        (err instanceof Error ? err.message : String(err)),
+    )
+  }
+
   await deps.db.updateSubscription(subscription.id, {
     status: 'active',
     hosting_active: true,
