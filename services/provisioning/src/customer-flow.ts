@@ -27,6 +27,7 @@ import { resolve as pathResolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { buildSetupScript, type Tier } from './setup-script.js'
+import { personasForTier, DEFAULT_PERSONA } from '../../../supabase/functions/_shared/tier-personas.js'
 // Phase 5-3.c rollout: per-customer HMAC token computed at customer-creation
 // time. Reuses the same auth module as the verifier side (Edge Functions).
 import { signCustomerToken } from '../../../supabase/functions/_shared/hermes-instance-auth'
@@ -429,13 +430,26 @@ async function buildScriptFor(opts: SpinUpOpts, openRouterKey: string): Promise<
   // Phase 2E-3: include fleet SSH pubkey + Hermes version pin.
   // Phase 5-3.c: compute HMAC token if HERMES_INSTANCE_HMAC_KEY env set.
   const hermesInstanceToken = await computeHermesInstanceToken(opts.customerId)
+  // D1 lock (2026-05-12 multi-persona MVP): derive the customer's
+  // persona list from their tier. Caller can override via opts.agentSlug
+  // to pick a non-default primary persona (e.g., Studio fixture that
+  // wants Business Director as the bare-message default).
+  const tierPersonas = personasForTier(opts.tier)
+  const defaultSlug = opts.agentSlug ?? DEFAULT_PERSONA
+  // Ensure the chosen default appears first in the list (first-of-list
+  // invariant): if the caller picked a non-default primary, hoist it.
+  const agentSlugs = tierPersonas.includes(defaultSlug)
+    ? [defaultSlug, ...tierPersonas.filter((s) => s !== defaultSlug)]
+    : [defaultSlug, ...tierPersonas]
+
   return buildSetupScript({
     customerId: opts.customerId,
     tier: opts.tier,
     telegramBotToken: opts.customerTelegramBotToken,
     telegramAllowedUserIds: opts.customerTelegramAllowedUserIds,
     openRouterKey,
-    agentSlug: opts.agentSlug ?? 'the-pro',
+    agentSlug: defaultSlug,
+    agentSlugs,
     bundleTarBase64: BOOTSTRAP_BUNDLE_BASE64,
     fleetSshPubkey: FLEET_SSH_PUBKEY || undefined,
     hermesVersion: HERMES_VERSION,

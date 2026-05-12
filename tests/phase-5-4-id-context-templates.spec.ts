@@ -9,7 +9,7 @@ import * as fs from 'node:fs'
 import * as path from 'node:path'
 
 const ROOT = path.resolve(process.cwd())
-const BD_DIR = path.join(ROOT, 'agent-packs/business-director')
+const BD_DIR = path.join(ROOT, 'agent-packs/all-in-one-business-agent')
 
 const NEW_TEMPLATES = [
   {
@@ -65,7 +65,7 @@ test('all 4 Phase 5-4 templates registered in manifest', () => {
   for (const t of NEW_TEMPLATES) {
     assert.ok(
       ids.has(t.id),
-      `expected template ${t.id} registered in business-director/manifest.json`,
+      `expected template ${t.id} registered in all-in-one-business-agent/manifest.json`,
     )
   }
 })

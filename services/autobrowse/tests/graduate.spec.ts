@@ -15,28 +15,28 @@ const SPEC = synthesize(
 
 test('graduate: emits target SKILL.md path under agent-packs/<bundle>/skills/<id>/', () => {
   const artifacts = graduate(SPEC, {
-    targetBundleSlug: 'web-master',
+    targetBundleSlug: 'web-app-builder',
     enabledForTiers: ['pro', 'studio'],
     repoRoot: '/repo',
   })
   assert.equal(
     artifacts.skillMdPath,
-    '/repo/agent-packs/web-master/skills/tokopedia-product-search/SKILL.md',
+    '/repo/agent-packs/web-app-builder/skills/tokopedia-product-search/SKILL.md',
   )
 })
 
 test('graduate: strips trailing slashes from repoRoot', () => {
   const artifacts = graduate(SPEC, {
-    targetBundleSlug: 'web-master',
+    targetBundleSlug: 'web-app-builder',
     enabledForTiers: ['pro'],
     repoRoot: '/repo///',
   })
-  assert.equal(artifacts.skillMdPath, '/repo/agent-packs/web-master/skills/tokopedia-product-search/SKILL.md')
+  assert.equal(artifacts.skillMdPath, '/repo/agent-packs/web-app-builder/skills/tokopedia-product-search/SKILL.md')
 })
 
 test('graduate: skillMdText starts with the skill heading', () => {
   const artifacts = graduate(SPEC, {
-    targetBundleSlug: 'web-master',
+    targetBundleSlug: 'web-app-builder',
     enabledForTiers: ['pro', 'studio'],
     repoRoot: '/repo',
   })
@@ -45,7 +45,7 @@ test('graduate: skillMdText starts with the skill heading', () => {
 
 test('graduate: manifestSkillEntry has tier-correct enabled_for_tiers', () => {
   const artifacts = graduate(SPEC, {
-    targetBundleSlug: 'web-master',
+    targetBundleSlug: 'web-app-builder',
     enabledForTiers: ['starter', 'pro', 'studio'],
     repoRoot: '/repo',
   })
@@ -54,7 +54,7 @@ test('graduate: manifestSkillEntry has tier-correct enabled_for_tiers', () => {
 
 test('graduate: empty templates list (Phase 4-1 v0)', () => {
   const artifacts = graduate(SPEC, {
-    targetBundleSlug: 'web-master',
+    targetBundleSlug: 'web-app-builder',
     enabledForTiers: ['pro'],
     repoRoot: '/repo',
   })
@@ -64,7 +64,7 @@ test('graduate: empty templates list (Phase 4-1 v0)', () => {
 
 test('graduate: custom handler_ref propagates through to manifest entry', () => {
   const artifacts = graduate(SPEC, {
-    targetBundleSlug: 'web-master',
+    targetBundleSlug: 'web-app-builder',
     enabledForTiers: ['pro'],
     handlerRef: 'edge-fn:tokopedia-product-search-handler',
     repoRoot: '/repo',
