@@ -81,6 +81,7 @@ function fakeStore(seed: { sub: SubscriptionRow; customerEmail?: string | null }
     async markSubscriptionInvoicePaid() {},
     async markSubscriptionInvoiceFailed() {},
     async addStarterCredits() {},
+    async clearStalePairState() {},
   }
 }
 

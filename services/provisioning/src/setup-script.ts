@@ -397,16 +397,26 @@ log "No telegramBotToken — skipping halo ping (customer will paste token via d
   //   /etc/systemd/system/hermes-gateway.service exists,
   //   enabled (multi-user.target.wants/), Active: active (running),
   //   Restart=always RestartSec=60.
+  // HF-2 (2026-05-12): gateway install + start failures are FATAL.
+  // Pre-HF-2 they were tagged "non-fatal" + the customer's VPS got
+  // marked running even though the bot would never reply. Cron is
+  // genuinely cosmetic (it adds a daily-news job) so it stays optional.
   const hermesGatewayBlock = hasTelegram
     ? `
 log "Installing Hermes gateway as system service..."
-${HERMES} gateway install --system --run-as-user weuseai >> "$LOG" 2>&1 || log "✗ gateway install failed (non-fatal)"
+if ! ${HERMES} gateway install --system --run-as-user weuseai >> "$LOG" 2>&1; then
+  log "✗ gateway install FAILED — customer's bot would never reply; aborting"
+  exit 9
+fi
 
 log "Starting Hermes gateway service..."
-${HERMES} gateway start --system >> "$LOG" 2>&1 || log "✗ gateway start failed (non-fatal)"
+if ! ${HERMES} gateway start --system >> "$LOG" 2>&1; then
+  log "✗ gateway start FAILED — customer's bot would never reply; aborting"
+  exit 10
+fi
 
-log "Adding daily-news cron..."
-su - weuseai -c '${HERMES} cron add --schedule "0 0 * * *" --prompt "${shSingleQuote(DAILY_NEWS_CRON_PROMPT)}" --deliver telegram' >> "$LOG" 2>&1 || log "✗ cron add failed (non-fatal)"
+log "Adding daily-news cron (optional, cosmetic)..."
+su - weuseai -c '${HERMES} cron add --schedule "0 0 * * *" --prompt "${shSingleQuote(DAILY_NEWS_CRON_PROMPT)}" --deliver telegram' >> "$LOG" 2>&1 || log "⚠ cron add failed (truly optional — daily-news skill still works on demand)"
 `
     : ''
 
@@ -554,14 +564,38 @@ log() {
 
 log "=== weuseai setup START (customer ${p.customerId}, tier ${p.tier}) ==="
 
+# ─── 0. Heartbeat (HF-2 2026-05-12) ─────────────────────────────────────
+# Background liveness signal so the parent customer-flow SSH session can
+# distinguish "still working" from "hung." Writes to a file (NOT stdout)
+# every 30 sec — parent can SSH-tail /var/log/hermes-install.heartbeat
+# while the main script runs. File-based so we don't pollute the SSH
+# stdout stream that customer-flow parses.
+heartbeat() {
+  while true; do
+    sleep 30
+    date -u '+%Y-%m-%dT%H:%M:%SZ' > /var/log/hermes-install.heartbeat
+  done
+}
+mkdir -p /var/log
+touch /var/log/hermes-install.heartbeat
+heartbeat &
+HEARTBEAT_PID=$!
+trap "kill $HEARTBEAT_PID 2>/dev/null" EXIT
+
 # ─── 1. PROOF OF LIFE (halo) — FIRST, before slow installs ──────────────
 ${haloCurl}
 
-# ─── 2. Base packages ─────────────────────────────────────────────────────
-log "Updating apt..."
-DEBIAN_FRONTEND=noninteractive apt-get update -qq >> "$LOG" 2>&1
-log "Installing base packages..."
-DEBIAN_FRONTEND=noninteractive apt-get install -y -qq curl ca-certificates python3 sudo >> "$LOG" 2>&1
+# ─── 2. Base packages (HF-2: timeouts on every apt op) ──────────────────
+log "Updating apt (timeout 90 sec)..."
+if ! timeout 90 DEBIAN_FRONTEND=noninteractive apt-get update -qq >> "$LOG" 2>&1; then
+  log "✗ apt-get update timed out or failed after 90 sec"
+  exit 5
+fi
+log "Installing base packages (timeout 180 sec)..."
+if ! timeout 180 DEBIAN_FRONTEND=noninteractive apt-get install -y -qq curl ca-certificates python3 sudo >> "$LOG" 2>&1; then
+  log "✗ apt-get install timed out or failed after 180 sec"
+  exit 6
+fi
 
 # ─── 3. weuseai user (idempotent) ────────────────────────────────────────
 if ! id weuseai >/dev/null 2>&1; then
@@ -606,18 +640,41 @@ chown -R weuseai:weuseai /home/weuseai/.hermes
 # via the extend-capabilities skill.
 ${bundleInstallBlock}${bundlePullInstallBlock}${fleetSshPubkeyBlock}
 
-# ─── 7. Hermes install (slow — 3-6 min) ────────────────────────────────
+# ─── 7. Hermes install (slow — 3-6 min, HF-2 timeout 10 min) ────────────
 # Phase 2E-3 Q7 lock: pin to ${pinnedHermesVersion} by default; the install.sh
 # script reads the HERMES_VERSION env var if present. When the override
 # isn't honoured by upstream, the install pulls main — at the time of
 # locking (2026-05-08), main IS v0.13.0+ so the default still gets us
 # v0.13.0 features. Override flow: set HERMES_VERSION on the
 # provisioning service to test a new tag on the next provisioned VPS.
-log "Installing Hermes (pinned to ${pinnedHermesVersion}; this takes 3-6 min)..."
-su - weuseai -c 'HERMES_VERSION=${pinnedHermesVersion} curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | HERMES_VERSION=${pinnedHermesVersion} bash' >> "$LOG" 2>&1
-log "✓ Hermes install complete"
+#
+# HF-2 (2026-05-12 founder Q3 lock): hard timeout 600 sec (10 min).
+# Pre-HF-2 the install had no timeout — pip stalls on PyPI from SGP
+# region could hang forever and customer-flow's SSH session never
+# returned. Inner curl also has --max-time 30 so a stuck TCP connection
+# fails fast at network layer.
+log "Installing Hermes (pinned to ${pinnedHermesVersion}; this takes 3-6 min, timeout 10 min)..."
+if ! timeout 600 \\
+  su - weuseai -c 'HERMES_VERSION=${pinnedHermesVersion} curl -fsSL --max-time 30 https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | HERMES_VERSION=${pinnedHermesVersion} bash' \\
+  >> "$LOG" 2>&1
+then
+  log "✗ Hermes install timed out or failed after 600 sec"
+  exit 7
+fi
+log "✓ Hermes install complete; verifying binary..."
 
-# ─── 8. Telegram gateway + cron (best-effort — || true on each) ──────────
+# ─── 7b. Post-install verification (HF-2) ───────────────────────────────
+# A successful install.sh exit doesn't guarantee the binary actually
+# works — e.g., a botched venv link can leave hermes unreadable. Run
+# 'hermes --version' with a 30 sec cap to catch this BEFORE we declare
+# success and move on to the gateway install.
+if ! timeout 30 su - weuseai -c '~/.local/bin/hermes --version' >> "$LOG" 2>&1; then
+  log "✗ hermes --version failed within 30 sec — install broken"
+  exit 8
+fi
+log "✓ Hermes binary verified"
+
+# ─── 8. Telegram gateway + cron (HF-2: gateway is now FATAL) ────────────
 ${hermesGatewayBlock}
 
 # ─── 9. Ready marker (proves end-to-end success) ──────────────────────
