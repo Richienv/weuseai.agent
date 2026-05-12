@@ -101,23 +101,49 @@ test('script: runs Hermes install.sh as weuseai (pinned via HERMES_VERSION env)'
   // HERMES_VERSION env-prefixed on BOTH curl and bash so upstream picks
   // up the pin if the install.sh script honours it. The default lock is
   // v0.13.0 (founder Q7).
+  //
+  // HF-2 (2026-05-12 founder Q3 lock): the install.sh invocation is
+  // now wrapped in `timeout 600` + the inner curl has --max-time 30.
+  // Regex allows both pre- and post-HF-2 layouts; the HF-2-specific
+  // hardening is pinned by tests/setup-script-hang-hardening.spec.ts.
   assert.match(
     s,
-    /su - weuseai -c ['"]HERMES_VERSION=v0\.13\.0 curl -fsSL https:\/\/raw\.githubusercontent\.com\/NousResearch\/hermes-agent\/main\/scripts\/install\.sh \| HERMES_VERSION=v0\.13\.0 bash/,
+    /su - weuseai -c ['"]HERMES_VERSION=v0\.13\.0 curl -fsSL (?:--max-time \d+ )?https:\/\/raw\.githubusercontent\.com\/NousResearch\/hermes-agent\/main\/scripts\/install\.sh \| HERMES_VERSION=v0\.13\.0 bash/,
     'install.sh pinned via HERMES_VERSION env',
   )
 })
 
-test('script: gateway install + start + cron — best-effort (failure tolerated)', () => {
+test('script: gateway install + start fail FATAL (HF-2 — was best-effort pre-2026-05-12)', () => {
   const s = buildSetupScript(baseParams)
-  // Each hermes management command: tolerated failure so a CLI flag rename
-  // upstream doesn't kill the whole script. The crucial halo already fired.
-  // Tolerance via `|| true` OR `|| log "..."` (logs the failure but exits 0).
-  const lines = s.split('\n').filter(l => l.match(/hermes (gateway|cron)/))
-  assert.ok(lines.length >= 3, `at least 3 hermes mgmt commands, got ${lines.length}`)
-  for (const l of lines) {
-    assert.match(l, /\|\|\s*(true|log\s)/, `tolerant: ${l.trim()}`)
-  }
+  // HF-2 (2026-05-12 founder lock): gateway install/start failures are
+  // FATAL. Pre-HF-2 they were tagged `|| log "(non-fatal)"` which
+  // masked real failures + left customer VPSes marked running with a
+  // bot that would never reply. Affirmative check: each command is
+  // followed by an explicit `if ! ... ; then ... exit N` block.
+  //
+  // Cron remains best-effort (cosmetic; daily-news skill works on demand).
+  const gatewayInstallLine = s
+    .split('\n')
+    .find((l) => l.match(/hermes gateway install --system/))
+  assert.ok(gatewayInstallLine, 'gateway install line must be present')
+  assert.match(
+    gatewayInstallLine!,
+    /^if ! .*gateway install/,
+    `gateway install must be inside an "if ! ... ; then exit" block (HF-2 fatal): ${gatewayInstallLine!.trim()}`,
+  )
+  const gatewayStartLine = s
+    .split('\n')
+    .find((l) => l.match(/hermes gateway start --system/))
+  assert.ok(gatewayStartLine, 'gateway start line must be present')
+  assert.match(
+    gatewayStartLine!,
+    /^if ! .*gateway start/,
+    `gateway start must be inside an "if ! ... ; then exit" block (HF-2 fatal): ${gatewayStartLine!.trim()}`,
+  )
+  // Cron stays optional (cosmetic).
+  const cronLine = s.split('\n').find((l) => l.match(/hermes cron add/))
+  assert.ok(cronLine, 'cron add line must be present')
+  assert.match(cronLine!, /\|\| log/, 'cron add stays best-effort')
 })
 
 test('script: gateway install uses --system --run-as-user (not user-level service)', () => {
