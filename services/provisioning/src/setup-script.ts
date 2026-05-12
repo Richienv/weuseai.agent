@@ -42,8 +42,31 @@ export type SetupScriptParams = {
    * Phase 2E-1.5 (Hermes-native bundle): which agent persona this VPS
    * runs. Defaults to 'the-pro' if absent (matches Phase 2C-1 default
    * persona). The bundle for this slug ships as `bundleTarBase64`.
+   *
+   * D1 lock (2026-05-12 multi-persona MVP): `agentSlug` is now the
+   * customer's DEFAULT persona — the one Hermes uses when the customer
+   * sends a bare (non-slash-command) message. Additional personas at
+   * the customer's tier ride along in `agentSlugs` and are pulled by
+   * bundle-pull-script on every boot. Kept as a string (not array)
+   * for back-compat with Phase 2E-1.5 callers + the bootstrap-bundle
+   * env line (`WEUSEAI_AGENT_SLUG=<single>`).
    */
   agentSlug?: string
+  /**
+   * D1 lock (2026-05-12 multi-persona MVP): the full list of personas
+   * the customer has access to at their tier. Source of truth:
+   * `supabase/functions/_shared/tier-personas.ts` (`TIER_PERSONAS`).
+   *
+   * Written to /home/weuseai/.hermes/.env as
+   *   WEUSEAI_AGENT_SLUGS=the-pro,doc-expert,slide-master,...
+   * Read by bundle-pull-script.ts at every Hermes boot — loops over
+   * the CSV and pulls each persona's bundle independently. The
+   * persona named by `agentSlug` MUST appear as the first element
+   * (first-of-list invariant pinned by tier-personas.spec.ts).
+   *
+   * Optional: when absent, falls back to `[agentSlug ?? 'the-pro']`.
+   */
+  agentSlugs?: readonly string[]
   /**
    * Phase 2E-1.5: base64-encoded tar.gz of the agent-pack bundle
    * directory contents. Caller (customer-flow.ts) tars
@@ -282,9 +305,17 @@ function workflowEnvLines(p: SetupScriptParams): string[] {
   // Skipped when no bundle is shipped (back-compat with Phase 1/2A).
   if (!p.bundleTarBase64) return []
   const slug = p.agentSlug ?? 'the-pro'
+  // D1 lock (2026-05-12 multi-persona MVP): emit WEUSEAI_AGENT_SLUGS
+  // as a CSV of all personas the customer has at their tier. The
+  // bundle-pull script loops over this list at every Hermes boot.
+  // Falls back to [slug] for back-compat callers that only pass
+  // agentSlug (e.g., legacy test fixtures).
+  const slugs = p.agentSlugs && p.agentSlugs.length > 0 ? p.agentSlugs : [slug]
   const url = p.workflowExecuteUrl ?? DEFAULT_WORKFLOW_EXECUTE_URL
   return [
     `WEUSEAI_AGENT_SLUG=${slug}`,
+    `WEUSEAI_AGENT_SLUGS=${slugs.join(',')}`,
+    `WEUSEAI_TIER=${p.tier}`,
     `WEUSEAI_CUSTOMER_ID=${p.customerId}`,
     `WEUSEAI_WORKFLOW_EXECUTE_URL=${url}`,
   ]
