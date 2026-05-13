@@ -1,0 +1,12 @@
+{
+  "$schema": "../_manifest.schema.json",
+  "agent_slug": "whatsapp-cloud-api",
+  "version": "0.0.1-stub",
+  "description_id": "STUB Slot 2 (deferred). WhatsApp Cloud API integration pack — Meta direct protocol, AiSensy BSP reseller untuk pelanggan non-teknis. Build menunggu first paying customer feedback pada Xendit (Slot 1). Locked decisions di SKILL.md.",
+  "description_en": "STUB Slot 2 (deferred). WhatsApp Cloud API integration pack — Meta direct protocol, AiSensy BSP reseller for non-technical customers. Build pending first paying customer feedback on Xendit (Slot 1). Locked decisions documented in SKILL.md.",
+  "skills": [],
+  "templates": [],
+  "self_extend": false,
+  "_stub": true,
+  "_deferred_trigger": "First paying customer asks for WhatsApp broadcast OR Xendit stable 14+ days + founder checkpoint"
+}

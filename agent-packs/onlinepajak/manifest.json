@@ -1,0 +1,12 @@
+{
+  "$schema": "../_manifest.schema.json",
+  "agent_slug": "onlinepajak",
+  "version": "0.0.1-stub",
+  "description_id": "STUB Slot 3 (deferred). OnlinePajak PJAP reseller integration pack — e-Faktur, SPT filing, BPE retrieval untuk pelanggan PKP. Build menunggu first PKP customer signup atau founder strategic call. Locked decisions di SKILL.md.",
+  "description_en": "STUB Slot 3 (deferred). OnlinePajak PJAP reseller integration pack — e-Faktur, SPT filing, BPE retrieval for PKP customers. Build pending first PKP customer signup or founder strategic call. Locked decisions in SKILL.md.",
+  "skills": [],
+  "templates": [],
+  "self_extend": false,
+  "_stub": true,
+  "_deferred_trigger": "First PKP customer signs up and requests tax-filing OR founder strategic call to prioritize moat-play"
+}

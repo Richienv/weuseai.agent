@@ -1,0 +1,47 @@
+{
+  "$schema": "../_manifest.schema.json",
+  "agent_slug": "xendit",
+  "version": "1.0.0",
+  "description_id": "Pack integrasi Xendit — BYO credential, 4 operasi siap pakai: invoice.create / invoice.get / refund.create / balance.get. Plaintext API key disimpan terenkripsi (AES-256-GCM) di integration_credentials table; setiap operasi dipanggil via /integration-proxy-xendit Edge Function dengan X-CID + HMAC bearer auth. Pelanggan bisa revoke kapan saja. Setiap call dicatat di audit_log (sanitized, no PII). Bahasa error mapping (invalid_api_key / insufficient_balance / rate_limited / dst.) sudah jadi.",
+  "description_en": "Xendit integration pack — BYO credential, 4 operations ready: invoice.create / invoice.get / refund.create / balance.get. Plaintext API key encrypted (AES-256-GCM) in integration_credentials table; every operation goes through /integration-proxy-xendit Edge Function with X-CID + HMAC bearer auth. Customer can revoke anytime. Every call audit-logged (PII-sanitized). Bahasa error mapping ready.",
+  "skills": [
+    {
+      "id": "invoice-create",
+      "description_id": "Buat invoice baru di akun Xendit pelanggan. Required: external_id, amount, description. Returns invoice_url 24-jam-expiry default.",
+      "description_en": "Create new invoice in customer's Xendit account. Required: external_id, amount, description. Returns 24h-expiry invoice_url by default.",
+      "templates_used": [],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:xendit-invoice-create",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
+      "id": "invoice-get",
+      "description_id": "Cek status invoice by ID. Enum: PENDING / PAID / SETTLED / EXPIRED dengan mapping Bahasa.",
+      "description_en": "Get invoice status by ID. Enum: PENDING / PAID / SETTLED / EXPIRED with Bahasa mapping.",
+      "templates_used": [],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:xendit-invoice-get",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
+      "id": "refund-create",
+      "description_id": "Refund invoice (partial atau full). Catatan: channel cash (Indomaret / Alfamart) tidak support refund otomatis.",
+      "description_en": "Refund an invoice (partial or full). Note: cash channels (Indomaret / Alfamart) do not support automated refunds.",
+      "templates_used": [],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:xendit-refund-create",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
+      "id": "balance-get",
+      "description_id": "Cek saldo Xendit pelanggan. Default account_type = CASH.",
+      "description_en": "Get customer's Xendit balance. Default account_type = CASH.",
+      "templates_used": [],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:xendit-balance-get",
+      "enabled_for_tiers": ["pro", "studio"]
+    }
+  ],
+  "templates": [],
+  "self_extend": false
+}
