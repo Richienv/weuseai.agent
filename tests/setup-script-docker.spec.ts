@@ -35,6 +35,17 @@ const __dirname = resolve(fileURLToPath(import.meta.url), '..')
 const HARNESS_DIR = resolve(__dirname, 'setup-script-docker')
 const IMAGE_TAG = 'weuseai-setup-harness:testbed'
 
+// Real (empty) gzipped tar in base64. The rendered setup-script's bundle
+// install block runs `base64 -d | tar -xz`, which under `set -o pipefail`
+// aborts the entire script if the input is not a valid gzip stream. Use
+// a real empty tar so the block runs cleanly without us having to
+// invent gigabytes of fake skill data. ~13 KB.
+function makeEmptyBundleB64(): string {
+  return execSync('tar -czf - -T /dev/null | base64 | tr -d "\\n"', {
+    encoding: 'utf8',
+  }).trim()
+}
+
 function dockerAvailable(): boolean {
   try {
     execSync('docker version --format={{.Server.Version}}', { stdio: 'ignore' })
@@ -168,13 +179,20 @@ exit 0
   'curl': '#!/bin/bash\necho "[shim curl] $*"\nexit 0\n',
 }
 
+const EMPTY_BUNDLE_B64 = makeEmptyBundleB64()
+
 const BASE_PARAMS = {
   customerId: 'cust-docker-harness',
   tier: 'pro' as const,
   telegramBotToken: '12345:harnessfake',
   telegramAllowedUserIds: '987654',
   openRouterKey: 'sk-or-v1-harness-fake',
-  bundleTarBase64: 'fake-bootstrap-bundle-b64',
+  // Real empty tar.gz so base64 -d | tar -xz succeeds inside the
+  // container under set -o pipefail. The scenarios assert orchestration
+  // (script reaches setup-complete marker), not that the bundle had
+  // specific contents. A fuller scenario with a non-empty bundle could
+  // be added later if we want to verify the symlink-to-skills loop.
+  bundleTarBase64: EMPTY_BUNDLE_B64,
   fleetSshPubkey: 'ssh-ed25519 AAAAdummy',
   hermesVersion: 'v0.13.0',
 }
