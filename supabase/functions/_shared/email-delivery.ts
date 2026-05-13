@@ -237,9 +237,33 @@ export function buildPaymentReceiptEmailBody(args: {
   amount_idr: number
   payment_method: string
   paid_at_iso: string
+  /**
+   * Customer UUID (from subscription.customer_id). When supplied, the
+   * email body inserts a "Lanjutkan setup agent kamu di sini: …" line
+   * with a welcome-URL embedded `?cid=<id>` query param so customers
+   * who lose the welcome-tab can recover via email.
+   *
+   * Per audit doc §P2-CF-3 (closes P1-CF-5 lost-cid recovery loop).
+   * Optional so legacy callers + future re-send flows that only have
+   * the invoice_id still produce a valid email body.
+   */
+  customer_id?: string
 }): { subject: string; text: string } {
   const formattedTotal = formatIdr(args.amount_idr)
   const formattedDate = formatPaidAt(args.paid_at_iso)
+
+  // Audit doc §P2-CF-3: receipt email is the recovery path for the
+  // lost-cid problem. URL-encode the cid defensively even though
+  // production cids are always UUIDs — encoding cost is nil and
+  // prevents any future schema change from emitting a broken link.
+  const welcomeLines = args.customer_id && args.customer_id.length > 0
+    ? [
+        `Lanjutkan setup agent kamu di sini:`,
+        `https://weuseai-agent.vercel.app/welcome?cid=${encodeURIComponent(args.customer_id)}`,
+        ``,
+      ]
+    : []
+
   return {
     subject: `Bukti pembayaran — weuseai.agent (${args.invoice_id})`,
     text: [
@@ -257,6 +281,7 @@ export function buildPaymentReceiptEmailBody(args: {
       `Agent kamu sedang disiapkan. Begitu siap, kami kirim email`,
       `aktivasi terpisah dengan link ke dashboard onboarding.`,
       ``,
+      ...welcomeLines,
       `Butuh bantuan atau perlu pengembalian dana? Lihat`,
       `https://weuseai-agent.vercel.app/refund-policy atau balas email ini.`,
       ``,
