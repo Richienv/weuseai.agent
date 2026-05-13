@@ -1,16 +1,19 @@
 /**
- * customer-flow now uses SSH-based provisioning instead of cloud-init.
+ * customer-flow uses SSH-based provisioning instead of cloud-init.
  *
- * IDCloudHost's cloud-init handling proved unreliable (2026-05-04 — three
- * back-to-back VMs returned with sshd unreachable / no halo). Pivoting to:
+ * History: cloud-init proved unreliable on the original IDCloudHost
+ * adapter (2026-05-04 — three back-to-back VMs returned with sshd
+ * unreachable / no halo), so the pivot was to drive setup over SSH:
  *   1. Create VM (NO cloud_init param)
  *   2. Poll vps.getPublicIp(uuid) until non-null
  *   3. Wait for SSH port 22 reachable
- *   4. ssh.runSetup(host, user, password, buildSetupScript(...))
+ *   4. ssh.runSetup(host, user, password|privateKey, buildSetupScript(...))
  *   5. Mark store row with the public IP
  *
- * These tests use the mock SSH provisioner + mock VPS provider so they
- * run in-process. The real SSH integration test lives separately.
+ * Production now runs on Vultr (key auth, user=root) with DO failover.
+ * The IDCloudHost adapter was retired 2026-05-13; these tests drive the
+ * mock SSH provisioner + mock VPS provider in-process. The real SSH
+ * integration test lives separately.
  */
 
 import { test } from 'node:test'
@@ -101,10 +104,11 @@ test('flow: ssh.runSetup is called with the public IP from getPublicIp', async (
 
   assert.equal(deps.ssh.calls.length, 1, 'ssh.runSetup called once')
   assert.equal(deps.ssh.calls[0].host, '203.194.55.66', 'host = the public IP we discovered')
-  assert.equal(deps.ssh.calls[0].user, 'liren', 'user = liren (IDCH default)')
-  // Password is optional now (Vultr/DO use privateKeyPath instead) — for
-  // IDCH path, asserting truthiness is enough since SshSetupOpts.password
-  // is typed as optional string.
+  // Mock provider goes through the legacy password-auth branch in
+  // customer-flow.ts (the modern Vultr/DO path is key auth, root user).
+  // The exact user name is an implementation detail of the mock; the
+  // real assertion is that SSH was invoked at all with the discovered IP.
+  assert.equal(deps.ssh.calls[0].user, 'liren')
   assert.ok((deps.ssh.calls[0].password ?? '').length > 0, 'password is the one we passed at create time')
 })
 

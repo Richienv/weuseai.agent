@@ -572,7 +572,8 @@ async function safeUpdateSubscription(
  *
  * Originally named `isIdcloudhostCapacityError` (PR #73). Renamed
  * 2026-05-11 (Vultr migration cascade) to `isProviderCapacityError`.
- * Old name kept as deprecated alias for back-compat.
+ * The deprecated alias was removed 2026-05-13 alongside the IDCH
+ * adapter retirement — Vultr is the primary provider now.
  *
  * Exported so tests can pin both directions (positive + negative).
  */
@@ -594,14 +595,6 @@ export function isProviderCapacityError(body: string): boolean {
   if (/size.*not available/i.test(body)) return true
   if (/region.*not available/i.test(body)) return true
   return false
-}
-
-/**
- * @deprecated 2026-05-11 — use `isProviderCapacityError`. Kept as alias
- * for back-compat with any external callers; removed when no usages.
- */
-export function isIdcloudhostCapacityError(body: string): boolean {
-  return isProviderCapacityError(body)
 }
 
 function errMessage(e: unknown): string {

@@ -13,7 +13,7 @@
     "cli": "tsx scripts/cli.ts",
     "health-check": "tsx scripts/cli.ts health",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "typecheck:all": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p services/provisioning/tsconfig.json && tsc --noEmit -p services/proxy/tsconfig.json && tsc --noEmit -p services/hermes/tsconfig.json && tsc --noEmit -p services/payment/tsconfig.json && tsc --noEmit -p services/test-idcloudhost/tsconfig.json && tsc --noEmit -p supabase/tsconfig.json && tsc --noEmit -p packages/observability/tsconfig.json && tsc --noEmit -p services/business-roadmap/tsconfig.json"
+    "typecheck:all": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p services/provisioning/tsconfig.json && tsc --noEmit -p services/proxy/tsconfig.json && tsc --noEmit -p services/hermes/tsconfig.json && tsc --noEmit -p services/payment/tsconfig.json && tsc --noEmit -p supabase/tsconfig.json && tsc --noEmit -p packages/observability/tsconfig.json && tsc --noEmit -p services/business-roadmap/tsconfig.json"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
