@@ -401,14 +401,34 @@ log "No telegramBotToken — skipping halo ping (customer will paste token via d
   // Pre-HF-2 they were tagged "non-fatal" + the customer's VPS got
   // marked running even though the bot would never reply. Cron is
   // genuinely cosmetic (it adds a daily-news job) so it stays optional.
-  const hermesGatewayBlock = hasTelegram
-    ? `
+  //
+  // HF-2d (2026-05-13): gateway INSTALL now runs unconditionally —
+  // it only depends on the Hermes binary, NOT on the bot token. The
+  // pre-2d gate `if hasTelegram` meant first-spinUp (via xendit-webhook
+  // with empty bot token) skipped gateway install entirely, then
+  // complete-onboarding's refresh-env raced setup-script's Hermes
+  // install — refresh-env's install-if-missing block fired BEFORE
+  // setup-script finished installing Hermes binary, got "hermes
+  // binary not found at /home/weuseai/.local/bin/hermes" + exit 4,
+  // and the customer's gateway was never installed at all. Verified
+  // on customer e282ce25 2026-05-13: refresh_env_requests row had
+  // outcome.error='env_write_failed' with that exact detail.
+  //
+  // Post-HF-2d: setup-script ALWAYS installs the gateway after
+  // Hermes binary verify (step 7b). When a bot token is present at
+  // first spinUp the gateway is also STARTED + cron added; without a
+  // bot token it stays installed-but-not-started, and complete-
+  // onboarding's refresh-env triggers the start via the existing
+  // systemctl-restart line. No race possible.
+  const hermesGatewayInstallBlock = `
 log "Installing Hermes gateway as system service..."
 if ! ${HERMES} gateway install --system --run-as-user weuseai >> "$LOG" 2>&1; then
   log "✗ gateway install FAILED — customer's bot would never reply; aborting"
   exit 9
 fi
-
+`
+  const hermesGatewayStartBlock = hasTelegram
+    ? `
 log "Starting Hermes gateway service..."
 if ! ${HERMES} gateway start --system >> "$LOG" 2>&1; then
   log "✗ gateway start FAILED — customer's bot would never reply; aborting"
@@ -418,7 +438,11 @@ fi
 log "Adding daily-news cron (optional, cosmetic)..."
 su - weuseai -c '${HERMES} cron add --schedule "0 0 * * *" --prompt "${shSingleQuote(DAILY_NEWS_CRON_PROMPT)}" --deliver telegram' >> "$LOG" 2>&1 || log "⚠ cron add failed (truly optional — daily-news skill still works on demand)"
 `
-    : ''
+    : `
+log "No TELEGRAM_BOT_TOKEN at first spinUp — gateway installed but not started."
+log "  complete-onboarding step 8a will start it once customer pairs."
+`
+  const hermesGatewayBlock = hermesGatewayInstallBlock + hermesGatewayStartBlock
 
   // .env file content (heredoc-safe — no special chars in our values)
   const envFileBody = allEnvLines.join('\n')
