@@ -515,6 +515,23 @@
                   <span aria-hidden="true">→</span>
                 </a>
               </div>
+              <!-- Pre-scout 2026-05-13: elapsed-time fallback. Fires when
+                   total wait exceeds LONGER_THAN_USUAL_MS, independent of
+                   the per-stage soft/hard escalation. Calm-premium
+                   reassurance, no apology, no support CTA — Sesi D will
+                   decide if/how a support surface lives here.
+                   Expandable details element gives more context without
+                   revealing infra (VPS / Hermes / Vultr names are
+                   forbidden by founder spec). -->
+              <div id="b-longer-than-usual" hidden style="margin-top:14px; padding:12px 14px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.12); border-radius:6px; font-size:13px; color:rgba(245,245,245,0.85);">
+                <div style="font-weight:500; margin-bottom:6px;">Setup-nya sedang berjalan, kali ini lebih lama dari biasanya.</div>
+                <div style="font-size:12px; color:rgba(245,245,245,0.65); line-height:1.55;">Tetap di halaman ini. Agent kamu akan otomatis siap saat selesai.</div>
+                <details id="b-longer-than-usual-details" style="margin-top:10px;">
+                  <summary style="cursor:pointer; font-size:12px; color:rgba(245,245,245,0.75); padding:4px 0;">Apa yang sedang terjadi</summary>
+                  <div style="margin-top:10px; font-size:12px; color:rgba(245,245,245,0.65); line-height:1.6;">Agent kamu butuh beberapa konfigurasi sebelum siap menerima pesan pertama. Beberapa langkah memang memakan waktu lebih lama tergantung kepadatan jaringan saat itu. Yang penting jalan, bukan cepat.</div>
+                </details>
+              </div>
+              <!-- end longer-than-usual -->
             </div>
           `;
           break;
@@ -697,11 +714,38 @@
       ready:            'Siap.',
     };
 
+    /**
+     * Canonical forward order for monotonic-clamp (pre-scout 2026-05-13).
+     *
+     * The probe can return an earlier stage on a snapshot RACE — e.g.
+     * the readiness probe at t=N saw `hermes_starting` but at t=N+10s
+     * a stale read from a replica returns `vps_booting`. Pre-fix the
+     * label + progress bar would jump backwards, breaking customer
+     * trust ("did I lose progress?"). Post-fix: we clamp against the
+     * high-water-mark in lastShownStageIndex below — stage indexes
+     * only ever advance.
+     *
+     * Drift gate: tests/welcome-trust-signals-prescout.spec.ts pins
+     * this exact array; re-ordering breaks the clamp.
+     */
+    const STAGE_ORDER = ['vps_provisioning', 'vps_booting', 'hermes_starting', 'persona_writing', 'pairing_approval', 'ready'];
+
     /** Last probe response captured by tick(). renderState('B') reads
      *  from this; per-stage elapsed-tracker uses the timestamp. */
     let lastProbe = null;
     let currentStageStartedAt = null;
     let lastSeenStage = null;
+
+    /** Monotonic-clamp high-water marks (pre-scout 2026-05-13).
+     *
+     * lastShownStageIndex defaults to -1 so the first probe seen wins.
+     * lastShownStagesCompleted defaults to 0 so the bar starts empty
+     * and only grows. Both persist across applyStageProgressToB calls
+     * and across renderState('B') re-renders — they live at module
+     * scope (NOT inside the function) so a fresh state-B render after
+     * a brief network hiccup doesn't reset them. */
+    let lastShownStageIndex = -1;
+    let lastShownStagesCompleted = 0;
 
     /**
      * Fold the latest probe.progress snapshot into the B-state DOM:
@@ -720,7 +764,24 @@
       const $wa    = document.getElementById('b-hard-wa');
       const $eta   = document.getElementById('b-eta-line');
 
-      // Reset per-stage timer on stage transition.
+      // Monotonic clamp (pre-scout 2026-05-13). Probe snapshots can race —
+      // a stale replica read after a fresh probe returned `hermes_starting`
+      // could return `vps_booting`, flipping the label / bar backwards.
+      // We index the probe stage against STAGE_ORDER and clamp upward
+      // against the lastShownStageIndex high-water mark. The clamped
+      // stage drives the label; the probe's RAW current_stage still
+      // drives the per-stage elapsed-tracker (escalation hints) because
+      // hint timing IS allowed to reset on a real transition.
+      const probeIdx = STAGE_ORDER.indexOf(progress.current_stage);
+      if (probeIdx >= 0) {
+        lastShownStageIndex = Math.max(probeIdx, lastShownStageIndex);
+      }
+      const clampedStage = lastShownStageIndex >= 0
+        ? STAGE_ORDER[lastShownStageIndex]
+        : progress.current_stage;
+
+      // Reset per-stage timer on stage transition (uses RAW current_stage —
+      // hint timing reflects the actual current stage's elapsed window).
       if (lastSeenStage !== progress.current_stage) {
         lastSeenStage = progress.current_stage;
         currentStageStartedAt = Date.now();
@@ -730,11 +791,15 @@
 
       if ($label) {
         $label.textContent =
-          STAGE_LABEL[progress.current_stage] ?? 'Sedang menyiapkan agent…';
+          STAGE_LABEL[clampedStage] ?? 'Sedang menyiapkan agent…';
       }
       if ($fill) {
         const total = progress.total_stages || 1;
-        const done = (progress.stages_completed?.length ?? 0);
+        const probeDone = (progress.stages_completed?.length ?? 0);
+        // Monotonic clamp on completed-stages count — same race risk
+        // as current_stage above.
+        const done = Math.max(lastShownStagesCompleted, probeDone);
+        lastShownStagesCompleted = done;
         const pct = Math.min(100, Math.max(5, Math.round((done / total) * 100)));
         $fill.style.width = pct + '%';
         const $bar = $fill.parentElement;
@@ -783,6 +848,28 @@
     setInterval(() => {
       if (currentState !== 'B' || !lastProbe?.progress) return;
       applyStageProgressToB(lastProbe.progress);
+    }, 5000);
+
+    /**
+     * Pre-scout 2026-05-13: elapsed-time fallback.
+     *
+     * Independent of the per-stage soft/hard hints (those fire when a
+     * SINGLE stage takes 1.5x / 3x its expected duration). This timer
+     * fires when TOTAL wait exceeds the threshold — a different signal
+     * useful for fresh customers whose every stage is borderline OK
+     * but cumulatively still feel slow.
+     *
+     * 300_000 ms = 5 min. Sesi D's customer-flow audit may tune.
+     */
+    const LONGER_THAN_USUAL_MS = 300_000;
+    setInterval(() => {
+      const $longer = document.getElementById('b-longer-than-usual');
+      if (!$longer) return;
+      if (currentState !== 'B') {
+        $longer.hidden = true;
+        return;
+      }
+      $longer.hidden = !(Date.now() - startedAt > LONGER_THAN_USUAL_MS);
     }, 5000);
 
     // ─── Polling ──────────────────────────────────────────────
@@ -922,10 +1009,14 @@
       apt_install:      'Memasang paket dasar sistem…',
       hermes_install:   'Memasang otak agent (proses paling lama, sekitar 3–6 menit)…',
       hermes_verifying: 'Memverifikasi pemasangan…',
-      bundle_install:   'Memasang skill bundle…',
+      // Pre-scout 2026-05-13: 'skill bundle' → 'keterampilan agent'
+      // (calm BI, no English dev jargon).
+      bundle_install:   'Memasang keterampilan agent…',
       gateway_install:  'Memasang servis Telegram…',
       gateway_starting: 'Menjalankan servis Telegram…',
-      setup_complete:   'Setup selesai. Menunggu pairing…',
+      // Pre-scout 2026-05-13: 'Setup' + 'pairing' both English jargon.
+      // Refined to pure BI that names the customer-action framing.
+      setup_complete:   'Hampir siap. Menunggu kamu menyapa di Telegram…',
       unknown:          '',
     };
 
