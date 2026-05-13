@@ -1827,15 +1827,21 @@
         $expectationsErr.textContent = 'Ada karakter yang ditolak. Tulis ulang tanpa tag/kode.';
         return;
       }
-      // IDCloudHost capacity-exhaustion path (2026-05-11 honest-error fix).
-      // Pre-fix this fell through to the generic "Belum jadi. Ada kendala
-      // teknis." popup, which read as "you did something wrong." But the
-      // capacity error is a transient platform issue (Jakarta region full)
-      // — customer should be told it's not their fault + given an honest
-      // wait window. See docs/investigation/2026-05-11-pair-failure.md.
+      // Capacity-exhaustion path. Originally the IDCloudHost honest-error
+      // fix (2026-05-11); now applies to Vultr+DO double-capacity-fail
+      // post-cutover. A3 / audit §P1-CF-6 Phase 1 (+ P2-CF-8 jargon
+      // fix in passing): customer needs to know the retry IS automatic
+      // and the 30-min email fallback exists. "Server VPS" tech-name
+      // leak from the original 2026-05-11 copy is also dropped.
+      //
+      // D1 (P1-CF-6 Phase 2) — the pg_cron retry worker that honors
+      // the "every 3 menit" promise — ships separately. Until then,
+      // the 30-min email promise is kept by founder-manual
+      // intervention (audit explicitly documents this Phase-1 path).
+      // See docs/investigation/2026-05-11-pair-failure.md.
       if (r.status === 503 && data?.error === 'vps_capacity_exhausted') {
         showSubmitError(
-          'Server VPS lagi penuh. Ini bukan kesalahan kamu — coba refresh halaman ini dalam 5–10 menit, atau hubungi tim di WhatsApp.',
+          'Sistem infrastruktur sedang ramai. Agent kamu dijadwalkan ulang otomatis — kami coba lagi setiap 3 menit. Kalau dalam 30 menit belum berhasil, tim kami hubungi kamu via email. Stay di halaman ini atau cek email untuk update.',
           true,
         );
         return;
