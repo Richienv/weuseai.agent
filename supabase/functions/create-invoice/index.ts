@@ -106,6 +106,26 @@ const db: IInvoiceStore = {
       updated_at: new Date().toISOString(),
     })
   },
+  /**
+   * Sesi D pass-3 P0 (2026-05-13): append consent_events row.
+   * Service-role inserts only — anon is RLS-locked out.
+   */
+  async insertConsentEvent(input) {
+    const { data, error } = await supabase
+      .from('consent_events')
+      .insert({
+        customer_id: input.customer_id,
+        consent_type: input.consent_type,
+        accepted_at: input.accepted_at,
+        ip_address: input.ip_address,
+        user_agent: input.user_agent,
+        ...(input.version ? { version: input.version } : {}),
+      })
+      .select('id')
+      .single()
+    if (error) throw error
+    return data as { id: string }
+  },
 }
 
 const xendit: IXenditClient = {

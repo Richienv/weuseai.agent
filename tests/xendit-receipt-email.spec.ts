@@ -82,6 +82,10 @@ function fakeStore(seed: { sub: SubscriptionRow; customerEmail?: string | null }
     async markSubscriptionInvoiceFailed() {},
     async addStarterCredits() {},
     async clearStalePairState() {},
+    async insertConsentEvent() {
+      // Sesi D pass-3 P0 stub — receipt-email tests don't exercise consent.
+      return { id: 'consent_stub' }
+    },
   }
 }
 

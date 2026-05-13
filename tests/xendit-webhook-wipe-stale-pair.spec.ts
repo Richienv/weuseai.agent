@@ -71,6 +71,10 @@ function makeStore(seed: { sub: SubscriptionRow }): IInvoiceStore & {
     async clearStalePairState(customerId: string) {
       wipes.push(customerId)
     },
+    async insertConsentEvent() {
+      // Sesi D pass-3 P0 stub — webhook tests don't exercise consent.
+      return { id: 'consent_stub' }
+    },
   } as IInvoiceStore & { state: { wipes: string[] } }
 }
 
