@@ -88,7 +88,16 @@ Deno.serve(async (req) => {
     )
   }
 
-  const result = await customerProgressProxyHandler({ customer_id: customerId }, deps)
+  // Sesi D pass-3 P1-2 (2026-05-13): forward X-CID header value to the
+  // handler. The handler returns 403 'x_cid_mismatch' if missing or if
+  // it doesn't equal customer_id. Closes the cross-customer leak path
+  // where anon-JWT + any cid returned VPS IP + log tail.
+  const xCid = req.headers.get('x-cid')
+
+  const result = await customerProgressProxyHandler(
+    { customer_id: customerId, x_cid: xCid },
+    deps,
+  )
   const status = result.ok ? 200 : result.status
   return withCors(
     new Response(JSON.stringify(result), {
