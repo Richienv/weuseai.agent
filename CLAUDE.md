@@ -2,36 +2,57 @@
 
 **Project:** weuseai.agent — managed Hermes agent hosting untuk pelanggan Indonesia. MyClaw-style flow, IDR pricing, Telegram delivery, 5-menit setup.
 
-**Status:** Landing live di `weuseai-agent.vercel.app` (root HTML files). Platform layer (services/) freshly merged dari liren-stand monorepo. Belum end-to-end production-tested. Agent runtime pakai upstream NousResearch/hermes-agent — bukan custom build.
+**Status:** Production live di `weuseai-agent.vercel.app`. Platform stack end-to-end validated as of 2026-05-13 (Richie's richiebot + Renita's bot both spun up + paired). Pass-3 security cascade shipped (PR #91/#92/#93/#94). Agent runtime pakai upstream NousResearch/hermes-agent — bukan custom build.
+
+**Production state (live as of 2026-05-13):**
+- **Landing:** `weuseai-agent.vercel.app` — main `d7c48ae`
+- **Per-customer VPS:** Vultr Singapore `vc2-1c-1gb` ($5/mo) provisioned via Vultr API. DigitalOcean SGP1 as failover when Vultr capacity exhausted.
+- **Provisioning service:** Fly.io `weuseai-provisioning` (region `sin`, shared-cpu-1x / 256MB)
+- **Payments:** Xendit live (QRIS primary, e-wallet + cards supported). Sandbox retired.
+- **Agent personas:** 10-persona library (`tier-personas.ts` is single source of truth — D1 lock 2026-05-12). Starter gets 3, Pro gets 8, Studio gets 10. The Pro is the default-persona invariant across every tier.
+- **Telegram delivery:** per-customer bot, customer supplies bot token at onboarding.
 
 **Prioritas urut:** Lihat `NEXT.md`. Kerjain dari atas, jangan skip. Stop kalau task gagal — lapor + tunggu input founder.
 
 ---
 
-## Repo structure (post-merge 2026-04-30)
+## Repo structure (updated 2026-05-13)
 
 ```
 weuseai.agent/velorah/
 ├── index.html / checkout.html / use-cases.html  # landing live di Vercel
+├── welcome.html / onboarding.html               # post-payment funnel
+├── terms.html / privacy.html / refund-policy.html / contact.html
 ├── assets/                                          # landing images, fonts, og-image
 ├── vercel.json                                      # vercel routing for landing
 ├── services/                                        # platform backend
-│   ├── provisioning/   # Express server, IDCloudHost VPS spawner
+│   ├── provisioning/   # Express server on Fly.io; spawns Vultr SGP VPSes
+│   │                   # via Vultr API, DigitalOcean SGP1 failover
 │   ├── proxy/          # Cloudflare Worker, LLM routing for Starter tier
 │   ├── hermes/         # Reference docs / cloud-init for upstream Hermes install
-│   ├── payment/        # IPaymentProvider abstraction (mock + Xendit adapter)
-│   └── test-idcloudhost/  # Day-1 IDCloudHost API gate
+│   └── payment/        # IPaymentProvider abstraction (mock + Xendit adapter)
+│   # services/test-idcloudhost/ deleted 2026-05-13 (PR #90) — IDCH adapter retired
 ├── packages/
+│   ├── observability/  # shared logging primitives
 │   └── shared/         # (placeholder) brand tokens, shared types
 ├── supabase/
-│   ├── schema.sql      # initial schema, apply via Supabase SQL editor
-│   └── functions/      # (placeholder) Edge Functions, mis. xendit-webhook
+│   ├── migrations/     # SQL migrations, applied via Supabase Mgmt API
+│   └── functions/      # live Edge Functions: xendit-webhook, create-invoice,
+│                       # complete-onboarding, bundle-fetch, customer-progress-proxy,
+│                       # customer-readiness, workflow-execute, bundle-pull-record,
+│                       # tier-bump, restart-hermes, +others
 ├── docs/
 │   ├── 04-Liren-Stand-Strategy.md     # apa + kenapa
 │   ├── 05-One-Click-Build-Plan.md     # gimana, day-by-day
-│   └── 06-Research-Preview.md         # context tech decision
+│   ├── 06-Research-Preview.md         # context tech decision
+│   ├── audit/                          # security audits (Sesi D output)
+│   ├── design/                         # design specs (Vultr migration, etc.)
+│   ├── investigation/                  # incident postmortems
+│   └── plans/                          # phase specs
 ├── tests/
-│   └── end-to-end-mock.spec.ts        # 3 integration tests, mock adapters
+│   # ~1400 tests across handler unit tests, source-grep drift gates,
+│   # docker-harness scenarios, e2e mocks. tests/pass-3-regression-suite.spec.ts
+│   # is the security-contract runbook (PR #94).
 ├── CLAUDE.md           # ← ini (root brief, baca dulu)
 ├── CLAUDE.md.platform  # archived liren-stand brief, reference only
 ├── NEXT.md.platform    # archived task queue, reference only
@@ -39,7 +60,7 @@ weuseai.agent/velorah/
 └── tsconfig.json       # root tsconfig (covers tests/)
 ```
 
-Landing files dan platform sekarang satu monorepo. `services/*` dan `packages/*` di-link via npm workspaces.
+Landing files dan platform satu monorepo. `services/*` dan `packages/*` di-link via npm workspaces.
 
 ---
 
@@ -90,15 +111,17 @@ Reframe hosting sebagai utility (kayak bayar listrik), bukan subscription tradis
 | Layer | Pilihan | Catatan |
 |-------|---------|---------|
 | Bahasa | TypeScript | Semua services/* + packages/* |
-| Landing | Static HTML + React-via-CDN | `index.html`, `checkout.html`, `use-cases.html` di root, deploy Vercel |
-| VPS | IDCloudHost API | Region jakarta atau cyc01 |
-| Agent runtime | NousResearch/hermes-agent (MIT OSS) | Install via upstream `scripts/install.sh`, manage via systemd. Kita nggak fork, nggak build. |
-| LLM (Starter) | DeepSeek V3 via LiteLLM proxy | Pelanggan tier Starter pakai proxy kita, default model `deepseek-chat` |
-| LLM (Pro/Studio BYOK) | DeepSeek / OpenRouter / OpenAI / Z.ai (GLM) | Pelanggan paste API key sendiri |
-| Payment | Xendit (sandbox active) | QRIS primary, e-wallet supported. `services/payment/` punya IPaymentProvider abstraction (mock + xendit). |
-| Database | Supabase | `supabase/schema.sql` — apply pending |
-| Edge Functions | Supabase Functions | `xendit-webhook` paling pertama (Day 4-5) |
-| Channel | Telegram | Phase 1 only. WhatsApp ditunda. |
+| Landing | Static HTML + React-via-CDN | `index.html`, `checkout.html`, `use-cases.html`, `welcome.html`, `onboarding.html` di root, deploy Vercel |
+| VPS | Vultr Singapore (primary) + DigitalOcean SGP1 (failover) | Plan `vc2-1c-1gb` ($5/mo). Cutover from IDCloudHost 2026-05-11 (PR #75); IDCH adapter retired 2026-05-13 (PR #90). Failover triggers on Vultr capacity-exhausted errors. |
+| Provisioning service | Fly.io `weuseai-provisioning` | Region `sin` (Singapore — closest Fly POP to Vultr SGP), shared-cpu-1x / 256MB. Auto-stop, min=0 max=1 machines. |
+| Agent runtime | NousResearch/hermes-agent (MIT OSS) | Pinned `v0.13.0` (2026-05-08 lock). Install via upstream `scripts/install.sh` as user `weuseai`, manage via systemd. Kita nggak fork, nggak build. |
+| LLM (Starter) | DeepSeek V3 via Cloudflare Worker proxy | Pelanggan tier Starter pakai proxy kita, default model `deepseek-chat`. $3–5 onboarding credits via `credits` table. |
+| LLM (Pro/Studio BYOK) | DeepSeek / OpenRouter / OpenAI / Z.ai (GLM) | Pelanggan paste API key sendiri di onboarding. |
+| Payment | Xendit (live, validated) | QRIS primary, e-wallet + cards supported. Webhook signed via `XENDIT_WEBHOOK_TOKEN`. `services/payment/` punya IPaymentProvider abstraction (mock + xendit). |
+| Database | Supabase | Migrations live di `supabase/migrations/*.sql`, applied via Supabase Mgmt API. RLS-locked per Sesi D pass-1/2/3 (X-CID enforcement on customers + subscriptions + consent_events). |
+| Edge Functions | Supabase Functions | Live: `xendit-webhook`, `create-invoice` (gates ToS), `complete-onboarding`, `bundle-fetch` (tier-enforced), `customer-progress-proxy` (X-CID), `customer-readiness` (X-CID), `workflow-execute`, `bundle-pull-record`, +others. |
+| Multi-persona library | `supabase/functions/_shared/tier-personas.ts` (D1 lock 2026-05-12) | Starter 3 / Pro 8 / Studio 10. The Pro persona is default-at-index-0 invariant across every tier. |
+| Channel | Telegram | Phase 1 only. WhatsApp ditunda. Per-customer bot, customer supplies token. |
 
 ---
 
@@ -107,12 +130,12 @@ Reframe hosting sebagai utility (kayak bayar listrik), bukan subscription tradis
 Kita pakai NousResearch/hermes-agent (https://github.com/NousResearch/hermes-agent, MIT) sebagai agent runtime. **Kita nggak nulis kode agent.**
 
 **Yang kita kerjain:**
-- Provision VPS pelanggan (IDCloudHost API)
-- Cloud-init: jalanin upstream `install.sh` sebagai user `weuseai`, tulis `/home/weuseai/.hermes/.env` dengan kredensial pelanggan
+- Provision VPS pelanggan via Vultr API (Singapore region), DigitalOcean SGP1 failover. SSH-based setup script writes `/home/weuseai/.hermes/.env` dengan kredensial pelanggan.
 - systemd unit `hermes-agent.service` (`ExecStart=/home/weuseai/.local/bin/hermes gateway start`, `Restart=always`)
 - LLM routing: tier Starter → proxy kita → DeepSeek; tier Pro/Studio → BYOK key langsung ke provider
 - Telegram bot per pelanggan (pelanggan kasih bot token sendiri saat onboarding)
 - Payment, dashboard, marketplace skill metadata, hosting/Always-On billing
+- Tier-persona enforcement: bundle-fetch validates `agent_slug ∈ personasForTier(customer.tier)` before signing the URL (PR #92).
 
 **Yang kita NGGAK kerjain:**
 - Tool calling, prompt engineering, agent loop logic — itu Hermes core
@@ -121,8 +144,19 @@ Kita pakai NousResearch/hermes-agent (https://github.com/NousResearch/hermes-age
 
 **Implikasi:**
 - Bug di agent core → upstream issue, bukan kita fix
-- Update Hermes = re-install di VPS pelanggan, bukan rebuild image
-- Pin ke release tag mereka kalau ada breaking change (Phase 3 task)
+- Update Hermes = re-install di VPS pelanggan, bukan rebuild image. Currently pinned to `v0.13.0` (HERMES_VERSION env override pulls a different tag on next-provisioned VPS).
+
+---
+
+## Security gates on the customer flow (pass-3, 2026-05-13)
+
+Three gates landed before the first real paying customer onboards. All have automated regression coverage in `tests/pass-3-regression-suite.spec.ts` (PR #94 — the contract runbook).
+
+- **ToS consent (PR #91):** `create-invoice` rejects 400 `tos_required` when `tos_accepted_at` is missing, 400 `tos_stale` when older than 24h or future-dated. Acceptance written to `consent_events` (RLS-locked, append-only) BEFORE Xendit invoice creation. UU PDP Art. 22(1) + chargeback evidence.
+- **Tier-persona enforcement (PR #92):** `bundle-fetch` returns 403 `tier_does_not_grant_persona` when `agent_slug ∉ personasForTier(customer.tier)`. Closes the Starter-customer-mints-Studio-bundle escalation path.
+- **X-CID validation (PR #93):** `customer-progress-proxy` + `customer-readiness` both REQUIRE `X-CID` header equal to body `customer_id` else 403 `x_cid_mismatch`. Closes the cross-customer VPS-info leak via anon JWT.
+
+Regression suite is the source of truth. If a future PR weakens any gate, the suite fails with a self-documenting test name.
 
 ---
 
@@ -152,7 +186,7 @@ Bring back kalau ada signal dari 10+ paying customer minta fitur tertentu.
 
 Filter pertanyaan sebelum publish copy: *"Would someone I respect in Jakarta save this, or scroll past?"*
 
-Aesthetic landing: chrome-on-canvas (bg `#FAF9F5`, ink `#141413`, accent Liren Blue `#0047FF`), Inter font, max 1 emoji per section.
+Aesthetic landing: dark theme (bg `#0a0a0a`, ink `#f5f5f5`, accent signal-red `#E5322D`), Inter font + Instrument Serif for hero, Liquid-glass cards. Max 1 emoji per section. (Earlier chrome-on-canvas spec was superseded during the Sesi B brand pass.)
 
 Detail lengkap di `docs/04-Liren-Stand-Strategy.md`.
 
