@@ -18,6 +18,11 @@
 //   PROVISIONING_AUTH_TOKEN   — bearer for the Fly /spin-up route
 //   BOT_TOKEN_ENC_KEY         — base64 key for decrypt_bot_token RPC
 //                                (same key complete-onboarding uses)
+// Optional env (Phase 4 — founder DM alerts on retry-exhausted):
+//   SUPPORT_TELEGRAM_BOT_TOKEN — same bot token xendit-webhook DMs from
+//   RICHIE_CHAT_ID             — founder DM chat_id
+//   When either is unset the alert is a no-op (handler is back-compat
+//   safe — append-only audit row is still written).
 //
 // Auth: service-role JWT. The migration's pg_cron schedule passes
 // `Authorization: Bearer <service-role-token>`. The Edge Function
@@ -52,6 +57,11 @@ const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const PROVISIONING_URL = Deno.env.get('PROVISIONING_URL')!
 const PROVISIONING_AUTH_TOKEN = Deno.env.get('PROVISIONING_AUTH_TOKEN')!
 const BOT_TOKEN_ENC_KEY = Deno.env.get('BOT_TOKEN_ENC_KEY')!
+// Phase 4: founder alert on retry-exhausted (audit §Telemetry).
+// Reuses the SAME env vars as xendit-webhook so there's one source
+// of truth for founder DMs. Missing tokens → notifyFounder no-ops.
+const FOUNDER_BOT_TOKEN = Deno.env.get('SUPPORT_TELEGRAM_BOT_TOKEN') ?? ''
+const FOUNDER_CHAT_ID = Deno.env.get('RICHIE_CHAT_ID') ?? ''
 
 const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
 
@@ -182,6 +192,18 @@ async function insertAttempt(input: {
   return data as { id: string }
 }
 
+// Phase 4: Telegram founder-DM alert wired only when both env vars are
+// present. Mirrors the xendit-webhook alert path so the founder gets
+// every P1-class incident from one bot.
+async function notifyFounder(text: string): Promise<void> {
+  if (!FOUNDER_BOT_TOKEN || !FOUNDER_CHAT_ID) return
+  await fetch(`https://api.telegram.org/bot${FOUNDER_BOT_TOKEN}/sendMessage`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ chat_id: FOUNDER_CHAT_ID, text }),
+  })
+}
+
 const deps: RetryHandlerDeps = {
   findStalePendingProvisions,
   findLatestAttempt,
@@ -191,6 +213,7 @@ const deps: RetryHandlerDeps = {
   log: (msg, extra) => {
     console.log(msg, extra ?? {})
   },
+  notifyFounder,
 }
 
 // ─── HTTP entry ──────────────────────────────────────────────────────
