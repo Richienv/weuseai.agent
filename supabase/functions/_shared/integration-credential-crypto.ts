@@ -90,24 +90,18 @@ export async function decryptCredential(
 ): Promise<string> {
   validateKey(hexKey)
 
-  let keyBytes: Uint8Array
-  let cryptoKey: CryptoKey
-  let iv: Uint8Array
-  let ctBytes: Uint8Array
-  let tagBytes: Uint8Array
-
   try {
-    keyBytes = hexToBytes(hexKey)
-    cryptoKey = await crypto.subtle.importKey(
+    const keyBytes = hexToBytes(hexKey)
+    const cryptoKey = await crypto.subtle.importKey(
       'raw',
       keyBytes,
       { name: ALGORITHM },
       false,
       ['decrypt'],
     )
-    iv = base64ToBytes(cipher.iv)
-    ctBytes = base64ToBytes(cipher.ciphertext)
-    tagBytes = base64ToBytes(cipher.auth_tag)
+    const iv = base64ToBytes(cipher.iv)
+    const ctBytes = base64ToBytes(cipher.ciphertext)
+    const tagBytes = base64ToBytes(cipher.auth_tag)
 
     // Reassemble ciphertext + tag for Web Crypto's decrypt.
     const combined = new Uint8Array(ctBytes.length + tagBytes.length)

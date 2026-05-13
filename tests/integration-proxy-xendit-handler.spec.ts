@@ -157,7 +157,7 @@ test('proxy: 412 with Bahasa when credential not configured', async () => {
     body: { operation: 'balance.get', params: {} },
   }))
   assert.equal(res.status, 412)
-  const body = await res.json()
+  const body = await res.json() as { code: string; message_bahasa: string }
   assert.equal(body.code, 'credential_not_configured')
   assert.match(body.message_bahasa, /hubungkan akun Xendit/i)
 })
@@ -172,7 +172,7 @@ test('proxy: 410 with Bahasa when credential revoked', async () => {
     body: { operation: 'balance.get', params: {} },
   }))
   assert.equal(res.status, 410)
-  const body = await res.json()
+  const body = await res.json() as { code: string; message_bahasa: string }
   assert.equal(body.code, 'credential_revoked')
   assert.match(body.message_bahasa, /sudah dilepas/i)
 })
@@ -196,7 +196,7 @@ test('proxy invoice.create: happy path → Xendit POST /v2/invoices', async () =
     },
   }))
   assert.equal(res.status, 200)
-  const body = await res.json()
+  const body = await res.json() as { ok: boolean; data: { id: string; invoice_url: string } }
   assert.equal(body.ok, true)
   assert.equal(body.data.id, 'inv-fake-123')
   assert.match(body.data.invoice_url, /checkout\.xendit\.co/)
@@ -225,7 +225,7 @@ test('proxy invoice.create: rejects missing required params with Bahasa', async 
     },
   }))
   assert.equal(res.status, 400)
-  const body = await res.json()
+  const body = await res.json() as { ok: boolean; message_bahasa: string }
   assert.equal(body.ok, false)
   assert.match(body.message_bahasa, /belum lengkap|wajib|isi/i)
 })
@@ -248,7 +248,7 @@ test('proxy invoice.create: upstream 401 → Bahasa invalid_api_key', async () =
     },
   }))
   assert.equal(res.status, 502)
-  const body = await res.json()
+  const body = await res.json() as { code: string; message_bahasa: string }
   assert.equal(body.code, 'invalid_api_key')
   assert.match(body.message_bahasa, /Akun Xendit/)
 })
@@ -270,7 +270,7 @@ test('proxy invoice.get: fetches by id, returns status', async () => {
     body: { operation: 'invoice.get', params: { invoice_id: 'inv-001' } },
   }))
   assert.equal(res.status, 200)
-  const body = await res.json()
+  const body = await res.json() as { data: { status: string } }
   assert.equal(body.data.status, 'PAID')
   assert.equal(capturedFetches[0].method, 'GET')
   assert.match(capturedFetches[0].url, /\/v2\/invoices\/inv-001$/)
@@ -317,7 +317,7 @@ test('proxy balance.get: returns balance_idr', async () => {
     body: { operation: 'balance.get', params: {} },
   }))
   assert.equal(res.status, 200)
-  const body = await res.json()
+  const body = await res.json() as { data: { balance: number } }
   assert.equal(body.data.balance, 12500000)
   assert.match(capturedFetches[0].url, /\/balance/)
 })
@@ -333,7 +333,7 @@ test('proxy: 400 on unknown operation', async () => {
     body: { operation: 'invoice.nuke_database', params: {} },
   }))
   assert.equal(res.status, 400)
-  const body = await res.json()
+  const body = await res.json() as { code: string }
   assert.equal(body.code, 'unknown_operation')
 })
 

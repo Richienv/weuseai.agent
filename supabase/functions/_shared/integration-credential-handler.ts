@@ -152,7 +152,7 @@ async function handlePost(
 ): Promise<Response> {
   let body: { api_key?: string; label?: string }
   try {
-    body = await req.json()
+    body = await req.json() as { api_key?: string; label?: string }
   } catch {
     return jsonResponse(400, { ok: false, error: 'invalid_json' })
   }

@@ -83,7 +83,7 @@ export async function handleXenditProxy(
   // ─── 2. Parse body ───
   let body: ProxyBody
   try {
-    body = await req.json()
+    body = await req.json() as ProxyBody
   } catch {
     return jsonResponse(400, { ok: false, error: 'invalid_json' })
   }
