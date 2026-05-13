@@ -542,14 +542,54 @@
                    stay-on-page CTA. Re-enable the email claim once
                    transactional email lands (Sesi B P0 buildlist). -->
               <div id="b-eta-line" style="margin-top:14px; font-size:12px; color:rgba(245,245,245,0.45);">Estimasi 5–7 menit total. Stay di halaman ini, agent kamu lagi disiapkan.</div>
+              <!-- Phase 3 P3-CF-1 (audit, 2026-05-13): always-visible 5-step
+                   explainer accordion. Demystifies the 6-min wait without
+                   exposing infra names. Default-collapsed for calm. -->
+              <details id="b-whats-happening" style="margin-top:14px;">
+                <summary style="cursor:pointer; font-size:12px; color:rgba(245,245,245,0.65); padding:4px 0;">Apa yang sedang terjadi?</summary>
+                <div style="margin-top:10px; padding:10px 12px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:6px; font-size:12px; color:rgba(245,245,245,0.75); line-height:1.6;">
+                  Kami menyiapkan infrastruktur khusus buat agent kamu — bukan shared, bukan generic. 5 langkah, totalnya sekitar 6 menit:
+                  <ol style="margin:10px 0 0 18px; padding:0; line-height:1.7;">
+                    <li>Menyalakan sistem dedicated di Singapura (~3 menit)</li>
+                    <li>Memasang otak agent dan dependensi (~2 menit)</li>
+                    <li>Menulis kepribadian dan keterampilan agent (~30 detik)</li>
+                    <li>Menyambungkan saluran Telegram pribadi kamu (~30 detik)</li>
+                    <li>Menunggu kamu mengirim pesan pertama</li>
+                  </ol>
+                </div>
+              </details>
+              <!-- end b-whats-happening -->
+              <!-- Phase 3 P3-CF-2 (audit, 2026-05-13): micro-content during
+                   the 6-min wait. Sample prompts give customers something
+                   concrete to plan; founder note signals "made in Jakarta,
+                   you can reach me." Premium feel: wait becomes anticipation. -->
+              <div id="b-wait-content" style="margin-top:18px; padding:14px 16px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px; font-size:13px; color:rgba(245,245,245,0.78); line-height:1.6;">
+                <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color:rgba(245,245,245,0.45); margin-bottom:8px;">Sambil menunggu</div>
+                <div style="margin-bottom:12px;">Begitu agent kamu siap, kamu bisa langsung coba dari Telegram. Beberapa contoh untuk mulai:</div>
+                <ul style="margin:0 0 12px 18px; padding:0; line-height:1.7;">
+                  <li>Coba: kirim <em>"briefing pagi untuk hari ini"</em> ke agent kamu.</li>
+                  <li>Coba: <em>"rangkum artikel ini singkat: &lt;tempel URL&gt;"</em>.</li>
+                  <li>Coba: <em>"bantuin balas email ini dengan nada profesional"</em>.</li>
+                </ul>
+                <div style="font-size:12px; color:rgba(245,245,245,0.6); padding-top:10px; border-top:1px solid rgba(255,255,255,0.06);">
+                  Dibuat di Jakarta untuk pengguna Indonesia. Pertanyaan teknis langsung ke saya: <a href="mailto:kidnovell.richie@gmail.com" style="color:rgba(245,245,245,0.75); text-decoration:underline;">kidnovell.richie@gmail.com</a> — Richie
+                </div>
+              </div>
+              <!-- end b-wait-content -->
               <!-- Phase 2 progress overlay (2026-05-13): customer-progress-proxy
                    surfaces the actual setup-script line + heartbeat age so
                    the customer sees real-time progress instead of a black box.
                    Filled in by tick() via pollCustomerProgress(). Hidden until
-                   first successful poll. -->
-              <div id="b-progress-line" hidden style="margin-top:10px; padding:8px 12px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:6px; font-family: 'JetBrains Mono', monospace; font-size:11px; color:rgba(245,245,245,0.65); line-height:1.45;">
+                   first successful poll.
+                   Phase 3 P3-CF-3 (2026-05-13): the raw log tail is now
+                   wrapped in a "Detail teknis" expandable so the default
+                   view stays calm. inferred_stage label remains visible. -->
+              <div id="b-progress-line" hidden style="margin-top:10px; padding:8px 12px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:6px; font-size:11px; color:rgba(245,245,245,0.65); line-height:1.45;">
                 <div id="b-progress-stage" style="font-family: 'Inter', sans-serif; font-size:12px; font-weight:500; color:rgba(245,245,245,0.85); margin-bottom:4px;"></div>
-                <div id="b-progress-tail" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></div>
+                <details id="b-progress-tail-details" style="margin-top:6px;">
+                  <summary style="cursor:pointer; font-family:'Inter',sans-serif; font-size:10px; color:rgba(245,245,245,0.45); text-transform:uppercase; letter-spacing:0.06em; padding:2px 0;">Detail teknis</summary>
+                  <div id="b-progress-tail" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-family:'JetBrains Mono',monospace; margin-top:6px;"></div>
+                </details>
                 <div id="b-progress-heartbeat" style="font-family: 'Inter', sans-serif; font-size:10px; color:rgba(245,245,245,0.40); margin-top:4px;"></div>
               </div>
               <!-- Soft escalation hint: shown only when current stage exceeds
@@ -579,7 +619,7 @@
                 <div style="font-weight:500; margin-bottom:6px;">Setup-nya sedang berjalan, kali ini lebih lama dari biasanya.</div>
                 <div style="font-size:12px; color:rgba(245,245,245,0.65); line-height:1.55;">Tetap di halaman ini. Agent kamu akan otomatis siap saat selesai.</div>
                 <details id="b-longer-than-usual-details" style="margin-top:10px;">
-                  <summary style="cursor:pointer; font-size:12px; color:rgba(245,245,245,0.75); padding:4px 0;">Apa yang sedang terjadi</summary>
+                  <summary style="cursor:pointer; font-size:12px; color:rgba(245,245,245,0.75); padding:4px 0;">Mengapa lebih lama?</summary>
                   <div style="margin-top:10px; font-size:12px; color:rgba(245,245,245,0.65); line-height:1.6;">Agent kamu butuh beberapa konfigurasi sebelum siap menerima pesan pertama. Beberapa langkah memang memakan waktu lebih lama tergantung kepadatan jaringan saat itu. Yang penting jalan, bukan cepat.</div>
                 </details>
               </div>
