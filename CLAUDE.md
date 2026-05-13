@@ -64,17 +64,19 @@ Landing files dan platform satu monorepo. `services/*` dan `packages/*` di-link 
 
 ---
 
-## Business model (LOCKED v1.1, 2026-04-28)
+## Business model (LOCKED v1.2, 2026-05-13)
 
 **Setup fee one-time + Hosting fee monthly + Optional Always-On + BYOK LLM ongoing.**
 
-### Pricing structure
+### Pricing structure (live landing is source of truth)
 
-| Tier | Setup (sekali bayar) | Hosting (Rp 99k/bulan flat) | Always-On (+Rp 49k/bulan opsional) |
-|------|----------------------|------------------------------|--------------------------------------|
-| Starter | Rp 299k | Auto-pause >30 hari inactive | Skip auto-suspend, VPS 24/7 |
-| Pro | Rp 1.2jt | Same | Same |
-| Studio | Rp 4.9jt | Same | Same |
+| Tier | Setup (diskon launch) | Setup (strike / target) | Hosting (Rp 99rb/bulan flat) | Always-On (+Rp 49rb/bulan opsional) |
+|------|------------------------|--------------------------|-------------------------------|--------------------------------------|
+| Starter | Rp 399rb | Rp 699rb | Auto-pause >30 hari inactive | Skip auto-suspend, VPS 24/7 |
+| Pro | Rp 1,29jt | Rp 2,5jt | Same | Same |
+| Studio | Rp 5,9jt | Rp 10,9jt | Same | Same |
+
+Values live di `index.html` (Pricing section) — keep CLAUDE.md in lockstep when landing copy changes. Locked v1.1 values (Rp 299k / 1.2jt / 4.9jt from 2026-04-28) superseded 2026-05-13 per founder confirmation.
 
 ### LLM strategy
 
