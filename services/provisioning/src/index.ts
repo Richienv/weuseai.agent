@@ -19,6 +19,7 @@ import { MockLlmKeyMinter } from './llm/mock-minter.js'
 import { tierBump, type TierBumpRouteRequest } from './routes/tier-bump.js'
 import { refreshEnvHandler, type RefreshEnvRequest } from './routes/refresh-env.js'
 import { restartHermesHandler, type RestartHermesRequest } from './routes/restart-hermes.js'
+import { customerProgressHandler, type CustomerProgressRequest } from './routes/customer-progress.js'
 import {
   readinessProbeHandler,
   type ReadinessProbeRequest,
@@ -236,6 +237,46 @@ app.post('/restart-hermes', async (req, res) => {
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
     console.error('restart-hermes failed:', msg)
+    res.status(500).json({ ok: false, error: 'internal', detail: msg })
+  }
+})
+
+// Phase 2 prevention (2026-05-13): GET /customer-progress — real-time
+// surface for welcome.html so customers + admin see actual setup-script
+// progress (apt install / Hermes pip / gateway start) instead of an
+// 8-min "stuck at stage Y" black box. SSH-tails the VPS's
+// /var/log/weuseai-setup.log + heartbeat file in one round-trip.
+//
+// Read-only — no side effects on the VPS. Safe to poll every 3-5 sec
+// during the setup window.
+app.get('/customer-progress', async (req, res) => {
+  if (!refreshEnvStore) {
+    return res.status(500).json({
+      ok: false,
+      error: 'internal',
+      detail: 'customer-progress requires SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY env vars',
+    })
+  }
+  const customerId = (req.query.customer_id ?? '') as string
+  try {
+    const result = await customerProgressHandler(
+      { customer_id: customerId },
+      {
+        fleetSshPrivateKey: FLEET_SSH_PRIVATE_KEY,
+        store: {
+          findVpsByCustomerId: async (cid: string) => {
+            return await refreshEnvStore.findActiveVPSByCustomer(cid)
+          },
+        },
+      },
+    )
+    if (!result.ok) {
+      return res.status(result.status).json(result)
+    }
+    res.json(result)
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    console.error('customer-progress failed:', msg)
     res.status(500).json({ ok: false, error: 'internal', detail: msg })
   }
 })
