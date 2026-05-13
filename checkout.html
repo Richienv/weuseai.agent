@@ -555,6 +555,31 @@
         <h1 class="serif" style="font-size: 28px; line-height: 1.1; letter-spacing: -0.02em; margin: 0 0 6px;">Pilih cara bayar</h1>
         <p style="font-size: 13px; color: var(--text-muted); margin: 0 0 22px;">Setup sekali bayar. Hosting Rp 99k/bulan, stop kapan saja. Biaya processor transparent di tiap method.</p>
 
+        <!-- B2 (audit §P1-CF-2, 2026-05-13): Xendit failure-return banner.
+             Shown only when the URL carries ?error=failed — the param
+             Xendit appends when an invoice expires or is rejected. Pre-
+             fix the customer landed on a fresh-looking form with no
+             acknowledgment that something just failed. -->
+        <div
+          id="xendit-failure-banner"
+          hidden
+          role="alert"
+          style="margin: 0 0 18px; padding: 14px 16px; background: rgba(229, 50, 45, 0.08); border: 1px solid rgba(229, 50, 45, 0.32); border-radius: 10px; font-size: 13px; color: var(--text-primary, #141413); line-height: 1.55;"
+        >
+          <div style="font-weight: 600; margin-bottom: 6px;">Pembayaran kamu belum selesai</div>
+          <div style="color: var(--text-muted, #6b7c93);">Link Xendit kadaluarsa atau ditolak. Coba bayar lagi dari sini, atau hubungi tim kalau berlanjut.</div>
+          <div style="margin-top: 10px;">
+            <a
+              id="xendit-failure-wa"
+              href="https://wa.me/6282154902561?text=Halo%20tim%2C%20pembayaran%20saya%20di%20checkout%20gagal%20%E2%80%94%20bisa%20bantu%20cek%3F"
+              target="_blank"
+              rel="noopener noreferrer"
+              style="font-size: 12px; color: var(--text-primary, #141413); text-decoration: underline;"
+            >Hubungi tim via WhatsApp <span aria-hidden="true">→</span></a>
+          </div>
+        </div>
+        <!-- end xendit-failure-banner -->
+
         <form id="payForm" autocomplete="on" novalidate>
           <div class="field-group">
             <div class="method-list" id="methodList" role="radiogroup" aria-label="Cara bayar">
@@ -782,6 +807,27 @@
       };
     }
 
+    // B2 (audit §P1-CF-2, 2026-05-13): Xendit failure-return acknowledgment.
+    //
+    // When Xendit redirects to /checkout.html?plan=…&error=failed (invoice
+    // expired or rejected), reveal the banner above the form so the
+    // customer knows the previous attempt didn't complete. Without this
+    // they land on a fresh-looking form, click pay, and either retry
+    // blind or bounce.
+    //
+    // Telemetry: console.log breadcrumb fires once on banner reveal so
+    // the founder can grep Vercel logs for Xendit failure rate per
+    // plan tier.
+    function revealXenditFailureBannerIfNeeded() {
+      const u = new URL(window.location.href);
+      const errParam = u.searchParams.get('error');
+      if (errParam !== 'failed') return;
+      const plan = (u.searchParams.get('plan') || 'pro').toLowerCase();
+      console.log('[checkout] xendit_failed_return', { plan });
+      const banner = document.getElementById('xendit-failure-banner');
+      if (banner) banner.hidden = false;
+    }
+
     function writeAlwaysOnToURL(on) {
       const u = new URL(window.location.href);
       if (on) u.searchParams.set('alwaysOn', '1');
@@ -915,6 +961,10 @@
       state.planKey = fromURL.planKey;
       state.alwaysOn = fromURL.alwaysOn;
       renderAll();
+      // B2 (audit §P1-CF-2): reveal Xendit failure banner if Xendit
+      // redirected us back with ?error=failed. Fires after renderAll
+      // so the banner sits above the freshly-rendered methods list.
+      revealXenditFailureBannerIfNeeded();
 
       document.getElementById('aoCheckbox').addEventListener('change', (e) => {
         state.alwaysOn = !!e.target.checked;
