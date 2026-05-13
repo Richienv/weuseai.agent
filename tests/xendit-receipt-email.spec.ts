@@ -141,6 +141,113 @@ test('buildPaymentReceiptEmailBody: includes refund-policy reference for trust',
   assert.match(text, /refund-policy|pengembalian/i, 'body references refund policy')
 })
 
+// ─── A1: lost-cid recovery via receipt email (P2-CF-3, closes P1-CF-5) ──
+//
+// Audit doc: docs/audit/2026-05-13-customer-flow-hardening.md §P2-CF-3.
+//
+// Receipt email is the customer's recovery path when the welcome.html tab
+// is lost (browser closed, switched device, link clipped). Embed the cid
+// in a welcome URL so customer can return to setup with one click. Without
+// this, the only fallback is WhatsApp support.
+
+test('buildPaymentReceiptEmailBody: includes welcome URL with cid when customer_id supplied (P2-CF-3)', () => {
+  const { text } = buildPaymentReceiptEmailBody({
+    invoice_id: 'xnd_inv_99',
+    tier: 'pro',
+    amount_idr: 1_398_723,
+    payment_method: 'QRIS',
+    paid_at_iso: '2026-05-12T03:00:00Z',
+    customer_id: 'cust-abc-123-uuid',
+  })
+  // The audit-proposed URL pattern, cid embedded as query param.
+  assert.ok(
+    text.includes('https://weuseai-agent.vercel.app/welcome?cid=cust-abc-123-uuid'),
+    'body must include welcome URL with cid query param',
+  )
+  // Bahasa lead-in copy — calm-premium, no jargon. Matches audit copy.
+  assert.match(
+    text,
+    /Lanjutkan setup agent kamu/i,
+    'body must include the lead-in copy "Lanjutkan setup agent kamu"',
+  )
+})
+
+test('buildPaymentReceiptEmailBody: omits welcome URL when customer_id absent (back-compat)', () => {
+  const { text } = buildPaymentReceiptEmailBody({
+    invoice_id: 'xnd_inv_98',
+    tier: 'starter',
+    amount_idr: 348_000,
+    payment_method: 'QRIS',
+    paid_at_iso: '2026-05-12T03:00:00Z',
+    // No customer_id passed — older callers / future re-send flows where
+    // we only have the invoice_id should still get a valid email body.
+  })
+  assert.equal(
+    text.includes('/welcome?cid='),
+    false,
+    'no welcome URL when customer_id is not supplied',
+  )
+  assert.equal(
+    /Lanjutkan setup agent kamu/i.test(text),
+    false,
+    'no "Lanjutkan setup" line when customer_id is not supplied',
+  )
+})
+
+test('buildPaymentReceiptEmailBody: empty-string customer_id treated as absent', () => {
+  // Defensive — a sloppy caller passing customer_id='' must NOT produce
+  // a broken URL like "/welcome?cid=".
+  const { text } = buildPaymentReceiptEmailBody({
+    invoice_id: 'xnd_inv_97',
+    tier: 'pro',
+    amount_idr: 1_398_723,
+    payment_method: 'QRIS',
+    paid_at_iso: '2026-05-12T03:00:00Z',
+    customer_id: '',
+  })
+  assert.equal(
+    text.includes('/welcome?cid='),
+    false,
+    'empty-string customer_id must not produce a broken welcome URL',
+  )
+})
+
+test('buildPaymentReceiptEmailBody: cid is URL-encoded so funky characters do not break the link', () => {
+  // Defensive — customer_id should always be a UUID, but if anything
+  // weird ever lands here (test fixture, future schema change), we must
+  // not emit a malformed URL.
+  const { text } = buildPaymentReceiptEmailBody({
+    invoice_id: 'xnd_inv_96',
+    tier: 'studio',
+    amount_idr: 5_999_000,
+    payment_method: 'QRIS',
+    paid_at_iso: '2026-05-12T03:00:00Z',
+    customer_id: 'a/b c&d',
+  })
+  // encodeURIComponent('a/b c&d') === 'a%2Fb%20c%26d'
+  assert.ok(
+    text.includes('/welcome?cid=a%2Fb%20c%26d'),
+    'customer_id must be URL-encoded in the link',
+  )
+})
+
+test('buildPaymentReceiptEmailBody: with cid, body still passes brand-voice rules', () => {
+  const { text } = buildPaymentReceiptEmailBody({
+    invoice_id: 'xnd_inv_42',
+    tier: 'pro',
+    amount_idr: 1_398_723,
+    payment_method: 'QRIS',
+    paid_at_iso: '2026-05-12T03:00:00Z',
+    customer_id: 'cust-abc-123',
+  })
+  // No exclamation marks, no banned marketing words even with the new line.
+  assert.ok(!text.includes('!'), 'no exclamation marks in body')
+  assert.ok(
+    !/basically|just|literally|honestly|10x|revolutionary|game-changer|next-level/i.test(text),
+    'no banned marketing words',
+  )
+})
+
 // ─── integration ────────────────────────────────────────────────────────
 
 test('PAID: when sendReceiptEmail dep + customer email present → email sent with right args', async () => {

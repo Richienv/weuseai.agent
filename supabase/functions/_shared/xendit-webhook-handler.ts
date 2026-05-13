@@ -217,6 +217,10 @@ async function trySendReceipt(
       amount_idr: event.amount ?? 0,
       payment_method: event.payment_method ?? 'unknown',
       paid_at_iso: event.paid_at ?? new Date().toISOString(),
+      // Audit doc §P2-CF-3: embed cid in welcome URL so customers who
+      // lose the welcome-tab (closed browser, switched device) can
+      // recover via the receipt email instead of WhatsApp support.
+      customer_id: subscription.customer_id,
     })
     await deps.sendReceiptEmail({ to: customer.email, subject, text })
   } catch {
