@@ -99,11 +99,20 @@ export async function restartHermesHandler(
   }
 
   // Write the fleet SSH private key to a tmpfile for the duration of
-  // the SSH call. Same pattern as customer-flow.ts:setupSshKeyAuth().
+  // the SSH call. Same pattern as customer-flow.ts:setupSshKeyAuth() —
+  // HF-2e (2026-05-13): explicit utf-8 encoding + trailing-newline
+  // normalisation. Pre-2e the default Node encoding (utf-8) was used
+  // without normalising the trailing newline, and OpenSSH rejected the
+  // resulting file with "Load key: error in libcrypto". Verified on
+  // customer e282ce25 2026-05-13 — POST /restart-hermes returned 502
+  // ssh_restart_failed with that exact stderr.
   const tmpDir = mkdtempSync(join(tmpdir(), 'weuseai-restart-hermes-'))
   const keyPath = join(tmpDir, 'fleet-key')
   try {
-    writeFileSync(keyPath, deps.fleetSshPrivateKey)
+    const normalised = deps.fleetSshPrivateKey.endsWith('\n')
+      ? deps.fleetSshPrivateKey
+      : deps.fleetSshPrivateKey + '\n'
+    writeFileSync(keyPath, normalised, { encoding: 'utf8' })
     chmodSync(keyPath, 0o600)
 
     const exec = deps.exec ?? defaultExec
