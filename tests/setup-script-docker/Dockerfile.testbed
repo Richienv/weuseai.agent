@@ -19,6 +19,18 @@ RUN apt-get update -qq && \
       bash coreutils curl ca-certificates sudo python3 && \
     rm -rf /var/lib/apt/lists/*
 
+# Pre-create the `weuseai` user. The rendered setup-script has an
+# idempotent `if ! id weuseai` guard, so pre-creating means the script
+# short-circuits the useradd/usermod/sudoers branch. This is closer to
+# truth than shimming useradd (a shimmed useradd returns 0 but leaves
+# `id weuseai` failing, which would break later `sudo -u weuseai …`
+# calls under `set -e`). Match the real cloud-init layout: home dir,
+# bash shell, passwordless sudo via /etc/sudoers.d/weuseai.
+RUN useradd -m -s /bin/bash weuseai && \
+    usermod -aG sudo weuseai && \
+    echo 'weuseai ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/weuseai && \
+    chmod 0440 /etc/sudoers.d/weuseai
+
 # Tier 2 scenarios install a systemctl shim into /usr/local/bin at
 # runtime (via NOOP_SHIMS in the spec) — no PID-1-systemd in the
 # container. Sufficient for "did the script run without abort?" but
