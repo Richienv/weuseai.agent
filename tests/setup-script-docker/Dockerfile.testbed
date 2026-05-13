@@ -16,13 +16,12 @@ ENV DEBIAN_FRONTEND=noninteractive
 # real Vultr Ubuntu image — those packages are present pre-boot.
 RUN apt-get update -qq && \
     apt-get install -y -qq --no-install-recommends \
-      bash coreutils curl ca-certificates sudo python3 systemctl-no-systemd && \
+      bash coreutils curl ca-certificates sudo python3 && \
     rm -rf /var/lib/apt/lists/*
 
-# Tier 2 scenarios that need real systemd (gateway install + start)
-# use --privileged + a real systemd. The default `systemctl` shim
-# above lets the script's idempotent existence checks pass without a
-# real PID 1 — sufficient for "did the script run without abort?" but
+# Tier 2 scenarios install a systemctl shim into /usr/local/bin at
+# runtime (via NOOP_SHIMS in the spec) — no PID-1-systemd in the
+# container. Sufficient for "did the script run without abort?" but
 # not for "did the gateway actually start?". A real-systemd scenario
 # is a separate Tier 3 follow-up.
 
