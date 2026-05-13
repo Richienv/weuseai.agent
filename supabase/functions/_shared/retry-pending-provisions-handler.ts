@@ -113,6 +113,19 @@ export type RetryHandlerDeps = {
   now?: () => Date
   /** Best-effort log sink (Vercel/Supabase logs surface this). */
   log?: (msg: string, extra?: Record<string, unknown>) => void
+  /**
+   * Phase 4 (audit §Telemetry, 2026-05-13): when a subscription hits
+   * MAX_ATTEMPTS this tick, fire a founder-DM alert so manual reconcile
+   * happens fast. Receives a pre-formatted text payload (CID + sub_id
+   * + recognizable tag).
+   *
+   * Optional — handler must still ship cleanly when undefined
+   * (back-compat for tests + local-stub Deno deploys that lack the
+   * Telegram env vars). Throws are swallowed: telemetry failures must
+   * never abort the worker tick. The append-only attempt row is the
+   * source of truth; the founder DM is a nicety on top.
+   */
+  notifyFounder?: (text: string) => Promise<void>
 }
 
 export type RetryHandlerResult = {
@@ -195,6 +208,24 @@ export async function retryPendingProvisionsHandler(
         customer_id: row.customer_id,
         attempt_number: nextAttemptNumber,
       })
+      // Phase 4: founder DM alert. Best-effort — any throw is
+      // swallowed so the next stale row still gets processed and the
+      // audit log stays the source of truth.
+      if (deps.notifyFounder) {
+        const text =
+          `[retry-worker] retry-exhausted for customer ${row.customer_id} ` +
+          `(subscription ${subId}) — ${MAX_ATTEMPTS} attempts failed over ` +
+          `~${(MAX_ATTEMPTS * MIN_RETRY_INTERVAL_MS) / 60_000} min. ` +
+          `Manual reconcile required.`
+        try {
+          await deps.notifyFounder(text)
+        } catch (e) {
+          log('[retry-pending-provisions] notifyFounder threw (swallowed)', {
+            subscription_id: subId,
+            error: e instanceof Error ? e.message : String(e),
+          })
+        }
+      }
       continue
     }
 

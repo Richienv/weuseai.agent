@@ -441,3 +441,159 @@ test('D1: exported tunable constants match A3 customer-facing promise', () => {
   assert.equal(MIN_RETRY_INTERVAL_MS, 3 * 60_000, 'MIN_RETRY_INTERVAL_MS must be 3 min (A3 copy)')
   assert.equal(MAX_ATTEMPTS, 6, 'MAX_ATTEMPTS must be 6 (audit §P1-CF-6 Phase 2)')
 })
+
+// ─── 12-15. Phase 4: founder Telegram alert on exhaustion ───────────
+//
+// Audit doc §Phase 4 — Telemetry, founder-DM alerts for P1-class
+// failures. retry-exhausted is the canonical P1-class signal: a
+// paying customer's VPS never came up after 6 attempts (~18 min) and
+// the founder has to step in manually.
+//
+// Contract:
+//   - When a row hits the `exhausted` branch, deps.notifyFounder is
+//     called with a structured text payload (CID + sub_id + tag).
+//   - Non-exhausted outcomes (spin_up_ok, capacity_exhausted under
+//     MAX_ATTEMPTS, skipped_recent) do NOT call notifyFounder.
+//   - notifyFounder is optional — handler still ships without it
+//     wired (back-compat for tests + local-stub deploys).
+//   - notifyFounder throws are swallowed — telemetry failures must
+//     never abort the worker tick.
+
+test('Phase 4: exhausted outcome triggers notifyFounder with cid + sub_id + audit tag', async () => {
+  const founderMessages: string[] = []
+  const deps = makeDeps({
+    stale: [row({ subscription_id: 'sub_exh_test', customer_id: 'cust_exh_test' })],
+    latest: {
+      sub_exh_test: attempt({
+        subscription_id: 'sub_exh_test',
+        attempted_at: '2026-05-13T11:55:00Z',
+        attempt_number: MAX_ATTEMPTS,
+        outcome: 'capacity_exhausted',
+      }),
+    },
+  })
+  deps.notifyFounder = async (text: string) => {
+    founderMessages.push(text)
+  }
+  const r = await retryPendingProvisionsHandler(deps)
+  assert.equal(r.exhausted, 1, 'this tick exhausted one row')
+  assert.equal(founderMessages.length, 1, 'exactly one founder alert')
+  const msg = founderMessages[0]
+  assert.ok(
+    msg.includes('cust_exh_test'),
+    'alert must include customer_id so founder can find the row fast',
+  )
+  assert.ok(
+    msg.includes('sub_exh_test'),
+    'alert must include subscription_id for unambiguous lookup',
+  )
+  assert.ok(
+    /\[retry-worker\]|\[provisioning alert\]|retry.*exhausted/i.test(msg),
+    'alert must carry a recognizable tag for founder DM filtering',
+  )
+  assert.ok(
+    /exhausted/i.test(msg),
+    'alert must say "exhausted" so the severity is obvious at a glance',
+  )
+})
+
+test('Phase 4: non-exhausted outcomes do NOT call notifyFounder', async () => {
+  const founderMessages: string[] = []
+  // 3 rows that hit non-exhausted branches:
+  //   sub_ok_phase4       → spin_up_ok
+  //   sub_cap_phase4      → capacity_exhausted (attempt 1, still has retries left)
+  //   sub_recent_phase4   → skipped_recent (gated by MIN_RETRY_INTERVAL_MS)
+  const deps = makeDeps({
+    stale: [
+      row({ subscription_id: 'sub_ok_phase4', customer_id: 'cust_a' }),
+      row({ subscription_id: 'sub_cap_phase4', customer_id: 'cust_b' }),
+      row({ subscription_id: 'sub_recent_phase4', customer_id: 'cust_c' }),
+    ],
+    latest: {
+      sub_ok_phase4: null,
+      sub_cap_phase4: null,
+      sub_recent_phase4: attempt({
+        // 30 s ago — recent
+        attempted_at: '2026-05-13T11:59:30Z',
+        outcome: 'capacity_exhausted',
+      }),
+    },
+  })
+  // First spin-up returns ok, second returns capacity-exhausted.
+  let calls = 0
+  deps.provisioning = {
+    spinUp: async (input) => {
+      calls += 1
+      deps.state.spinUpCalls.push(input)
+      return calls === 1
+        ? { ok: true, jobId: 'j_phase4' }
+        : { ok: false, status: 503, body: 'plan and region combination is unavailable' }
+    },
+  }
+  deps.notifyFounder = async (text: string) => {
+    founderMessages.push(text)
+  }
+  const r = await retryPendingProvisionsHandler(deps)
+  assert.equal(r.exhausted, 0, 'no exhaustion this tick')
+  assert.equal(
+    founderMessages.length,
+    0,
+    'notifyFounder must NOT fire for non-exhausted outcomes — would spam founder DM',
+  )
+})
+
+test('Phase 4: back-compat — handler runs without notifyFounder wired', async () => {
+  // Test stub + local-deno deploys ship without notifyFounder (it
+  // requires TELEGRAM_BOT_TOKEN + RICHIE_CHAT_ID env vars). The
+  // worker must complete cleanly when the dep is undefined, even when
+  // a row reaches the exhausted branch.
+  const deps = makeDeps({
+    stale: [row({ subscription_id: 'sub_no_alert' })],
+    latest: {
+      sub_no_alert: attempt({
+        attempted_at: '2026-05-13T11:55:00Z',
+        attempt_number: MAX_ATTEMPTS,
+        outcome: 'capacity_exhausted',
+      }),
+    },
+  })
+  // Explicitly no deps.notifyFounder = ...
+  const r = await retryPendingProvisionsHandler(deps)
+  assert.equal(r.exhausted, 1, 'exhaustion still recorded')
+  assert.equal(deps.state.attempts.length, 1, 'audit row still written')
+  assert.equal(deps.state.attempts[0].outcome, 'exhausted')
+})
+
+test('Phase 4: notifyFounder throw is swallowed — worker tick continues', async () => {
+  // Telegram API down / rate-limited / DNS failure must NOT abort
+  // the tick. The exhausted-row audit log is the source of truth;
+  // founder DM is a nicety on top.
+  const deps = makeDeps({
+    stale: [
+      row({ subscription_id: 'sub_throw_a' }),
+      row({ subscription_id: 'sub_throw_b' }),
+    ],
+    latest: {
+      sub_throw_a: attempt({
+        attempted_at: '2026-05-13T11:55:00Z',
+        attempt_number: MAX_ATTEMPTS,
+        outcome: 'capacity_exhausted',
+      }),
+      sub_throw_b: attempt({
+        attempted_at: '2026-05-13T11:55:00Z',
+        attempt_number: MAX_ATTEMPTS,
+        outcome: 'capacity_exhausted',
+      }),
+    },
+  })
+  let invocations = 0
+  deps.notifyFounder = async (_text: string) => {
+    invocations += 1
+    throw new Error('telegram api unreachable')
+  }
+  const r = await retryPendingProvisionsHandler(deps)
+  // Both rows still recorded as exhausted despite the alerts throwing.
+  assert.equal(r.exhausted, 2, 'both rows exhausted regardless of alert failures')
+  assert.equal(invocations, 2, 'both alerts were attempted')
+  assert.equal(deps.state.attempts.length, 2, 'both audit rows written')
+})
