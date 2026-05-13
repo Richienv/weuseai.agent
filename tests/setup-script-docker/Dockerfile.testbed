@@ -1,0 +1,30 @@
+# Test harness — mirrors the Vultr `vc2-1c-1gb` Ubuntu 22.04 base image
+# that customers' VPSes boot from. The harness pipes a rendered
+# setup-script into this container and asserts post-conditions.
+#
+# Network access intentionally NOT disabled — Tier 2 scenarios that
+# need real apt + Hermes pip install rely on container network reach.
+# Tier 1 (bash syntax check) doesn't need Docker at all.
+FROM ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Pre-install bash + coreutils (timeout, date) so the script's first
+# few lines execute regardless of apt-update timing. Pre-install sudo +
+# python3 so we don't have to wait for the script's `apt-get install`
+# to provide them. This matches what cloud-init effectively does on a
+# real Vultr Ubuntu image — those packages are present pre-boot.
+RUN apt-get update -qq && \
+    apt-get install -y -qq --no-install-recommends \
+      bash coreutils curl ca-certificates sudo python3 systemctl-no-systemd && \
+    rm -rf /var/lib/apt/lists/*
+
+# Tier 2 scenarios that need real systemd (gateway install + start)
+# use --privileged + a real systemd. The default `systemctl` shim
+# above lets the script's idempotent existence checks pass without a
+# real PID 1 — sufficient for "did the script run without abort?" but
+# not for "did the gateway actually start?". A real-systemd scenario
+# is a separate Tier 3 follow-up.
+
+WORKDIR /work
+CMD ["/bin/bash"]

@@ -1,0 +1,52 @@
+# Phase 3 prevention infrastructure (2026-05-13).
+#
+# Runs the Tier 2 Docker harness against the rendered setup-script
+# output on every PR that touches the bash-generating files. CI
+# provides Docker so the spec's runtime gate (dockerAvailable())
+# returns true and the scenarios actually execute (vs SKIP locally).
+#
+# Tier 1 (bash syntax check via tests/setup-script-bash-syntax.spec.ts)
+# already runs on every npm test — no need to re-run here.
+#
+# CI minutes budget: each scenario boots a container, runs the rendered
+# script with shimmed apt/curl/su, asserts. Should complete in <2 min
+# total for 5 scenarios. The first build pays the Ubuntu 22.04 base
+# download (~30 sec) once per CI runner image.
+
+name: setup-script harness
+
+on:
+  pull_request:
+    paths:
+      - 'services/provisioning/src/setup-script.ts'
+      - 'services/provisioning/src/bundle-pull-script.ts'
+      - 'services/provisioning/Dockerfile'
+      - 'tests/setup-script-docker.spec.ts'
+      - 'tests/setup-script-docker/**'
+      - '.github/workflows/setup-script-harness.yml'
+  workflow_dispatch:
+
+jobs:
+  docker-harness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify Docker available
+        run: docker version --format '{{.Server.Version}}'
+
+      - name: Run Tier 2 setup-script harness
+        run: npx tsx --test tests/setup-script-docker.spec.ts
+        env:
+          # Force the runtime gate (dockerAvailable) to enable scenarios.
+          # The gate is auto-detect; this env is a belt-and-suspenders.
+          CI: 'true'
