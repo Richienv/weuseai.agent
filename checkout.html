@@ -969,6 +969,34 @@
       const _emailErrInit = document.getElementById('emailError');
       _emailInpInit.addEventListener('input', () => clearFieldError(_emailInpInit, _emailErrInit));
 
+      // Batch A2 (audit §P1-CF-1, 2026-05-13): Bahasa error mapping on
+      // checkout submit failures. Pre-fix: raw server codes like
+      // "invalid_methodId" echoed verbatim into the UI ("Gagal:
+      // invalid_methodId..."), breaking voice at the first stumble.
+      // Mapper translates each known code to calm-premium BI; unknown
+      // codes get the generic fallback. tos_required / tos_stale are
+      // NOT in this map — they're handled inline above with an under-
+      // checkbox surface from PR #91.
+      const CHECKOUT_ERROR_MAP = {
+        invalid_email:           'Email belum benar. Cek lagi formatnya (mis. kamu@email.com).',
+        invalid_methodId:        'Cara bayar yang dipilih sedang tidak tersedia. Pilih cara bayar lain dari daftar.',
+        invalid_plan:            'Paket tidak dikenali. Refresh halaman dan coba lagi — kalau berlanjut, hubungi tim.',
+        consent_persist_failed:  'Persetujuan tidak tersimpan. Centang ulang Syarat dan Ketentuan, lalu coba lagi.',
+      };
+      const CHECKOUT_ERROR_FALLBACK = 'Pembayaran tidak bisa disiapkan saat ini. Coba lagi dalam 1 menit, atau hubungi tim via WhatsApp.';
+      function mapCheckoutSubmitError(serverCode) {
+        if (typeof serverCode === 'string' && CHECKOUT_ERROR_MAP[serverCode]) {
+          return CHECKOUT_ERROR_MAP[serverCode];
+        }
+        return CHECKOUT_ERROR_FALLBACK;
+      }
+
+      // Per-page retry counter. Incremented on every submit failure
+      // in the catch block below. When >= 2, an inline WhatsApp escalation
+      // link surfaces below the error banner so customers don't need to
+      // hunt for the footer support number.
+      let submitFailCount = 0;
+
       document.getElementById('payForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = document.getElementById('payBtn');
@@ -1092,11 +1120,35 @@
               }
               throw new Error(msg);
             }
-            throw new Error(data.error || `Gagal menyiapkan pembayaran (${res.status})`);
+            // Batch A2 (audit §P1-CF-1): map unknown / non-consent
+            // server codes to Bahasa via mapCheckoutSubmitError below.
+            // console.warn breadcrumb so the founder can grep Vercel
+            // logs to see failure distribution per code class until
+            // proper analytics lands.
+            const serverCode = (data && typeof data.error === 'string') ? data.error : null;
+            if (serverCode) console.warn('[checkout] submit failed:', serverCode);
+            throw new Error(serverCode ?? '__http_' + res.status + '__');
           }
           window.location.href = data.invoice_url;
         } catch (err) {
-          errEl.textContent = `Gagal: ${err.message}. Coba lagi atau pilih method lain.`;
+          submitFailCount += 1;
+          const serverCode = String((err && err.message) ? err.message : '');
+          const userMsg = mapCheckoutSubmitError(serverCode);
+          // After 2+ failures, surface an inline WhatsApp link so the
+          // customer doesn't have to hunt for the footer support number.
+          // Prefill identifies the failure context for the founder.
+          const waUrl = 'https://wa.me/6282154902561?text=' + encodeURIComponent(
+            'Halo tim weuseai, saya gagal menyelesaikan pembayaran di halaman checkout. Bisa bantu cek?'
+          );
+          const waLinkHtml = (submitFailCount >= 2)
+            ? '<div style="margin-top:10px; font-size:12px;">'
+              + '<a href="' + waUrl + '" target="_blank" rel="noopener noreferrer" '
+              + 'style="color: rgba(245,245,245,0.85); text-decoration: underline;">'
+              + 'Sudah dua kali gagal? Hubungi tim via WhatsApp '
+              + '<span aria-hidden="true">→</span>'
+              + '</a></div>'
+            : '';
+          errEl.innerHTML = '<div>' + userMsg + '</div>' + waLinkHtml;
           errEl.style.display = 'block';
           btn.disabled = false;
           btn.innerHTML = origLabel;
