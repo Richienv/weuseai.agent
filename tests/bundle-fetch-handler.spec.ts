@@ -220,3 +220,109 @@ test('fetch: signed URL response includes version + url + expires_at', async () 
     assert.ok(r.body.expires_at)
   }
 })
+
+// ─── Sesi D pass-3 P1-1: tier-personas enforcement ────────────────────
+//
+// Source: docs/audit/2026-05-13-pass-3-multi-persona-and-progress.md §P1-PASS3-1
+//
+// Pre-fix: any tier could request any persona bundle. Test matrix below
+// pins the tier → persona invariants from supabase/functions/_shared/
+// tier-personas.ts (D1 lock 2026-05-12) so a future tier-personas
+// edit can't silently re-open the gap.
+
+test('Starter + trade-pro → 403 tier_does_not_grant_persona (Pro-tier persona)', async () => {
+  const r = await bundleFetchHandler(
+    { customer_id: 'cust-1', agent_slug: 'trade-pro' },
+    buildDeps({ customer: customer({ tier: 'starter' }) }),
+  )
+  assert.equal(r.ok, false)
+  if (!r.ok) {
+    assert.equal(r.status, 403)
+    assert.equal(r.error, 'tier_does_not_grant_persona')
+  }
+})
+
+test('Starter + web-app-builder → 403 (Studio-only persona)', async () => {
+  const r = await bundleFetchHandler(
+    { customer_id: 'cust-1', agent_slug: 'web-app-builder' },
+    buildDeps({ customer: customer({ tier: 'starter' }) }),
+  )
+  assert.equal(r.ok, false)
+  if (!r.ok) {
+    assert.equal(r.status, 403)
+    assert.equal(r.error, 'tier_does_not_grant_persona')
+  }
+})
+
+test('Pro + trade-pro → 200 (in-tier persona)', async () => {
+  const r = await bundleFetchHandler(
+    { customer_id: 'cust-1', agent_slug: 'trade-pro' },
+    buildDeps({ customer: customer({ tier: 'pro' }) }),
+  )
+  assert.equal(r.ok, true)
+})
+
+test('Pro + web-app-builder → 403 (Studio-only, even on Pro)', async () => {
+  const r = await bundleFetchHandler(
+    { customer_id: 'cust-1', agent_slug: 'web-app-builder' },
+    buildDeps({ customer: customer({ tier: 'pro' }) }),
+  )
+  assert.equal(r.ok, false)
+  if (!r.ok) {
+    assert.equal(r.status, 403)
+    assert.equal(r.error, 'tier_does_not_grant_persona')
+  }
+})
+
+test('Pro + business-agent → 403 (Studio-only)', async () => {
+  const r = await bundleFetchHandler(
+    { customer_id: 'cust-1', agent_slug: 'business-agent' },
+    buildDeps({ customer: customer({ tier: 'pro' }) }),
+  )
+  assert.equal(r.ok, false)
+  if (!r.ok) assert.equal(r.error, 'tier_does_not_grant_persona')
+})
+
+test('Studio + web-app-builder → 200 (top tier gets all)', async () => {
+  const r = await bundleFetchHandler(
+    { customer_id: 'cust-1', agent_slug: 'web-app-builder' },
+    buildDeps({ customer: customer({ tier: 'studio' }) }),
+  )
+  assert.equal(r.ok, true)
+})
+
+test('Studio + business-agent → 200', async () => {
+  const r = await bundleFetchHandler(
+    { customer_id: 'cust-1', agent_slug: 'business-agent' },
+    buildDeps({ customer: customer({ tier: 'studio' }) }),
+  )
+  assert.equal(r.ok, true)
+})
+
+test('Studio + the-pro → 200 (default persona, in every tier)', async () => {
+  const r = await bundleFetchHandler(
+    { customer_id: 'cust-1', agent_slug: 'the-pro' },
+    buildDeps({ customer: customer({ tier: 'studio' }) }),
+  )
+  assert.equal(r.ok, true)
+})
+
+test('Starter + the-pro → 200 (default persona in all tiers)', async () => {
+  const r = await bundleFetchHandler(
+    { customer_id: 'cust-1', agent_slug: 'the-pro' },
+    buildDeps({ customer: customer({ tier: 'starter' }) }),
+  )
+  assert.equal(r.ok, true)
+})
+
+test('error message names the slug + tier (audit-friendly)', async () => {
+  const r = await bundleFetchHandler(
+    { customer_id: 'cust-1', agent_slug: 'business-agent' },
+    buildDeps({ customer: customer({ tier: 'starter' }) }),
+  )
+  assert.equal(r.ok, false)
+  if (!r.ok) {
+    assert.match(r.detail ?? '', /business-agent/)
+    assert.match(r.detail ?? '', /starter/)
+  }
+})

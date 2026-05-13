@@ -14,6 +14,7 @@ import {
   KNOWN_PERSONA_SLUGS,
 } from './manifest-validator.ts'
 import { TIER_ORDINAL, type WorkflowTier } from './workflow-types.ts'
+import { personasForTier } from './tier-personas.ts'
 
 // ─── input + output ────────────────────────────────────────────────────
 
@@ -134,6 +135,27 @@ export async function bundleFetchHandler(
       status: 403,
       error: 'invalid_customer_tier',
       detail: customer.tier,
+    }
+  }
+
+  // Sesi D pass-3 P1-1 (2026-05-13): tier-personas enforcement.
+  //
+  // Source: docs/audit/2026-05-13-pass-3-multi-persona-and-progress.md §P1-PASS3-1
+  //
+  // Pre-fix: handler only checked agent_slug ∈ KNOWN_PERSONA_SLUGS (typo
+  // catch) and never compared against the customer's tier — so a Starter
+  // customer with an active subscription could mint a signed URL for
+  // any Studio-only persona bundle (web-app-builder, business-agent) and
+  // download the prompt-IP. tier-personas.ts is the single source of
+  // truth (D1 lock 2026-05-12) used by setup-script + bundle-pull;
+  // mirroring it here closes the privilege-escalation gap.
+  const allowedSlugs = personasForTier(customer.tier)
+  if (!allowedSlugs.includes(input.agent_slug)) {
+    return {
+      ok: false,
+      status: 403,
+      error: 'tier_does_not_grant_persona',
+      detail: `agent_slug "${input.agent_slug}" not available on tier "${customer.tier}"`,
     }
   }
 
