@@ -33,7 +33,8 @@ COPY services/provisioning/package.json ./services/provisioning/
 COPY services/hermes/package.json ./services/hermes/
 COPY services/proxy/package.json ./services/proxy/
 COPY services/payment/package.json ./services/payment/
-COPY services/test-idcloudhost/package.json ./services/test-idcloudhost/
+# services/test-idcloudhost/ workspace removed 2026-05-13 alongside the
+# IDCloudHost adapter retirement (PR #90).
 # packages/shared/ is a placeholder (.gitkeep only) — no package.json yet,
 # add a COPY line here once it's populated.
 
