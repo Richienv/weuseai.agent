@@ -101,6 +101,25 @@ export interface IInvoiceStore {
    * wipe failure does not turn into a 5xx that would Xendit-retry.
    */
   clearStalePairState(customerId: string): Promise<void>
+
+  /**
+   * Sesi D pass-3 P0 (2026-05-13): append one row to the consent_events
+   * table. Called by create-invoice for both 'tos' (required) and
+   * 'marketing' (optional) acceptance. The handler captures
+   * ip_address + user_agent from request headers and forwards them
+   * here so we satisfy UU PDP Art. 22(1)'s "demonstrate consent"
+   * requirement + give Xendit chargeback evidence we can produce.
+   *
+   * Service-role only; the consent_events table is RLS-locked.
+   */
+  insertConsentEvent(input: {
+    customer_id: string
+    consent_type: 'tos' | 'marketing'
+    accepted_at: string  // ISO8601
+    ip_address: string | null
+    user_agent: string | null
+    version?: string  // policy version; defaults to 'v1.0' at DB level
+  }): Promise<{ id: string }>
 }
 
 export type SubscriptionRow = {

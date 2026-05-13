@@ -1018,18 +1018,28 @@
         errEl.style.display = 'none';
         errEl.textContent = '';
 
+        // Stamp ToS + (optional) marketing opt-in timestamps now so we
+        // POST identical values to the server and localStorage cache.
+        // Sesi D pass-3 P0 (2026-05-13): the server-side validates these
+        // (must parse, must be within 24h of now()) and writes a
+        // consent_events row BEFORE the Xendit invoice is created. That
+        // closes the DevTools bypass — even if a user steps over the
+        // client check, the server still rejects without a fresh
+        // timestamp. localStorage cache stays for offline resilience.
+        const tosAcceptedAt = new Date().toISOString();
+        const marketingOptInAt = acceptMarketing ? new Date().toISOString() : null;
+
         // Cache email so onboarding step 1 can prefill (anon SELECT
         // on customers.email is REVOKED per Sesi D P0-2 — without
         // this cache, customer has to retype email on the post-payment
         // page even though they just typed it here).
         try {
           localStorage.setItem(`onboarding_checkout_email`, email);
-          // ToS-acceptance + marketing opt-in cached client-side for
-          // audit trail (Sesi B P0 buildlist #5). Backend
-          // create-invoice does not yet read these; storing here means
-          // future Resend marketing pipeline can pick the consent flag
-          // without a schema migration.
-          localStorage.setItem('onboarding_accept_tos_at', new Date().toISOString());
+          // Keep localStorage in sync so the post-payment / welcome page
+          // can show "ToS diterima pukul HH:MM" without a roundtrip.
+          // Server validation is the authoritative record; localStorage
+          // is convenience + offline resilience only.
+          localStorage.setItem('onboarding_accept_tos_at', tosAcceptedAt);
           localStorage.setItem('onboarding_accept_marketing', acceptMarketing ? '1' : '0');
         } catch { /* localStorage may be disabled */ }
 
@@ -1051,10 +1061,37 @@
               country: document.getElementById('country').value,
               // postal omitted 2026-05-10 (PR #66 Track 4); same rationale.
               postal: '',
+              // Sesi D pass-3 P0: REQUIRED — server rejects 400 if missing.
+              tos_accepted_at: tosAcceptedAt,
+              // Optional; null when checkbox unticked.
+              marketing_opt_in_at: marketingOptInAt,
+              // Policy version live on /terms + /privacy as of 2026-05-13.
+              // Bump in lockstep with the policy text + this string.
+              policy_version: 'v1.0',
             }),
           });
           const data = await res.json();
           if (!res.ok || !data.invoice_url) {
+            // Surface server-side consent rejection with a Bahasa
+            // explanation. tos_required / tos_stale come from the
+            // pass-3 P0 server gate; the user almost certainly just
+            // unchecked the box or has a clock drift.
+            if (data && data.error === 'tos_required') {
+              const msg = 'Wajib menyetujui Syarat dan Ketentuan untuk lanjut.';
+              if (tosErr) {
+                tosErr.textContent = msg;
+                tosErr.style.display = 'block';
+              }
+              throw new Error(msg);
+            }
+            if (data && data.error === 'tos_stale') {
+              const msg = 'Persetujuan kadaluwarsa. Centang ulang lalu coba lagi.';
+              if (tosErr) {
+                tosErr.textContent = msg;
+                tosErr.style.display = 'block';
+              }
+              throw new Error(msg);
+            }
             throw new Error(data.error || `Gagal menyiapkan pembayaran (${res.status})`);
           }
           window.location.href = data.invoice_url;

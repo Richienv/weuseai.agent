@@ -100,6 +100,12 @@ function makeFakeInvoiceStore(seed: {
       // wipe-semantics tests live in
       // tests/xendit-webhook-wipe-stale-pair.spec.ts.
     },
+    async insertConsentEvent() {
+      // Sesi D pass-3 P0 (2026-05-13): no-op for post-payment-flow
+      // tests. The dedicated consent tests live in
+      // tests/create-invoice-consent.spec.ts.
+      return { id: 'consent_stub' }
+    },
   }
 }
 
