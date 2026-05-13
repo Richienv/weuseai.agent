@@ -6498,6 +6498,330 @@
       );
     }
 
+    // ─────────────────────── COST COMPARISON (A1) ───────────────────────
+    // Frames weuseai.agent against the realistic SMB owner alternative:
+    // ChatGPT Plus subscription + asisten manusia part-time. Six rows lock
+    // in: Bahasa native, 10 agents, 24/7, persistent memory, setup time,
+    // cost. weuseai column hits ✓ across all + Rp 99rb/bulan at the foot.
+    function CostComparisonSection() {
+      const rows = [
+        {
+          label: 'Bahasa native',
+          us:    { mark: '✓', aside: 'kamu form, default WIB' },
+          gpt:   { mark: '~', aside: 'Inggris dulu, terjemahan kedua' },
+          human: { mark: '✓', aside: 'tergantung orangnya' },
+        },
+        {
+          label: '10 agent spesialis',
+          us:    { mark: '✓', aside: 'Pro, Doc, Slide, Trade, Researcher, …' },
+          gpt:   { mark: '✗', aside: 'satu bot, satu giliran' },
+          human: { mark: '✗', aside: 'satu orang, satu fokus' },
+        },
+        {
+          label: '24/7',
+          us:    { mark: '✓', aside: 'jalan saat kamu tidur' },
+          gpt:   { mark: '~', aside: 'cuma saat kamu chat' },
+          human: { mark: '✗', aside: 'jam kerja saja' },
+        },
+        {
+          label: 'Persistent memory',
+          us:    { mark: '✓', aside: 'ingat lintas sesi, lintas hari' },
+          gpt:   { mark: '~', aside: 'memori terbatas per chat' },
+          human: { mark: '~', aside: 'ingatan orang, lupa juga' },
+        },
+        {
+          label: 'Waktu setup',
+          us:    { mark: '5 menit',     plain: true },
+          gpt:   { mark: 'langsung',    plain: true, aside: 'tapi tanpa workflow kamu' },
+          human: { mark: '1–2 minggu',  plain: true, aside: 'interview, kontrak, training' },
+        },
+        {
+          label: 'Biaya',
+          us:    { mark: 'Rp 99rb/bulan',      plain: true, accent: true, aside: 'hosting flat, BYOK LLM' },
+          gpt:   { mark: '$20/bulan',          plain: true, aside: '≈ Rp 320rb' },
+          human: { mark: 'Rp 5–8jt/bulan',     plain: true, aside: 'gaji asisten part-time Jakarta' },
+        },
+      ];
+
+      const Mark = ({ cell, isUs }) => {
+        if (cell.plain) {
+          return (
+            <div className="flex flex-col gap-0.5">
+              <span
+                className={`font-heading ${cell.accent ? 'text-white' : 'text-white/85'}`}
+                style={{ fontSize: cell.accent ? '1.15rem' : '0.95rem', letterSpacing: '-0.01em' }}
+              >
+                {cell.mark}
+              </span>
+              {cell.aside ? (
+                <span className="text-[11px] text-white/45 font-body font-light leading-snug">
+                  {cell.aside}
+                </span>
+              ) : null}
+            </div>
+          );
+        }
+        const ok = cell.mark === '✓';
+        const partial = cell.mark === '~';
+        const bg = ok
+          ? (isUs ? 'rgba(229,50,45,0.22)' : 'rgba(255,255,255,0.12)')
+          : partial
+            ? 'rgba(255,255,255,0.08)'
+            : 'rgba(255,255,255,0.04)';
+        const fg = ok
+          ? (isUs ? '#E5322D' : 'rgba(255,255,255,0.78)')
+          : partial
+            ? 'rgba(255,255,255,0.55)'
+            : 'rgba(255,255,255,0.32)';
+        return (
+          <div className="flex flex-col gap-1">
+            <span
+              aria-hidden="true"
+              className="inline-flex items-center justify-center rounded-full w-5 h-5 text-[11px] font-bold"
+              style={{ background: bg, color: fg }}
+            >
+              {ok ? '✓' : partial ? '~' : '✗'}
+            </span>
+            {cell.aside ? (
+              <span className="text-[11px] text-white/45 font-body font-light leading-snug">
+                {cell.aside}
+              </span>
+            ) : null}
+          </div>
+        );
+      };
+
+      const cols = [
+        { key: 'us',    label: 'weuseai.agent', tagline: 'agent kamu, di server kamu', isUs: true },
+        { key: 'gpt',   label: 'ChatGPT Plus',  tagline: 'chat saja, satu bot' },
+        { key: 'human', label: 'Asisten manusia', tagline: 'part-time, jam kerja' },
+      ];
+
+      return (
+        <section id="vs-cost" className="relative overflow-hidden py-20 md:py-32 px-5 md:px-6 lg:px-16 bg-black">
+          <FadeTop /> <FadeBottom />
+          <div className="relative z-10 max-w-6xl mx-auto">
+            <div className="flex flex-col items-center text-center mb-14 md:mb-20">
+              <div
+                className="liquid-glass rounded-full px-3.5 py-1 text-xs font-medium font-body text-white/90"
+                style={{ borderColor: 'rgba(229, 50, 45, 0.45)' }}
+              >
+                Ongkos vs hasil
+              </div>
+              <BlurText
+                as="h2"
+                text="Rp 99rb/bulan. Bukan Rp 5–8jt."
+                className="mt-5 md:mt-6 text-3xl md:text-5xl lg:text-6xl font-heading text-white tracking-tight leading-[1.0] md:leading-[0.95] max-w-3xl"
+                style={{ letterSpacing: '-0.04em' }}
+                delay={70}
+              />
+              <p className="mt-5 md:mt-6 max-w-xl text-white/55 font-body font-light text-sm md:text-base leading-relaxed">
+                Mayoritas pemilik usaha sekarang gabungkan ChatGPT Plus dan asisten manusia part-time. Total bisa Rp 5–8jt per bulan dan tetap berhenti jam 5 sore.
+              </p>
+            </div>
+
+            {/* Desktop / tablet: table. Mobile: stacked cards (handled below). */}
+            <div className="hidden md:block">
+              <div className="liquid-glass rounded-2xl overflow-hidden">
+                <div className="grid grid-cols-4 gap-0 border-b border-white/8">
+                  <div className="px-5 py-5 text-xs uppercase tracking-wider text-white/45 font-body font-medium">
+                    Fitur
+                  </div>
+                  {cols.map((c) => (
+                    <div
+                      key={c.key}
+                      className="px-5 py-5"
+                      style={
+                        c.isUs
+                          ? { background: 'rgba(229,50,45,0.07)', borderLeft: '1px solid rgba(229,50,45,0.35)', borderRight: '1px solid rgba(229,50,45,0.35)' }
+                          : {}
+                      }
+                    >
+                      <div className={`font-heading ${c.isUs ? 'text-white' : 'text-white/85'} text-base md:text-lg leading-[1.15]`} style={{ letterSpacing: '-0.02em' }}>
+                        {c.label}
+                      </div>
+                      <div className="mt-1 text-[11px] text-white/45 font-body font-light">
+                        {c.tagline}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {rows.map((r, ri) => (
+                  <div
+                    key={r.label}
+                    className={`grid grid-cols-4 gap-0 ${ri < rows.length - 1 ? 'border-b border-white/6' : ''}`}
+                  >
+                    <div className="px-5 py-5 text-sm font-body text-white/75 leading-snug">
+                      {r.label}
+                    </div>
+                    {cols.map((c) => (
+                      <div
+                        key={c.key}
+                        className="px-5 py-5"
+                        style={
+                          c.isUs
+                            ? { background: 'rgba(229,50,45,0.05)', borderLeft: '1px solid rgba(229,50,45,0.18)', borderRight: '1px solid rgba(229,50,45,0.18)' }
+                            : {}
+                        }
+                      >
+                        <Mark cell={r[c.key]} isUs={c.isUs} />
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Mobile: 3 stacked cards. weuseai goes first so it leads. */}
+            <div className="md:hidden grid grid-cols-1 gap-5">
+              {cols.map((c, i) => (
+                <Mot.div
+                  key={c.key}
+                  initial={{ opacity: 0, y: 14 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, amount: 0.2 }}
+                  transition={{ duration: 0.55, ease: EASE, delay: 0.04 * i }}
+                  className="liquid-glass rounded-2xl p-6"
+                  style={
+                    c.isUs
+                      ? {
+                          borderColor: 'rgba(229,50,45,0.55)',
+                          boxShadow: '0 0 0 1px rgba(229,50,45,0.4), 0 14px 50px -25px rgba(229,50,45,0.45)',
+                        }
+                      : { opacity: 0.92 }
+                  }
+                >
+                  <div className="font-heading text-white text-lg leading-[1.1]" style={{ letterSpacing: '-0.02em' }}>
+                    {c.label}
+                  </div>
+                  <div className="mt-1 text-xs text-white/55 font-body font-light">
+                    {c.tagline}
+                  </div>
+                  <ul className="mt-5 space-y-3.5">
+                    {rows.map((r) => (
+                      <li key={r.label} className="flex items-start justify-between gap-3">
+                        <span className="text-sm text-white/65 font-body font-light leading-snug max-w-[55%]">
+                          {r.label}
+                        </span>
+                        <span className="text-right">
+                          <Mark cell={r[c.key]} isUs={c.isUs} />
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </Mot.div>
+              ))}
+            </div>
+
+            <p className="mt-10 md:mt-14 text-center text-xs md:text-sm italic text-white/45 font-body font-light max-w-2xl mx-auto leading-relaxed">
+              Setup sekali bayar. Hosting Rp 99rb/bulan. Bisa pause kapan saja dari dashboard.
+            </p>
+
+            <div className="mt-7 md:mt-9 flex justify-center">
+              <a
+                href="#pricing"
+                className="rounded-full px-5 py-3 text-sm font-medium flex items-center gap-2 no-underline text-white"
+                style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.28)' }}
+              >
+                Lihat paket lengkap <ArrowUpRight size={14} stroke={2.2} />
+              </a>
+            </div>
+          </div>
+        </section>
+      );
+    }
+
+    // ─────────────────────── SECURITY NARRATIVE (A2) ─────────────────────
+    // Premium tone for average-joe SMB owners. No mention of BotFather /
+    // Telegram / Supabase / VPS / Hermes / OpenRouter by name. Each bullet
+    // is one idea, one short body sentence. Five pillars: dedicated
+    // instance, encrypted credentials, owned data location, audit trail,
+    // exit control.
+    function SecurityNarrativeSection() {
+      const pillars = [
+        {
+          n: '01',
+          title: 'Agent eksklusif kamu sendiri',
+          body:  'Setiap pelanggan dapat agent sendiri di lingkungan terisolasi. Tidak ada antrian, tidak ada data kamu yang campur dengan pelanggan lain.',
+        },
+        {
+          n: '02',
+          title: 'Kredensial diamankan standar enterprise',
+          body:  'API key, password, dan token pribadi kamu disimpan terenkripsi end-to-end, dengan rotasi otomatis dan akses terbatas.',
+        },
+        {
+          n: '03',
+          title: 'Data tinggal di server premium milik kamu',
+          body:  'Riwayat percakapan, dokumen, dan workflow kamu tersimpan di lokasi khusus yang hanya kamu akses. Bukan masuk pool training data publik.',
+        },
+        {
+          n: '04',
+          title: 'Setiap percakapan tercatat, transparan',
+          body:  'Kamu bisa lihat persis apa yang agent kerjakan, kapan, dan output-nya. Bukan kotak hitam tanpa jejak.',
+        },
+        {
+          n: '05',
+          title: 'Kontrol penuh kapan saja',
+          body:  'Pause, export semua data, atau hapus akses tools langsung dari dashboard kamu. Tidak ada lock-in, tidak ada negosiasi.',
+        },
+      ];
+
+      return (
+        <section id="keamanan" className="relative overflow-hidden py-20 md:py-32 px-5 md:px-6 lg:px-16 bg-black">
+          <FadeTop /> <FadeBottom />
+          <div className="relative z-10 max-w-6xl mx-auto">
+            <div className="flex flex-col items-center text-center mb-14 md:mb-20">
+              <div
+                className="liquid-glass rounded-full px-3.5 py-1 text-xs font-medium font-body text-white/90"
+                style={{ borderColor: 'rgba(229, 50, 45, 0.45)' }}
+              >
+                Keamanan
+              </div>
+              <BlurText
+                as="h2"
+                text="Privat. Terenkripsi. Milik kamu."
+                className="mt-5 md:mt-6 text-3xl md:text-5xl lg:text-6xl font-heading text-white tracking-tight leading-[1.0] md:leading-[0.95] max-w-3xl"
+                style={{ letterSpacing: '-0.04em' }}
+                delay={70}
+              />
+              <p className="mt-5 md:mt-6 max-w-xl text-white/55 font-body font-light text-sm md:text-base leading-relaxed">
+                Lima prinsip yang bikin agent kamu tetap private — dari hari pertama sampai hari kamu memilih berhenti.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
+              {pillars.map((p, i) => (
+                <Mot.div
+                  key={p.n}
+                  initial={{ opacity: 0, y: 16 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, amount: 0.3 }}
+                  transition={{ duration: 0.55, ease: EASE, delay: 0.06 * i }}
+                  className="liquid-glass rounded-2xl p-7 md:p-8 flex flex-col"
+                >
+                  <div
+                    className="text-xs font-body font-medium text-white/45"
+                    style={{ letterSpacing: '0.08em' }}
+                  >
+                    {p.n}
+                  </div>
+                  <h3
+                    className="mt-4 font-heading text-white text-lg md:text-xl leading-[1.15]"
+                    style={{ letterSpacing: '-0.02em' }}
+                  >
+                    {p.title}
+                  </h3>
+                  <p className="mt-3 text-sm md:text-[15px] text-white/65 font-body font-light leading-relaxed">
+                    {p.body}
+                  </p>
+                </Mot.div>
+              ))}
+            </div>
+          </div>
+        </section>
+      );
+    }
+
     function Pricing() {
       const [breakdownTier, setBreakdownTier] = React.useState(null);
 
@@ -7236,6 +7560,8 @@
               <VelvetSection />
               <FeaturesGrid />
               <ChatVsAgentSection />
+              <CostComparisonSection />
+              <SecurityNarrativeSection />
               <Pricing />
               <CommunitySection />
               <FAQ />
