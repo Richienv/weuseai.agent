@@ -61,6 +61,7 @@
     body[data-state=""]   .unverified-only,
     body[data-state="A"]  .unverified-only,
     body[data-state="E"]  .unverified-only,
+    body[data-state="E2"] .unverified-only,
     body[data-state="G"]  .unverified-only { display: revert; }
 
     /* Layout primitives ------------------------------------------------ */
@@ -437,13 +438,33 @@
     // page-relative not subscription-relative.
     let subscriptionStartedAtMs = null;
 
-    // welcome-guard fix (2026-05-10): if cid is present but pollOnce
-    // returns null (no subscription row found), give the Xendit webhook
-    // ≤NULL_GRACE_MS to write the row before flipping to INVALID_CID.
+    // welcome-guard fix (2026-05-10), expanded by C1 (audit §P1-CF-3,
+    // 2026-05-13) into a three-tier adaptive grace. If cid is present
+    // but pollOnce returns null, the Xendit webhook is in flight; the
+    // pre-C1 single 30 s cliff said "salah link" too early for slow-
+    // webhook cases, leaving legit paying customers with a literal
+    // "wrong link" message.
+    //
+    // Tiers now:
+    //   0–30 s   (< NULL_GRACE_SLOW_MS) — state A, default label.
+    //   30–90 s  (< NULL_GRACE_HARD_MS) — state A, slow-confirmation
+    //                                     label "Konfirmasi pembayaran
+    //                                     sedang lambat. Sebentar lagi…"
+    //   90 s +   (>= NULL_GRACE_HARD_MS) — state E2 (new): webhook
+    //                                      definitely missing, prefilled
+    //                                      WA escalation with cid +
+    //                                      check-email guidance.
+    //
+    // State E (current copy) now ONLY fires when cid is missing /
+    // malformed entirely — i.e. when there's no UUID at all in the
+    // URL. The cid-present-but-webhook-late case routes to E2.
     // Without this, a legit paying customer who lands on welcome.html
     // before the webhook fires sees the "salah link" guard for one cycle
     // (10s) which is alarming enough to bounce.
-    const NULL_GRACE_MS = 30_000;
+    // C1 grace tiers (audit §P1-CF-3). Pre-C1 was a single
+    // NULL_GRACE_MS = 30_000 that flipped state A → state E at 30 s.
+    const NULL_GRACE_SLOW_MS = 30_000;  // label switches to slow-confirmation
+    const NULL_GRACE_HARD_MS = 90_000;  // escalate to state E2 (webhook missing)
 
     // Customer's per-bot Telegram username — populated lazily by
     // ensureBotUsername() the first time we render state C2 (the
@@ -483,14 +504,24 @@
       let html = '';
 
       switch (state) {
-        case 'A': // LOADING — initial poll in flight
+        case 'A': { // LOADING — initial poll in flight
+          // C1 adaptive grace (audit §P1-CF-3): when the null-poll has
+          // crossed NULL_GRACE_SLOW_MS but is still below the hard
+          // cliff, tick() passes { slow: true } so the label switches
+          // to a calm "konfirmasi pembayaran sedang lambat" message
+          // instead of leaving the customer with the same generic
+          // loading text for 60+ seconds.
+          const aLabel = opts.slow
+            ? 'Konfirmasi pembayaran sedang lambat. Sebentar lagi…'
+            : 'Memeriksa status pembayaran kamu...';
           html = `
             <div class="fade-in" style="display:flex; align-items:center; gap:12px; color:rgba(245,245,245,0.85);">
               <span class="pulse-dot" aria-hidden="true"></span>
-              <span style="font-size:14px;">Memeriksa status pembayaran kamu...</span>
+              <span style="font-size:14px;">${aLabel}</span>
             </div>
           `;
           break;
+        }
 
         case 'B': { // pending / pending_provision (Track 2 observability 2026-05-10: stage-aware)
           // Stage label is set INSIDE renderState by reading lastProbe.progress.
@@ -640,22 +671,76 @@
           `;
           break;
 
-        case 'E': // INVALID_CID
+        case 'E': { // MISSING_CID — no UUID in URL at all
+          // C1 (audit §P1-CF-5, 2026-05-13): state E now fires ONLY
+          // when cid is absent from the URL (no UUID present), so its
+          // copy serves the lost-cid recovery flow: "I paid but the
+          // welcome link is gone." Receipt email (PR #99) contains
+          // the cid-embedded URL; this state reminds the customer.
+          // For shape-valid-cid-with-late-webhook the new state E2
+          // takes over.
+          const eWaHref = 'https://wa.me/6282154902561?text=' + encodeURIComponent(
+            'Halo tim, saya sudah bayar tapi link onboarding hilang. Email pembayaran saya: '
+          );
           html = `
             <div class="fade-in">
               <div style="font-size:14px; color:rgba(245,245,245,0.85); margin-bottom:8px; line-height:1.6;">
-                Halaman ini hanya untuk konfirmasi pembayaran.
+                Sudah bayar tapi link kamu hilang?
               </div>
-              <div style="font-size:13px; color:rgba(245,245,245,0.55); margin-bottom:18px; line-height:1.6;">
-                Mungkin kamu salah link, atau session-nya kadaluarsa.
+              <div style="font-size:13px; color:rgba(245,245,245,0.65); margin-bottom:18px; line-height:1.6;">
+                Cek email — struk pembayaran berisi link ke setup. Atau hubungi tim — kami bantu pulihkan dengan email kamu.
               </div>
-              <a href="/" class="btn-secondary focus-ring">
-                Kembali ke beranda
-                <span aria-hidden="true">→</span>
-              </a>
+              <div style="display:flex; flex-wrap:wrap; gap:10px;">
+                <a href="${eWaHref}" target="_blank" rel="noopener noreferrer" class="btn-primary focus-ring">
+                  Hubungi tim via WhatsApp
+                  <span aria-hidden="true">→</span>
+                </a>
+                <a href="/" class="btn-secondary focus-ring">
+                  Kembali ke beranda
+                  <span aria-hidden="true">→</span>
+                </a>
+              </div>
             </div>
           `;
           break;
+        }
+
+        case 'E2': { // WEBHOOK_MISSING — cid present, subscription row never arrived
+          // C1 (audit §P1-CF-3, 2026-05-13): hard escalation when
+          // null-poll passes NULL_GRACE_HARD_MS. The customer-side
+          // signal is "I paid but the welcome page still shows
+          // loading after 90+ seconds." The founder-side signal is
+          // a webhook that never landed; manual reconcile required.
+          // The WA prefill includes the cid so the founder can look
+          // up the Xendit invoice directly.
+          const e2WaText = 'Halo tim, saya sudah bayar tapi halaman konfirmasi belum berubah.'
+            + (cid ? ' Customer ID: ' + cid + '.' : '')
+            + ' Mohon bantu cek.';
+          const e2WaHref = 'https://wa.me/6282154902561?text=' + encodeURIComponent(e2WaText);
+          html = `
+            <div class="fade-in">
+              <div class="alert">
+                <div class="alert-title">
+                  <span class="icon" aria-hidden="true">i</span>
+                  Kami belum menerima konfirmasi pembayaran kamu.
+                </div>
+                <p>
+                  Cek email untuk struk dari Xendit. Kalau strukmu sudah masuk tapi halaman ini belum berubah, hubungi tim via WhatsApp — kami bantu reconcile manual.
+                </p>
+                <div class="alert-actions">
+                  <a href="${e2WaHref}" target="_blank" rel="noopener noreferrer" class="btn-primary focus-ring">
+                    Hubungi tim via WhatsApp
+                    <span aria-hidden="true">→</span>
+                  </a>
+                  <button type="button" class="btn-secondary focus-ring" id="e2-retry">
+                    Cek lagi
+                  </button>
+                </div>
+              </div>
+            </div>
+          `;
+          break;
+        }
 
         case 'F': // timeout
           html = `
@@ -705,6 +790,18 @@
           startedAt = Date.now();
           subscriptionStartedAtMs = null;
           stateFTelemetryFired = false;
+          renderState('A');
+          tick();
+        });
+      }
+
+      // Wire up E2-state retry (C1, audit §P1-CF-3). Same pattern as F:
+      // reset the page-load anchor so the adaptive-grace tiers re-start
+      // from zero. The subscription anchor is irrelevant here (no
+      // subscription row has been seen yet).
+      if (state === 'E2') {
+        document.getElementById('e2-retry')?.addEventListener('click', () => {
+          startedAt = Date.now();
           renderState('A');
           tick();
         });
@@ -1127,7 +1224,11 @@
     }
 
     function isTerminal(state) {
-      return state === 'C' || state === 'C2' || state === 'D' || state === 'E' || state === 'F';
+      // C1 adds 'E2' to the terminal set. Like E, F: once we've decided
+      // the webhook truly missed, stop polling. Manual retry ("Cek lagi"
+      // button in E2) re-enters polling via the button handler.
+      return state === 'C' || state === 'C2' || state === 'D'
+        || state === 'E' || state === 'E2' || state === 'F';
     }
 
     /**
@@ -1306,14 +1407,26 @@
             });
           }
         } else if (status == null) {
-          // Subscription row not yet visible. Two reasons:
-          //   (1) Xendit webhook hasn't fired/landed → race, will resolve
-          //   (2) cid is fabricated/stale or X-CID mismatch → never resolves
-          // Hold in pre-verification (state A) for the grace window so
-          // legit (1) cases don't see the guard. After grace expires,
-          // flip to E so (2) cases get a clear message.
-          if (Date.now() - startedAt < NULL_GRACE_MS) {
+          // Subscription row not yet visible. Three customer scenarios:
+          //   (1) Xendit webhook hasn't fired/landed → race, will resolve.
+          //   (2) cid is fabricated/malformed → never resolves.
+          //   (3) cid is shape-valid but for a customer that doesn't exist
+          //       (X-CID mismatch, or random UUID typed in) → never resolves.
+          //
+          // C1 (audit §P1-CF-3, 2026-05-13): three-tier adaptive grace.
+          // Pre-C1 the single 30 s cliff dumped (1) cases into state E
+          // saying "wrong link" which read as dismissal. New grace:
+          //   < 30 s        → A (default label)
+          //   30 – 90 s     → A with slow-confirmation label
+          //   >= 90 s + cid → E2 (webhook definitely missing, WA escalation)
+          //   >= 90 s + no cid → E (legit "no link" / lost-link recovery)
+          const elapsed = Date.now() - startedAt;
+          if (elapsed < NULL_GRACE_SLOW_MS) {
             renderState('A');
+          } else if (elapsed < NULL_GRACE_HARD_MS) {
+            renderState('A', { slow: true });
+          } else if (cid) {
+            renderState('E2');
           } else {
             renderState('E');
           }

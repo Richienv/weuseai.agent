@@ -146,19 +146,33 @@ test('renderState() writes document.body.dataset.state', () => {
   )
 })
 
-test('30-sec grace window before flipping null pollOnce → state E', () => {
+test('adaptive grace tiers for null pollOnce — SLOW + HARD (C1 post-2026-05-13)', () => {
   const src = fs.readFileSync(WELCOME, 'utf8')
+  // C1 (audit §P1-CF-3, 2026-05-13) replaced the single NULL_GRACE_MS
+  // = 30 s cliff with a 3-tier ramp:
+  //   0–30 s → A (default label)
+  //   30–90 s → A (slow-confirmation label)
+  //   90 s + → E2 (when cid present) or E (when cid missing)
+  // The dedicated spec at tests/welcome-state-e2-adaptive-grace.spec.ts
+  // pins the full contract. This test is the structural drift gate:
+  // both grace constants must exist, and the null-status branch must
+  // reference both.
   assert.ok(
-    /NULL_GRACE_MS\s*=\s*30_?000/.test(src),
-    'must declare a NULL_GRACE_MS constant (30s) for webhook race defense',
+    /(?:const|let)\s+NULL_GRACE_SLOW_MS\s*=\s*30_?000/.test(src),
+    'must declare NULL_GRACE_SLOW_MS = 30000 (label-switch tier)',
   )
-  // The check must compare elapsed ms against the constant before flipping
-  // to renderState('E'); during the window we render 'A' (loading) instead.
   assert.ok(
-    /Date\.now\(\)\s*-\s*startedAt\s*<\s*NULL_GRACE_MS[\s\S]{0,200}renderState\(\s*'A'\s*\)[\s\S]{0,200}renderState\(\s*'E'\s*\)/.test(
+    /(?:const|let)\s+NULL_GRACE_HARD_MS\s*=\s*90_?000/.test(src),
+    'must declare NULL_GRACE_HARD_MS = 90000 (state-E2 escalation tier)',
+  )
+  // The null-status branch must reference both grace constants AND
+  // escalate to state E2 at the hard cliff. Window sizes generous so
+  // C1's expanded comment block doesn't trip the gate.
+  assert.ok(
+    /status\s*==\s*null[\s\S]{0,2000}NULL_GRACE_SLOW_MS[\s\S]{0,2000}NULL_GRACE_HARD_MS[\s\S]{0,1000}renderState\(\s*'E2'\s*\)/.test(
       src,
     ),
-    'null pollOnce branch must hold state A inside grace, then flip to E',
+    'null-poll branch must reference SLOW + HARD tiers and escalate to E2',
   )
 })
 
