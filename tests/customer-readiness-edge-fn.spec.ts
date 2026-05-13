@@ -2,8 +2,11 @@
 //
 // Track 1 of post-pair UX polish (2026-05-10). Edge Fn wrapper that
 // proxies welcome.html readiness polls to the Fly /customer-readiness-probe
-// endpoint. Validates UUID format + customer-exists + optional X-CID
-// consistency before forwarding.
+// endpoint. Validates UUID format + X-CID match + customer-exists
+// before forwarding.
+//
+// Sesi D pass-3 P1-2 (2026-05-13): X-CID enforcement is now MANDATORY
+// (was soft-optional pre-pass-3); mismatches return 403 (was 400).
 
 import test from 'node:test'
 import assert from 'node:assert/strict'
@@ -90,7 +93,7 @@ test('rejects non-UUID customer_id', async () => {
   assert.equal(r.status, 400)
 })
 
-test('rejects when X-CID header conflicts with body customer_id', async () => {
+test('Sesi D pass-3 P1-2: X-CID mismatch → 403 x_cid_mismatch (was 400 cid_mismatch pre-pass-3)', async () => {
   const otherCid = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
   const r = await handleCustomerReadiness(
     makeReq({ customer_id: VALID_CID }, { 'x-cid': otherCid }),
@@ -101,14 +104,35 @@ test('rejects when X-CID header conflicts with body customer_id', async () => {
       fetchImpl: makeFakeFetch({}),
     },
   )
-  assert.equal(r.status, 400)
+  assert.equal(r.status, 403)
   const j = (await r.json()) as { error: string }
-  assert.equal(j.error, 'cid_mismatch')
+  assert.equal(j.error, 'x_cid_mismatch')
 })
 
-test('returns 404 when customer does not exist', async () => {
+test('Sesi D pass-3 P1-2: X-CID header missing → 403 (was passthrough pre-pass-3)', async () => {
+  let upstreamHits = 0
   const r = await handleCustomerReadiness(
-    makeReq({ customer_id: VALID_CID }),
+    makeReq({ customer_id: VALID_CID }),  // no x-cid header
+    {
+      provisioningUrl: 'https://fly',
+      provisioningAuthToken: 'tok',
+      validateCustomerExists: async () => true,
+      fetchImpl: ((async () => {
+        upstreamHits++
+        return new Response('{"ok":true}', { status: 200 })
+      }) as unknown as typeof fetch),
+    },
+  )
+  assert.equal(r.status, 403)
+  const j = (await r.json()) as { error: string }
+  assert.equal(j.error, 'x_cid_mismatch')
+  // Fly never called when X-CID is missing — auth gate trips first
+  assert.equal(upstreamHits, 0)
+})
+
+test('returns 404 when customer does not exist (with valid X-CID)', async () => {
+  const r = await handleCustomerReadiness(
+    makeReq({ customer_id: VALID_CID }, { 'x-cid': VALID_CID }),
     {
       provisioningUrl: 'https://fly',
       provisioningAuthToken: 'tok',
@@ -148,10 +172,10 @@ test('proxies to Fly with bearer + forwards body verbatim on success', async () 
   assert.equal(captured[0].init?.body, JSON.stringify({ customer_id: VALID_CID }))
 })
 
-test('returns 503 when Fly is unreachable', async () => {
+test('returns 503 when Fly is unreachable (with valid X-CID)', async () => {
   const failFetch = (() => Promise.reject(new Error('ECONNREFUSED'))) as typeof fetch
   const r = await handleCustomerReadiness(
-    makeReq({ customer_id: VALID_CID }),
+    makeReq({ customer_id: VALID_CID }, { 'x-cid': VALID_CID }),
     {
       provisioningUrl: 'https://fly',
       provisioningAuthToken: 'tok',

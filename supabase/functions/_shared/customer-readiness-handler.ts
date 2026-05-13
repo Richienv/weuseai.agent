@@ -65,12 +65,15 @@ export async function handleCustomerReadiness(
     return json({ error: 'invalid_field', field: 'customer_id' }, 400)
   }
 
-  // Optional consistency check: if X-CID header is present, it must
-  // match body.customer_id. Catches accidental cross-customer drift in
-  // the welcome.html state (defense-in-depth, not a security gate).
+  // Sesi D pass-3 P1-2 (2026-05-13): X-CID is now MANDATORY + mismatches
+  // return 403 (was 400 + soft-optional pre-pass-3). Closes the
+  // cross-customer probe leak — without enforcement any anon-JWT holder
+  // could probe any customer's VPS by submitting its UUID in the body
+  // and skipping the header. Mirrors the customers + subscriptions
+  // table enforcement (pass-1 P0-2 / P0-3).
   const headerCid = req.headers.get('x-cid')
-  if (headerCid && headerCid !== body.customer_id) {
-    return json({ error: 'cid_mismatch' }, 400)
+  if (!headerCid || headerCid !== body.customer_id) {
+    return json({ error: 'x_cid_mismatch' }, 403)
   }
 
   // Customer must exist + have a non-failed subscription. Otherwise we

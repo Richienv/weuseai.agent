@@ -17,6 +17,15 @@
 
 export type CustomerProgressProxyInput = {
   customer_id: string
+  /**
+   * Sesi D pass-3 P1-2 (2026-05-13): X-CID request header value. The
+   * Deno entry-point reads `req.headers.get('x-cid')` and forwards it
+   * here. Must equal `customer_id` or the handler returns
+   * 403 'x_cid_mismatch'. Closes the cross-customer leak path where
+   * anon-JWT + any cid would otherwise return VPS IP + log tail for
+   * any customer.
+   */
+  x_cid: string | null
 }
 
 export type CustomerProgressProxyResult =
@@ -47,6 +56,16 @@ export async function customerProgressProxyHandler(
 ): Promise<CustomerProgressProxyResult> {
   if (!input.customer_id || typeof input.customer_id !== 'string') {
     return { ok: false, status: 400, error: 'invalid_customer_id' }
+  }
+
+  // Sesi D pass-3 P1-2 (2026-05-13): X-CID enforcement. The header
+  // must be present AND match body.customer_id. Mirrors the pattern
+  // already on the customers + subscriptions tables (Sesi D P0-2 /
+  // P0-3) — keeps the auth model consistent across all customer-
+  // scoped endpoints. Returns 403 (not 400) because the request is
+  // syntactically valid; it's the authorization that fails.
+  if (!input.x_cid || input.x_cid !== input.customer_id) {
+    return { ok: false, status: 403, error: 'x_cid_mismatch' }
   }
 
   const exists = await deps.customerExists(input.customer_id)

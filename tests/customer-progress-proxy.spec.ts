@@ -50,7 +50,7 @@ function makeDeps(opts: {
 // ─── validation ────────────────────────────────────────────────────────
 
 test('missing customer_id → 400 invalid_customer_id', async () => {
-  const r = await customerProgressProxyHandler({ customer_id: '' }, makeDeps())
+  const r = await customerProgressProxyHandler({ customer_id: '', x_cid: null }, makeDeps())
   assert.equal(r.ok, false)
   if (r.ok) return
   assert.equal(r.status, 400)
@@ -59,7 +59,7 @@ test('missing customer_id → 400 invalid_customer_id', async () => {
 
 test('customer not found → 404 customer_not_found (no leak)', async () => {
   const deps = makeDeps({ exists: false })
-  const r = await customerProgressProxyHandler({ customer_id: 'cust-fake' }, deps)
+  const r = await customerProgressProxyHandler({ customer_id: 'cust-fake', x_cid: 'cust-fake' }, deps)
   assert.equal(r.ok, false)
   if (r.ok) return
   assert.equal(r.status, 404)
@@ -72,7 +72,7 @@ test('customer not found → 404 customer_not_found (no leak)', async () => {
 
 test('happy path: forwards upstream fields unchanged', async () => {
   const deps = makeDeps()
-  const r = await customerProgressProxyHandler({ customer_id: 'cust-1' }, deps)
+  const r = await customerProgressProxyHandler({ customer_id: 'cust-1', x_cid: 'cust-1' }, deps)
   assert.equal(r.ok, true)
   if (!r.ok) return
   assert.equal(r.vps_id, 'vps-1')
@@ -96,7 +96,7 @@ test('vps_ip_pending case (VPS row exists but IP not yet allocated) — forwarde
       inferred_stage: 'unknown',
     },
   })
-  const r = await customerProgressProxyHandler({ customer_id: 'cust-1' }, deps)
+  const r = await customerProgressProxyHandler({ customer_id: 'cust-1', x_cid: 'cust-1' }, deps)
   assert.equal(r.ok, true)
   if (!r.ok) return
   assert.equal(r.vps_ip_pending, true)
@@ -107,7 +107,7 @@ test('vps_ip_pending case (VPS row exists but IP not yet allocated) — forwarde
 
 test('provisioning unreachable (throw) → 502 provisioning_unreachable', async () => {
   const deps = makeDeps({ fetchThrows: true })
-  const r = await customerProgressProxyHandler({ customer_id: 'cust-1' }, deps)
+  const r = await customerProgressProxyHandler({ customer_id: 'cust-1', x_cid: 'cust-1' }, deps)
   assert.equal(r.ok, false)
   if (r.ok) return
   assert.equal(r.status, 502)
@@ -122,7 +122,7 @@ test('provisioning returns non-JSON → 502 provisioning_malformed_response', as
     status: 200,
     bodyText: '<html>404</html>',
   })
-  const r = await customerProgressProxyHandler({ customer_id: 'cust-1' }, deps)
+  const r = await customerProgressProxyHandler({ customer_id: 'cust-1', x_cid: 'cust-1' }, deps)
   assert.equal(r.ok, false)
   if (r.ok) return
   assert.equal(r.status, 502)
@@ -135,9 +135,61 @@ test('provisioning returns non-2xx → status forwarded', async () => {
     fetchStatus: 404,
     fetchBody: { ok: false, error: 'customer_vps_not_found' },
   })
-  const r = await customerProgressProxyHandler({ customer_id: 'cust-1' }, deps)
+  const r = await customerProgressProxyHandler({ customer_id: 'cust-1', x_cid: 'cust-1' }, deps)
   assert.equal(r.ok, false)
   if (r.ok) return
   assert.equal(r.status, 404)
   assert.equal(r.error, 'customer_vps_not_found')
+})
+
+// ─── Sesi D pass-3 P1-2: X-CID enforcement ─────────────────────────────
+//
+// Source: docs/audit/2026-05-13-pass-3-multi-persona-and-progress.md §P1-PASS3-2
+
+test('X-CID missing → 403 x_cid_mismatch, no upstream call', async () => {
+  const deps = makeDeps()
+  const r = await customerProgressProxyHandler(
+    { customer_id: 'cust-1', x_cid: null },
+    deps,
+  )
+  assert.equal(r.ok, false)
+  if (r.ok) return
+  assert.equal(r.status, 403)
+  assert.equal(r.error, 'x_cid_mismatch')
+  // Don't even reach the upstream — auth fails first
+  assert.equal(deps.state.fetched.length, 0)
+})
+
+test('X-CID cross-customer (≠ body customer_id) → 403 x_cid_mismatch', async () => {
+  const deps = makeDeps()
+  const r = await customerProgressProxyHandler(
+    { customer_id: 'cust-1', x_cid: 'cust-2' },
+    deps,
+  )
+  assert.equal(r.ok, false)
+  if (r.ok) return
+  assert.equal(r.status, 403)
+  assert.equal(r.error, 'x_cid_mismatch')
+  assert.equal(deps.state.fetched.length, 0)
+})
+
+test('X-CID empty string → 403 x_cid_mismatch (not treated as match-anything)', async () => {
+  const deps = makeDeps()
+  const r = await customerProgressProxyHandler(
+    { customer_id: 'cust-1', x_cid: '' },
+    deps,
+  )
+  assert.equal(r.ok, false)
+  if (r.ok) return
+  assert.equal(r.status, 403)
+  assert.equal(r.error, 'x_cid_mismatch')
+})
+
+test('X-CID match → 200 (existing happy path preserved)', async () => {
+  const deps = makeDeps()
+  const r = await customerProgressProxyHandler(
+    { customer_id: 'cust-1', x_cid: 'cust-1' },
+    deps,
+  )
+  assert.equal(r.ok, true)
 })
