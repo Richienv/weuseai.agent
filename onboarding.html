@@ -1638,8 +1638,14 @@
     }
 
     function renderExpired() {
+      // A4 (audit §P1-CF-7, 2026-05-13): expired-state copy now
+      // explains the 30-min auto-expiry is a security feature and
+      // sets expectation that re-generation is a ~5 second tap.
+      // Pre-fix terse "Kode kadaluarsa." read as a customer mistake;
+      // new copy frames it as a normal-by-design event with a fast
+      // recovery path.
       $pairStatus.innerHTML = `
-        <span style="font-size: 14px; color: rgba(245,245,245,0.85); flex: 1;">Kode kadaluarsa.</span>
+        <span style="font-size: 14px; color: rgba(245,245,245,0.85); flex: 1; line-height: 1.5;">Kode pasangan kadaluarsa otomatis setelah 30 menit untuk keamanan. Mulai ulang untuk dapat kode baru — cepat, sekitar 5 detik.</span>
         <button type="button" class="btn-secondary focus-ring" id="rotate-now">Mulai ulang <span aria-hidden="true">→</span></button>
       `;
       document.getElementById('rotate-now')?.addEventListener('click', () => {
