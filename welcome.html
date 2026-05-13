@@ -416,6 +416,27 @@
     let currentState = null;
     let pollTimer = null;
     let startedAt = Date.now();
+    // B1 (audit §P1-CF-4, 2026-05-13): timeout anchor.
+    //
+    // Pre-fix: TIMEOUT_MS measured wall-clock from page load, so a
+    // customer who paid 10 min ago and reopened welcome.html got a
+    // fresh 15 min window — even though the server-side timer had
+    // already half-elapsed. Worse, a customer who paid 20 min ago
+    // and JUST landed got 15 fresh minutes despite the subscription
+    // being long-stale.
+    //
+    // Fix: anchor to subscription.started_at (returned by pollOnce).
+    // This field is null until the first pollOnce surfaces a row;
+    // tick() handles null by falling back to page-load `startedAt`
+    // for the very first poll (same behaviour as pre-B1 in the brief
+    // initial moment). After the first successful poll the anchor
+    // sticks and the timer reflects reality.
+    //
+    // The page-load `startedAt` above is still used by the
+    // LONGER_THAN_USUAL_MS panel (PR #95) — different concern,
+    // page-relative not subscription-relative.
+    let subscriptionStartedAtMs = null;
+
     // welcome-guard fix (2026-05-10): if cid is present but pollOnce
     // returns null (no subscription row found), give the Xendit webhook
     // ≤NULL_GRACE_MS to write the row before flipping to INVALID_CID.
@@ -675,7 +696,15 @@
       // Wire up F-state retry
       if (state === 'F') {
         document.getElementById('retry-now')?.addEventListener('click', () => {
+          // B1: reset BOTH anchors. Without re-arming the subscription
+          // anchor, the next pollOnce immediately re-hits the timeout
+          // and renders F again. Same for the page-load anchor (used
+          // by the LONGER_THAN_USUAL_MS panel). Also clear the
+          // telemetry-fired flag so a subsequent timeout on this
+          // session logs once, not zero times.
           startedAt = Date.now();
+          subscriptionStartedAtMs = null;
+          stateFTelemetryFired = false;
           renderState('A');
           tick();
         });
@@ -893,7 +922,14 @@
       });
       if (!r.ok) throw new Error(`poll failed: ${r.status}`);
       const rows = await r.json();
-      return rows[0]?.status ?? null;
+      // B1 (audit §P1-CF-4, 2026-05-13): surface started_at so the
+      // timeout check in tick() can anchor against subscription origin
+      // instead of page load. Returns an object now; bare scalar was
+      // the pre-B1 shape.
+      return {
+        status: rows[0]?.status ?? null,
+        started_at: rows[0]?.started_at ?? null,
+      };
     }
 
     /**
@@ -1094,9 +1130,43 @@
       return state === 'C' || state === 'C2' || state === 'D' || state === 'E' || state === 'F';
     }
 
+    /**
+     * B1 (audit §P1-CF-4, 2026-05-13): timeout-anchor helper.
+     *
+     * Returns true when the customer has been waiting > TIMEOUT_MS
+     * relative to subscription.started_at. Falls back to page-load
+     * `startedAt` only when subscriptionStartedAtMs is null (the
+     * very first poll, before pollOnce has resolved). Fires a
+     * telemetry breadcrumb on the FIRST transition into state F per
+     * page-load so the founder can grep Vercel logs for failure
+     * volume without log spam.
+     */
+    let stateFTelemetryFired = false;
+    function isTimedOut() {
+      const anchorMs = (typeof subscriptionStartedAtMs === 'number' && subscriptionStartedAtMs > 0)
+        ? subscriptionStartedAtMs
+        : startedAt;
+      const timedOut = Date.now() - anchorMs > TIMEOUT_MS;
+      if (timedOut && !stateFTelemetryFired) {
+        stateFTelemetryFired = true;
+        const elapsedMinutes = Math.round((Date.now() - anchorMs) / 60_000);
+        console.log('[welcome] state_F_reached', { cid, elapsedMinutes });
+      }
+      return timedOut;
+    }
+
     async function tick() {
       try {
-        const status = await pollOnce();
+        const poll = await pollOnce();
+        const status = poll.status;
+        // Cache the subscription anchor as soon as pollOnce returns
+        // it. Once set, the anchor sticks across subsequent polls so
+        // a flapping started_at value can't reset the timer (it
+        // shouldn't, but defensive — server-side truth wins once).
+        if (poll.started_at && !subscriptionStartedAtMs) {
+          const parsed = Date.parse(poll.started_at);
+          if (!Number.isNaN(parsed)) subscriptionStartedAtMs = parsed;
+        }
         if (status === 'active') {
           // Probe-first state machine (2026-05-10 onboarding-loop fix).
           //
@@ -1136,8 +1206,15 @@
             // Probe responded but says not ready yet.
             if (job) {
               // Provisioning was kicked off — show wait state until
-              // ready or until we hit timeout.
-              if (Date.now() - startedAt > TIMEOUT_MS) {
+              // ready or until we hit timeout (B1: timer anchored to
+              // subscription.started_at, falls back to page-load
+              // startedAt only on the very first poll).
+              if (Date.now() - (subscriptionStartedAtMs ?? startedAt) > TIMEOUT_MS) {
+                if (!stateFTelemetryFired) {
+                  stateFTelemetryFired = true;
+                  const elapsedMinutes = Math.round((Date.now() - (subscriptionStartedAtMs ?? startedAt)) / 60_000);
+                  console.log('[welcome] state_F_reached', { cid, elapsedMinutes });
+                }
                 renderState('F');
               } else {
                 renderState('B');
@@ -1158,7 +1235,12 @@
             // so a transient network issue doesn't break the page.
             // Customer can retry by waiting for the next 10s tick.
             if (job) {
-              if (Date.now() - startedAt > TIMEOUT_MS) {
+              if (Date.now() - (subscriptionStartedAtMs ?? startedAt) > TIMEOUT_MS) {
+                if (!stateFTelemetryFired) {
+                  stateFTelemetryFired = true;
+                  const elapsedMinutes = Math.round((Date.now() - (subscriptionStartedAtMs ?? startedAt)) / 60_000);
+                  console.log('[welcome] state_F_reached', { cid, elapsedMinutes });
+                }
                 renderState('F');
               } else {
                 renderState('B');
@@ -1205,7 +1287,12 @@
             // Case 1: fresh customer, no VPS row yet — they need the
             // onboarding CTA, not the wait state.
             renderState('C');
-          } else if (Date.now() - startedAt > TIMEOUT_MS) {
+          } else if (Date.now() - (subscriptionStartedAtMs ?? startedAt) > TIMEOUT_MS) {
+            if (!stateFTelemetryFired) {
+              stateFTelemetryFired = true;
+              const elapsedMinutes = Math.round((Date.now() - (subscriptionStartedAtMs ?? startedAt)) / 60_000);
+              console.log('[welcome] state_F_reached', { cid, elapsedMinutes });
+            }
             renderState('F');
           } else {
             renderState('B');
