@@ -490,6 +490,16 @@
                    stay-on-page CTA. Re-enable the email claim once
                    transactional email lands (Sesi B P0 buildlist). -->
               <div id="b-eta-line" style="margin-top:14px; font-size:12px; color:rgba(245,245,245,0.45);">Estimasi 5–7 menit total. Stay di halaman ini, agent kamu lagi disiapkan.</div>
+              <!-- Phase 2 progress overlay (2026-05-13): customer-progress-proxy
+                   surfaces the actual setup-script line + heartbeat age so
+                   the customer sees real-time progress instead of a black box.
+                   Filled in by tick() via pollCustomerProgress(). Hidden until
+                   first successful poll. -->
+              <div id="b-progress-line" hidden style="margin-top:10px; padding:8px 12px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:6px; font-family: 'JetBrains Mono', monospace; font-size:11px; color:rgba(245,245,245,0.65); line-height:1.45;">
+                <div id="b-progress-stage" style="font-family: 'Inter', sans-serif; font-size:12px; font-weight:500; color:rgba(245,245,245,0.85); margin-bottom:4px;"></div>
+                <div id="b-progress-tail" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></div>
+                <div id="b-progress-heartbeat" style="font-family: 'Inter', sans-serif; font-size:10px; color:rgba(245,245,245,0.40); margin-top:4px;"></div>
+              </div>
               <!-- Soft escalation hint: shown only when current stage exceeds
                    1.5x its expected duration. Founder copy may iterate. -->
               <div id="b-soft-hint" hidden style="margin-top:12px; padding:10px 12px; background:rgba(229,170,40,0.08); border:1px solid rgba(229,170,40,0.25); border-radius:6px; font-size:12px; color:rgba(229,170,40,0.95);">
@@ -867,6 +877,103 @@
       }
     }
 
+    /**
+     * Phase 2 (2026-05-13): poll customer-progress-proxy to surface
+     * real-time setup-script progress. Welcome page shows actual log
+     * lines + heartbeat-age below the stage label so customers see
+     * what's happening on their VPS instead of a black-box 8-min wait.
+     *
+     * Returns null on transient failure (caller treats as "skip update,
+     * try again next tick"). Best-effort — never blocks state machine.
+     */
+    let lastProgressSnapshot = null;
+    async function pollCustomerProgress() {
+      if (!cid) return null;
+      try {
+        const r = await fetch(
+          `${SUPABASE_URL}/functions/v1/customer-progress-proxy`,
+          {
+            method: 'POST',
+            headers: {
+              apikey: SUPABASE_ANON_KEY,
+              Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+              'X-CID': cid,
+              'content-type': 'application/json',
+            },
+            body: JSON.stringify({ customer_id: cid }),
+          },
+        );
+        if (!r.ok) return null;
+        const j = await r.json();
+        if (!j || j.ok !== true) return null;
+        return {
+          vps_ip_pending: j.vps_ip_pending === true,
+          progress_lines: Array.isArray(j.progress_lines) ? j.progress_lines : [],
+          heartbeat_age_sec: typeof j.heartbeat_age_sec === 'number' ? j.heartbeat_age_sec : null,
+          heartbeat_stale: j.heartbeat_stale === true,
+          inferred_stage: typeof j.inferred_stage === 'string' ? j.inferred_stage : 'unknown',
+        };
+      } catch {
+        return null;
+      }
+    }
+
+    const STAGE_LABEL_DETAIL = {
+      apt_install:      'Memasang paket dasar sistem…',
+      hermes_install:   'Memasang otak agent (proses paling lama, sekitar 3–6 menit)…',
+      hermes_verifying: 'Memverifikasi pemasangan…',
+      bundle_install:   'Memasang skill bundle…',
+      gateway_install:  'Memasang servis Telegram…',
+      gateway_starting: 'Menjalankan servis Telegram…',
+      setup_complete:   'Setup selesai. Menunggu pairing…',
+      unknown:          '',
+    };
+
+    /**
+     * DOM update for the Phase 2 progress overlay. Pure function over
+     * the latest snapshot. Called from tick() after pollCustomerProgress().
+     */
+    function renderProgressOverlay(snapshot) {
+      const $overlay = document.getElementById('b-progress-line');
+      if (!$overlay) return;
+      if (!snapshot) {
+        $overlay.hidden = true;
+        return;
+      }
+      const $stage = document.getElementById('b-progress-stage');
+      const $tail = document.getElementById('b-progress-tail');
+      const $heartbeat = document.getElementById('b-progress-heartbeat');
+
+      if (snapshot.vps_ip_pending) {
+        if ($stage) $stage.textContent = 'Menunggu alokasi alamat IP…';
+        if ($tail) $tail.textContent = '';
+        if ($heartbeat) $heartbeat.textContent = '';
+        $overlay.hidden = false;
+        return;
+      }
+
+      const detail = STAGE_LABEL_DETAIL[snapshot.inferred_stage] ?? '';
+      if ($stage) $stage.textContent = detail;
+      const last = snapshot.progress_lines.length > 0
+        ? snapshot.progress_lines[snapshot.progress_lines.length - 1]
+        : '';
+      if ($tail) $tail.textContent = last;
+      if ($heartbeat) {
+        if (snapshot.heartbeat_age_sec === null) {
+          $heartbeat.textContent = '';
+        } else if (snapshot.heartbeat_stale) {
+          $heartbeat.textContent = `⚠ Tidak ada aktivitas ${snapshot.heartbeat_age_sec} detik. Hubungi tim kalau berlanjut.`;
+          $heartbeat.style.color = 'rgba(229,170,40,0.95)';
+        } else {
+          $heartbeat.textContent = `Aktivitas terakhir ${snapshot.heartbeat_age_sec} detik lalu`;
+          $heartbeat.style.color = 'rgba(245,245,245,0.40)';
+        }
+      }
+      if (detail || last) {
+        $overlay.hidden = false;
+      }
+    }
+
     async function ensureBotUsername() {
       if (botUsername) return botUsername;
       if (!cid) return null;
@@ -944,6 +1051,11 @@
               } else {
                 renderState('B');
                 applyStageProgressToB(probe.progress);
+                // Phase 2 (2026-05-13): poll real-time progress overlay.
+                pollCustomerProgress().then((snapshot) => {
+                  lastProgressSnapshot = snapshot;
+                  renderProgressOverlay(snapshot);
+                });
               }
             } else {
               // No job kicked off yet AND probe says not ready → the
@@ -1007,6 +1119,13 @@
           } else {
             renderState('B');
             if (probe?.progress) applyStageProgressToB(probe.progress);
+            // Phase 2 (2026-05-13): also fetch real-time setup-script
+            // progress + heartbeat age, render below the stage label.
+            // Best-effort — never await blocks renderState.
+            pollCustomerProgress().then((snapshot) => {
+              lastProgressSnapshot = snapshot;
+              renderProgressOverlay(snapshot);
+            });
           }
         } else if (status == null) {
           // Subscription row not yet visible. Two reasons:
