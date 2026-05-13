@@ -1,43 +1,41 @@
 import type { IVPSProvider, CreateVPSOpts, VPSInfo } from '../vps-provider.js'
 import { MockVPSProvider } from './mock-vps.js'
-import { IDCloudHostVPSProvider } from './idcloudhost-vps.js'
 import { VultrVPSProvider, classifyVultrError } from './vultr-vps.js'
 import { DigitalOceanVPSProvider, classifyDOError } from './digitalocean-vps.js'
 
 /**
  * Pick VPS provider. Priority:
  *   1. ENABLE_REAL_PROVISIONING === 'false' → MockVPSProvider (dry-run gate)
- *   2. VPS_PROVIDER env (mock | idcloudhost | vultr | digitalocean)
+ *   2. VPS_PROVIDER env (mock | vultr | digitalocean)
  *      - 'vultr' returns a FailoverVPSProvider wrapping Vultr (primary)
  *        + DigitalOcean SGP1 (failover on capacity errors). Matches the
  *        Sesi R §5 multi-provider recommendation.
- *      - 'idcloudhost' returns the IDCH adapter raw (grandfathered
- *        customers route here via createVPSProviderByName based on
- *        the stored vps_instances.provider column — see per-customer
- *        routing note below).
- *   3. Default — current main branch shipping with 'idcloudhost' until
- *      Step 2 cutover PR flips the Fly secret to 'vultr'.
+ *      - 'digitalocean' returns the DO adapter raw — testing / hot-swap
+ *        path only.
+ *   3. Default — 'vultr'. The IDCloudHost adapter was retired
+ *      2026-05-13 after the Vultr cutover (PR #75) stabilised and no
+ *      active customers remained on IDCH. Historical
+ *      vps_instances.provider='idcloudhost' rows are kept for audit
+ *      trail; createVPSProviderByName('idcloudhost') now throws.
  *
  * Dry-run gate exists so dev / staging envs can boot the full Express
  * service and exercise the HTTP layer without spending IDR/USD on real
  * VPS spawns. Set ENABLE_REAL_PROVISIONING=false in fly.toml's preview env.
  *
- * Per-customer routing for grandfathered customers: callers like
- * tear-down + refresh-env look up vps_instances.provider on each row
- * and use createVPSProviderByName() to construct the matching adapter
- * directly. The factory's default only affects NEW provisioning
- * (xendit-webhook spinUp, complete-onboarding step 8).
+ * Per-customer routing: callers like tear-down + refresh-env look up
+ * vps_instances.provider on each row and use createVPSProviderByName()
+ * to construct the matching adapter directly. The factory's default only
+ * affects NEW provisioning (xendit-webhook spinUp, complete-onboarding
+ * step 8).
  */
 export function createVPSProvider(): IVPSProvider {
   if (process.env.ENABLE_REAL_PROVISIONING === 'false') {
     return new MockVPSProvider()
   }
-  const which = process.env.VPS_PROVIDER ?? 'idcloudhost'
+  const which = process.env.VPS_PROVIDER ?? 'vultr'
   switch (which) {
     case 'mock':
       return new MockVPSProvider()
-    case 'idcloudhost':
-      return new IDCloudHostVPSProvider()
     case 'vultr': {
       // DO failover is opt-in: when DIGITALOCEAN_API_KEY is set, we wrap
       // Vultr (primary) + DO (failover) in FailoverVPSProvider. When it
@@ -81,9 +79,17 @@ export function createVPSProvider(): IVPSProvider {
 export function createVPSProviderByName(name: string): IVPSProvider {
   switch (name) {
     case 'mock':         return new MockVPSProvider()
-    case 'idcloudhost':  return new IDCloudHostVPSProvider()
     case 'vultr':        return new VultrVPSProvider()
     case 'digitalocean': return new DigitalOceanVPSProvider()
+    case 'idcloudhost':
+      // Adapter retired 2026-05-13. Historical IDCH rows remain in
+      // vps_instances for audit trail; their tear-down was completed
+      // before retirement. If a row with provider='idcloudhost' shows
+      // up here it's a regression (or an extremely stale tear-down
+      // request) — throw so the caller's logged fallback kicks in.
+      throw new Error(
+        `createVPSProviderByName: IDCloudHost adapter retired 2026-05-13 — historical rows are audit-only`,
+      )
     default:
       throw new Error(`createVPSProviderByName: unknown provider "${name}"`)
   }
@@ -173,10 +179,10 @@ export class FailoverVPSProvider implements IVPSProvider {
 }
 
 /**
- * Detect capacity-style errors across Vultr + DO + IDCloudHost (the last
- * for defense-in-depth — the IDCH capacity message that motivated this
- * migration is distinctive enough to recognize even though IDCH isn't
- * in the primary/secondary chain here).
+ * Detect capacity-style errors across Vultr + DO. The legacy IDCloudHost
+ * substring match is kept defensively — it costs nothing and lets the
+ * failover trigger on any stale IDCH error message that might still
+ * surface from older log paths.
  *
  * Tested in tests/vultr-do-adapter.spec.ts.
  */
@@ -188,6 +194,5 @@ export function classifyFailoverError(msg: string): 'capacity' | 'other' {
 }
 
 export { MockVPSProvider } from './mock-vps.js'
-export { IDCloudHostVPSProvider } from './idcloudhost-vps.js'
 export { VultrVPSProvider, classifyVultrError } from './vultr-vps.js'
 export { DigitalOceanVPSProvider, classifyDOError } from './digitalocean-vps.js'

@@ -15,7 +15,7 @@
  *
  *   createVPSProvider(env) →
  *     - When ENABLE_REAL_PROVISIONING === 'false', returns MockVPSProvider
- *     - Otherwise returns IDCloudHostVPSProvider
+ *     - Otherwise returns the Vultr provider (default since 2026-05-13)
  */
 
 import { test } from 'node:test'
@@ -28,7 +28,7 @@ import {
 
 import { createVPSProvider } from '../services/provisioning/src/providers/index.ts'
 import { MockVPSProvider } from '../services/provisioning/src/providers/mock-vps.ts'
-import { IDCloudHostVPSProvider } from '../services/provisioning/src/providers/idcloudhost-vps.ts'
+import { VultrVPSProvider } from '../services/provisioning/src/providers/vultr-vps.ts'
 
 // ─── parseSpinUpRequest ────────────────────────────────────────────────────
 
@@ -170,14 +170,34 @@ test('createVPSProvider: dry-run mode (ENABLE_REAL_PROVISIONING=false) returns M
   }
 })
 
-test('createVPSProvider: production mode (ENABLE_REAL_PROVISIONING unset) returns IDCloudHostVPSProvider', () => {
-  const original = process.env.ENABLE_REAL_PROVISIONING
+test('createVPSProvider: production mode (ENABLE_REAL_PROVISIONING unset) returns Vultr provider by default', () => {
+  // Default-provider invariant — flipped from 'idcloudhost' to 'vultr' on
+  // 2026-05-13 when the IDCH adapter was retired. The VultrVPSProvider
+  // constructor reads VULTR_API_KEY eagerly and throws if missing, so
+  // the test stubs a dummy key. The factory may wrap Vultr in a
+  // FailoverVPSProvider when DIGITALOCEAN_API_KEY is set; the test
+  // scrubs that env so we get the bare VultrVPSProvider back.
+  const oReal = process.env.ENABLE_REAL_PROVISIONING
+  const oWhich = process.env.VPS_PROVIDER
+  const oDoKey = process.env.DIGITALOCEAN_API_KEY
+  const oVultrKey = process.env.VULTR_API_KEY
+  const oVultrSsh = process.env.VULTR_FLEET_SSH_KEY_ID
   delete process.env.ENABLE_REAL_PROVISIONING
+  delete process.env.VPS_PROVIDER
+  delete process.env.DIGITALOCEAN_API_KEY
+  process.env.VULTR_API_KEY = 'stub-for-test-only'
+  process.env.VULTR_FLEET_SSH_KEY_ID = 'stub-ssh-key-uuid-for-test'
   try {
     const p = createVPSProvider()
-    assert.ok(p instanceof IDCloudHostVPSProvider, 'expected IDCloudHost in production mode')
+    assert.ok(p instanceof VultrVPSProvider, 'expected Vultr in production mode')
   } finally {
-    if (original !== undefined) process.env.ENABLE_REAL_PROVISIONING = original
+    if (oReal !== undefined) process.env.ENABLE_REAL_PROVISIONING = oReal
+    if (oWhich !== undefined) process.env.VPS_PROVIDER = oWhich
+    if (oDoKey !== undefined) process.env.DIGITALOCEAN_API_KEY = oDoKey
+    if (oVultrKey === undefined) delete process.env.VULTR_API_KEY
+    else process.env.VULTR_API_KEY = oVultrKey
+    if (oVultrSsh === undefined) delete process.env.VULTR_FLEET_SSH_KEY_ID
+    else process.env.VULTR_FLEET_SSH_KEY_ID = oVultrSsh
   }
 })
 

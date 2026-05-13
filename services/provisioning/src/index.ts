@@ -54,12 +54,11 @@ const sharedDeps: SpinUpDeps = {
   llmMinter,
   // Vultr-migration cascade 2026-05-11: read provider name from
   // VPS_PROVIDER env (same value the factory uses) so vps_instances.provider
-  // stamping matches the actual factory choice. Pre-fix this was
-  // hardcoded to 'idcloudhost' which produced misleading DB rows for
-  // post-cutover customers.
+  // stamping matches the actual factory choice. Post-IDCH-retirement
+  // (2026-05-13) the default is 'vultr' to match the factory default.
   providerName: isDryRun
     ? 'mock'
-    : (process.env.VPS_PROVIDER ?? 'idcloudhost'),
+    : (process.env.VPS_PROVIDER ?? 'vultr'),
   alertChatId: process.env.RICHIE_CHAT_ID,
 }
 

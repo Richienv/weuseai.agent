@@ -730,11 +730,13 @@ test('vps_capacity_exhausted: 503 with distinct error code when provisioning bod
   assert.equal(sub?.status, 'pending_provision')
 })
 
-test('isProviderCapacityError: positive + negative across IDCloudHost + Vultr + DO (2026-05-11 Vultr cascade)', async () => {
-  const { isProviderCapacityError, isIdcloudhostCapacityError } = await import(
+test('isProviderCapacityError: positive + negative across Vultr + DO (legacy IDCH phrasing kept defensively)', async () => {
+  const { isProviderCapacityError } = await import(
     '../supabase/functions/_shared/complete-onboarding-handler.ts'
   )
-  // Positive: IDCloudHost (verbatim from production Fly logs 2026-05-11).
+  // Positive: legacy IDCloudHost phrasing kept defensively — historical
+  // error messages may still surface from old log paths even though the
+  // IDCH adapter was retired 2026-05-13.
   assert.equal(
     isProviderCapacityError(
       'IDCloudHost POST /vm -> 500: {"errors": {"Error": "Compute resources temporarily unavailable due to high demand. If possible, choose a different region or location."}}',
@@ -757,13 +759,7 @@ test('isProviderCapacityError: positive + negative across IDCloudHost + Vultr + 
   assert.equal(isProviderCapacityError('connection refused'), false)
   assert.equal(isProviderCapacityError('SSH auth failed'), false)
   assert.equal(isProviderCapacityError(''), false)
-  assert.equal(isProviderCapacityError('IDCloudHost POST /vm -> 401: unauthorized'), false)
-  // Back-compat alias from PR #73.
-  assert.equal(
-    isIdcloudhostCapacityError('Compute resources temporarily unavailable'),
-    true,
-    'deprecated alias still works',
-  )
+  assert.equal(isProviderCapacityError('Vultr POST /v2/instances -> 401: unauthorized'), false)
 })
 
 test('mint failure: 502, no provisioning called, no key persisted', async () => {

@@ -156,6 +156,11 @@ function makeProvisioningWiredToSpinUp(opts: {
                 : { ok: true, stdout: '', stderr: '', exitCode: 0 },
             }),
             llmMinter: new MockLlmKeyMinter(),
+            // providerName='mock' is required post-IDCH-retirement: the
+            // default flipped from 'idcloudhost' to 'vultr', which would
+            // route the SSH branch to key-auth and demand a real
+            // FLEET_SSH_PRIVATE_KEY env var.
+            providerName: 'mock',
             alertChatId: 'admin-chat',
             ipPollIntervalMs: 1,
             ipPollTimeoutMs: 1000,

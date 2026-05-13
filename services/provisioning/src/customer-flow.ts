@@ -119,16 +119,20 @@ export async function spinUpCustomer(
   const ipPollTimeoutMs = deps.ipPollTimeoutMs ?? 5 * 60 * 1000
   const sshPollIntervalMs = deps.sshPollIntervalMs ?? 3000
   const sshReadyTimeoutMs = deps.sshReadyTimeoutMs ?? 5 * 60 * 1000
-  const billingAccountId =
-    deps.billingAccountId ?? process.env.IDCLOUDHOST_BILLING_ACCOUNT_ID ?? ''
+  // billingAccountId was an IDCloudHost-only concept (jkt01 region needed
+  // a separate billing account UUID per customer). Vultr + DO don't need
+  // it. Kept as a deps override so legacy callers compile; production
+  // code never reads it post-IDCH-retirement.
+  const billingAccountId = deps.billingAccountId ?? ''
   // Region stamp depends on the active provider so vps_instances.region
-  // matches reality. Pre-Vultr-cascade this read only IDCLOUDHOST_REGION
-  // which was misleading for Vultr-routed VPSes (jkt01 stamp on sgp VPS).
-  const activeProvider = deps.providerName ?? process.env.VPS_PROVIDER ?? 'idcloudhost'
+  // matches reality. Post-IDCH-retirement (2026-05-13) the default is
+  // 'vultr'; an explicit deps.providerName override or VPS_PROVIDER env
+  // still picks up 'mock' / 'digitalocean' as needed.
+  const activeProvider = deps.providerName ?? process.env.VPS_PROVIDER ?? 'vultr'
   const regionEnvKey =
     activeProvider === 'vultr' ? process.env.VULTR_REGION
     : activeProvider === 'digitalocean' ? process.env.DIGITALOCEAN_REGION
-    : process.env.IDCLOUDHOST_REGION
+    : null
   const region = deps.region ?? regionEnvKey ?? null
   const waitForSshOpen = deps.waitForSshOpen ?? defaultWaitForSshOpen
 
@@ -225,7 +229,7 @@ export async function spinUpCustomer(
   // as `vultr` and subsequent ops would hit the wrong API.
   const inferredProvider =
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (deps.vps as any).lastCreatedWith ?? deps.providerName ?? 'idcloudhost'
+    (deps.vps as any).lastCreatedWith ?? deps.providerName ?? 'vultr'
   await deps.store.createVPSInstance({
     customer_id: opts.customerId,
     vps_id: vps.uuid,
