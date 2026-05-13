@@ -1,0 +1,41 @@
+# Test harness — mirrors the Vultr `vc2-1c-1gb` Ubuntu 22.04 base image
+# that customers' VPSes boot from. The harness pipes a rendered
+# setup-script into this container and asserts post-conditions.
+#
+# Network access intentionally NOT disabled — Tier 2 scenarios that
+# need real apt + Hermes pip install rely on container network reach.
+# Tier 1 (bash syntax check) doesn't need Docker at all.
+FROM ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Pre-install bash + coreutils (timeout, date) so the script's first
+# few lines execute regardless of apt-update timing. Pre-install sudo +
+# python3 so we don't have to wait for the script's `apt-get install`
+# to provide them. This matches what cloud-init effectively does on a
+# real Vultr Ubuntu image — those packages are present pre-boot.
+RUN apt-get update -qq && \
+    apt-get install -y -qq --no-install-recommends \
+      bash coreutils curl ca-certificates sudo python3 && \
+    rm -rf /var/lib/apt/lists/*
+
+# Pre-create the `weuseai` user. The rendered setup-script has an
+# idempotent `if ! id weuseai` guard, so pre-creating means the script
+# short-circuits the useradd/usermod/sudoers branch. This is closer to
+# truth than shimming useradd (a shimmed useradd returns 0 but leaves
+# `id weuseai` failing, which would break later `sudo -u weuseai …`
+# calls under `set -e`). Match the real cloud-init layout: home dir,
+# bash shell, passwordless sudo via /etc/sudoers.d/weuseai.
+RUN useradd -m -s /bin/bash weuseai && \
+    usermod -aG sudo weuseai && \
+    echo 'weuseai ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/weuseai && \
+    chmod 0440 /etc/sudoers.d/weuseai
+
+# Tier 2 scenarios install a systemctl shim into /usr/local/bin at
+# runtime (via NOOP_SHIMS in the spec) — no PID-1-systemd in the
+# container. Sufficient for "did the script run without abort?" but
+# not for "did the gateway actually start?". A real-systemd scenario
+# is a separate Tier 3 follow-up.
+
+WORKDIR /work
+CMD ["/bin/bash"]
