@@ -99,3 +99,28 @@ test('Phase 4 contract: harness exports findings + ctx for CI downstream scripts
     'harness must export `PROD_BASE` so CI scripts see the actual URL hit',
   )
 })
+
+// ─── Phase 6 hardening: Xendit staging URL must be a Step 7 failure ──
+
+test('Phase 6 contract: Step 7 fails on Xendit STAGING host (test-mode detection)', () => {
+  const src = fs.readFileSync(SMOKE_PATH, 'utf8')
+  // The smoke previously passed Step 7 on either checkout.xendit.co
+  // OR checkout-staging.xendit.co because the regex only required
+  // *.xendit.co. CLAUDE.md says Xendit is LIVE; staging URLs mean
+  // the XENDIT_API_KEY on the Supabase Edge Function is still a
+  // test key. Customers cannot pay real money via a staging URL.
+  // Drift gate ensures Step 7 fails on staging hosts.
+  assert.match(
+    src,
+    /(?:isStaging|staging)[\s\S]{0,200}fail/,
+    'Step 7 must explicitly fail when invoice_url host contains "staging"',
+  )
+  // The failure must reference the correct env var name + rotation
+  // hint so founder gets actionable guidance directly in the smoke
+  // output.
+  assert.match(
+    src,
+    /XENDIT_API_KEY[\s\S]{0,200}xnd_production_/,
+    'Step 7 staging-fail detail must reference XENDIT_API_KEY rotation to xnd_production_*',
+  )
+})
