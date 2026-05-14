@@ -124,3 +124,91 @@ test('provisioning service returns 503 → handler maps to 503', async () => {
   )
   assert.equal(res.status, 503)
 })
+
+// ─── Phase E (2026-05-14) Option 2 part 1 — atomic token+allowlist ──
+//
+// Root cause this closes: the admin path used to push only
+// TELEGRAM_BOT_TOKEN. The Phase D smoke caught Renita stuck at Stage 5
+// (gateway running, but `TELEGRAM_ALLOWED_USERS` unset → every /start
+// from her chat_id denied). Fix: when customer.telegram_chat_id is
+// present, the handler must push BOTH keys in the same envValues map,
+// so the .env rewrites run in one SSH session under
+// `set -euo pipefail` (no restart unless ALL writes succeed).
+
+test('Phase E: customer with chat_id → envValues has BOTH token AND allowlist', async () => {
+  const db = new FakeOnboardingStore()
+  await db.seedCustomer({
+    id: 'cust-renita',
+    email: 'kdwb.co@gmail.com',
+    telegram_chat_id: '6805409051',
+  })
+  await db.setBotTokenAndUsername('cust-renita', '12345:bot_token', 'kamis14maybot')
+  const provisioning = new FakeProvisioning()
+  const res = await handleAdminCustomerVpsRefresh(
+    makeReq({ customer_id: 'cust-renita', reason: 'Phase E atomic write' }),
+    { db, provisioning },
+  )
+  assert.equal(res.status, 200)
+  assert.equal(provisioning.refreshCalls.length, 1)
+  const env = provisioning.refreshCalls[0]!.envValues
+  // Both keys present.
+  assert.equal(env.TELEGRAM_BOT_TOKEN, '12345:bot_token', 'token must be in envValues')
+  assert.equal(
+    env.TELEGRAM_ALLOWED_USERS,
+    '6805409051',
+    'allowlist must be customer.telegram_chat_id when present',
+  )
+})
+
+test('Phase E: customer WITHOUT chat_id → envValues has token only (graceful fallback)', async () => {
+  // New customer who paid but never paired their Telegram chat yet.
+  // Pushing an empty TELEGRAM_ALLOWED_USERS would either no-op or
+  // accidentally lock the bot to nobody. Don't include the key at all.
+  const db = new FakeOnboardingStore()
+  await db.seedCustomer({
+    id: 'cust-pre-pair',
+    email: 'fresh@example.com',
+    // telegram_chat_id intentionally omitted (null)
+  })
+  await db.setBotTokenAndUsername('cust-pre-pair', '12345:bot_token', 'fresh_bot')
+  const provisioning = new FakeProvisioning()
+  const res = await handleAdminCustomerVpsRefresh(
+    makeReq({ customer_id: 'cust-pre-pair' }),
+    { db, provisioning },
+  )
+  assert.equal(res.status, 200)
+  const env = provisioning.refreshCalls[0]!.envValues
+  assert.equal(env.TELEGRAM_BOT_TOKEN, '12345:bot_token')
+  assert.equal(
+    env.TELEGRAM_ALLOWED_USERS,
+    undefined,
+    'allowlist must NOT be in envValues when customer has no chat_id ' +
+      '(otherwise we lock the gateway to nobody)',
+  )
+})
+
+test('Phase E atomicity invariant: when token is pushed AND chat_id exists, allowlist MUST be co-pushed', async () => {
+  // Drift gate. If a future refactor adds a branch that pushes the
+  // token without the allowlist for a customer whose chat_id is set,
+  // we land back at the Renita Stage 5 bug. This test fails
+  // unambiguously in that case.
+  const db = new FakeOnboardingStore()
+  await db.seedCustomer({
+    id: 'cust-invariant',
+    email: 'invariant@example.com',
+    telegram_chat_id: '9999999999',
+  })
+  await db.setBotTokenAndUsername('cust-invariant', '99999:tok', 'inv_bot')
+  const provisioning = new FakeProvisioning()
+  await handleAdminCustomerVpsRefresh(
+    makeReq({ customer_id: 'cust-invariant' }),
+    { db, provisioning },
+  )
+  const env = provisioning.refreshCalls[0]!.envValues
+  if (env.TELEGRAM_BOT_TOKEN && !env.TELEGRAM_ALLOWED_USERS) {
+    assert.fail(
+      'INVARIANT VIOLATED: token pushed without allowlist while customer.telegram_chat_id ' +
+        'is set. This regenerates the Renita Stage 5 bug class.',
+    )
+  }
+})

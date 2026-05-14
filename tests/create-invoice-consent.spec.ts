@@ -95,6 +95,11 @@ function makeStore(opts: {
     async markSubscriptionInvoiceFailed() {},
     async addStarterCredits() {},
     async clearStalePairState() {},
+    async getDecryptedBotToken() {
+      // Phase E Option 2 part 2 stub — consent tests don't exercise
+      // bot-token snapshot.
+      return null
+    },
     async insertConsentEvent(input) {
       if (opts.failConsentInsert) throw new Error('simulated DB error')
       const row: ConsentRow = {

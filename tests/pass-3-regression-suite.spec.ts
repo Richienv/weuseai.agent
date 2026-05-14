@@ -103,6 +103,12 @@ function makeCheckoutStore(): IInvoiceStore & {
     async markSubscriptionInvoiceFailed() {},
     async addStarterCredits() {},
     async clearStalePairState() {},
+    async getDecryptedBotToken() {
+      // Phase E Option 2 part 2 stub — pass-3 regression suite tests
+      // the security gates (ToS / tier / X-CID); doesn't exercise
+      // bot-token snapshot semantics.
+      return null
+    },
     async insertConsentEvent(input) {
       const row: ConsentRowCaptured = {
         customer_id: input.customer_id,

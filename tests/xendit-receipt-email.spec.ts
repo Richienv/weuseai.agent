@@ -82,6 +82,12 @@ function fakeStore(seed: { sub: SubscriptionRow; customerEmail?: string | null }
     async markSubscriptionInvoiceFailed() {},
     async addStarterCredits() {},
     async clearStalePairState() {},
+    async getDecryptedBotToken() {
+      // Phase E Option 2 part 2 stub — receipt-email tests don't exercise
+      // bot-token snapshot. Dedicated tests in
+      // tests/xendit-webhook-bot-token-snapshot.spec.ts.
+      return null
+    },
     async insertConsentEvent() {
       // Sesi D pass-3 P0 stub — receipt-email tests don't exercise consent.
       return { id: 'consent_stub' }

@@ -45,8 +45,20 @@ import { join } from 'node:path'
 // here from a prior latent-bug-noted pass) is what Hermes auxiliary
 // tasks read. Both names point at the same key. Allowing both lets
 // admin tooling rotate or set them together.
+//
+// TELEGRAM_ALLOWED_USERS added 2026-05-14 (Phase E Option 2 part 1):
+// Hermes upstream gateway denies all unauthorized users by default
+// unless this env var lists the customer's chat_id (comma-separated
+// CSV supported). Without it, a successful TELEGRAM_BOT_TOKEN push
+// produces a running gateway that rejects every /start the customer
+// sends — the "Renita Stage 5" bug class found by the Phase D audit
+// smoke. Atomic write semantics: when both TELEGRAM_BOT_TOKEN and
+// TELEGRAM_ALLOWED_USERS are in envValues, the script's
+// `set -euo pipefail` guard + restart-only-after-all-rewrites
+// ensures we never restart the gateway with a partial .env.
 export const ALLOWED_ENV_KEYS = [
   'TELEGRAM_BOT_TOKEN',
+  'TELEGRAM_ALLOWED_USERS',
   'OPENAI_API_KEY',
   'OPENROUTER_API_KEY',
 ] as const
@@ -164,6 +176,42 @@ export type RefreshEnvDeps = {
     command: string
   }) => Promise<{ ok: true; stdout: string } | { ok: false; error: string }>
   store: IRefreshEnvStore
+  /**
+   * Phase E Option 1 (2026-05-14): retry-loop sleeper. Injected by
+   * tests so backoff math can be verified without burning real
+   * seconds. Production defaults to a setTimeout-based sleep.
+   */
+  sleep?: (ms: number) => Promise<void>
+  /**
+   * Phase E Option 1: override the default 5-attempt retry cap.
+   * Production omits this (default 5). Tests pass `1` to disable
+   * retries entirely. Pre-Phase-E behavior == `maxAttempts: 1`.
+   */
+  maxAttempts?: number
+  /**
+   * Phase E Option 1: per-customer in-flight queue. Tests pass a
+   * fresh Map to assert dedup semantics. Production passes a
+   * module-level Map shared across all requests on the Fly process.
+   * If undefined, no queue (each handler call independent — current
+   * behavior for non-prod test paths that don't care).
+   */
+  inflightByCustomer?: Map<string, Promise<RefreshEnvResult>>
+}
+
+// ─── Phase E Option 1 retry policy ─────────────────────────────────
+//
+// Founder spec 2026-05-14: 5 attempts max, backoff 5s/15s/45s/2m/5m
+// on `ssh_unreachable` or `ssh_auth_failed` (the two transient
+// manifestations of the setup-script race). Non-transient errors
+// (hermes_inactive_after_restart, systemd_restart_failed,
+// env_write_failed) fail fast — retrying just burns cycles.
+
+export const RETRY_BACKOFF_MS = [5_000, 15_000, 45_000, 120_000, 300_000] as const
+export const MAX_REFRESH_ATTEMPTS = 5
+
+/** Errors whose semantics imply "transient, may succeed on retry." */
+function isTransientError(error: RefreshEnvFailure['error']): boolean {
+  return error === 'ssh_unreachable' || error === 'ssh_auth_failed'
 }
 
 // ─── pure: build remote bash command ───────────────────────────────
@@ -416,7 +464,104 @@ function writePrivateKeyTmpfile(pem: string): { path: string; cleanup: () => voi
 
 // ─── handler ───────────────────────────────────────────────────────
 
+/**
+ * Phase E Option 1 (2026-05-14): public entry. Wraps the inner
+ * single-attempt-with-retry logic with the per-customer queue so
+ * concurrent callers for the same customer share one SSH chain.
+ *
+ * Queue semantics: in-flight promise stored in `deps.inflightByCustomer`
+ * keyed on customer_id. Second arrival awaits + returns the same
+ * result. Cleared on settle (success OR failure). When
+ * `inflightByCustomer` is undefined, no queue (each call independent).
+ */
 export async function refreshEnvHandler(
+  req: RefreshEnvRequest,
+  deps: RefreshEnvDeps,
+): Promise<RefreshEnvResult> {
+  // Validate customer_id BEFORE consulting the queue (otherwise a
+  // bad request_id would let us stash an entry under an empty key).
+  if (!req || typeof req !== 'object') {
+    return { ok: false, error: 'invalid_field', detail: 'body must be an object' }
+  }
+  if (typeof req.customer_id !== 'string' || req.customer_id.length === 0) {
+    return { ok: false, error: 'invalid_field', detail: 'invalid customer_id' }
+  }
+  const queue = deps.inflightByCustomer
+  if (queue) {
+    const inflight = queue.get(req.customer_id)
+    if (inflight) {
+      // Another caller is already retrying for this customer. Wait
+      // for them — same .env write would produce the same outcome.
+      return inflight
+    }
+    const promise = refreshEnvWithRetries(req, deps)
+    queue.set(req.customer_id, promise)
+    try {
+      return await promise
+    } finally {
+      // Best-effort delete. If a third caller arrives AFTER this
+      // delete but BEFORE the second caller's `return`, they'd start
+      // a fresh chain — that's correct behavior (the first chain is done).
+      if (queue.get(req.customer_id) === promise) {
+        queue.delete(req.customer_id)
+      }
+    }
+  }
+  return refreshEnvWithRetries(req, deps)
+}
+
+/**
+ * Phase E Option 1 retry wrapper. Runs the single-attempt inner up
+ * to `maxAttempts` times, sleeping `RETRY_BACKOFF_MS[i]` between
+ * attempts. Retries ONLY on transient SSH errors. Non-transient
+ * failures (gateway inactive after restart, etc.) propagate
+ * immediately so the caller can surface them.
+ */
+async function refreshEnvWithRetries(
+  req: RefreshEnvRequest,
+  deps: RefreshEnvDeps,
+): Promise<RefreshEnvResult> {
+  const maxAttempts = Math.max(1, deps.maxAttempts ?? MAX_REFRESH_ATTEMPTS)
+  const sleep = deps.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)))
+
+  let last: RefreshEnvResult | null = null
+  for (let i = 0; i < maxAttempts; i++) {
+    last = await refreshEnvSingleAttempt(req, deps)
+    if (last.ok) {
+      // Final success → record outcome so request_id idempotency
+      // returns the cached success on a re-fire from upstream.
+      await recordOutcome(deps.store, req.request_id, req.customer_id, last)
+      return last
+    }
+    if (!isTransientError(last.error)) {
+      // Final non-transient failure → record outcome (same cache logic).
+      await recordOutcome(deps.store, req.request_id, req.customer_id, last)
+      return last
+    }
+    if (i === maxAttempts - 1) {
+      // Final transient failure after exhausting retries → record so
+      // upstream knows we tried hard. Caller can re-fire with a fresh
+      // request_id to start a new chain.
+      await recordOutcome(deps.store, req.request_id, req.customer_id, last)
+      break
+    }
+    // Sleep before the next attempt. RETRY_BACKOFF_MS[0] is the gap
+    // BEFORE attempt 2 (after attempt 1 failed); index = current i.
+    // We intentionally do NOT record_outcome on transient mid-chain
+    // failures — the idempotency cache only holds FINAL results, so
+    // attempt N+1's cache check returns no completedAt and proceeds.
+    const waitMs = RETRY_BACKOFF_MS[i] ?? RETRY_BACKOFF_MS[RETRY_BACKOFF_MS.length - 1]
+    await sleep(waitMs)
+  }
+  return last ?? { ok: false, error: 'internal', detail: 'retry loop produced no result', request_id: req.request_id }
+}
+
+/**
+ * Single attempt. Original pre-Phase-E body — validates the rest of
+ * the request, dedups via request_id idempotency, runs ONE SSH, maps
+ * the result. The retry wrapper above orchestrates multiple calls.
+ */
+async function refreshEnvSingleAttempt(
   req: RefreshEnvRequest,
   deps: RefreshEnvDeps,
 ): Promise<RefreshEnvResult> {
@@ -548,8 +693,12 @@ export async function refreshEnvHandler(
   }
 
   if (!sshResult.ok) {
+    // Phase E Option 1: do NOT record outcome here. The retry wrapper
+    // decides whether this attempt is the final one (records) or a
+    // transient mid-chain failure (skips). Without that gating,
+    // transient failures would populate the idempotency cache and
+    // short-circuit subsequent retries.
     const out = mapSshFailure(sshResult.error, req.request_id)
-    await recordOutcome(deps.store, req.request_id, req.customer_id, out)
     return out
   }
 
@@ -573,7 +722,9 @@ export async function refreshEnvHandler(
     hermes_active_after_restart: true,
     request_id: req.request_id,
   }
-  await recordOutcome(deps.store, req.request_id, req.customer_id, out)
+  // Phase E Option 1: do NOT record outcome here either. The retry
+  // wrapper does it for the final result (success or final failure).
+  // Single source of truth for cache writes.
   return out
 }
 

@@ -99,6 +99,38 @@ async function handlePaid(
   const now = deps.now?.() ?? new Date()
   const nextBilling = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
 
+  // Phase E Option 2 part 2 (2026-05-14): snapshot the customer's
+  // existing bot token BEFORE the wipe. When an existing customer
+  // re-subscribes (their previous pair state is about to be wiped by
+  // HF-1 below), we want spinUp to receive the OLD bot token so
+  // setup-script's hasTelegram=true branch starts the gateway directly.
+  // This skips the refresh-env round-trip that races setup-script
+  // (PR #118 forensic — Renita's stuck-bot bug).
+  //
+  // Ordering matters: snapshot BEFORE wipe. After clearStalePairState
+  // runs, telegram_bot_token is null in the DB and getDecryptedBotToken
+  // would always return null — defeating the purpose. The
+  // tests/xendit-webhook-bot-token-snapshot.spec.ts ordering drift gate
+  // pins this.
+  //
+  // Best-effort: any throw or null is treated as "no existing token,"
+  // and we pass '' to spinUp (the pre-Phase-E behavior). A snapshot
+  // failure must NEVER block the webhook from returning 200 — Xendit
+  // would otherwise retry-storm us.
+  let existingBotToken = ''
+  try {
+    const snap = await deps.db.getDecryptedBotToken(subscription.customer_id)
+    if (snap && typeof snap === 'string' && snap.length > 0) {
+      existingBotToken = snap
+    }
+  } catch (err) {
+    console.error(
+      `[xendit-webhook] getDecryptedBotToken snapshot failed for ${subscription.customer_id} ` +
+        `(falling back to empty token, refresh-env will recover): ` +
+        (err instanceof Error ? err.message : String(err)),
+    )
+  }
+
   // HF-1 (2026-05-12 founder Q1 lock): wipe stale pair state on every
   // pending → active transition. Reaches this path ONLY when the
   // subscription was previously 'pending' (the idempotent-retry path
@@ -110,6 +142,9 @@ async function handlePaid(
   //   - renewed sub after a cancel → wipe clears whatever lingered
   //   - idempotent re-delivery on an already-active sub → never reaches
   //     here (caller returns idempotent: true earlier)
+  //
+  // The Phase E snapshot above ran BEFORE this wipe, so the in-memory
+  // `existingBotToken` survives even though the row is now cleared.
   //
   // Best-effort: a wipe failure must NOT turn the webhook into a 5xx
   // (would trigger Xendit retry storm + re-fire spinUp). Log + continue.
@@ -147,17 +182,21 @@ async function handlePaid(
     const result = await deps.provisioning.spinUp({
       customerId: subscription.customer_id,
       tier: subscription.tier,
-      // Explicit empty string — keeps the key PRESENT in the JSON body so
-      // spin-up-helpers.ts treats this as "caller deliberately said no
-      // bot token" instead of falling back to env.TELEGRAM_BOT_TOKEN
-      // (the shared @weuseaibot platform token). Without this empty
-      // string, fresh provisions install + start hermes-gateway with the
-      // shared token and log Telegram 409s for the entire onboarding
-      // window. The customer's own bot token gets installed later when
-      // complete-onboarding step 8a calls refreshEnv.
-      // Per docs/investigation/2026-05-10-fresh-provision-dry-run.md
-      // Stage 4.
-      customerTelegramBotToken: '',
+      // Phase E Option 2 part 2 (2026-05-14): pass the snapshot from
+      // BEFORE the wipe. Two cases:
+      //   1. Existing customer re-subscribes (had paired bot before) →
+      //      existingBotToken is the decrypted plaintext. setup-script's
+      //      hasTelegram=true branch fires → gateway starts directly →
+      //      no refresh-env race.
+      //   2. New customer (never paired) → existingBotToken is ''. The
+      //      pre-Phase-E behavior preserves: setup-script installs but
+      //      defers start to refresh-env (now retry-aware per Option 1).
+      // The empty-string semantics are preserved for case 2 to keep
+      // spin-up-helpers.ts from falling back to env.TELEGRAM_BOT_TOKEN
+      // (the shared @weuseaibot platform token), which would cause
+      // Telegram 409 conflict storms during onboarding. Per
+      // docs/investigation/2026-05-10-fresh-provision-dry-run.md Stage 4.
+      customerTelegramBotToken: existingBotToken,
       alwaysOnEnabled: subscription.always_on_enabled,
       useStarterCredits: subscription.tier === 'starter',
     })

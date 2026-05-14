@@ -153,7 +153,12 @@ export class OnboardingProvisioningClient implements IOnboardingProvisioningClie
     const ok = body as {
       vps_id?: string
       ip_address?: string
-      applied?: { TELEGRAM_BOT_TOKEN?: 'updated' | 'unchanged'; OPENROUTER_API_KEY?: 'updated' | 'unchanged' }
+      applied?: {
+        TELEGRAM_BOT_TOKEN?: 'updated' | 'unchanged'
+        TELEGRAM_ALLOWED_USERS?: 'updated' | 'unchanged'
+        OPENROUTER_API_KEY?: 'updated' | 'unchanged'
+        OPENAI_API_KEY?: 'updated' | 'unchanged'
+      }
       hermes_restart_at?: string
     }
     if (!ok.vps_id || !ok.ip_address) {
