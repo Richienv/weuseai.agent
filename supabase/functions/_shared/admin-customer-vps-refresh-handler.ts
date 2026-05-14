@@ -76,10 +76,28 @@ export async function handleAdminCustomerVpsRefresh(
   // Call provisioning. request_id includes the caller's reason hash so
   // an admin can re-fire safely without colliding with a different
   // refresh kicked off by complete-onboarding-handler.
+  //
+  // Phase E Option 2 part 1 (2026-05-14): atomic token + allowlist push.
+  // The pre-Phase-E version pushed only TELEGRAM_BOT_TOKEN, leaving the
+  // gateway running but TELEGRAM_ALLOWED_USERS unset → all /start
+  // messages denied (Renita Stage 5 bug class found by Phase D smoke).
+  // When customer.telegram_chat_id is present, push both keys in the
+  // same envValues map. The refresh-env route runs them under
+  // `set -euo pipefail` so the gateway is only restarted if BOTH
+  // writes succeed. When chat_id is null (customer paid but never
+  // paired), pushing an empty allowlist would lock the bot to nobody —
+  // we omit the key entirely instead (handler-side gate, mirrors
+  // upstream pre-approve gating below).
+  const envValues: { TELEGRAM_BOT_TOKEN: string; TELEGRAM_ALLOWED_USERS?: string } = {
+    TELEGRAM_BOT_TOKEN: botToken,
+  }
+  if (customer.telegram_chat_id) {
+    envValues.TELEGRAM_ALLOWED_USERS = customer.telegram_chat_id
+  }
   const requestId = crypto.randomUUID()
   const refreshResult = await deps.provisioning.refreshEnv({
     customerId: body.customer_id,
-    envValues: { TELEGRAM_BOT_TOKEN: botToken },
+    envValues,
     // Pass SOUL.md too so admin rescue produces an in-character agent.
     // When customer has no soul_md_text yet (rare — would mean step 4
     // never ran), refreshEnv just skips the SOUL.md write.
@@ -88,7 +106,10 @@ export async function handleAdminCustomerVpsRefresh(
     // on the in-character agent (skips Hermes upstream's pairing-code
     // prompt). chat_id is whatever was captured during step 3 /pair
     // (or null if pairing never completed — refreshEnv just skips
-    // pre-approve in that case).
+    // pre-approve in that case). Distinct from TELEGRAM_ALLOWED_USERS
+    // above: the env var is what the gateway reads at boot; this
+    // pre-approve writes to /home/weuseai/.hermes/pairing/telegram-
+    // approved.json (upstream Hermes pairing-cache).
     telegramChatId: customer.telegram_chat_id ?? undefined,
     telegramUserName: customer.display_name ?? undefined,
     requestId,

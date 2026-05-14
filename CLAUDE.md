@@ -8,7 +8,7 @@
 - **Landing:** `weuseai-agent.vercel.app` — main `d7c48ae`
 - **Per-customer VPS:** Vultr Singapore `vc2-1c-1gb` ($5/mo) provisioned via Vultr API. DigitalOcean SGP1 as failover when Vultr capacity exhausted.
 - **Provisioning service:** Fly.io `weuseai-provisioning` (region `sin`, shared-cpu-1x / 256MB)
-- **Payments:** Xendit live (QRIS primary, e-wallet + cards supported). Sandbox retired.
+- **Payments:** Xendit currently in TEST mode (founder lock-in 2026-05-14 — Phase F runs on test-mode through unlock; first real-money customer post-rotation doubles as prod-mode validation). `XENDIT_API_KEY` Supabase secret is `xnd_development_*`; rotate to `xnd_production_*` to go live. Smoke Step 7 explicitly fails on `checkout-staging.xendit.co` so the test-mode state is never silently masked.
 - **Agent personas:** 10-persona library (`tier-personas.ts` is single source of truth — D1 lock 2026-05-12). Starter gets 3, Pro gets 8, Studio gets 10. The Pro is the default-persona invariant across every tier.
 - **Telegram delivery:** per-customer bot, customer supplies bot token at onboarding.
 
@@ -119,7 +119,7 @@ Reframe hosting sebagai utility (kayak bayar listrik), bukan subscription tradis
 | Agent runtime | NousResearch/hermes-agent (MIT OSS) | Pinned `v0.13.0` (2026-05-08 lock). Install via upstream `scripts/install.sh` as user `weuseai`, manage via systemd. Kita nggak fork, nggak build. |
 | LLM (Starter) | DeepSeek V3 via Cloudflare Worker proxy | Pelanggan tier Starter pakai proxy kita, default model `deepseek-chat`. $3–5 onboarding credits via `credits` table. |
 | LLM (Pro/Studio BYOK) | DeepSeek / OpenRouter / OpenAI / Z.ai (GLM) | Pelanggan paste API key sendiri di onboarding. |
-| Payment | Xendit (live, validated) | QRIS primary, e-wallet + cards supported. Webhook signed via `XENDIT_WEBHOOK_TOKEN`. `services/payment/` punya IPaymentProvider abstraction (mock + xendit). |
+| Payment | Xendit (currently TEST mode — see Production deploy section) | QRIS primary, e-wallet + cards supported. Webhook signed via `XENDIT_WEBHOOK_TOKEN`. `services/payment/` punya IPaymentProvider abstraction (mock + xendit). |
 | Database | Supabase | Migrations live di `supabase/migrations/*.sql`, applied via Supabase Mgmt API. RLS-locked per Sesi D pass-1/2/3 (X-CID enforcement on customers + subscriptions + consent_events). |
 | Edge Functions | Supabase Functions | Live: `xendit-webhook`, `create-invoice` (gates ToS), `complete-onboarding`, `bundle-fetch` (tier-enforced), `customer-progress-proxy` (X-CID), `customer-readiness` (X-CID), `workflow-execute`, `bundle-pull-record`, +others. |
 | Multi-persona library | `supabase/functions/_shared/tier-personas.ts` (D1 lock 2026-05-12) | Starter 3 / Pro 8 / Studio 10. The Pro persona is default-at-index-0 invariant across every tier. |
@@ -133,7 +133,7 @@ Kita pakai NousResearch/hermes-agent (https://github.com/NousResearch/hermes-age
 
 **Yang kita kerjain:**
 - Provision VPS pelanggan via Vultr API (Singapore region), DigitalOcean SGP1 failover. SSH-based setup script writes `/home/weuseai/.hermes/.env` dengan kredensial pelanggan.
-- systemd unit `hermes-agent.service` (`ExecStart=/home/weuseai/.local/bin/hermes gateway start`, `Restart=always`)
+- systemd unit `hermes-gateway.service` (`ExecStart=/home/weuseai/.hermes/hermes-agent/venv/bin/python -m hermes_cli.main gateway run --replace`, `Restart=always`). Drop-in `/etc/systemd/system/hermes-gateway.service.d/10-bundle-pull.conf` wires the per-customer persona-bundle pull as `ExecStartPre`. **CORRECTED 2026-05-14:** earlier CLAUDE.md said `hermes-agent.service` — wrong; was caught by PR #118 forensic.
 - LLM routing: tier Starter → proxy kita → DeepSeek; tier Pro/Studio → BYOK key langsung ke provider
 - Telegram bot per pelanggan (pelanggan kasih bot token sendiri saat onboarding)
 - Payment, dashboard, marketplace skill metadata, hosting/Always-On billing
@@ -238,9 +238,14 @@ Order rekomen: kalau task butuh context strategis baca 04. Kalau butuh detail im
 
 ## Production deploy
 
-- Landing live di `https://weuseai-agent.vercel.app/` (verify deploys di sini, bukan velorah-nu auto-alias)
+- Landing live di `https://weuseai-agent.vercel.app/`. As of 2026-05-14 BOTH `weuseai-agent.vercel.app` AND `velorah-nu.vercel.app` auto-track main (founder added `weuseai-agent.vercel.app` as a project domain via Option B in PR #114). Either URL is canonical; smoke continues to target the `weuseai-agent.vercel.app` apex.
+  - **CORRECTED 2026-05-14:** the prior "verify deploys di sini, bukan velorah-nu auto-alias" line was inverted. `velorah-nu.vercel.app` IS auto-tracking (and was the only canonical URL for 16d after project scaffolding); `weuseai-agent.vercel.app` was a stale manual alias until the domain-add. Both work now.
 - `vercel.json` di root velorah punya routing config
 - `.vercel/` folder punya project linking — jangan commit (gitignored)
+
+### Deferred gate — Xendit test-mode/prod-mode signing fidelity (2026-05-14 lock-in)
+
+The current `XENDIT_API_KEY` is a TEST-mode secret. Phase F's "3 consecutive green chain runs" gate runs entirely on test-mode invoices (founder lock-in: zero $ spend during Phase F). **Xendit's test-mode webhook signature scheme has NOT been verified to match production byte-for-byte.** The first real-money customer payment AFTER `XENDIT_API_KEY` rotates to `xnd_production_*` doubles as the prod-mode signing validation — there is no automated proof until then. A future agent picking this up must NOT assume test-mode-green == prod-ready: the first paid customer is the actual integration test.
 
 ---
 

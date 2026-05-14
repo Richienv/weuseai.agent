@@ -75,6 +75,12 @@ function makeStore(seed: { sub: SubscriptionRow }): IInvoiceStore & {
       // Sesi D pass-3 P0 stub — webhook tests don't exercise consent.
       return { id: 'consent_stub' }
     },
+    async getDecryptedBotToken() {
+      // Phase E Option 2 part 2 (2026-05-14): no-op for wipe-semantics
+      // tests. The dedicated snapshot tests live in
+      // tests/xendit-webhook-bot-token-snapshot.spec.ts.
+      return null
+    },
   } as IInvoiceStore & { state: { wipes: string[] } }
 }
 

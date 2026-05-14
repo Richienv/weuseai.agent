@@ -103,6 +103,22 @@ export interface IInvoiceStore {
   clearStalePairState(customerId: string): Promise<void>
 
   /**
+   * Phase E Option 2 part 2 (2026-05-14): decrypt the customer's
+   * existing bot token. Returns null when customer has no stored token
+   * (new customer) or when decryption fails for any reason (production
+   * stores wrap pgcrypto's decrypt RPC — best-effort). Called by
+   * xendit-webhook-handler BEFORE clearStalePairState to snapshot the
+   * pre-wipe value, which is then passed to spinUp as
+   * customerTelegramBotToken so setup-script's hasTelegram=true branch
+   * starts the gateway directly (avoids the refresh-env race that bit
+   * Renita 2026-05-14).
+   *
+   * Throws are caught + treated as null by the caller — a snapshot
+   * failure must NOT block the webhook from returning 200.
+   */
+  getDecryptedBotToken(customerId: string): Promise<string | null>
+
+  /**
    * Sesi D pass-3 P0 (2026-05-13): append one row to the consent_events
    * table. Called by create-invoice for both 'tos' (required) and
    * 'marketing' (optional) acceptance. The handler captures
@@ -401,6 +417,14 @@ export type RefreshEnvInput = {
   customerId: string
   envValues: {
     TELEGRAM_BOT_TOKEN?: string
+    // Phase E Option 2 part 1 (2026-05-14): TELEGRAM_ALLOWED_USERS
+    // gets pushed alongside TELEGRAM_BOT_TOKEN by the admin handler
+    // when the customer has a telegram_chat_id. Without it, Hermes
+    // gateway restarts with a bot token but denies every customer
+    // /start (Renita Stage 5 bug class). The atomic write semantics
+    // are guaranteed by the refresh-env bash script's `set -euo pipefail`
+    // gate — restart happens only if all rewrites succeed.
+    TELEGRAM_ALLOWED_USERS?: string
     // Same value, two names: Hermes's primary chat path reads
     // OPENAI_API_KEY; auxiliary tasks (compression / title generation)
     // read OPENROUTER_API_KEY. Both should be set to the OpenRouter
@@ -435,6 +459,7 @@ export type RefreshEnvResult =
       ipAddress: string
       applied: {
         TELEGRAM_BOT_TOKEN?: 'updated' | 'unchanged'
+        TELEGRAM_ALLOWED_USERS?: 'updated' | 'unchanged'
         OPENAI_API_KEY?: 'updated' | 'unchanged'
         OPENROUTER_API_KEY?: 'updated' | 'unchanged'
       }

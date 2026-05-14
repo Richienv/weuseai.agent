@@ -17,7 +17,17 @@ import { MockSshProvisioner } from './ssh/mock-ssh-provisioner.js'
 import { OpenRouterKeyMinter } from './llm/openrouter-minter.js'
 import { MockLlmKeyMinter } from './llm/mock-minter.js'
 import { tierBump, type TierBumpRouteRequest } from './routes/tier-bump.js'
-import { refreshEnvHandler, type RefreshEnvRequest } from './routes/refresh-env.js'
+import {
+  refreshEnvHandler,
+  type RefreshEnvRequest,
+  type RefreshEnvResult,
+} from './routes/refresh-env.js'
+
+// Phase E Option 1 (2026-05-14): module-level per-customer in-flight
+// queue. Survives across all `/refresh-env` requests on this Fly
+// instance (`min=0 max=1` per CLAUDE.md, so a single Map covers all
+// concurrent callers). Tests pass a fresh Map to isolate state.
+const refreshEnvInflightByCustomer = new Map<string, Promise<RefreshEnvResult>>()
 import { restartHermesHandler, type RestartHermesRequest } from './routes/restart-hermes.js'
 import { customerProgressHandler, type CustomerProgressRequest } from './routes/customer-progress.js'
 import {
@@ -178,6 +188,11 @@ app.post('/refresh-env', async (req, res) => {
       {
         fleetPrivateKey: FLEET_SSH_PRIVATE_KEY,
         store: refreshEnvStore,
+        // Phase E Option 1 (2026-05-14): retry + queue wired for
+        // production. Default 5 attempts, exp backoff (5s/15s/45s/2m).
+        // Per-customer queue prevents two concurrent retry chains
+        // hammering the same VPS .env.
+        inflightByCustomer: refreshEnvInflightByCustomer,
       },
     )
     if (!result.ok) {

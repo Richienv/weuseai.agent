@@ -3,6 +3,8 @@
 // Deploy: supabase functions deploy xendit-webhook
 // Required env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
 //   XENDIT_WEBHOOK_TOKEN, PROVISIONING_URL, PROVISIONING_AUTH_TOKEN,
+//   BOT_TOKEN_ENC_KEY (Phase E 2026-05-14: needed to decrypt existing
+//     customer bot tokens for the pre-wipe snapshot in handlePaid),
 //   RICHIE_CHAT_ID (optional, for alerts).
 
 // @ts-ignore — Deno-only
@@ -29,6 +31,12 @@ const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const WEBHOOK_TOKEN = Deno.env.get('XENDIT_WEBHOOK_TOKEN')!
 const PROVISIONING_URL = Deno.env.get('PROVISIONING_URL')!
 const PROVISIONING_AUTH_TOKEN = Deno.env.get('PROVISIONING_AUTH_TOKEN')!
+// Phase E (2026-05-14): used to decrypt the customer's existing bot
+// token for the pre-wipe snapshot in handlePaid. When unset, the
+// store's getDecryptedBotToken always returns null and the handler
+// falls back to spinUp(customerTelegramBotToken: '') — the pre-Phase-E
+// behavior. So missing this env is a degraded but functional state.
+const BOT_TOKEN_ENC_KEY = Deno.env.get('BOT_TOKEN_ENC_KEY') ?? ''
 const ALERT_CHAT_ID = Deno.env.get('RICHIE_CHAT_ID')
 const TELEGRAM_BOT_TOKEN = Deno.env.get('SUPPORT_TELEGRAM_BOT_TOKEN')
 
@@ -135,6 +143,29 @@ const db: IInvoiceStore = {
       })
       .eq('id', customerId)
     if (error) throw error
+  },
+  // Phase E Option 2 part 2 (2026-05-14): pre-wipe snapshot path for
+  // xendit-webhook handlePaid(). Two-step: SELECT the encrypted
+  // telegram_bot_token column (service-role bypasses the anon SELECT
+  // REVOKE from Sesi D P0-2), then call decrypt_bot_token RPC. Returns
+  // null on any failure mode (missing key, no token, RPC error) — the
+  // handler treats null as "no existing token, fall back to
+  // empty-string spinUp." So a degraded BOT_TOKEN_ENC_KEY env setup
+  // gracefully preserves the pre-Phase-E behavior.
+  async getDecryptedBotToken(customerId) {
+    if (!BOT_TOKEN_ENC_KEY) return null
+    const { data: cust, error: custErr } = await supabase
+      .from('customers')
+      .select('telegram_bot_token')
+      .eq('id', customerId)
+      .maybeSingle()
+    if (custErr || !cust || !cust.telegram_bot_token) return null
+    const { data: dec, error: decErr } = await supabase.rpc('decrypt_bot_token', {
+      encrypted: cust.telegram_bot_token,
+      enc_key: BOT_TOKEN_ENC_KEY,
+    })
+    if (decErr) return null
+    return typeof dec === 'string' && dec.length > 0 ? dec : null
   },
 }
 

@@ -100,6 +100,12 @@ function makeFakeInvoiceStore(seed: {
       // wipe-semantics tests live in
       // tests/xendit-webhook-wipe-stale-pair.spec.ts.
     },
+    async getDecryptedBotToken() {
+      // Phase E Option 2 part 2 (2026-05-14): no-op for these tests.
+      // The dedicated snapshot-semantics tests live in
+      // tests/xendit-webhook-bot-token-snapshot.spec.ts.
+      return null
+    },
     async insertConsentEvent() {
       // Sesi D pass-3 P0 (2026-05-13): no-op for post-payment-flow
       // tests. The dedicated consent tests live in
