@@ -42,7 +42,12 @@ import assert from 'node:assert/strict'
 
 // ─── Configuration ────────────────────────────────────────────────────
 
-const PROD_BASE = 'https://weuseai-agent.vercel.app'
+// Phase 4 (2026-05-14): CI override. GitHub Actions sets
+// E2E_SMOKE_BASE so the workflow can target preview deployments, the
+// auto-tracking sibling alias (velorah-nu.vercel.app), or other
+// environments without editing this file. Default stays at the
+// canonical production URL per CLAUDE.md.
+const PROD_BASE = process.env.E2E_SMOKE_BASE ?? 'https://weuseai-agent.vercel.app'
 const SMOKE_EMAIL = `e2e-smoke-${Date.now()}@weuseai.test`
 
 // Lifted from a fresh fetch of the LIVE /checkout — these are the
