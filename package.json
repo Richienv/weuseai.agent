@@ -13,7 +13,17 @@
     "cli": "tsx scripts/cli.ts",
     "health-check": "tsx scripts/cli.ts health",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "typecheck:all": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p services/provisioning/tsconfig.json && tsc --noEmit -p services/proxy/tsconfig.json && tsc --noEmit -p services/hermes/tsconfig.json && tsc --noEmit -p services/payment/tsconfig.json && tsc --noEmit -p supabase/tsconfig.json && tsc --noEmit -p packages/observability/tsconfig.json && tsc --noEmit -p services/business-roadmap/tsconfig.json"
+    "typecheck:all": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p services/provisioning/tsconfig.json && tsc --noEmit -p services/proxy/tsconfig.json && tsc --noEmit -p services/hermes/tsconfig.json && tsc --noEmit -p services/payment/tsconfig.json && tsc --noEmit -p supabase/tsconfig.json && tsc --noEmit -p packages/observability/tsconfig.json && tsc --noEmit -p services/business-roadmap/tsconfig.json",
+
+    "_local_first_iteration": "Founder directive 2026-05-14 (feedback_local_first_iteration.md): every change goes through the local smoke before deploy. See CLAUDE.md → 'How to iterate locally' for the full recipe.",
+    "local:up": "supabase start && echo '\\n✓ local Supabase up. Run npm run local:fn-serve in another shell.\\n'",
+    "local:down": "supabase stop",
+    "local:reset": "supabase db reset",
+    "local:status": "supabase status",
+    "local:fn-serve": "supabase functions serve --no-verify-jwt --env-file ./.env.local",
+    "local:prov-dev": "cd services/provisioning && ENABLE_REAL_PROVISIONING=false VPS_PROVIDER=mock npm run dev",
+    "smoke:service:local": "E2E_SMOKE_TARGET=local AUDIT_CID=cust-local-renita tsx --test tests/e2e/smoke-service.spec.ts",
+    "smoke:service:deployed": "E2E_SMOKE_TARGET=deployed tsx --test tests/e2e/smoke-service.spec.ts"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",

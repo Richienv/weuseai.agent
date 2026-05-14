@@ -210,6 +210,44 @@ Order rekomen: kalau task butuh context strategis baca 04. Kalau butuh detail im
 
 ---
 
+## Local-first iteration (LOCKED 2026-05-14 per `feedback_local_first_iteration.md`)
+
+**Every code change goes through the local smoke before deploy.** Vercel / Supabase / Fly redeploy is verification, not iteration. Anti-patterns: "ship PR, deploy, see what breaks" / "manual SSH to a real VPS as integration evidence" / "wait for Vercel cold-start to confirm a fix." If a deployment-glue bug surfaces post-deploy that didn't surface locally, that is a **local-stack fidelity gap** — fix the local stack (add the missing mock, env var, init step) so the next iteration would have caught it.
+
+**Exception: Phase F (fresh-customer chain validation) intentionally runs against real deployed everything.** That IS its purpose. But the harness code itself develops + tests locally with mocked Vultr/Xendit/SSH first; real test-mode runs are reserved for actual chain verification.
+
+### How to iterate locally
+
+```bash
+# Test-double iteration (NO Docker required — fastest path)
+npm test                            # 1600+ unit + integration + drift gates
+npm run smoke:service:local         # Phase D audit smoke, in-process fixtures, no network
+
+# Provisioning service against mocks (NO Docker required)
+ENABLE_REAL_PROVISIONING=false VPS_PROVIDER=mock npm run local:prov-dev
+#   • SSH calls go to MockSshProvisioner (services/provisioning/src/ssh/mock-ssh-provisioner.ts)
+#   • VPS calls go to MockVPSProvider   (services/provisioning/src/providers/mock-vps.ts)
+
+# Full local Supabase stack (REQUIRES Docker — install Docker Desktop or OrbStack first)
+npm run local:up                    # supabase start  (postgres + edge runtime)
+npm run local:fn-serve              # supabase functions serve --no-verify-jwt
+npm run local:reset                 # supabase db reset  (re-apply migrations)
+npm run local:status                # current state of the local stack
+npm run local:down                  # supabase stop
+
+# Verification (after the fix passes locally)
+npm run smoke:service:deployed      # Phase D smoke against real Renita-shaped customer
+```
+
+**Env-swap pattern (already in place):**
+- `ENABLE_REAL_PROVISIONING=false` → `MockSshProvisioner` instead of `ExecSshProvisioner`
+- `VPS_PROVIDER=mock` → `MockVPSProvider` instead of Vultr / DigitalOcean
+- `E2E_SMOKE_TARGET=local | deployed` → smoke uses in-process fixtures vs real network
+
+**Docker is a prereq for `npm run local:up` / `local:fn-serve`.** If Docker isn't installed, you can still iterate via `npm test` and `npm run smoke:service:local` — both run handler-level mocks with full fidelity to the smoke's 5-stage shape.
+
+---
+
 ## Working conventions
 
 **Commits:**

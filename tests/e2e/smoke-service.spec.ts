@@ -19,6 +19,19 @@
  *   AUDIT_SSH_KEY_PATH (optional)    — default ~/.ssh/weuseai-fleet
  *   AUDIT_CID (optional)             — default Renita's cid
  *
+ * Phase G (founder directive 2026-05-14 local-first iteration):
+ *   E2E_SMOKE_TARGET = 'deployed' (default) | 'local'
+ *     - deployed: hits real Supabase + real VPS via SSH (the existing
+ *                 behavior — used for post-deploy verification).
+ *     - local:    runs against canned in-process fixtures. NO network
+ *                 (Supabase PostgREST not called, SSH not invoked).
+ *                 The smoke shape itself is the gate — proves the
+ *                 5-stage chain is structurally sound. Phase F builds
+ *                 the fresh-customer chain smoke on top of this layer.
+ *   This lets the smoke run on any dev machine without Docker, real
+ *   credentials, or live VPSes. Production verification stays on the
+ *   'deployed' path.
+ *
  * Stages (each is independent — one failing does NOT skip subsequent):
  *
  *   1. Payment        — customers row + active subscription + consent rows
@@ -55,15 +68,75 @@ if (existsSync(ENV_LOCAL)) {
   }
 }
 
+// Phase G (local-first): the smoke runs against either real network
+// (deployed mode, default) or in-process fixtures (local mode).
+const TARGET = (process.env.E2E_SMOKE_TARGET ?? 'deployed') as 'local' | 'deployed'
+if (TARGET !== 'local' && TARGET !== 'deployed') {
+  // eslint-disable-next-line no-console
+  console.error(`FATAL: E2E_SMOKE_TARGET must be 'local' or 'deployed', got '${TARGET}'`)
+  process.exit(2)
+}
+
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
 const AUDIT_CID = process.env.AUDIT_CID ?? '42c024ce-a4d6-4374-8dcf-1e396ae9e750'
 const SSH_KEY = process.env.AUDIT_SSH_KEY_PATH ?? resolve(homedir(), '.ssh/weuseai-fleet')
 
-if (!SUPABASE_URL || !SERVICE_KEY) {
+if (TARGET === 'deployed' && (!SUPABASE_URL || !SERVICE_KEY)) {
   // eslint-disable-next-line no-console
-  console.error('FATAL: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY required (set in .env.local or env)')
+  console.error('FATAL: deployed-mode smoke requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (set in .env.local or env)')
   process.exit(2)
+}
+
+// ─── Local-mode fixtures ──────────────────────────────────────────────
+//
+// Canned data shaped EXACTLY like what PostgREST + SSH return in
+// deployed mode. The shape match is what makes the local smoke a
+// fidelity-honest proxy for the deployed one. If the deployed mode
+// surfaces a shape we don't yet mock here, that's a LOCAL STACK
+// FIDELITY GAP (founder directive item 6) — fix here, then the next
+// local iteration would have caught it.
+//
+// Local mode hard-codes a "Renita-shaped" healthy customer. To
+// simulate a failure mode (e.g. Phase D before-fix state), override
+// LOCAL_FIXTURE_PROFILE via env. Out-of-scope for this PR.
+const LOCAL_FIXTURE = {
+  customer: {
+    id: 'cust-local-renita',
+    email: 'kdwb.co@example.test',
+    display_name: 'Renita (local)',
+    telegram_chat_id: '6805409051',
+  },
+  subscription: {
+    id: 'sub-local-renita',
+    customer_id: 'cust-local-renita',
+    tier: 'pro' as const,
+    status: 'active' as const,
+    xendit_invoice_id: 'inv-local-renita',
+    hosting_active: true,
+    started_at: '2026-05-14T06:47:36+00:00',
+    next_billing_at: '2026-06-13T06:47:36+00:00',
+  },
+  consent: [
+    { id: 'consent-tos-local', consent_type: 'tos', accepted_at: '2026-05-14T06:47:34+00:00', version: 'v1.0' },
+  ],
+  vps: {
+    id: 'vps-row-local',
+    customer_id: 'cust-local-renita',
+    vps_id: 'vultr-local-vps-uuid',
+    ip_address: '203.0.113.42', // RFC 5737 documentation range — never routable
+    provider: 'mock',
+    region: 'sgp',
+    status: 'running',
+    created_at: '2026-05-14T06:47:55+00:00',
+  },
+  setupLogTail:
+    '[06:55:24] ✓ Hermes binary verified\n' +
+    '[06:55:24] Installing Hermes gateway as system service...\n' +
+    '[06:55:27] === weuseai setup COMPLETE ===',
+  hermesGatewayStatus: 'active\nMainPID=12345\nActiveState=active\nSubState=running\nTOKEN=present',
+  hermesAllowlistEnv:
+    'TELEGRAM_ALLOWED_USERS=6805409051\n---end---',
 }
 
 // ─── Finding tracker ──────────────────────────────────────────────────
@@ -97,6 +170,28 @@ const ctx: Ctx = {}
 // ─── Helpers ──────────────────────────────────────────────────────────
 
 async function pgSelect(table: string, query: string): Promise<any[]> {
+  if (TARGET === 'local') {
+    // Local fixtures. Match by table + simple WHERE shapes; the smoke
+    // queries are stable enough that we don't need a full PostgREST
+    // query parser. If a new query shape lands, extend here.
+    const cidFromQuery = /customer_id=eq\.([^&]+)/.exec(query)?.[1]
+    const idFromQuery = /id=eq\.([^&]+)/.exec(query)?.[1]
+    if (table === 'customers' && idFromQuery === LOCAL_FIXTURE.customer.id) {
+      return [LOCAL_FIXTURE.customer]
+    }
+    if (table === 'subscriptions' && cidFromQuery === LOCAL_FIXTURE.customer.id) {
+      // Stage 1 filter is &status=eq.active — fixture sub is active.
+      return [LOCAL_FIXTURE.subscription]
+    }
+    if (table === 'consent_events' && cidFromQuery === LOCAL_FIXTURE.customer.id) {
+      return LOCAL_FIXTURE.consent.filter((c) => query.includes(`consent_type=eq.${c.consent_type}`))
+    }
+    if (table === 'vps_instances' && cidFromQuery === LOCAL_FIXTURE.customer.id) {
+      return [LOCAL_FIXTURE.vps]
+    }
+    return []
+  }
+  // deployed mode: hit real PostgREST
   const url = `${SUPABASE_URL}/rest/v1/${table}?${query}`
   const r = await fetch(url, {
     headers: {
@@ -111,6 +206,34 @@ async function pgSelect(table: string, query: string): Promise<any[]> {
 }
 
 function ssh(host: string, cmd: string, timeoutSec = 10): { ok: boolean; stdout: string; stderr: string } {
+  if (TARGET === 'local') {
+    // Local SSH double: pattern-match the command and return canned
+    // output that mirrors what a healthy Renita-shaped VPS produces.
+    // Three commands matter for the smoke:
+    //   - `sudo tail -3 /var/log/weuseai-setup.log` → setup-complete marker
+    //   - `test -f .../hermes && echo BIN=yes; ...` → binary/env/SOUL checks
+    //   - `systemctl is-active hermes-gateway; ... ; grep TELEGRAM_BOT_TOKEN` → Stage 4
+    //   - `grep -E '^(TELEGRAM_ALLOWED_USERS|GATEWAY_ALLOW_ALL_USERS|TELEGRAM_ALLOWED_USER_IDS)=' ...` → Stage 5
+    if (/tail -3 \/var\/log\/weuseai-setup\.log/.test(cmd)) {
+      return { ok: true, stdout: LOCAL_FIXTURE.setupLogTail, stderr: '' }
+    }
+    if (/test -f \/home\/weuseai\/\.local\/bin\/hermes/.test(cmd)) {
+      return { ok: true, stdout: 'BIN=yes\nENV=yes\nSOUL=yes', stderr: '' }
+    }
+    if (/systemctl is-active hermes-gateway/.test(cmd) && /TELEGRAM_BOT_TOKEN/.test(cmd)) {
+      return { ok: true, stdout: LOCAL_FIXTURE.hermesGatewayStatus, stderr: '' }
+    }
+    if (/TELEGRAM_ALLOWED_USERS/.test(cmd) && /grep/.test(cmd)) {
+      return { ok: true, stdout: LOCAL_FIXTURE.hermesAllowlistEnv, stderr: '' }
+    }
+    // Unknown command — surface as a fidelity gap so we add a fixture for it.
+    return {
+      ok: false,
+      stdout: '',
+      stderr: `LOCAL FIXTURE GAP: no canned response for cmd: ${cmd.slice(0, 200)}`,
+    }
+  }
+  // deployed mode: real SSH
   try {
     const stdout = execFileSync(
       'ssh',
@@ -135,6 +258,11 @@ function ssh(host: string, cmd: string, timeoutSec = 10): { ok: boolean; stdout:
 }
 
 async function tcpProbe(host: string, port: number, timeoutMs = 3000): Promise<boolean> {
+  if (TARGET === 'local') {
+    // Local: pretend port 22 is always open on the fixture IP. Other
+    // ports return true too — we're not testing real network here.
+    return host === LOCAL_FIXTURE.vps.ip_address
+  }
   // Use nc — present on macOS + ubuntu CI runners.
   try {
     execFileSync('nc', ['-w', String(Math.ceil(timeoutMs / 1000)), '-z', host, String(port)], {
@@ -433,7 +561,7 @@ test('SUMMARY', () => {
   // eslint-disable-next-line no-console
   console.log(`\n══════════════════════════════════════════════════`)
   // eslint-disable-next-line no-console
-  console.log(`Service audit smoke — cid ${AUDIT_CID}`)
+  console.log(`Service audit smoke — target=${TARGET} cid=${AUDIT_CID}`)
   // eslint-disable-next-line no-console
   console.log(`Passed: ${passed} / Failed: ${failed} / Total: ${findings.length}`)
   // eslint-disable-next-line no-console
