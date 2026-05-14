@@ -1024,14 +1024,23 @@
       // "invalid_methodId" echoed verbatim into the UI ("Gagal:
       // invalid_methodId..."), breaking voice at the first stumble.
       // Mapper translates each known code to calm-premium BI; unknown
-      // codes get the generic fallback. tos_required / tos_stale are
-      // NOT in this map — they're handled inline above with an under-
-      // checkbox surface from PR #91.
+      // codes get the generic fallback.
+      //
+      // Hotfix 2026-05-14: tos_required + tos_stale added to the
+      // catalog. The inline handler below ALSO writes a focused
+      // message under the checkbox (tosErr) for immediate-action UX;
+      // the catalog entry here populates the bottom error banner so
+      // it's uniform with other error codes (not the generic
+      // "Pembayaran tidak bisa disiapkan" fallback). The inline
+      // handler now throws the CODE (not the localized message) so
+      // the lookup in this map resolves.
       const CHECKOUT_ERROR_MAP = {
         invalid_email:           'Email belum benar. Cek lagi formatnya (mis. kamu@email.com).',
         invalid_methodId:        'Cara bayar yang dipilih sedang tidak tersedia. Pilih cara bayar lain dari daftar.',
         invalid_plan:            'Paket tidak dikenali. Refresh halaman dan coba lagi — kalau berlanjut, hubungi tim.',
         consent_persist_failed:  'Persetujuan tidak tersimpan. Centang ulang Syarat dan Ketentuan, lalu coba lagi.',
+        tos_required:            'Centang dulu Syarat dan Ketentuan untuk lanjut ke pembayaran.',
+        tos_stale:               'Sesi kamu sudah kadaluarsa. Centang ulang persetujuan untuk lanjut.',
       };
       const CHECKOUT_ERROR_FALLBACK = 'Pembayaran tidak bisa disiapkan saat ini. Coba lagi dalam 1 menit, atau hubungi tim via WhatsApp.';
       function mapCheckoutSubmitError(serverCode) {
@@ -1154,21 +1163,27 @@
             // explanation. tos_required / tos_stale come from the
             // pass-3 P0 server gate; the user almost certainly just
             // unchecked the box or has a clock drift.
+            //
+            // Hotfix 2026-05-14: throw the CODE (not the localized
+            // message) so the A2 catalog below resolves it and writes
+            // the bottom-banner message uniformly with other error
+            // codes. The under-checkbox tosErr write keeps an
+            // immediate-action message in place — that's the surface
+            // customers act on; the bottom banner is the secondary
+            // "what happened" summary.
             if (data && data.error === 'tos_required') {
-              const msg = 'Wajib menyetujui Syarat dan Ketentuan untuk lanjut.';
               if (tosErr) {
-                tosErr.textContent = msg;
+                tosErr.textContent = 'Wajib menyetujui Syarat dan Ketentuan untuk lanjut.';
                 tosErr.style.display = 'block';
               }
-              throw new Error(msg);
+              throw new Error('tos_required');
             }
             if (data && data.error === 'tos_stale') {
-              const msg = 'Persetujuan kadaluwarsa. Centang ulang lalu coba lagi.';
               if (tosErr) {
-                tosErr.textContent = msg;
+                tosErr.textContent = 'Persetujuan kadaluwarsa. Centang ulang lalu coba lagi.';
                 tosErr.style.display = 'block';
               }
-              throw new Error(msg);
+              throw new Error('tos_stale');
             }
             // Batch A2 (audit §P1-CF-1): map unknown / non-consent
             // server codes to Bahasa via mapCheckoutSubmitError below.
