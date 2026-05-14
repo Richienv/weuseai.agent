@@ -299,6 +299,30 @@ test('Step 7: invoice_url is a well-formed Xendit URL', async () => {
     assert.fail('invoice_url not on Xendit domain')
     return
   }
+  // Phase 6 hardening (2026-05-14): catch the Xendit-test-mode P0
+  // the smoke previously missed. Staging URLs (host contains
+  // "-staging" or "checkout-staging") mean the Edge Function's
+  // XENDIT_API_KEY is a test key (xnd_development_*) — customers
+  // landing here cannot pay real money. CLAUDE.md says Xendit is
+  // LIVE; production must serve `checkout.xendit.co` (no -staging).
+  const isStaging = /staging/i.test(url.host)
+  if (isStaging) {
+    record({
+      step: 7,
+      name: 'Invoice URL well-formed',
+      status: 'fail',
+      detail:
+        `invoice_url host is Xendit STAGING: ${url.host}\n` +
+        `→ XENDIT_API_KEY on the Supabase Edge Function is still a test key (xnd_development_*).\n` +
+        `→ Real customers landing on this URL cannot pay real money.\n` +
+        `→ Rotate to a production key (xnd_production_*) via:\n` +
+        `   supabase secrets set --project-ref gtjgsligllbjcisiyrah \\\n` +
+        `     XENDIT_API_KEY=xnd_production_xxxxx \\\n` +
+        `     XENDIT_WEBHOOK_TOKEN=<live-webhook-token>`,
+    })
+    assert.fail('Xendit is in test mode (host=' + url.host + ') — customers cannot pay real money')
+    return
+  }
   record({
     step: 7,
     name: 'Invoice URL well-formed',
