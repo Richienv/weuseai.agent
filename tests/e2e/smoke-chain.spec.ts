@@ -419,9 +419,27 @@ function makeDeployedDeps(): ChainDeps {
   }
   function ssh(host: string, cmd: string, timeoutSec = 20): { ok: boolean; stdout: string; stderr: string } {
     try {
+      // UserKnownHostsFile=/dev/null is REQUIRED, not optional: Vultr
+      // recycles public IPs across runs (every run #1 attempt landed on
+      // 45.77.43.11), and each fresh VPS has a different SSH host key.
+      // With the shared ~/.ssh/known_hosts, run N+1 hits a CHANGED-key
+      // mismatch — which StrictHostKeyChecking=no does NOT bypass: ssh
+      // prints the MITM warning, disables some auth, and the connection
+      // becomes flaky (run deployed-1778834122615: Stage 6 squeaked
+      // through, Stage 7 got "Connection closed by host"). Pinning the
+      // known-hosts file to /dev/null means every ephemeral VPS is
+      // simply "new" and accepted cleanly — no shared-state conflict.
       const stdout = execFileSync(
         'ssh',
-        ['-i', SSH_KEY, '-o', 'StrictHostKeyChecking=no', '-o', `ConnectTimeout=${timeoutSec}`, '-o', 'BatchMode=yes', `weuseai@${host}`, cmd],
+        [
+          '-i', SSH_KEY,
+          '-o', 'StrictHostKeyChecking=no',
+          '-o', 'UserKnownHostsFile=/dev/null',
+          '-o', 'LogLevel=ERROR',
+          '-o', `ConnectTimeout=${timeoutSec}`,
+          '-o', 'BatchMode=yes',
+          `weuseai@${host}`, cmd,
+        ],
         { encoding: 'utf8', timeout: (timeoutSec + 5) * 1000 },
       )
       return { ok: true, stdout, stderr: '' }
