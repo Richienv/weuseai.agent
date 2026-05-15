@@ -14,7 +14,7 @@ Per-stage ceiling. A stage that exceeds budget still completes but is flagged `o
 | Stage | Name | Budget | Notes |
 |---|---|---|---|
 | 1 | Create Xendit test invoice | 5s | |
-| 2 | Pay invoice + webhook delivered | 2s | |
+| 2 | Pay invoice + webhook delivered | 2s | Synthetic invoice.paid POST to xendit-webhook (founder decision 2026-05-15) — Xendit has no server-side invoice-pay API. 2s budget assumed near-instant; a real handler roundtrip (auth + lookup + synchronous spin-up kick) runs longer and is expected to flag `over_budget`. Not a failure. |
 | 3 | Customer + subscription rows created | 30s | |
 | 4 | VPS provisioned (status=running) | 120s | Vultr provisions fast |
 | 5 | setup-script COMPLETE marker | **360s** | **Bumped 4→6min** — reconciled vs handoff §8.6's measured 7:30 setup wall-clock |
