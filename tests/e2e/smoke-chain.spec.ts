@@ -105,8 +105,8 @@ const CASCADE_LOG = resolve(process.cwd(), 'docs/cascades/2026-05-14-8min-flow-v
 
 const STAGE_BUDGET_MS: Record<number, number> = {
   1: 5_000, // create Xendit test invoice
-  2: 2_000, // simulate/observe paid webhook
-  3: 30_000, // poll customers + subscriptions rows
+  2: 6_500, // synthetic webhook delivery <500ms + synchronous spin-up kick <6s (recalibrated after run #1)
+  3: 5_000, // poll customers + subscriptions rows (recalibrated 30→5s after run #1 — corrected query is sub-second)
   4: 120_000, // poll Vultr for VPS status=running
   5: 360_000, // SSH-up → setup-script COMPLETE (bumped 4→6min per §8.6)
   6: 30_000, // bundle-pull installed all tier personas
@@ -210,8 +210,8 @@ function makeLocalDeps(simClock: { nowMs: number }): ChainDeps {
   // table for harness-shape verification.
   const SIM_ADVANCE_MS: Record<string, number> = {
     createInvoice: 1_200,
-    payWebhook: 1_500,
-    customerRows: 8_000,
+    payWebhook: 6_000, // synthetic webhook + synchronous spin-up kick
+    customerRows: 3_000, // corrected two-query lookup — sub-second + poll slack
     vpsRunning: 95_000, // ~1.5 min — Vultr provisions fast
     setupComplete: 270_000, // ~4.5 min SSH-up→COMPLETE (within 6min budget)
     bundlePull: 6_000,
