@@ -30,7 +30,9 @@
  * ── DEPLOYED-MODE ENV (only for E2E_CHAIN_TARGET=deployed) ──
  *   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
  *   XENDIT_API_KEY (xnd_development_* — test mode)
- *   VULTR_API_KEY                    — poll VPS status + delete VPS
+ *   PROVISIONING_AUTH_TOKEN          — bearer for the Fly provisioning
+ *                                      service /tear-down route (Stage 11)
+ *   PROVISIONING_URL (optional)      — default weuseai-provisioning.fly.dev
  *   CHAIN_BOT_TOKEN                  — a fresh BotFather token for this
  *                                      run's customer (per §13.4 pool;
  *                                      one token per run, tear-down
@@ -39,6 +41,11 @@
  *                                      send /start (founder's own
  *                                      chat works for the test)
  *   AUDIT_SSH_KEY_PATH (optional)    — default ~/.ssh/weuseai-fleet
+ *
+ *   NOTE: Vultr API is NOT called directly by the harness. VPS status
+ *   (Stage 4) reads the vps_instances table; VPS-delete (Stage 11)
+ *   goes through the provisioning service. The Vultr key is
+ *   IP-allowlisted to the Fly machine, unreachable from dev/CI.
  *
  * ── THREE PRE-CODING ADJUSTMENTS (cascade brief 2026-05-15) ──
  *   1. Stage 5 budget reconciled vs handoff §8.6's measured 7:30
@@ -271,8 +278,15 @@ function requireEnv(name: string): string {
 function makeDeployedDeps(): ChainDeps {
   const SUPABASE_URL = () => requireEnv('SUPABASE_URL')
   const SERVICE_KEY = () => requireEnv('SUPABASE_SERVICE_ROLE_KEY')
-  const XENDIT_API_KEY = () => requireEnv('XENDIT_API_KEY')
-  const VULTR_API_KEY = () => requireEnv('VULTR_API_KEY')
+  // Provisioning service — Stage 11 teardown routes VPS-delete through
+  // POST /tear-down here, NOT a direct Vultr API call. Reason: the
+  // Vultr API key is IP-allowlisted to the Fly machine, so the harness
+  // (dev machine / CI) cannot call api.vultr.com directly. /tear-down
+  // runs on Fly where the key IS allowlisted, and it both deletes the
+  // VPS and updates the DB rows.
+  const PROVISIONING_URL = () =>
+    (process.env.PROVISIONING_URL ?? 'https://weuseai-provisioning.fly.dev').replace(/\/$/, '')
+  const PROVISIONING_AUTH_TOKEN = () => requireEnv('PROVISIONING_AUTH_TOKEN')
 
   async function pgSelect(table: string, query: string): Promise<any[]> {
     const r = await fetch(`${SUPABASE_URL()}/rest/v1/${table}?${query}`, {
@@ -360,9 +374,11 @@ function makeDeployedDeps(): ChainDeps {
         if (running) return { vpsId: running.vps_id, vpsIp: running.ip_address }
         await sleep(2000)
       }
-      // Cross-check Vultr directly so a stuck DB row doesn't mask a
-      // live VPS.
-      void VULTR_API_KEY()
+      // VPS status is read from the vps_instances table (written by the
+      // provisioning service). We do NOT cross-check Vultr directly —
+      // the Vultr API key is IP-allowlisted to the Fly machine and the
+      // harness cannot reach it. The DB row IS the provisioning
+      // service's source of truth for status.
       throw new Error('VPS did not reach status=running within 120s')
     },
     async pollSetupComplete(vpsIp) {
@@ -428,21 +444,30 @@ function makeDeployedDeps(): ChainDeps {
       throw new Error(`no bot reply to /${slug} within 60s`)
     },
     async teardown(ctx) {
-      // Best-effort: delete VPS via Vultr, cancel subscription, soft-
-      // delete customer. Each step independent — a failure in one
-      // doesn't block the others.
+      // Best-effort cleanup. Each step independent — a failure in one
+      // doesn't block the others. If something here leaks, the daily
+      // scripts/orphan-vps-cleanup.mjs is the catch-all.
       const errors: string[] = []
-      if (ctx.vpsId) {
+      // VPS-delete routes through the provisioning service's /tear-down
+      // (Fly has the IP-allowlisted Vultr key; the harness does not).
+      // /tear-down also updates the vps_instances row.
+      if (ctx.customerId) {
         try {
-          const r = await fetch(`https://api.vultr.com/v2/instances/${ctx.vpsId}`, {
-            method: 'DELETE',
-            headers: { authorization: `Bearer ${VULTR_API_KEY()}` },
+          const r = await fetch(`${PROVISIONING_URL()}/tear-down`, {
+            method: 'POST',
+            headers: {
+              authorization: `Bearer ${PROVISIONING_AUTH_TOKEN()}`,
+              'content-type': 'application/json',
+            },
+            body: JSON.stringify({ customerId: ctx.customerId }),
           })
-          if (!r.ok && r.status !== 404) errors.push(`vultr delete: HTTP ${r.status}`)
+          if (!r.ok) errors.push(`tear-down: HTTP ${r.status} ${(await r.text()).slice(0, 200)}`)
         } catch (e) {
-          errors.push(`vultr delete: ${e instanceof Error ? e.message : String(e)}`)
+          errors.push(`tear-down: ${e instanceof Error ? e.message : String(e)}`)
         }
       }
+      // Mark the subscription canceled so the test customer doesn't
+      // linger as "active" (tear-down handles the VPS, not billing state).
       if (ctx.subscriptionId) {
         try {
           await fetch(`${SUPABASE_URL()}/rest/v1/subscriptions?id=eq.${ctx.subscriptionId}`, {
