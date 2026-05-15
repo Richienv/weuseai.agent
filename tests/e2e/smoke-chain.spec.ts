@@ -29,9 +29,11 @@
  *
  * ── DEPLOYED-MODE ENV (only for E2E_CHAIN_TARGET=deployed) ──
  *   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
- *   XENDIT_API_KEY (xnd_development_* — test mode) — Stage 2 reads the
- *                                      invoice's VA numbers + calls the
- *                                      VA simulate-payment API
+ *   XENDIT_WEBHOOK_TOKEN             — the x-callback-token shared
+ *                                      secret; Stage 2 POSTs a
+ *                                      synthetic invoice.paid event
+ *                                      with it (Xendit has no
+ *                                      server-side invoice-pay API)
  *   PROVISIONING_AUTH_TOKEN          — bearer for the Fly provisioning
  *                                      service /tear-down route (Stage 11)
  *   PROVISIONING_URL (optional)      — default weuseai-provisioning.fly.dev
@@ -164,10 +166,10 @@ type ChainCtx = {
 type ChainDeps = {
   /** Stage 1: create a (test-mode) Xendit invoice. */
   createInvoice(email: string): Promise<{ invoiceId: string; invoiceUrl: string }>
-  /** Stage 2: trigger payment on the test-mode invoice (deployed: via
-   *  the Xendit VA simulate-payment API) + return once the
-   *  xendit-webhook has delivered + processed invoice.paid. The arg is
-   *  the subscription row id Stage 1 produced. */
+  /** Stage 2: mark the test-mode invoice paid (deployed: POST a
+   *  synthetic invoice.paid event to the xendit-webhook function) +
+   *  return once that webhook has processed it. The arg is the
+   *  subscription row id Stage 1 produced. */
   payInvoiceAndAwaitWebhook(subscriptionId: string): Promise<void>
   /** Stage 3: poll Supabase for the customer + subscription rows. */
   pollCustomerRows(email: string): Promise<{ customerId: string; subscriptionId: string }>
@@ -291,11 +293,11 @@ function makeDeployedDeps(): ChainDeps {
   const PROVISIONING_URL = () =>
     (process.env.PROVISIONING_URL ?? 'https://weuseai-provisioning.fly.dev').replace(/\/$/, '')
   const PROVISIONING_AUTH_TOKEN = () => requireEnv('PROVISIONING_AUTH_TOKEN')
-  // Xendit test-mode secret (xnd_development_*). Used by Stage 2 to GET
-  // the invoice's virtual-account numbers and POST a VA payment
-  // simulation — see payInvoiceAndAwaitWebhook for why VA, not QRIS.
-  const XENDIT_API_KEY = () => requireEnv('XENDIT_API_KEY')
-  const xenditAuth = () => `Basic ${Buffer.from(`${XENDIT_API_KEY()}:`).toString('base64')}`
+  // Webhook shared secret — the same value Xendit puts in the
+  // `x-callback-token` header and the xendit-webhook Edge Function
+  // checks against. Stage 2 POSTs a synthetic invoice.paid event with
+  // this token (see payInvoiceAndAwaitWebhook for why synthetic).
+  const XENDIT_WEBHOOK_TOKEN = () => requireEnv('XENDIT_WEBHOOK_TOKEN')
 
   async function pgSelect(table: string, query: string): Promise<any[]> {
     const r = await fetch(`${SUPABASE_URL()}/rest/v1/${table}?${query}`, {
@@ -322,15 +324,6 @@ function makeDeployedDeps(): ChainDeps {
     async createInvoice(email) {
       // Xendit create-invoice via OUR Edge Function (exercises the real
       // path a customer hits): POST /functions/v1/create-invoice.
-      //
-      // methodId is 'va' (not 'qris') ONLY for the harness: the Xendit
-      // v2 Invoice API has no payment-simulation endpoint, and QRIS
-      // test-payments can't be triggered server-side. A VA invoice
-      // exposes `available_banks[].bank_account_number`, which the
-      // `pool_virtual_accounts/simulate_payment` API CAN pay in test
-      // mode — that's the only Xendit-native simulate path for an
-      // invoice-originated payment. See payInvoiceAndAwaitWebhook.
-      // Production customers still choose their own method on checkout.
       const r = await fetch(`${SUPABASE_URL()}/functions/v1/create-invoice`, {
         method: 'POST',
         headers: { 'content-type': 'application/json', authorization: `Bearer ${SERVICE_KEY()}` },
@@ -338,7 +331,7 @@ function makeDeployedDeps(): ChainDeps {
           email,
           plan: 'pro',
           alwaysOn: false,
-          methodId: 'va',
+          methodId: 'qris',
           country: 'ID',
           postal: '',
           tos_accepted_at: new Date().toISOString(),
@@ -358,81 +351,75 @@ function makeDeployedDeps(): ChainDeps {
       return { invoiceId: body.subscription_id ?? 'unknown', invoiceUrl: body.invoice_url }
     },
     async payInvoiceAndAwaitWebhook(subscriptionId) {
-      // Stage 2: trigger payment on the test-mode Xendit invoice, then
-      // wait for Xendit's invoice.paid webhook to reach + be processed
-      // by our xendit-webhook Edge Function.
+      // Stage 2: mark the test-mode invoice paid + drive the
+      // xendit-webhook Edge Function exactly as a real payment would.
       //
-      // Xendit's v2 Invoice API has NO simulate-payment endpoint. The
-      // only Xendit-native server-side simulate path for an
-      // invoice-originated payment is the VA route: a VA invoice
-      // exposes `available_banks[].bank_account_number`, and
-      // `POST /pool_virtual_accounts/simulate_payment` pays that VA in
-      // test mode — which makes Xendit fire the real invoice.paid
-      // webhook (exercises the genuine Xendit→us delivery hop).
+      // WHY SYNTHETIC (founder decision 2026-05-15): Xendit's v2 Invoice
+      // API has NO server-side payment-simulation path — an invoice
+      // never materializes a payable instrument until a human picks a
+      // method on the hosted checkout page (probe proved it: invoice
+      // `available_banks` carry only bank codes, no VA number;
+      // pool_virtual_accounts/simulate_payment 400s for lack of a
+      // `fullPaymentCode`). So Stage 2 POSTs a synthetic invoice.paid
+      // event straight to our xendit-webhook function, with the real
+      // `x-callback-token`. The ONLY thing this skips is Xendit's own
+      // delivery hop — already the deferred gate the first real paying
+      // customer validates (docs/consulting/2026-05-15-xendit-test-mode-
+      // signature.md + CLAUDE.md). Everything downstream (provision →
+      // install → Telegram) stays fully real.
       //
-      // `subscriptionId` is the subscription row id (Stage 1 returns it
-      // as `invoiceId`). The Xendit invoice id lives on that row.
+      // `subscriptionId` is the subscription row id Stage 1 produced.
       let xenditInvoiceId = ''
+      let amountIdr = 0
       for (let i = 0; i < 8; i++) {
         const rows = await pgSelect(
-          'subscriptions',
-          `id=eq.${subscriptionId}&select=xendit_invoice_id`,
+          'subscription_invoices',
+          `subscription_id=eq.${subscriptionId}&select=xendit_invoice_id,amount_idr&order=created_at.desc`,
         ).catch(() => [])
         if (rows[0]?.xendit_invoice_id) {
           xenditInvoiceId = rows[0].xendit_invoice_id
+          amountIdr = Number(rows[0].amount_idr) || 0
           break
         }
         await sleep(1000)
       }
       if (!xenditInvoiceId) {
-        throw new Error(`subscription ${subscriptionId} has no xendit_invoice_id`)
+        throw new Error(`subscription ${subscriptionId} has no xendit_invoice_id yet`)
       }
 
-      // GET the invoice to read its virtual-account numbers.
-      let bank: { bank_code: string; bank_account_number: string; transfer_amount: number } | undefined
-      for (let i = 0; i < 8; i++) {
-        const ir = await fetch(`https://api.xendit.co/v2/invoices/${xenditInvoiceId}`, {
-          headers: { authorization: xenditAuth() },
-        })
-        if (!ir.ok) {
-          throw new Error(`Xendit GET invoice failed: HTTP ${ir.status} ${(await ir.text()).slice(0, 200)}`)
-        }
-        const inv = (await ir.json()) as {
-          available_banks?: { bank_code: string; bank_account_number: string; transfer_amount: number }[]
-        }
-        const b = inv.available_banks?.[0]
-        if (b?.bank_account_number) {
-          bank = b
-          break
-        }
-        await sleep(1500)
-      }
-      if (!bank) {
-        throw new Error(`Xendit invoice ${xenditInvoiceId} exposed no available_banks VA to simulate`)
-      }
-
-      // Simulate the VA payment — test mode only, no banking-network hit.
-      const sr = await fetch('https://api.xendit.co/pool_virtual_accounts/simulate_payment', {
+      // POST the synthetic invoice.paid event. The handler verifies the
+      // x-callback-token, looks the subscription up by event.id, flips
+      // it active, and (synchronously) kicks spin-up — so by the time
+      // this returns 200 the DB row is already off 'pending'.
+      const wr = await fetch(`${SUPABASE_URL()}/functions/v1/xendit-webhook`, {
         method: 'POST',
-        headers: { authorization: xenditAuth(), 'content-type': 'application/json' },
+        headers: {
+          'content-type': 'application/json',
+          'x-callback-token': XENDIT_WEBHOOK_TOKEN(),
+        },
         body: JSON.stringify({
-          bank_code: bank.bank_code,
-          bank_account_number: bank.bank_account_number,
-          transfer_amount: bank.transfer_amount,
+          id: xenditInvoiceId,
+          external_id: `sub_${subscriptionId}_smoke`,
+          status: 'PAID',
+          paid_at: new Date().toISOString(),
+          payment_method: 'QRIS',
+          amount: amountIdr,
         }),
       })
-      if (!sr.ok) {
+      const wbody = (await wr.json().catch(() => ({}))) as { ok?: boolean; ignored?: string }
+      if (!wr.ok) {
+        throw new Error(`xendit-webhook rejected synthetic event: HTTP ${wr.status} ${JSON.stringify(wbody)}`)
+      }
+      if (wbody.ignored === 'unknown_invoice') {
         throw new Error(
-          `Xendit VA simulate_payment failed: HTTP ${sr.status} ${(await sr.text()).slice(0, 300)}`,
+          `xendit-webhook could not match invoice ${xenditInvoiceId} to a subscription ` +
+            `(ignored:unknown_invoice) — the synthetic event id is wrong`,
         )
       }
 
-      // Await the webhook: the xendit-webhook handler flips the
-      // subscription off 'pending' (→ 'active', or 'pending_provision'
-      // if spin-up later fails) once it has received + processed the
-      // invoice.paid event. That transition IS our "webhook delivered"
-      // proof.
-      for (let i = 0; i < 45; i++) {
+      // Confirm the row left 'pending' (→ 'active', or 'pending_provision'
+      // if spin-up later fails). That transition is our processed proof.
+      for (let i = 0; i < 15; i++) {
         const rows = await pgSelect(
           'subscriptions',
           `id=eq.${subscriptionId}&select=status`,
@@ -441,7 +428,7 @@ function makeDeployedDeps(): ChainDeps {
         if (status && status !== 'pending') return
         await sleep(2000)
       }
-      throw new Error('xendit-webhook did not flip the subscription off "pending" within 90s')
+      throw new Error('xendit-webhook did not flip the subscription off "pending" within 30s')
     },
     async pollCustomerRows(email) {
       for (let i = 0; i < 15; i++) {
