@@ -281,6 +281,55 @@ function requireEnv(name: string): string {
   return v
 }
 
+// ─── Stage 2 synthetic invoice.paid template (fidelity-locked) ────────
+//
+// Synthetic-payload-fidelity gate (Cowork consult 2026-05-15): Stage 2's
+// synthetic POST must be shaped from a REAL Xendit body, NOT
+// hand-fabricated from docs. This object is the verbatim field set +
+// types captured 2026-05-15 from a real Xendit API response —
+// `GET /v2/invoices/6a0570080168694c2c2d0ceb`, the founder's actual
+// test-mode payment of 2026-05-14 (the `checkout-staging.xendit.co`
+// invoice host confirms test mode). It caught a real bug: the earlier
+// placeholder used `payment_method: 'QRIS'` — the real value is
+// `QR_CODE` (QRIS is the `payment_channel`).
+//
+// Run-specific / PII fields (id, external_id, amounts, timestamps,
+// email, metadata, redirect URLs) are placeholders here and overwritten
+// per run in payInvoiceAndAwaitWebhook. Static non-PII fields keep their
+// real captured values so the shape stays faithful.
+const XENDIT_INVOICE_PAID_TEMPLATE = {
+  id: '__OVERRIDDEN__',
+  external_id: '__OVERRIDDEN__',
+  user_id: '66e17f9406ff03bbe4dd4de1',
+  payment_method: 'QR_CODE',
+  status: 'PAID',
+  merchant_name: 'Korean Rookies',
+  merchant_profile_picture_url: 'https://du8nwjtfkinx.cloudfront.net/xendit.png',
+  amount: 0,
+  paid_amount: 0,
+  paid_at: '__OVERRIDDEN__',
+  payer_email: '__OVERRIDDEN__',
+  description: 'weuseai.agent · Pro setup + bulan-1 hosting',
+  expiry_date: '__OVERRIDDEN__',
+  invoice_url: '__OVERRIDDEN__',
+  available_banks: [] as unknown[],
+  available_retail_outlets: [] as unknown[],
+  available_ewallets: [] as unknown[],
+  available_qr_codes: [{ qr_code_type: 'QRIS' }],
+  available_direct_debits: [] as unknown[],
+  available_paylaters: [] as unknown[],
+  should_exclude_credit_card: true,
+  should_send_email: false,
+  success_redirect_url: '__OVERRIDDEN__',
+  failure_redirect_url: '__OVERRIDDEN__',
+  created: '__OVERRIDDEN__',
+  updated: '__OVERRIDDEN__',
+  currency: 'IDR',
+  payment_channel: 'QRIS',
+  fees: [{ type: 'ADMIN', value: 0 }],
+  metadata: {} as Record<string, unknown>,
+}
+
 function makeDeployedDeps(): ChainDeps {
   const SUPABASE_URL = () => requireEnv('SUPABASE_URL')
   const SERVICE_KEY = () => requireEnv('SUPABASE_SERVICE_ROLE_KEY')
@@ -387,6 +436,32 @@ function makeDeployedDeps(): ChainDeps {
         throw new Error(`subscription ${subscriptionId} has no xendit_invoice_id yet`)
       }
 
+      // Build the synthetic invoice.paid body from the fidelity-locked
+      // real-capture template (XENDIT_INVOICE_PAID_TEMPLATE), overriding
+      // only this run's id / amounts / timestamps / PII.
+      const nowIso = new Date().toISOString()
+      const syntheticEvent = {
+        ...XENDIT_INVOICE_PAID_TEMPLATE,
+        id: xenditInvoiceId,
+        external_id: `sub_${subscriptionId}_smoke`,
+        amount: amountIdr,
+        paid_amount: amountIdr,
+        paid_at: nowIso,
+        created: nowIso,
+        updated: nowIso,
+        expiry_date: nowIso,
+        payer_email: 'phasef-smoke@weuseai.test',
+        invoice_url: `https://checkout-staging.xendit.co/web/${xenditInvoiceId}`,
+        success_redirect_url: 'https://weuseai-agent.vercel.app/welcome',
+        failure_redirect_url: 'https://weuseai-agent.vercel.app/checkout.html',
+        metadata: {
+          subscription_id: subscriptionId,
+          plan: 'pro',
+          always_on: false,
+          kind: 'setup_first_month',
+        },
+      }
+
       // POST the synthetic invoice.paid event. The handler verifies the
       // x-callback-token, looks the subscription up by event.id, flips
       // it active, and (synchronously) kicks spin-up — so by the time
@@ -397,14 +472,7 @@ function makeDeployedDeps(): ChainDeps {
           'content-type': 'application/json',
           'x-callback-token': XENDIT_WEBHOOK_TOKEN(),
         },
-        body: JSON.stringify({
-          id: xenditInvoiceId,
-          external_id: `sub_${subscriptionId}_smoke`,
-          status: 'PAID',
-          paid_at: new Date().toISOString(),
-          payment_method: 'QRIS',
-          amount: amountIdr,
-        }),
+        body: JSON.stringify(syntheticEvent),
       })
       const wbody = (await wr.json().catch(() => ({}))) as { ok?: boolean; ignored?: string }
       if (!wr.ok) {
