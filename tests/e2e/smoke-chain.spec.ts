@@ -103,21 +103,26 @@ const CASCADE_LOG = resolve(process.cwd(), 'docs/cascades/2026-05-14-8min-flow-v
 // still completes (we don't kill it) but is flagged `over_budget` in
 // the report. The unlock verdict sums actual elapsed for Stages 1-9.
 
+// Budgets — RELAXED per founder priority reframe 2026-05-15: reliability
+// over speed. ~20% slack on every stage vs §8.6 measured values. A clean
+// 12-13 min run is a PASS; a fast run that fails a stage is a FAIL.
 const STAGE_BUDGET_MS: Record<number, number> = {
   1: 5_000, // create Xendit test invoice
-  2: 6_500, // synthetic webhook delivery <500ms + synchronous spin-up kick <6s (recalibrated after run #1)
-  3: 5_000, // poll customers + subscriptions rows (recalibrated 30→5s after run #1 — corrected query is sub-second)
-  4: 120_000, // poll Vultr for VPS status=running
-  5: 360_000, // SSH-up → setup-script COMPLETE (bumped 4→6min per §8.6)
-  6: 30_000, // bundle-pull installed all tier personas
-  7: 30_000, // systemctl is-active hermes-gateway
-  8: 5_000, // Telegram getMe
-  9: 60_000, // /start → first response (widened 30→60s)
-  10: 60_000, // /<persona> hi → persona-correct response (widened 30→60s)
+  2: 10_000, // synthetic webhook + synchronous spin-up kick (widened 6.5→10s)
+  3: 5_000, // poll customers + subscriptions rows
+  4: 120_000, // poll vps_instances for ip_address present (VM booted)
+  5: 480_000, // poll vps_instances for status=running (setup-script done — widened 360→480s)
+  6: 60_000, // bundle-pull installed all tier personas (widened 30→60s)
+  7: 60_000, // systemctl is-active hermes-gateway (widened 30→60s)
+  8: 10_000, // Telegram getMe (widened 5→10s)
+  9: 90_000, // /start → first response (widened 60→90s)
+  10: 90_000, // /<persona> hi → persona-correct response (widened 60→90s)
   11: 30_000, // teardown
 }
-// Stages 1-9 sum = the 8-min unlock budget.
-const UNLOCK_BUDGET_MS = 8 * 60 * 1000
+// Relaxed completion ceiling — Phase F passes a run that finishes the
+// Stages 1-9 flow (payment → first /start response) under 15 min AND
+// has every stage clean. Reliability over tightness.
+const UNLOCK_BUDGET_MS = 15 * 60 * 1000
 
 // ─── Finding tracker ──────────────────────────────────────────────────
 
@@ -178,11 +183,15 @@ type ChainDeps = {
   /** Stage 3: poll Supabase until the customer + subscription rows are
    *  committed + queryable. */
   pollCustomerRows(email: string): Promise<{ customerId: string; subscriptionId: string }>
-  /** Stage 4: poll Vultr for the customer's VPS reaching status=running. */
-  pollVpsRunning(customerId: string): Promise<{ vpsId: string; vpsIp: string }>
-  /** Stage 5: SSH-poll until /var/log/weuseai-setup.log has the
-   *  COMPLETE marker. */
-  pollSetupComplete(vpsIp: string): Promise<void>
+  /** Stage 4: poll vps_instances until ip_address is set — i.e. the VM
+   *  has booted and Vultr assigned an IP. (status='running' is NOT used
+   *  here: the provisioning service only sets that after the whole
+   *  setup-script finishes — that's Stage 5's signal.) */
+  pollVpsHasIp(customerId: string): Promise<{ vpsId: string; vpsIp: string }>
+  /** Stage 5: poll vps_instances until status='running' — the
+   *  provisioning service sets that the moment the SSH setup-script
+   *  exits 0 (customer-flow.ts). Bails immediately on status='failed'. */
+  pollSetupComplete(customerId: string): Promise<void>
   /** Stage 6: confirm bundle-pull installed all tier personas. */
   checkBundlePull(vpsIp: string, expectedPersonaCount: number): Promise<number>
   /** Stage 7: confirm hermes-gateway systemd unit is active. */
@@ -241,7 +250,7 @@ function makeLocalDeps(simClock: { nowMs: number }): ChainDeps {
       const slug = localSlug(email)
       return { customerId: `cust_local_${slug}`, subscriptionId: `sub_local_${slug}` }
     },
-    async pollVpsRunning() {
+    async pollVpsHasIp() {
       simClock.nowMs += SIM_ADVANCE_MS.vpsRunning
       return { vpsId: 'vultr-local-chain-uuid', vpsIp: '203.0.113.77' }
     },
@@ -538,30 +547,44 @@ function makeDeployedDeps(): ChainDeps {
       }
       throw new Error('customer/subscription rows did not appear within 30s')
     },
-    async pollVpsRunning(customerId) {
+    async pollVpsHasIp(customerId) {
+      // Stage 4 = "VM booted, IP assigned". The provisioning service
+      // writes the vps_instances row as status='provisioning' with
+      // ip_address=null, then fills ip_address once Vultr reports the
+      // instance (customer-flow.ts). status only flips to 'running'
+      // AFTER the whole setup-script — that's Stage 5, not here.
       for (let i = 0; i < 60; i++) {
         const rows = await pgSelect(
           'vps_instances',
           `customer_id=eq.${customerId}&select=vps_id,ip_address,status&order=created_at.desc`,
         ).catch(() => [])
-        const running = rows.find((r) => r.status === 'running' && r.ip_address)
-        if (running) return { vpsId: running.vps_id, vpsIp: running.ip_address }
+        const row = rows[0]
+        if (row?.status === 'failed') {
+          throw new Error('provisioning marked the VPS status=failed')
+        }
+        if (row?.ip_address) return { vpsId: row.vps_id, vpsIp: row.ip_address }
         await sleep(2000)
       }
-      // VPS status is read from the vps_instances table (written by the
-      // provisioning service). We do NOT cross-check Vultr directly —
-      // the Vultr API key is IP-allowlisted to the Fly machine and the
-      // harness cannot reach it. The DB row IS the provisioning
-      // service's source of truth for status.
-      throw new Error('VPS did not reach status=running within 120s')
+      throw new Error('VPS did not get an ip_address within 120s')
     },
-    async pollSetupComplete(vpsIp) {
-      for (let i = 0; i < 72; i++) {
-        const r = ssh(vpsIp, "sudo tail -3 /var/log/weuseai-setup.log 2>&1 | tr -d '\\r'")
-        if (r.ok && /weuseai setup COMPLETE/i.test(r.stdout)) return
+    async pollSetupComplete(customerId) {
+      // Stage 5 = "setup-script done". The provisioning service sets
+      // vps_instances.status='running' the moment the SSH setup-script
+      // exits 0, and 'failed' on any error. We poll that — no SSH from
+      // the harness (the 'weuseai' user only exists after setup anyway).
+      for (let i = 0; i < 96; i++) {
+        const rows = await pgSelect(
+          'vps_instances',
+          `customer_id=eq.${customerId}&select=status&order=created_at.desc`,
+        ).catch(() => [])
+        const status = rows[0]?.status
+        if (status === 'running') return
+        if (status === 'failed') {
+          throw new Error('provisioning marked the VPS status=failed during setup')
+        }
         await sleep(5000)
       }
-      throw new Error('setup-script COMPLETE marker not found within 6min')
+      throw new Error('VPS did not reach status=running within 480s')
     },
     async checkBundlePull(vpsIp, expected) {
       const r = ssh(vpsIp, "sudo grep -c 'Bundle install complete' /var/log/weuseai-bundle-pull.log 2>&1 || echo 0")
@@ -711,9 +734,9 @@ const STAGES: Stage[] = [
   },
   {
     num: 4,
-    name: 'VPS provisioned (status=running)',
+    name: 'VPS provisioned (ip_address assigned)',
     async run(ctx, deps) {
-      const { vpsId, vpsIp } = await deps.pollVpsRunning(ctx.customerId!)
+      const { vpsId, vpsIp } = await deps.pollVpsHasIp(ctx.customerId!)
       ctx.vpsId = vpsId
       ctx.vpsIp = vpsIp
       return `vps=${vpsId} ip=${vpsIp}`
@@ -721,10 +744,10 @@ const STAGES: Stage[] = [
   },
   {
     num: 5,
-    name: 'setup-script COMPLETE marker',
+    name: 'setup-script COMPLETE (status=running)',
     async run(ctx, deps) {
-      await deps.pollSetupComplete(ctx.vpsIp!)
-      return 'weuseai-setup.log shows COMPLETE'
+      await deps.pollSetupComplete(ctx.customerId!)
+      return 'vps_instances.status = running'
     },
   },
   {
@@ -851,23 +874,26 @@ test('Phase F: fresh-customer chain', async () => {
   }
 
   // ─── Verdict ──
-  // Unlock criterion: Stages 1-9 all pass AND their summed elapsed
-  // time is under the 8-min budget.
+  // Phase F criterion (founder reframe 2026-05-15): EVERY stage clean
+  // (no fail, no skip) AND the Stages 1-9 flow finishes under the 15-min
+  // ceiling. Reliability over speed — a clean 13-min run passes.
   const stages1to9 = results.filter((r) => r.stage >= 1 && r.stage <= 9)
-  const all1to9Pass = stages1to9.length === 9 && stages1to9.every((r) => r.status === 'pass' || r.status === 'over_budget')
+  const allStagesClean = results.length === STAGES.length &&
+    results.every((r) => r.status === 'pass' || r.status === 'over_budget')
   const chainTimeMs = stages1to9.reduce((sum, r) => sum + r.elapsedMs, 0)
   const underBudget = chainTimeMs <= UNLOCK_BUDGET_MS
+  const budgetMin = (UNLOCK_BUDGET_MS / 1000 / 60).toFixed(2)
 
   // eslint-disable-next-line no-console
   console.log(`\n══════════════════════════════════════════════════`)
   // eslint-disable-next-line no-console
   console.log(`Phase F chain — target=${TARGET} runId=${runId}`)
   // eslint-disable-next-line no-console
-  console.log(`Stages 1-9 all pass: ${all1to9Pass ? 'YES' : 'NO'}`)
+  console.log(`All ${STAGES.length} stages clean (no fail/skip): ${allStagesClean ? 'YES' : 'NO'}`)
   // eslint-disable-next-line no-console
-  console.log(`Chain time (Stages 1-9): ${(chainTimeMs / 1000 / 60).toFixed(2)} min  (budget 8.00 min → ${underBudget ? 'UNDER' : 'OVER'})`)
+  console.log(`Chain time (Stages 1-9): ${(chainTimeMs / 1000 / 60).toFixed(2)} min  (budget ${budgetMin} min → ${underBudget ? 'UNDER' : 'OVER'})`)
   // eslint-disable-next-line no-console
-  console.log(`Unlock-eligible run: ${all1to9Pass && underBudget ? 'YES' : 'NO'}`)
+  console.log(`Unlock-eligible run: ${allStagesClean && underBudget ? 'YES' : 'NO'}`)
   // eslint-disable-next-line no-console
   console.log(`══════════════════════════════════════════════════`)
 
@@ -876,7 +902,7 @@ test('Phase F: fresh-customer chain', async () => {
   // record of the 3 real unlock runs.
   if (TARGET === 'deployed') {
     try {
-      appendRunToCascadeLog(runId, ctx, all1to9Pass, chainTimeMs, underBudget)
+      appendRunToCascadeLog(runId, ctx, allStagesClean, chainTimeMs, underBudget)
     } catch (e) {
       // eslint-disable-next-line no-console
       console.log(`(cascade-log append skipped: ${e instanceof Error ? e.message : String(e)})`)
@@ -888,14 +914,14 @@ test('Phase F: fresh-customer chain', async () => {
   // deployed mode we still assert, but the founder reviews the timing
   // breakdown regardless of pass/fail (run #1 is a data point).
   if (TARGET === 'local') {
-    assert.ok(all1to9Pass, 'local chain must pass all stages 1-9 (harness self-test)')
+    assert.ok(allStagesClean, 'local chain must pass every stage (harness self-test)')
     assert.ok(results.find((r) => r.stage === 11)?.status === 'pass', 'teardown must run + pass in local mode')
   } else {
     // Deployed: surface the verdict but don't hard-fail the process —
-    // the cascade-close logic (3 consecutive under-budget runs) is
+    // the cascade-close logic (3 consecutive clean under-budget runs) is
     // evaluated by the founder + the cascade log, not by a single
     // test exit code.
-    if (!all1to9Pass) {
+    if (!allStagesClean) {
       // eslint-disable-next-line no-console
       console.log(`\n⚠ Deployed run did NOT pass all stages. First failure: Stage ${firstFailedStage}.`)
     }
@@ -907,11 +933,12 @@ test('Phase F: fresh-customer chain', async () => {
 function appendRunToCascadeLog(
   runId: string,
   ctx: ChainCtx,
-  allPass: boolean,
+  allStagesClean: boolean,
   chainTimeMs: number,
   underBudget: boolean,
 ): void {
   const ts = new Date().toISOString()
+  const budgetMin = (UNLOCK_BUDGET_MS / 1000 / 60).toFixed(2)
   const rows = results
     .map((r) => `| ${r.stage} | ${r.name} | ${(r.elapsedMs / 1000).toFixed(1)}s | ${(r.budgetMs / 1000).toFixed(0)}s | ${r.status} |`)
     .join('\n')
@@ -922,9 +949,9 @@ function appendRunToCascadeLog(
     `- target: \`${TARGET}\``,
     `- email: \`${ctx.email}\``,
     `- customer: \`${ctx.customerId ?? '—'}\` · subscription: \`${ctx.subscriptionId ?? '—'}\` · vps: \`${ctx.vpsId ?? '—'}\``,
-    `- Stages 1-9 all pass: **${allPass ? 'YES' : 'NO'}**`,
-    `- chain time (Stages 1-9): **${(chainTimeMs / 1000 / 60).toFixed(2)} min** (budget 8.00 min → ${underBudget ? 'UNDER' : 'OVER'})`,
-    `- unlock-eligible: **${allPass && underBudget ? 'YES' : 'NO'}**`,
+    `- all ${STAGES.length} stages clean (no fail/skip): **${allStagesClean ? 'YES' : 'NO'}**`,
+    `- chain time (Stages 1-9): **${(chainTimeMs / 1000 / 60).toFixed(2)} min** (budget ${budgetMin} min → ${underBudget ? 'UNDER' : 'OVER'})`,
+    `- unlock-eligible: **${allStagesClean && underBudget ? 'YES' : 'NO'}**`,
     ``,
     `| Stage | Name | Elapsed | Budget | Status |`,
     `|---|---|---|---|---|`,

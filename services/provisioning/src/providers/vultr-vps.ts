@@ -1,3 +1,5 @@
+import { lookup as dnsLookup } from 'node:dns/promises'
+
 import type { IVPSProvider, CreateVPSOpts, VPSInfo } from '../vps-provider.js'
 
 /**
@@ -113,6 +115,16 @@ export class VultrVPSProvider implements IVPSProvider {
       },
     }
     if (body !== undefined) init.body = JSON.stringify(body)
+    // Bug B evidence log (2026-05-15) — record which IP family
+    // api.vultr.com resolves to for this call. The Vultr key allowlist
+    // is IPv4-only; index.ts forces IPv4 egress. If a future log line
+    // shows IPv6 here, the IPv4 forcing has regressed before Vultr 401s.
+    try {
+      const { address, family } = await dnsLookup('api.vultr.com')
+      console.log(`[vultr] ${method} ${path} → api.vultr.com ${address} (IPv${family})`)
+    } catch {
+      /* logging only — never block the API call */
+    }
     const r = await fetch(`https://api.vultr.com/v2${path}`, init)
     if (!r.ok) {
       const txt = await r.text()
