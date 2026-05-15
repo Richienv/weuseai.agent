@@ -24,7 +24,11 @@
     "local:prov-dev": "cd services/provisioning && ENABLE_REAL_PROVISIONING=false VPS_PROVIDER=mock npm run dev",
     "smoke": "tsx scripts/smoke-runner.mjs",
     "smoke:service:local": "E2E_SMOKE_TARGET=local AUDIT_CID=cust-local-renita tsx --test tests/e2e/smoke-service.spec.ts",
-    "smoke:service:deployed": "E2E_SMOKE_TARGET=deployed tsx --test tests/e2e/smoke-service.spec.ts"
+    "smoke:service:deployed": "E2E_SMOKE_TARGET=deployed tsx --test tests/e2e/smoke-service.spec.ts",
+    "smoke:chain:local": "E2E_CHAIN_TARGET=local tsx --test tests/e2e/smoke-chain.spec.ts",
+    "smoke:chain:deployed": "E2E_CHAIN_TARGET=deployed tsx --test tests/e2e/smoke-chain.spec.ts",
+    "orphan-vps:check": "node scripts/orphan-vps-cleanup.mjs",
+    "orphan-vps:apply": "node scripts/orphan-vps-cleanup.mjs --apply"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
