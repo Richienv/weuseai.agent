@@ -144,7 +144,6 @@ function record(r: StageResult) {
 type ChainCtx = {
   runId: string
   email: string
-  invoiceId?: string
   invoiceUrl?: string
   customerId?: string
   subscriptionId?: string
@@ -164,14 +163,20 @@ type ChainCtx = {
 // interface, so the 11-stage orchestration is identical in both modes.
 
 type ChainDeps = {
-  /** Stage 1: create a (test-mode) Xendit invoice. */
-  createInvoice(email: string): Promise<{ invoiceId: string; invoiceUrl: string }>
+  /** Stage 1: create a (test-mode) Xendit invoice. create-invoice also
+   *  creates the customer + (pending) subscription rows server-side, so
+   *  it returns their ids — captured into ctx immediately so teardown
+   *  can always reach them even if a later stage fails. */
+  createInvoice(
+    email: string,
+  ): Promise<{ invoiceUrl: string; customerId: string; subscriptionId: string }>
   /** Stage 2: mark the test-mode invoice paid (deployed: POST a
    *  synthetic invoice.paid event to the xendit-webhook function) +
    *  return once that webhook has processed it. The arg is the
    *  subscription row id Stage 1 produced. */
   payInvoiceAndAwaitWebhook(subscriptionId: string): Promise<void>
-  /** Stage 3: poll Supabase for the customer + subscription rows. */
+  /** Stage 3: poll Supabase until the customer + subscription rows are
+   *  committed + queryable. */
   pollCustomerRows(email: string): Promise<{ customerId: string; subscriptionId: string }>
   /** Stage 4: poll Vultr for the customer's VPS reaching status=running. */
   pollVpsRunning(customerId: string): Promise<{ vpsId: string; vpsIp: string }>
@@ -188,8 +193,9 @@ type ChainDeps = {
   sendStartAndAwaitReply(botToken: string, chatId: string): Promise<string>
   /** Stage 10: send /<persona> hi, poll for a persona-correct reply. */
   sendPersonaAndAwaitReply(botToken: string, chatId: string, slug: string): Promise<string>
-  /** Stage 11: tear down — delete VPS, cancel subscription, soft-delete customer. */
-  teardown(ctx: ChainCtx): Promise<void>
+  /** Stage 11: tear down — delete VPS, cancel subscription. Returns a
+   *  human summary of what was actually torn down. */
+  teardown(ctx: ChainCtx): Promise<string>
 }
 
 // ─── Local (mock) deps ────────────────────────────────────────────────
@@ -215,21 +221,25 @@ function makeLocalDeps(simClock: { nowMs: number }): ChainDeps {
     personaReply: 9_000,
     teardown: 7_000,
   }
+  // Deterministic local ids from email so Stage 1 and Stage 3 agree.
+  const localSlug = (email: string) => email.replace(/[^a-z0-9]/gi, '').slice(0, 12)
   return {
     async createInvoice(email) {
       simClock.nowMs += SIM_ADVANCE_MS.createInvoice
-      const id = `inv_local_${email.replace(/[^a-z0-9]/gi, '').slice(0, 12)}`
-      return { invoiceId: id, invoiceUrl: `https://checkout-staging.xendit.co/web/${id}` }
+      const slug = localSlug(email)
+      return {
+        invoiceUrl: `https://checkout-staging.xendit.co/web/inv_local_${slug}`,
+        customerId: `cust_local_${slug}`,
+        subscriptionId: `sub_local_${slug}`,
+      }
     },
     async payInvoiceAndAwaitWebhook() {
       simClock.nowMs += SIM_ADVANCE_MS.payWebhook
     },
     async pollCustomerRows(email) {
       simClock.nowMs += SIM_ADVANCE_MS.customerRows
-      return {
-        customerId: `cust_local_${email.replace(/[^a-z0-9]/gi, '').slice(0, 10)}`,
-        subscriptionId: `sub_local_${Date.now()}`,
-      }
+      const slug = localSlug(email)
+      return { customerId: `cust_local_${slug}`, subscriptionId: `sub_local_${slug}` }
     },
     async pollVpsRunning() {
       simClock.nowMs += SIM_ADVANCE_MS.vpsRunning
@@ -259,6 +269,7 @@ function makeLocalDeps(simClock: { nowMs: number }): ChainDeps {
     },
     async teardown() {
       simClock.nowMs += SIM_ADVANCE_MS.teardown
+      return 'local mock: VPS + subscription torn down'
     },
   }
 }
@@ -390,14 +401,20 @@ function makeDeployedDeps(): ChainDeps {
       })
       const body = (await r.json().catch(() => ({}))) as {
         invoice_url?: string
+        customer_id?: string
         subscription_id?: string
       }
-      if (!r.ok || !body.invoice_url) {
+      if (!r.ok || !body.invoice_url || !body.customer_id || !body.subscription_id) {
         throw new Error(`create-invoice failed: HTTP ${r.status} ${JSON.stringify(body).slice(0, 300)}`)
       }
-      // Xendit invoice id is embedded in subscription metadata; pull it
-      // from the customer/subscription created server-side.
-      return { invoiceId: body.subscription_id ?? 'unknown', invoiceUrl: body.invoice_url }
+      // create-invoice creates the customer + pending subscription rows
+      // server-side; return their ids so Stage 1 can park them on ctx
+      // (teardown then works even if a later stage fails).
+      return {
+        invoiceUrl: body.invoice_url,
+        customerId: body.customer_id,
+        subscriptionId: body.subscription_id,
+      }
     },
     async payInvoiceAndAwaitWebhook(subscriptionId) {
       // Stage 2: mark the test-mode invoice paid + drive the
@@ -499,14 +516,23 @@ function makeDeployedDeps(): ChainDeps {
       throw new Error('xendit-webhook did not flip the subscription off "pending" within 30s')
     },
     async pollCustomerRows(email) {
+      // Two sequential queries — PostgREST `in.()` does NOT accept a SQL
+      // subquery (it takes a literal value list), so look the customer
+      // up first, then filter subscriptions by customer_id=eq.
       for (let i = 0; i < 15; i++) {
-        const subs = await pgSelect(
-          'subscriptions',
-          `select=id,customer_id,status&customer_id=in.(select id from customers where email=eq.${encodeURIComponent(email)})`,
+        const customers = await pgSelect(
+          'customers',
+          `email=eq.${encodeURIComponent(email)}&select=id`,
         ).catch(() => [])
-        const rows = await pgSelect('customers', `email=eq.${encodeURIComponent(email)}&select=id`)
-        if (rows.length && subs.length) {
-          return { customerId: rows[0].id, subscriptionId: subs[0].id }
+        const customerId = customers[0]?.id
+        if (customerId) {
+          const subs = await pgSelect(
+            'subscriptions',
+            `customer_id=eq.${customerId}&select=id,status&order=started_at.desc`,
+          ).catch(() => [])
+          if (subs.length) {
+            return { customerId, subscriptionId: subs[0].id }
+          }
         }
         await sleep(2000)
       }
@@ -596,6 +622,7 @@ function makeDeployedDeps(): ChainDeps {
       // doesn't block the others. If something here leaks, the daily
       // scripts/orphan-vps-cleanup.mjs is the catch-all.
       const errors: string[] = []
+      const done: string[] = []
       // VPS-delete routes through the provisioning service's /tear-down
       // (Fly has the IP-allowlisted Vultr key; the harness does not).
       // /tear-down also updates the vps_instances row.
@@ -610,6 +637,7 @@ function makeDeployedDeps(): ChainDeps {
             body: JSON.stringify({ customerId: ctx.customerId }),
           })
           if (!r.ok) errors.push(`tear-down: HTTP ${r.status} ${(await r.text()).slice(0, 200)}`)
+          else done.push('VPS torn down')
         } catch (e) {
           errors.push(`tear-down: ${e instanceof Error ? e.message : String(e)}`)
         }
@@ -618,7 +646,7 @@ function makeDeployedDeps(): ChainDeps {
       // linger as "active" (tear-down handles the VPS, not billing state).
       if (ctx.subscriptionId) {
         try {
-          await fetch(`${SUPABASE_URL()}/rest/v1/subscriptions?id=eq.${ctx.subscriptionId}`, {
+          const r = await fetch(`${SUPABASE_URL()}/rest/v1/subscriptions?id=eq.${ctx.subscriptionId}`, {
             method: 'PATCH',
             headers: {
               apikey: SERVICE_KEY(),
@@ -628,11 +656,14 @@ function makeDeployedDeps(): ChainDeps {
             },
             body: JSON.stringify({ status: 'canceled', hosting_active: false }),
           })
+          if (!r.ok) errors.push(`sub cancel: HTTP ${r.status}`)
+          else done.push('subscription canceled')
         } catch (e) {
           errors.push(`sub cancel: ${e instanceof Error ? e.message : String(e)}`)
         }
       }
       if (errors.length) throw new Error(errors.join('; '))
+      return done.length ? done.join(' + ') : 'nothing to tear down (no customer/subscription id on ctx)'
     },
   }
 }
@@ -650,17 +681,21 @@ const STAGES: Stage[] = [
     num: 1,
     name: 'Create Xendit test invoice',
     async run(ctx, deps) {
-      const { invoiceId, invoiceUrl } = await deps.createInvoice(ctx.email)
-      ctx.invoiceId = invoiceId
+      const { invoiceUrl, customerId, subscriptionId } = await deps.createInvoice(ctx.email)
       ctx.invoiceUrl = invoiceUrl
-      return `invoice=${invoiceId} url=${invoiceUrl}`
+      // Park the ids on ctx NOW — teardown then has a customerId even if
+      // a stage between here and Stage 3 fails (run #1 leaked a VPS
+      // exactly because customerId was only set in Stage 3).
+      ctx.customerId = customerId
+      ctx.subscriptionId = subscriptionId
+      return `customer=${customerId} subscription=${subscriptionId} url=${invoiceUrl}`
     },
   },
   {
     num: 2,
     name: 'Pay invoice + webhook delivered',
     async run(ctx, deps) {
-      await deps.payInvoiceAndAwaitWebhook(ctx.invoiceId!)
+      await deps.payInvoiceAndAwaitWebhook(ctx.subscriptionId!)
       return 'xendit-webhook processed PAID'
     },
   },
@@ -739,8 +774,7 @@ const STAGES: Stage[] = [
     num: 11,
     name: 'Teardown (delete VPS, cancel sub)',
     async run(ctx, deps) {
-      await deps.teardown(ctx)
-      return 'VPS deleted, subscription canceled'
+      return await deps.teardown(ctx)
     },
   },
 ]
