@@ -37,6 +37,9 @@
  *   PROVISIONING_AUTH_TOKEN          — bearer for the Fly provisioning
  *                                      service /tear-down route (Stage 11)
  *   PROVISIONING_URL (optional)      — default weuseai-provisioning.fly.dev
+ *   PAIR_WEBHOOK_SECRET             — X-Telegram-Bot-Api-Secret-Token for
+ *                                      pair-customer-bot-webhook; Stage
+ *                                      5.7 POSTs a synthetic /pair update
  *   CHAIN_BOT_TOKEN                  — a fresh BotFather token for this
  *                                      run's customer (per §13.4 pool;
  *                                      one token per run, tear-down
@@ -112,6 +115,10 @@ const STAGE_BUDGET_MS: Record<number, number> = {
   3: 5_000, // poll customers + subscriptions rows
   4: 120_000, // poll vps_instances for ip_address present (VM booted)
   5: 480_000, // poll vps_instances for status=running (setup-script done — widened 360→480s)
+  5.5: 10_000, // validate-bot-token (getMe + setWebhook + persist)
+  5.6: 5_000, // rotate-pairing-code
+  5.7: 5_000, // synthetic /pair POST → telegram_chat_id set
+  5.8: 60_000, // complete-onboarding → refreshEnv → gateway restart + bundle-pull
   6: 60_000, // bundle-pull installed all tier personas (widened 30→60s)
   7: 60_000, // systemctl is-active hermes-gateway (widened 30→60s)
   8: 10_000, // Telegram getMe (widened 5→10s)
@@ -156,6 +163,7 @@ type ChainCtx = {
   vpsIp?: string
   botToken?: string
   botChatId?: string
+  pairingCode?: string
   startResponseText?: string
   personaResponseText?: string
 }
@@ -165,7 +173,7 @@ type ChainCtx = {
 // Each client is an interface. `makeLocalDeps()` returns canned
 // in-process impls + a simulated clock; `makeDeployedDeps()` returns
 // real network impls. The harness stage functions only see the
-// interface, so the 11-stage orchestration is identical in both modes.
+// interface, so the stage orchestration is identical in both modes.
 
 type ChainDeps = {
   /** Stage 1: create a (test-mode) Xendit invoice. create-invoice also
@@ -192,6 +200,19 @@ type ChainDeps = {
    *  provisioning service sets that the moment the SSH setup-script
    *  exits 0 (customer-flow.ts). Bails immediately on status='failed'. */
   pollSetupComplete(customerId: string): Promise<void>
+  /** Stage 5.5: validate-bot-token — Telegram getMe, set the bot's
+   *  webhook, persist the encrypted token on the customer row. */
+  validateBotToken(customerId: string, botToken: string): Promise<void>
+  /** Stage 5.6: rotate-pairing-code — mint the 6-digit pairing code. */
+  rotatePairingCode(customerId: string): Promise<string>
+  /** Stage 5.7: POST a synthetic `/pair <code>` update to
+   *  pair-customer-bot-webhook (real handler, real code match) — sets
+   *  customers.telegram_chat_id. */
+  submitPairingCode(customerId: string, code: string, chatId: string): Promise<void>
+  /** Stage 5.8: complete-onboarding — renders SOUL.md + refreshEnv,
+   *  which restarts hermes-gateway WITH the bot token; the gateway's
+   *  ExecStartPre then runs bundle-pull. */
+  completeOnboarding(customerId: string): Promise<void>
   /** Stage 6: confirm bundle-pull installed all tier personas. */
   checkBundlePull(vpsIp: string, expectedPersonaCount: number): Promise<number>
   /** Stage 7: confirm hermes-gateway systemd unit is active. */
@@ -223,6 +244,10 @@ function makeLocalDeps(simClock: { nowMs: number }): ChainDeps {
     customerRows: 3_000, // corrected two-query lookup — sub-second + poll slack
     vpsRunning: 95_000, // ~1.5 min — Vultr provisions fast
     setupComplete: 270_000, // ~4.5 min SSH-up→COMPLETE (within 6min budget)
+    validateBotToken: 4_000,
+    rotatePairingCode: 1_000,
+    submitPairingCode: 1_000,
+    completeOnboarding: 35_000, // refreshEnv SSH + gateway restart + bundle-pull
     bundlePull: 6_000,
     gatewayActive: 3_000,
     getMe: 800,
@@ -256,6 +281,19 @@ function makeLocalDeps(simClock: { nowMs: number }): ChainDeps {
     },
     async pollSetupComplete() {
       simClock.nowMs += SIM_ADVANCE_MS.setupComplete
+    },
+    async validateBotToken() {
+      simClock.nowMs += SIM_ADVANCE_MS.validateBotToken
+    },
+    async rotatePairingCode() {
+      simClock.nowMs += SIM_ADVANCE_MS.rotatePairingCode
+      return '123456'
+    },
+    async submitPairingCode() {
+      simClock.nowMs += SIM_ADVANCE_MS.submitPairingCode
+    },
+    async completeOnboarding() {
+      simClock.nowMs += SIM_ADVANCE_MS.completeOnboarding
     },
     async checkBundlePull(_ip, expected) {
       simClock.nowMs += SIM_ADVANCE_MS.bundlePull
@@ -367,6 +405,10 @@ function makeDeployedDeps(): ChainDeps {
   // checks against. Stage 2 POSTs a synthetic invoice.paid event with
   // this token (see payInvoiceAndAwaitWebhook for why synthetic).
   const XENDIT_WEBHOOK_TOKEN = () => requireEnv('XENDIT_WEBHOOK_TOKEN')
+  // Pairing webhook shared secret — the `X-Telegram-Bot-Api-Secret-Token`
+  // the pair-customer-bot-webhook function validates. Stage 5.7 POSTs a
+  // synthetic `/pair` update with it.
+  const PAIR_WEBHOOK_SECRET = () => requireEnv('PAIR_WEBHOOK_SECRET')
 
   async function pgSelect(table: string, query: string): Promise<any[]> {
     const r = await fetch(`${SUPABASE_URL()}/rest/v1/${table}?${query}`, {
@@ -586,6 +628,85 @@ function makeDeployedDeps(): ChainDeps {
       }
       throw new Error('VPS did not reach status=running within 480s')
     },
+    async validateBotToken(customerId, botToken) {
+      // Real onboarding path: validate-bot-token does Telegram getMe,
+      // sets the bot's webhook → pair-customer-bot-webhook, and persists
+      // the encrypted token (server-side SQL encrypt_bot_token()).
+      const r = await fetch(`${SUPABASE_URL()}/functions/v1/validate-bot-token`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${SERVICE_KEY()}` },
+        body: JSON.stringify({ customer_id: customerId, bot_token: botToken }),
+      })
+      const body = (await r.json().catch(() => ({}))) as { bot_username?: string }
+      if (!r.ok || !body.bot_username) {
+        throw new Error(`validate-bot-token failed: HTTP ${r.status} ${JSON.stringify(body).slice(0, 300)}`)
+      }
+    },
+    async rotatePairingCode(customerId) {
+      const r = await fetch(`${SUPABASE_URL()}/functions/v1/rotate-pairing-code`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${SERVICE_KEY()}` },
+        body: JSON.stringify({ customer_id: customerId }),
+      })
+      const body = (await r.json().catch(() => ({}))) as { code?: string }
+      if (!r.ok || !body.code) {
+        throw new Error(`rotate-pairing-code failed: HTTP ${r.status} ${JSON.stringify(body).slice(0, 300)}`)
+      }
+      return body.code
+    },
+    async submitPairingCode(customerId, code, chatId) {
+      // Synthetic Telegram `/pair <code>` update — exercises the real
+      // pair-customer-bot-webhook handler (real code match + chat-id
+      // link). Same synthetic-webhook pattern as Stage 2's xendit-webhook.
+      const r = await fetch(
+        `${SUPABASE_URL()}/functions/v1/pair-customer-bot-webhook?cid=${encodeURIComponent(customerId)}`,
+        {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            'x-telegram-bot-api-secret-token': PAIR_WEBHOOK_SECRET(),
+          },
+          body: JSON.stringify({
+            update_id: Date.now(),
+            message: {
+              message_id: 1,
+              date: Math.floor(Date.now() / 1000),
+              text: `/pair ${code}`,
+              chat: { id: Number(chatId), type: 'private' },
+              from: { id: Number(chatId), is_bot: false, first_name: 'PhaseF' },
+            },
+          }),
+        },
+      )
+      if (r.status === 401) {
+        throw new Error('pair-customer-bot-webhook rejected the secret token (401)')
+      }
+      const body = (await r.json().catch(() => ({}))) as { replied?: string; ignored?: string }
+      if (!r.ok || body.replied !== 'paired_silent') {
+        throw new Error(
+          `pairing did not link telegram_chat_id: HTTP ${r.status} ${JSON.stringify(body)}`,
+        )
+      }
+    },
+    async completeOnboarding(customerId) {
+      // Renders SOUL.md + refreshEnv → restarts hermes-gateway WITH the
+      // bot token; the gateway's ExecStartPre then runs bundle-pull.
+      const r = await fetch(`${SUPABASE_URL()}/functions/v1/complete-onboarding`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${SERVICE_KEY()}` },
+        body: JSON.stringify({
+          customer_id: customerId,
+          whatsapp: '081234567890',
+          expectations_text:
+            'Aku mau agen yang bantu balas pesan pelanggan toko online-ku di Telegram, ' +
+            'kasih draft jawaban yang sopan dan cepat, plus rangkuman pesanan tiap pagi.',
+        }),
+      })
+      const body = (await r.json().catch(() => ({}))) as Record<string, unknown>
+      if (!r.ok) {
+        throw new Error(`complete-onboarding failed: HTTP ${r.status} ${JSON.stringify(body).slice(0, 300)}`)
+      }
+    },
     async checkBundlePull(vpsIp, expected) {
       const r = ssh(vpsIp, "sudo grep -c 'Bundle install complete' /var/log/weuseai-bundle-pull.log 2>&1 || echo 0")
       const n = parseInt((r.stdout || '0').trim(), 10) || 0
@@ -751,6 +872,39 @@ const STAGES: Stage[] = [
     },
   },
   {
+    num: 5.5,
+    name: 'Pair — validate bot token',
+    async run(ctx, deps) {
+      await deps.validateBotToken(ctx.customerId!, ctx.botToken!)
+      return 'bot token validated + webhook set + token persisted'
+    },
+  },
+  {
+    num: 5.6,
+    name: 'Pair — rotate pairing code',
+    async run(ctx, deps) {
+      const code = await deps.rotatePairingCode(ctx.customerId!)
+      ctx.pairingCode = code
+      return `pairing code minted`
+    },
+  },
+  {
+    num: 5.7,
+    name: 'Pair — /pair message links telegram_chat_id',
+    async run(ctx, deps) {
+      await deps.submitPairingCode(ctx.customerId!, ctx.pairingCode!, ctx.botChatId!)
+      return 'telegram_chat_id linked'
+    },
+  },
+  {
+    num: 5.8,
+    name: 'complete-onboarding → hermes-gateway starts',
+    async run(ctx, deps) {
+      await deps.completeOnboarding(ctx.customerId!)
+      return 'SOUL.md rendered + refreshEnv → gateway restarted'
+    },
+  },
+  {
     num: 6,
     name: 'bundle-pull installed all tier personas',
     async run(ctx, deps) {
@@ -824,10 +978,11 @@ test('Phase F: fresh-customer chain', async () => {
 
   let firstFailedStage: number | null = null
 
-  // Stages 1-10 run in sequence; first failure stops the rest.
-  // Stage 11 (teardown) ALWAYS runs via the finally below.
+  // Every stage except teardown runs in sequence; first failure stops
+  // the rest. Stage 11 (teardown) ALWAYS runs via the finally below.
+  const teardownStage = STAGES.find((s) => s.num === 11)!
   try {
-    for (const s of STAGES.slice(0, 10)) {
+    for (const s of STAGES.filter((s) => s.num !== 11)) {
       const budgetMs = STAGE_BUDGET_MS[s.num]
       if (firstFailedStage !== null) {
         record({ stage: s.num, name: s.name, status: 'skipped', elapsedMs: 0, budgetMs, detail: `skipped — Stage ${firstFailedStage} failed first` })
@@ -859,8 +1014,8 @@ test('Phase F: fresh-customer chain', async () => {
       }
     }
   } finally {
-    // Stage 11 — teardown. Runs no matter what stages 1-10 did.
-    const s = STAGES[10]
+    // Stage 11 — teardown. Runs no matter what the earlier stages did.
+    const s = teardownStage
     const budgetMs = STAGE_BUDGET_MS[11]
     const startMs = now()
     try {

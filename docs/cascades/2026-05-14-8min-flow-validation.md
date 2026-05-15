@@ -19,6 +19,10 @@ Per-stage ceiling. A stage that exceeds budget still completes but is flagged `o
 | 3 | Customer + subscription rows created | **5s** | Two-query lookup (customer-by-email, then subscriptions-by-customer_id) — PostgREST `in.()` takes no subquery. Sub-second in practice. |
 | 4 | VPS provisioned (ip_address assigned) | 120s | **Polls `vps_instances.ip_address` present** = VM booted + IP assigned. NOT `status=running` — the provisioning service only sets that after the whole setup-script (Stage 5's signal). Bug A fix 2026-05-15. |
 | 5 | setup-script COMPLETE (status=running) | **480s** | **Polls `vps_instances.status='running'`** — the provisioning service sets that the moment the SSH setup-script exits 0 (`customer-flow.ts`). Widened 360→480s for setup-script reliability (§8.6 measured 7:30). Bails fast on `status='failed'`. |
+| 5.5 | Pair — validate bot token | 10s | **Pairing stages added 2026-05-15.** `POST /validate-bot-token` — Telegram getMe, set the bot webhook, persist the encrypted token. A fresh customer spins up with NO bot token (gateway installed-but-not-started); these 4 stages are the real onboarding/pairing path that starts the gateway, which is what runs bundle-pull. |
+| 5.6 | Pair — rotate pairing code | 5s | `POST /rotate-pairing-code` — mint the 6-digit code. |
+| 5.7 | Pair — /pair links telegram_chat_id | 5s | Synthetic `/pair <code>` update POSTed to `pair-customer-bot-webhook` with the `X-Telegram-Bot-Api-Secret-Token` — real handler, real code match. |
+| 5.8 | complete-onboarding → gateway starts | 60s | `POST /complete-onboarding` — renders SOUL.md, `refreshEnv` restarts hermes-gateway WITH the bot token; the gateway's `ExecStartPre` then runs bundle-pull. |
 | 6 | bundle-pull installed all tier personas | **60s** | Pro tier = 8 personas. Widened 30→60s. |
 | 7 | hermes-gateway active | **60s** | Widened 30→60s. |
 | 8 | Telegram getMe | **10s** | Widened 5→10s. |
@@ -26,7 +30,7 @@ Per-stage ceiling. A stage that exceeds budget still completes but is flagged `o
 | 10 | /<persona> → persona-correct response | **90s** | Widened 60→90s. |
 | 11 | Teardown (delete VPS, cancel sub) | 30s | always runs (finally block) |
 
-**Budget ceiling:** summing all 11 per-stage budgets = 5+10+5+120+480+60+60+10+90+90+30 = **960s = 16 min** worst-case ceiling; target completion **under 15 min** for the Stages 1-9 flow (1-9 budgets sum to 840s = 14 min). The relaxed budgets are deliberate — the cascade now validates that the chain *completes reliably*, not that it is fast. Setup-script (Stage 5) is the long pole and its optimization is explicitly deferred to post-cascade.
+**Budget ceiling:** the 15 per-stage budgets sum to **1040s ≈ 17 min** worst-case. These are observational ceilings (each stage's slack-padded worst case), NOT an expected total — a stage rarely runs near its ceiling. The pass criterion is the *measured* run finishing under 15 min with every stage clean; local + early deployed runs land around 7-13 min. Setup-script (Stage 5) is the long pole and its optimization is explicitly deferred to post-cascade.
 
 ---
 
@@ -116,3 +120,26 @@ Each Phase F run appends a block below automatically (the harness writes to this
 | 9 | /start → first response | 0.0s | 60s | skipped |
 | 10 | /<persona> → persona-correct response | 0.0s | 60s | skipped |
 | 11 | Teardown (delete VPS, cancel sub) | 2.8s | 30s | fail |
+
+### Run `deployed-1778829149015` — 2026-05-15T07:18:57.191Z
+
+- target: `deployed`
+- email: `e2e-chain-1778829149015@weuseai.test`
+- customer: `834a82aa-c903-475f-89ce-efefd0f03d0e` · subscription: `babbfcd6-e60e-4091-ab3f-fbaf77d2ad6f` · vps: `932bf125-8e69-41b3-b36f-d27f51ba64cd`
+- all 11 stages clean (no fail/skip): **NO**
+- chain time (Stages 1-9): **6.42 min** (budget 15.00 min → UNDER)
+- unlock-eligible: **NO**
+
+| Stage | Name | Elapsed | Budget | Status |
+|---|---|---|---|---|
+| 1 | Create Xendit test invoice | 3.5s | 5s | pass |
+| 2 | Pay invoice + webhook delivered | 7.0s | 10s | pass |
+| 3 | Customer + subscription rows created | 1.1s | 5s | pass |
+| 4 | VPS provisioned (ip_address assigned) | 48.4s | 120s | pass |
+| 5 | setup-script COMPLETE (status=running) | 322.5s | 480s | pass |
+| 6 | bundle-pull installed all tier personas | 2.8s | 60s | fail |
+| 7 | hermes-gateway active | 0.0s | 60s | skipped |
+| 8 | Telegram getMe | 0.0s | 10s | skipped |
+| 9 | /start → first response | 0.0s | 90s | skipped |
+| 10 | /<persona> → persona-correct response | 0.0s | 90s | skipped |
+| 11 | Teardown (delete VPS, cancel sub) | 2.9s | 30s | pass |
