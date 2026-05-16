@@ -281,9 +281,17 @@ npm run smoke:service:deployed      # Phase D smoke against real Renita-shaped c
 - `vercel.json` di root velorah punya routing config
 - `.vercel/` folder punya project linking — jangan commit (gitignored)
 
-### Deferred gate — Xendit test-mode/prod-mode signing fidelity (2026-05-14 lock-in)
+### Phase F cascade — CLOSED 2026-05-16
 
-The current `XENDIT_API_KEY` is a TEST-mode secret. Phase F's "3 consecutive green chain runs" gate runs entirely on test-mode invoices (founder lock-in: zero $ spend during Phase F). **Xendit's test-mode webhook signature scheme has NOT been verified to match production byte-for-byte.** The first real-money customer payment AFTER `XENDIT_API_KEY` rotates to `xnd_production_*` doubles as the prod-mode signing validation — there is no automated proof until then. A future agent picking this up must NOT assume test-mode-green == prod-ready: the first paid customer is the actual integration test.
+The fresh-customer chain is validated end-to-end (`tests/e2e/smoke-chain.spec.ts`, `docs/cascades/2026-05-14-8min-flow-validation.md`): real Xendit test invoice → paid webhook → Vultr VPS → setup-script → onboarding/pairing → hermes-gateway → bundle-pull → **proactive auto-greet**. 3 consecutive clean runs (~6.7 min) + a founder-confirmed hold-VPS run. The 8-min-flow priority lock (amended to 15 min) is RELEASED.
+
+**Standard post-payment flow now includes the auto-greet.** `complete-onboarding` step 8c (`sendProactiveGreeting`, `_shared/proactive-greeting.ts`) sends an in-character greeting to the customer's Telegram chat the moment provisioning + pairing complete — the customer never has to type `/start` to wake the bot. `/start` itself is also handled: the setup-script installs a `start` skill so `/start` routes to the SOUL.md first-contact greeting instead of Hermes' "Unknown command".
+
+### Deferred gate — Xendit prod-mode signing + body-shape fidelity (still open)
+
+The current `XENDIT_API_KEY` is a TEST-mode secret. Phase F ran entirely on test-mode invoices via a synthetic `invoice.paid` POST (Xendit has no server-side invoice-pay API — see the cascade doc's locked decisions). **Xendit's test-mode webhook signature scheme + `invoice.paid` body shape have NOT been verified to match production byte-for-byte.** The first real-money payment AFTER `XENDIT_API_KEY` rotates to `xnd_production_*` doubles as the prod-mode validation — there is no automated proof until then. Do NOT assume test-mode-green == prod-ready; **monitor the first real payment closely, within the 15-min flow window.** Rotating `XENDIT_API_KEY` is a founder-only action.
+
+Note: the Phase F harness greeted its synthetic test customer as `Hai, e2e-chain-…@weuseai.test` (email-as-name). Benign test artifact — the harness skips the onboarding form, so `customers.display_name` is null and `complete-onboarding` falls back to `email`. Real customers fill the onboarding form → `save-onboarding-profile` sets `display_name` → the greeting uses their real name.
 
 ---
 

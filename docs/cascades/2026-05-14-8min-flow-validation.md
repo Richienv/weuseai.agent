@@ -45,6 +45,22 @@ Permanent record of findings that cost investigation time. A future agent must N
 - **The Vultr API key's IP allowlist is IPv4-only.** Node Happy-Eyeballs intermittently egressed IPv6 from the Fly provisioning machine → Vultr `401 Unauthorized IP address`, flaking spin-up + tear-down. Fix: `services/provisioning/src/index.ts` forces IPv4 egress (`dns.setDefaultResultOrder('ipv4first')` + `net.setDefaultAutoSelectFamily(false)`); `vultr-vps.ts` logs the resolved IP family per call as regression evidence.
 - **The harness ssh() MUST pin `UserKnownHostsFile=/dev/null`.** Vultr recycles public IPs across runs; each fresh VPS has a different host key. A shared `~/.ssh/known_hosts` then hits a CHANGED-key mismatch — which `StrictHostKeyChecking=no` does NOT bypass (it triggers the MITM warning + flaky connections). `/dev/null` makes every ephemeral VPS simply "new".
 - **Stages 9-10 (/start + /<persona> replies) are `manual`, not automated — do not try to automate them.** Validating a bot's reply needs a real Telegram USER account; the harness holds only a bot token (a bot can't `/start` a bot, and the bot's own `getUpdates` poll conflicts with the hermes-gateway's long-poll). Recorded as status `manual` (not pass, not fail). The founder confirms /start + persona replies by hand — which is already the "founder personally confirms a working agent reply" half of the unlock criterion. Founder decision 2026-05-16.
+- **The auto-greet machinery already existed — do not rebuild it.** `_shared/proactive-greeting.ts` (`sendProactiveGreeting`) is called by `complete-onboarding` step 8c. Stage 5.9 verifies it via the `greeting` field now surfaced in the complete-onboarding response. Building a separate Option-A/B greeter would double-send.
+- **The harness greets its synthetic test customer by email (`Hai, e2e-chain-…@weuseai.test`) — benign test artifact, NOT a bug (CASE A, verified 2026-05-16).** `complete-onboarding` derives the name as `customer.display_name ?? customer.email`. The harness skips the onboarding form, so `display_name` is null → email fallback. A real customer fills the onboarding form → `save-onboarding-profile` sets `display_name` → the greeting uses their real name. (`create-invoice` also accepts a `displayName` in its body; the harness sends none.)
+
+---
+
+## Cascade outcome — CLOSED + UNLOCKED 2026-05-16
+
+The priority lock (`feedback_8min_flow_priority_lock.md`, amended to a 15-min budget) is **RELEASED**.
+
+- **3 consecutive clean chain runs** — `deployed-1778897729613` (6.72 min), `deployed-1778898155812` (6.68 min), `deployed-1778898587659` (6.72 min). Every automated stage `pass`/`over_budget`, Stages 9-10 `manual`, no orphan VPSes, no flake.
+- **Hold-VPS confirmation run** `deployed-1778913264702` (7.88 min, 16/16 clean incl. Stage 5.9 `auto-greet delivered source=llm`). Founder personally confirmed on Telegram (`@bot12bot21bot12bot`): `/start` reply, `/the-pro` persona reply, and the proactive auto-greet (timestamp 14:42 WIB) all work on a live agent.
+- Earlier failed attempts (`deployed-1778821590954` … `-1778901980688`) were each a real reliability bug the cascade existed to surface — see Locked decisions above. All fixed on branch `cascade/phase-f`.
+- **Deferred gate stays open:** first real paid customer (post `XENDIT_API_KEY` → `xnd_production_*`) is the prod-mode signing + body-shape fidelity check. Monitor closely.
+- Test customers: 12 `e2e-chain-*@weuseai.test` rows wiped 2026-05-16; Renita preserved.
+
+Audit trail for Sesi D: `docs/handoff/2026-05-16-sesi-d-phase-f-cascade.md`. Post-cascade follow-ups: `docs/post-cascade-followups.md`.
 
 ---
 
@@ -359,6 +375,34 @@ Each Phase F run appends a block below automatically (the harness writes to this
 | 6 | bundle-pull installed all tier personas | 1.3s | 60s | pass |
 | 7 | hermes-gateway active | 1.0s | 60s | pass |
 | 8 | Telegram getMe | 1.2s | 10s | pass |
+| 9 | /start → first response | 0.0s | 90s | manual |
+| 10 | /<persona> → persona-correct response | 0.0s | 90s | manual |
+| 11 | Teardown (delete VPS, cancel sub) | 0.0s | 30s | manual |
+
+### Run `deployed-1778913264702` — 2026-05-16T06:42:17.704Z
+
+- target: `deployed`
+- email: `e2e-chain-1778913264702@weuseai.test`
+- customer: `3f594346-1c00-470d-87d7-c5c91caa108c` · subscription: `606e6543-bb12-44bb-87e6-5cdf26b53184` · vps: `3b9cade6-f981-4554-aafb-bb7e28f81530`
+- all 16 stages clean (no fail/skip): **YES**
+- chain time (Stages 1-9): **7.88 min** (budget 15.00 min → UNDER)
+- unlock-eligible: **YES**
+
+| Stage | Name | Elapsed | Budget | Status |
+|---|---|---|---|---|
+| 1 | Create Xendit test invoice | 3.9s | 5s | pass |
+| 2 | Pay invoice + webhook delivered | 8.6s | 10s | pass |
+| 3 | Customer + subscription rows created | 1.2s | 5s | pass |
+| 4 | VPS provisioned (ip_address assigned) | 25.5s | 120s | pass |
+| 5 | setup-script COMPLETE (status=running) | 392.4s | 480s | pass |
+| 5.5 | Pair — validate bot token | 3.1s | 10s | pass |
+| 5.6 | Pair — rotate pairing code | 0.7s | 5s | pass |
+| 5.7 | Pair — /pair message links telegram_chat_id | 0.9s | 5s | pass |
+| 5.8 | complete-onboarding → hermes-gateway starts | 30.1s | 60s | pass |
+| 5.9 | auto-greet — proactive greeting delivered | 0.0s | 10s | pass |
+| 6 | bundle-pull installed all tier personas | 3.0s | 60s | pass |
+| 7 | hermes-gateway active | 2.8s | 60s | pass |
+| 8 | Telegram getMe | 0.9s | 10s | pass |
 | 9 | /start → first response | 0.0s | 90s | manual |
 | 10 | /<persona> → persona-correct response | 0.0s | 90s | manual |
 | 11 | Teardown (delete VPS, cancel sub) | 0.0s | 30s | manual |
