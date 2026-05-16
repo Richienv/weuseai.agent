@@ -1,19 +1,69 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "deep-researcher",
-  "version": "1.0.0",
-  "description_id": "Bundle persona Deep Researcher. Literature review, market analysis, competitor scan, kebijakan/regulasi research dengan source citation per claim. Pakai Hermes built-in research tools (arxiv, blogwatcher, llm-wiki) — tidak ada sub-skill khusus.",
+  "version": "2.0.0",
+  "description_id": "Bundle skill + template Deep Researcher v2. Riset topik kompleks dari banyak sumber, evaluasi kredibilitas per sumber, citation rapi per claim, dan sintesis jadi laporan terstruktur. Literature review, market analysis, competitor scan, kebijakan / regulasi research.",
   "skills": [
     {
+      "id": "web-research",
+      "description_id": "Riset topik dari sumber web — pecah topik jadi sub-pertanyaan, web search + scraping per sub-pertanyaan, kumpulkan source set dengan metadata. Prioritas paper akademik, laporan resmi, reporting jurnalistik.",
+      "description_en": "Research a topic from web sources — decompose into sub-questions, web search + scrape per sub-question, gather a source set with metadata. Prioritizes academic papers, official reports, journalistic reporting.",
+      "templates_used": [],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:web-research",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
+      "id": "source-evaluator",
+      "description_id": "Nilai kredibilitas tiap sumber pakai rubrik lima dimensi (authority, recency, primary/secondary, bias, corroboration). Output tier A-D per sumber sebagai pegangan untuk sintesis.",
+      "description_en": "Grade each source's credibility on a five-dimension rubric (authority, recency, primary/secondary, bias, corroboration). Outputs an A-D tier per source to anchor synthesis.",
+      "templates_used": ["source-credibility-rubric.md"],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:source-evaluator",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
+      "id": "citation-builder",
+      "description_id": "Format citation + susun daftar pustaka dari source set — footnote-numbered (default), APA, atau author-date. Tandai metadata yang tidak lengkap, tidak menebak field yang tidak diketahui.",
+      "description_en": "Format citations + build a reference list from a source set — footnote-numbered (default), APA, or author-date. Flags incomplete metadata, never guesses unknown fields.",
+      "templates_used": [],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:citation-builder",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
+      "id": "synthesis-report",
+      "description_id": "Susun laporan riset terstruktur dari source set yang sudah dinilai dan di-citation — TL;DR, key findings dengan evidence, detail, konflik antar sumber, gaps. Brief-memo, executive-summary, atau full-report.",
+      "description_en": "Compose a structured research report from a graded, cited source set — TL;DR, key findings with evidence, detail, source conflicts, gaps. Brief-memo, executive-summary, or full-report.",
+      "templates_used": ["synthesis-structure.md"],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:synthesis-report",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
       "id": "extend-capabilities",
-      "description_id": "Saat user minta kemampuan baru yang belum ada, draft skill markdown + template ke /var/lib/weuseai/customer-grown/. Tidak menyentuh bundle yang shipped — semua tambahan customer-grown saja.",
-      "description_en": "When user requests a capability the agent doesn't have, draft a new skill markdown + template into /var/lib/weuseai/customer-grown/. Bundled scaffolds remain untouched — only customer-grown additions are written.",
+      "description_id": "Generate skill / template baru saat customer minta sesuatu yang belum ada di inventory. Pakai LLM customer (BYOK), simpan ke /var/lib/weuseai/customer-grown/.",
+      "description_en": "Generate a new skill or template at runtime when the customer asks for something not in inventory.",
+      "templates_used": [],
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:extend-capabilities",
-      "tier": "starter"
+      "enabled_for_tiers": ["pro", "studio"]
     }
   ],
-  "templates": [],
+  "templates": [
+    {
+      "id": "source-credibility-rubric.md",
+      "kind": "reference",
+      "description_id": "Rubrik penilaian kredibilitas sumber — lima dimensi (authority, recency, primary/secondary, bias, corroboration) plus tier akhir A-D.",
+      "best_for": "source-evaluator grading rubric"
+    },
+    {
+      "id": "synthesis-structure.md",
+      "kind": "reference",
+      "description_id": "Kerangka tetap laporan riset — TL;DR, key findings, detail, konflik antar sumber, gaps, sumber. Tiga format: brief-memo, executive-summary, full-report.",
+      "best_for": "synthesis-report report skeleton"
+    }
+  ],
   "self_extend": true,
-  "extension_dir": "/var/lib/weuseai/customer-grown"
+  "extension_dir": "/var/lib/weuseai/customer-grown/"
 }
