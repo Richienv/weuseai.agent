@@ -350,6 +350,55 @@
     .chip:hover { background: rgba(255, 255, 255, 0.10); border-color: rgba(255, 255, 255, 0.22); color: var(--ink); }
     .chip:active { transform: translateY(1px); }
 
+    /* Persona picker (Step 4) — card grid, radio-select */
+    .persona-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    @media (min-width: 560px) {
+      .persona-grid { grid-template-columns: 1fr 1fr; }
+    }
+    .persona-card {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding: 14px 16px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--field-bg);
+      cursor: pointer;
+      transition: border-color 180ms ease, box-shadow 180ms ease, background 180ms ease;
+      position: relative;
+    }
+    .persona-card:hover { border-color: rgba(255, 255, 255, 0.24); }
+    .persona-card.is-selected {
+      border-color: var(--signal-red);
+      box-shadow: 0 0 0 3px rgba(229, 50, 45, 0.15);
+      background: rgba(229, 50, 45, 0.06);
+    }
+    .persona-card .persona-name {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--ink);
+    }
+    .persona-card .persona-blurb {
+      font-size: 12px;
+      line-height: 1.5;
+      color: rgba(245, 245, 245, 0.6);
+    }
+    .persona-card input[type="radio"] {
+      position: absolute;
+      opacity: 0;
+      width: 1px;
+      height: 1px;
+    }
+    .persona-card:focus-within {
+      border-color: var(--signal-red);
+      box-shadow: 0 0 0 3px rgba(229, 50, 45, 0.15);
+    }
+
     /* Step transitions ----------------------------------------------- */
     @keyframes stepFadeIn {
       from { opacity: 0; transform: translateY(8px); }
@@ -833,6 +882,26 @@
             </div>
           </div>
 
+          <!-- ─── Persona picker (2026-05-17) ─── -->
+          <!-- Customer picks ONE persona from the set their tier grants. -->
+          <!-- Cards are rendered by JS (renderPersonaPicker) from the -->
+          <!-- tier resolved off the customer's subscription row. -->
+          <div style="margin-top: 28px;">
+            <label class="field-label" for="persona-grid" style="margin-bottom: 4px;">
+              Pilih persona agent kamu
+            </label>
+            <p style="font-size: 12px; color: rgba(245,245,245,0.5); margin: 0 0 4px;">
+              Persona menentukan keahlian dan gaya agent. Kamu bisa ganti nanti.
+            </p>
+            <div
+              id="persona-grid"
+              class="persona-grid"
+              role="radiogroup"
+              aria-label="Persona agent"
+            ></div>
+            <p id="persona-error" class="field-error" aria-live="polite" style="margin-top: 8px;"></p>
+          </div>
+
           <button id="step3-cta" type="submit" class="btn-primary focus-ring" aria-disabled="true" disabled style="margin-top: 28px;">
             <span class="btn-spinner" aria-hidden="true"></span>
             <span class="btn-label">Lengkapi cara pakai agent</span>
@@ -948,6 +1017,39 @@
     const PAIR_POLL_MS  = 3_000;       // founder-locked: 3s
     const CODE_LIFETIME = 30 * 60_000; // founder-locked: 30 min
 
+    // ─── Persona library (2026-05-17) ───────────────────────────
+    // Mirror of supabase/functions/_shared/tier-personas.ts (TIER_PERSONAS
+    // + PERSONA_META). Static page — can't import the TS module. The
+    // server re-validates the submitted slug against the customer's tier
+    // in complete-onboarding (tier_does_not_grant_persona, 403), so this
+    // mirror is a UX convenience, not a trust boundary. Keep in lockstep
+    // with tier-personas.ts when the persona library changes.
+    const TIER_PERSONAS = {
+      starter: ['the-pro', 'doc-expert', 'slide-master'],
+      pro: [
+        'the-pro', 'doc-expert', 'slide-master', 'deep-researcher',
+        'trade-pro', 'project-conductor', 'video-producer', 'social-conductor',
+      ],
+      studio: [
+        'the-pro', 'doc-expert', 'slide-master', 'deep-researcher',
+        'trade-pro', 'project-conductor', 'video-producer', 'social-conductor',
+        'web-app-builder', 'business-agent',
+      ],
+    };
+    const DEFAULT_PERSONA = 'the-pro';
+    const PERSONA_META = {
+      'the-pro': { name: 'The Pro', blurb: 'Pendamping kerja harian. Briefing pagi, ingatan lintas sesi, bantu apa pun.' },
+      'doc-expert': { name: 'Doc Expert', blurb: 'Draft laporan, proposal, dan email yang sesuai gaya kamu.' },
+      'slide-master': { name: 'Slide Master', blurb: 'Susun deck presentasi dari poin mentah jadi slide rapi.' },
+      'deep-researcher': { name: 'Deep Researcher', blurb: 'Riset mendalam, banding sumber, dan rangkum temuan jadi ringkas.' },
+      'trade-pro': { name: 'Trade Pro', blurb: 'Analisis pasar dan rangkuman data trading. Bukan saran finansial.' },
+      'project-conductor': { name: 'Project Conductor', blurb: 'Jaga big picture project — bagi task, monitor progres, ingatkan blocker.' },
+      'video-producer': { name: 'Video Producer', blurb: 'Bantu konsep, script, dan alur produksi video dari ide sampai jadi.' },
+      'social-conductor': { name: 'Social Conductor', blurb: 'Rencanakan konten sosial, susun kalender, dan draft caption.' },
+      'web-app-builder': { name: 'Web Creator', blurb: 'Bangun landing page dan web app sederhana dari brief kamu.' },
+      'business-agent': { name: 'Business Director', blurb: 'Orkestrasi lintas departemen — operasi, marketing, sampai keuangan.' },
+    };
+
     // ─── URL ────────────────────────────────────────────────────
     const params = new URLSearchParams(location.search);
     const cid    = params.get('cid');
@@ -988,6 +1090,8 @@
     const $step3Form       = document.getElementById('step3-form');
     const $step3Cta        = document.getElementById('step3-cta');
     const $chips           = document.querySelectorAll('.chip');
+    const $personaGrid     = document.getElementById('persona-grid');
+    const $personaError    = document.getElementById('persona-error');
 
     const $overlay        = document.getElementById('submit-overlay');
     const $submitPanel    = document.getElementById('submit-panel');
@@ -1005,6 +1109,9 @@
     let pairingExpiry = null;          // Date
     let expiryTimer   = null;
     let pollTimer     = null;
+    // Persona selection (2026-05-17)
+    let customerTier    = null;        // 'starter' | 'pro' | 'studio'
+    let selectedPersona = null;        // chosen agent_slug
 
     // ─── Helpers ────────────────────────────────────────────────
 
@@ -1030,6 +1137,74 @@
         if (!r.ok) throw new Error(`fetchCustomer: ${r.status}`);
         return r.json();
       }).then((rows) => rows[0] ?? null);
+    }
+
+    /**
+     * Resolve the customer's tier from their most recent subscription.
+     * Persona selection (2026-05-17): the persona picker shows only the
+     * personas this tier grants. Anon SELECT on `subscriptions` is
+     * RLS-scoped by the X-CID header (Sesi D P0-3) — same pattern
+     * welcome.html's pollOnce uses. Returns 'starter' | 'pro' | 'studio'
+     * or null on any failure (caller falls back to 'starter').
+     */
+    function fetchTier() {
+      const url =
+        `${SUPABASE_URL}/rest/v1/subscriptions` +
+        `?customer_id=eq.${encodeURIComponent(cid)}` +
+        `&select=tier,status,started_at` +
+        `&order=started_at.desc&limit=1`;
+      return fetch(url, {
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          'X-CID': cid,
+        },
+      }).then((r) => {
+        if (!r.ok) throw new Error(`fetchTier: ${r.status}`);
+        return r.json();
+      }).then((rows) => {
+        const t = rows[0]?.tier;
+        return (t === 'starter' || t === 'pro' || t === 'studio') ? t : null;
+      });
+    }
+
+    /**
+     * Render the persona picker cards for the customer's tier. Customer
+     * MUST be able to pick ANY persona their tier grants — every tier
+     * persona gets a card. Default selection: 'the-pro' if in tier (it
+     * always is — first-of-list invariant), else the first tier persona.
+     */
+    function renderPersonaPicker() {
+      const slugs = TIER_PERSONAS[customerTier] || TIER_PERSONAS.starter;
+      const preferred = slugs.indexOf(DEFAULT_PERSONA) !== -1
+        ? DEFAULT_PERSONA
+        : slugs[0];
+      // Preserve an earlier choice across re-renders (tab resume); else
+      // default. Never leave selectedPersona pointing outside the tier.
+      if (!selectedPersona || slugs.indexOf(selectedPersona) === -1) {
+        selectedPersona = preferred;
+      }
+      $personaGrid.innerHTML = '';
+      slugs.forEach((slug) => {
+        const meta = PERSONA_META[slug] || { name: slug, blurb: '' };
+        const label = document.createElement('label');
+        label.className = 'persona-card focus-ring';
+        label.dataset.persona = slug;
+        if (slug === selectedPersona) label.classList.add('is-selected');
+        const checked = slug === selectedPersona ? ' checked' : '';
+        label.innerHTML =
+          `<input type="radio" name="persona" value="${slug}"${checked} />` +
+          `<span class="persona-name">${meta.name}</span>` +
+          `<span class="persona-blurb">${meta.blurb}</span>`;
+        label.querySelector('input').addEventListener('change', () => {
+          selectedPersona = slug;
+          $personaError.textContent = '';
+          $personaGrid.querySelectorAll('.persona-card').forEach((c) => {
+            c.classList.toggle('is-selected', c.dataset.persona === slug);
+          });
+        });
+        $personaGrid.appendChild(label);
+      });
     }
 
     /**
@@ -1750,6 +1925,15 @@
         $expectationsErr.textContent = 'Tulis minimal 1 kalimat biar agent ngerti karakter kamu.';
         return;
       }
+      // Persona selection (2026-05-17): a persona MUST be picked before
+      // submit. selectedPersona is set by renderPersonaPicker's default,
+      // so this guards only the pathological no-render case.
+      const tierSlugs = TIER_PERSONAS[customerTier] || TIER_PERSONAS.starter;
+      if (!selectedPersona || tierSlugs.indexOf(selectedPersona) === -1) {
+        $personaError.textContent = 'Pilih satu persona untuk agent kamu.';
+        $personaGrid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
       await submitOnboarding(text);
     });
 
@@ -1777,6 +1961,9 @@
             customer_id: cid,
             whatsapp: customer.whatsapp_number,
             expectations_text,
+            // Persona selection (2026-05-17): the chosen persona slug.
+            // complete-onboarding re-validates it against the tier.
+            agent_slug: selectedPersona,
           }),
         });
       } catch (err) {
@@ -1831,6 +2018,18 @@
         $overlay.hidden = true;
         setBtnLoading($step3Cta, false);
         $expectationsErr.textContent = 'Ada karakter yang ditolak. Tulis ulang tanpa tag/kode.';
+        return;
+      }
+      // Persona selection (2026-05-17): server rejected the chosen
+      // persona as out-of-tier. Should be unreachable — the picker only
+      // renders tier personas — but a stale tab or a tier downgrade
+      // could trip it. Send the customer back to the picker.
+      if (r.status === 403 && data?.error === 'tier_does_not_grant_persona') {
+        $overlay.hidden = true;
+        setBtnLoading($step3Cta, false);
+        $personaError.textContent =
+          'Persona itu tidak tersedia di paket kamu. Pilih persona lain.';
+        $personaGrid.scrollIntoView({ behavior: 'smooth', block: 'center' });
         return;
       }
       // Capacity-exhaustion path. Originally the IDCloudHost honest-error
@@ -1914,6 +2113,18 @@
       } catch {}
 
       renderStep1();
+
+      // Persona selection (2026-05-17): resolve tier, then build the
+      // persona picker. A tier-read failure is non-fatal — fall back to
+      // 'starter' (smallest persona set; server re-validates anyway) so
+      // onboarding never blocks on this.
+      try {
+        customerTier = await fetchTier();
+      } catch {
+        customerTier = null;
+      }
+      if (!customerTier) customerTier = 'starter';
+      renderPersonaPicker();
 
       // Pre-populate the bot username deeplink if we already validated
       // it server-side (resume case after a tab refresh post-Step 2).

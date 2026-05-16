@@ -23,6 +23,7 @@
     "local:fn-serve": "supabase functions serve --no-verify-jwt --env-file ./supabase/.env.local",
     "local:prov-dev": "cd services/provisioning && ENABLE_REAL_PROVISIONING=false VPS_PROVIDER=mock npm run dev",
     "smoke": "tsx scripts/smoke-runner.mjs",
+    "publish:bundles": "node scripts/publish-persona-bundles.mjs",
     "smoke:service:local": "E2E_SMOKE_TARGET=local AUDIT_CID=cust-local-renita tsx --test tests/e2e/smoke-service.spec.ts",
     "smoke:service:deployed": "E2E_SMOKE_TARGET=deployed tsx --test tests/e2e/smoke-service.spec.ts",
     "smoke:chain:local": "E2E_CHAIN_TARGET=local tsx --test tests/e2e/smoke-chain.spec.ts",

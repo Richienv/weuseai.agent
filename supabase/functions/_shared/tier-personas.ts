@@ -70,6 +70,62 @@ export function personasForTier(tier: Tier): readonly string[] {
   return list
 }
 
+/**
+ * Persona-selection support (2026-05-17): display metadata for the
+ * onboarding persona picker. Keyed by the same slugs as TIER_PERSONAS so
+ * the UI never has to duplicate the list. `name` is the v2 display name
+ * (manifest-validator.ts §rename notes); `blurb` is a one-line Bahasa
+ * description for the picker card — calm-premium register, "kamu", no
+ * exclamation marks, no banned words.
+ *
+ * onboarding.html mirrors this object (static page can't import TS); the
+ * drift test tier-personas.spec.ts pins both directions.
+ */
+export const PERSONA_META: {
+  readonly [slug: string]: { readonly name: string; readonly blurb: string }
+} = {
+  'the-pro': {
+    name: 'The Pro',
+    blurb: 'Pendamping kerja harian. Briefing pagi, ingatan lintas sesi, bantu apa pun.',
+  },
+  'doc-expert': {
+    name: 'Doc Expert',
+    blurb: 'Draft laporan, proposal, dan email yang sesuai gaya kamu.',
+  },
+  'slide-master': {
+    name: 'Slide Master',
+    blurb: 'Susun deck presentasi dari poin mentah jadi slide rapi.',
+  },
+  'deep-researcher': {
+    name: 'Deep Researcher',
+    blurb: 'Riset mendalam, banding sumber, dan rangkum temuan jadi ringkas.',
+  },
+  'trade-pro': {
+    name: 'Trade Pro',
+    blurb: 'Analisis pasar dan rangkuman data trading. Bukan saran finansial.',
+  },
+  'project-conductor': {
+    name: 'Project Conductor',
+    blurb: 'Jaga big picture project — bagi task, monitor progres, ingatkan blocker.',
+  },
+  'video-producer': {
+    name: 'Video Producer',
+    blurb: 'Bantu konsep, script, dan alur produksi video dari ide sampai jadi.',
+  },
+  'social-conductor': {
+    name: 'Social Conductor',
+    blurb: 'Rencanakan konten sosial, susun kalender, dan draft caption.',
+  },
+  'web-app-builder': {
+    name: 'Web Creator',
+    blurb: 'Bangun landing page dan web app sederhana dari brief kamu.',
+  },
+  'business-agent': {
+    name: 'Business Director',
+    blurb: 'Orkestrasi lintas departemen — operasi, marketing, sampai keuangan.',
+  },
+}
+
 // Drift gate: keep the test+code in sync by asserting at module-load time.
 // If a future migration adds a persona slug, this file must be updated
 // too — otherwise the test will fail and bundle-pull will silently miss

@@ -1,14 +1,14 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "trade-pro",
-  "version": "2.0.0",
-  "description_id": "Bundle skill + template Trade Pro v2. Briefing pasar pagi, alert saham + crypto, ringkas laporan keuangan emiten, plus IDR/BI rate watcher (pindahan dari Macro Strategist) + Bitget read-only (P1).",
+  "version": "2.1.0",
+  "description_id": "Bundle skill + template Trade Pro v2.1. Briefing pasar pagi, alert saham + crypto, ringkas laporan keuangan emiten, plus IDR/BI rate watcher (pindahan dari Macro Strategist) + Bitget read-only (P1). v2.1 menambah template format briefing, schema alert, format earnings, dan rate-watch reference.",
   "skills": [
     {
       "id": "market-briefing",
       "description_id": "Briefing pasar pagi jam 8 WIB — IDX open recap, US/EU overnight summary, crypto major moves, event calendar hari ini.",
       "description_en": "Morning market briefing — IDX open, overnight US/EU, crypto top moves, today's event calendar.",
-      "templates_used": [],
+      "templates_used": ["market-briefing-format.md"],
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:market-briefing",
       "enabled_for_tiers": ["pro", "studio"]
@@ -17,7 +17,7 @@
       "id": "alert-watcher",
       "description_id": "Set alert saham / crypto berdasarkan threshold (price, volume, news). Delivery via Telegram dengan one-line context. Tidak auto-trade.",
       "description_en": "Watch stocks / crypto for threshold-based alerts (price, volume, news). Telegram delivery with one-line context. Never auto-trades.",
-      "templates_used": [],
+      "templates_used": ["alert-rule-schema.md"],
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:alert-watcher",
       "enabled_for_tiers": ["pro", "studio"]
@@ -26,7 +26,7 @@
       "id": "earnings-summarizer",
       "description_id": "Ringkas laporan keuangan emiten — key metrics, surprises vs konsensus, audit notes, guidance change. Source dari laporan resmi (annual / quarterly).",
       "description_en": "Summarize listed-company financial reports — key metrics, surprises vs consensus, audit notes, guidance change. Sourced from official annual/quarterly filings.",
-      "templates_used": [],
+      "templates_used": ["earnings-summary-format.md"],
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:earnings-summarizer",
       "enabled_for_tiers": ["pro", "studio"]
@@ -35,7 +35,7 @@
       "id": "idr-bi-rate-watcher",
       "description_id": "Monitor IDR/USD dan BI rate. Update kalau IDR break level psikologis atau BI Board signal rate change. Konteks: spread vs Fed, capital flow, cadangan devisa. v2 — pindahan dari Macro Strategist.",
       "description_en": "Monitor IDR/USD and BI rate. Updates on psychological-level breaks or BI Board signals. Context includes Fed spread, capital flow, foreign reserves. v2 — moved from Macro Strategist.",
-      "templates_used": [],
+      "templates_used": ["rate-watch-reference.md"],
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:idr-bi-rate-watcher",
       "enabled_for_tiers": ["pro", "studio"]
@@ -59,7 +59,32 @@
       "enabled_for_tiers": ["pro", "studio"]
     }
   ],
-  "templates": [],
+  "templates": [
+    {
+      "id": "market-briefing-format.md",
+      "kind": "reference",
+      "description_id": "Struktur tetap briefing pasar pagi — IDX recap, overnight global, crypto, event calendar, sentiment one-liner.",
+      "best_for": "market-briefing output skeleton"
+    },
+    {
+      "id": "alert-rule-schema.md",
+      "kind": "schema-spec",
+      "description_id": "Schema rule alert — ticker, asset class, condition, threshold, status. Disimpan append-only di alerts.jsonl.",
+      "best_for": "alert-watcher rule storage shape"
+    },
+    {
+      "id": "earnings-summary-format.md",
+      "kind": "reference",
+      "description_id": "Struktur tetap ringkasan laporan keuangan emiten — key metrics, surprises vs konsensus, catatan auditor, guidance change.",
+      "best_for": "earnings-summarizer output skeleton"
+    },
+    {
+      "id": "rate-watch-reference.md",
+      "kind": "reference",
+      "description_id": "Reference IDR/BI rate — level psikologis IDR/USD, sumber data, dan framing per konteks customer (import, export, usd-debt, portfolio).",
+      "best_for": "idr-bi-rate-watcher level + framing reference"
+    }
+  ],
   "self_extend": true,
   "extension_dir": "/var/lib/weuseai/customer-grown/"
 }
