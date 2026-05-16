@@ -6,7 +6,23 @@
  */
 
 import 'dotenv/config'
+import dns from 'node:dns'
+import net from 'node:net'
 import express from 'express'
+
+// Bug B fix (2026-05-15) — force IPv4 egress.
+// The Vultr API key's IP allowlist holds only this Fly machine's IPv4
+// address. Node's Happy-Eyeballs (autoSelectFamily, default-on since
+// Node 20) intermittently won the IPv6 race when calling api.vultr.com,
+// so Vultr saw an unallowlisted IPv6 source and returned
+// `401 Unauthorized IP address` — flaking both spin-up and tear-down.
+// `ipv4first` orders DNS results IPv4-first; disabling autoSelectFamily
+// stops the race so the connection uses that first (IPv4) address.
+// Process-global on purpose: every outbound host we use (Vultr,
+// DigitalOcean, Supabase, Telegram) has IPv4, and IPv4 is the egress
+// path Fly's allowlisted address actually uses.
+dns.setDefaultResultOrder('ipv4first')
+net.setDefaultAutoSelectFamily(false)
 import { spinUpCustomer, tearDownCustomer, type SpinUpDeps } from './customer-flow.js'
 import { createVPSProvider } from './providers/index.js'
 import { createDataStore } from './stores/index.js'

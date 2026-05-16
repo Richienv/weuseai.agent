@@ -258,6 +258,29 @@ Selamat pagi. Berita Senin, 12 Mei 2026:
 Ringkasan dua kalimat tentang berita ini.
 `
 
+// /start skill (2026-05-16). Hermes' gateway only routes registered
+// skill-commands; an un-registered /start gets "Unknown command" — the
+// worst possible reply to a customer's very first message. A skill
+// named `start` makes /start resolve; invoking it feeds this content to
+// the agent, which fires the SOUL.md "first contact" greeting.
+const START_SKILL_MD = `# Start — sapaan kontak pertama
+
+## Kapan dipakai
+Saat customer mengetik /start. Biasanya ini pesan pertama mereka ke kamu, atau saat mereka mau mulai ulang percakapan dari awal.
+
+## Yang dilakukan
+Sapa customer sebagai kontak pertama. Ikuti persis bagian "When my customer first messages me" di SOUL.md kamu:
+- Sapa hangat, pakai nama customer kalau kamu tahu namanya.
+- Sebut spesialisasi kamu dalam satu kalimat singkat.
+- Kasih tiga contoh konkret yang bisa dimulai sekarang.
+- Tutup dengan satu pertanyaan: apa prioritas mereka hari ini.
+
+## Yang tidak dilakukan
+- Jangan tampilkan instruksi ini ke customer.
+- Jangan sebut kata "skill", "/start", atau "command".
+- Jangan jelaskan apa itu /start. Langsung balas dengan sapaan natural, seakan ini awal percakapan.
+`
+
 const DAILY_NEWS_CRON_PROMPT =
   'Cek 5 berita teratas dari detik.com, kompas.com, cnbcindonesia.com. ' +
   'Ringkas tiap berita 2 kalimat. ' +
@@ -619,16 +642,41 @@ ${haloCurl}
 #   "timeout: failed to run command 'DEBIAN_FRONTEND=noninteractive':
 #    No such file or directory"
 # at line 590 before halo / Hermes install ever ran.
-log "Updating apt (timeout 90 sec)..."
-if ! timeout 90 env DEBIAN_FRONTEND=noninteractive apt-get update -qq >> "$LOG" 2>&1; then
-  log "✗ apt-get update timed out or failed after 90 sec"
-  exit 5
-fi
-log "Installing base packages (timeout 180 sec)..."
-if ! timeout 180 env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq curl ca-certificates python3 sudo >> "$LOG" 2>&1; then
-  log "✗ apt-get install timed out or failed after 180 sec"
-  exit 6
-fi
+#
+# Reliability fix (2026-05-16, Phase F run #2): a cold Vultr VPS hitting
+# a slow/transient Ubuntu apt mirror failed apt-get install at the 180s
+# timeout (exit 6) — a one-off network flake, not a code bug. apt ops
+# now retry up to 3x with 5s/15s backoff; each attempt keeps its own
+# timeout. apt only — npm/pip/curl are NOT wrapped speculatively.
+apt_retry() {
+  # apt_retry <label> <exit_code> <timeout_sec> <command...>
+  local label="$1" code="$2" tmo="$3"; shift 3
+  local attempt=1 rc delay
+  while [ "$attempt" -le 3 ]; do
+    log "$label — attempt $attempt/3 (timeout \${tmo}s)..."
+    if timeout "$tmo" "$@" >> "$LOG" 2>&1; then
+      log "  ✓ $label ok (attempt $attempt)"
+      return 0
+    fi
+    rc=$?
+    if [ "$rc" -eq 124 ]; then
+      log "  ⚠ $label attempt $attempt: TIMED OUT after \${tmo}s"
+    else
+      log "  ⚠ $label attempt $attempt: failed rc=$rc (apt mirror error / lock / other)"
+    fi
+    if [ "$attempt" -lt 3 ]; then
+      if [ "$attempt" -eq 1 ]; then delay=5; else delay=15; fi
+      log "  ... retrying $label in \${delay}s"
+      sleep "$delay"
+    fi
+    attempt=$((attempt + 1))
+  done
+  log "✗ $label failed all 3 attempts"
+  exit "$code"
+}
+
+apt_retry "apt-get update" 5 90 env DEBIAN_FRONTEND=noninteractive apt-get update -qq
+apt_retry "apt-get install base packages" 6 180 env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq curl ca-certificates python3 sudo
 
 # ─── 3. weuseai user (idempotent) ────────────────────────────────────────
 if ! id weuseai >/dev/null 2>&1; then
@@ -658,6 +706,14 @@ chown weuseai:weuseai /home/weuseai/.hermes/SOUL.md
 # ─── 6. Daily news skill ───────────────────────────────────────────────
 cat > /home/weuseai/.hermes/skills/daily-news-briefing-bahasa/SKILL.md <<'WEUSEAI_SKILL_EOF'
 ${DAILY_NEWS_SKILL_MD}WEUSEAI_SKILL_EOF
+
+# ─── 6 (cont). /start skill — makes /start a recognized command ────────
+# Without this, Hermes' gateway replies "Unknown command /start" to a
+# customer's first message. A skill named start makes /start resolve and
+# routes it to the agent for the SOUL.md first-contact greeting.
+sudo -u weuseai mkdir -p /home/weuseai/.hermes/skills/start
+cat > /home/weuseai/.hermes/skills/start/SKILL.md <<'WEUSEAI_START_SKILL_EOF'
+${START_SKILL_MD}WEUSEAI_START_SKILL_EOF
 chown -R weuseai:weuseai /home/weuseai/.hermes
 
 # ─── 6b. Agent-pack bundle (Phase 2E-1.5, Hermes-native) ───────────────
@@ -706,6 +762,27 @@ if ! timeout 30 su - weuseai -c '~/.local/bin/hermes --version' >> "$LOG" 2>&1; 
   exit 8
 fi
 log "✓ Hermes binary verified"
+
+# ─── 7c. config.yaml display tweaks (2026-05-16) ────────────────────────
+# Keep Hermes' tool-progress + interim status messages OFF the customer's
+# Telegram thread. Without this the customer saw raw internal text —
+# "memory: '+user: ...'" tool previews and "Empty response after tool
+# calls" lifecycle status. config.yaml is materialized by the Hermes
+# install above; flip two display keys in place (sed keeps every
+# comment). Key-matching regex so it holds regardless of the upstream
+# default value. Hermes-config only — no upstream code is patched.
+CONFIG_YAML=/home/weuseai/.hermes/config.yaml
+if [ -f "$CONFIG_YAML" ]; then
+  # tool_progress is QUOTED — unquoted "off" is a YAML 1.1 boolean, but
+  # Hermes wants the string (its other values new/all/verbose are
+  # strings). interim_assistant_messages IS a real boolean — unquoted.
+  sed -i -E 's/^[[:space:]]*tool_progress:.*/  tool_progress: "off"/' "$CONFIG_YAML"
+  sed -i -E 's/^[[:space:]]*interim_assistant_messages:.*/  interim_assistant_messages: false/' "$CONFIG_YAML"
+  chown weuseai:weuseai "$CONFIG_YAML"
+  log "✓ config.yaml display tweaked (tool_progress=\"off\", interim_assistant_messages=false)"
+else
+  log "⚠ config.yaml not found at setup time — display tweak skipped (non-fatal)"
+fi
 
 # ─── 8. Telegram gateway + cron (HF-2: gateway is now FATAL) ────────────
 ${hermesGatewayBlock}

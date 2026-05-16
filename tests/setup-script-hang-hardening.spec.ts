@@ -1,8 +1,9 @@
 /**
  * HF-2 (2026-05-12 founder Q3+Q4 lock): setup-script hardening.
  * - Hermes install wrapped in `timeout 600` (10 min)
- * - apt-get update wrapped in `timeout 90`
- * - apt-get install wrapped in `timeout 180`
+ * - apt-get update / install run via the apt_retry helper — each
+ *   attempt keeps its per-op timeout (90s / 180s), 3x retry on flake
+ *   (added 2026-05-16, Phase F run #2 — flaky Ubuntu apt mirror)
  * - Post-install `hermes --version` verification (30 sec cap)
  * - 30-sec heartbeat background loop writing
  *   /var/log/hermes-install.heartbeat
@@ -54,20 +55,32 @@ test('Hermes install: curl uses --max-time 30 (network-level)', () => {
   )
 })
 
-test('apt-get update: wrapped in `timeout 90 env DEBIAN_FRONTEND=...`', () => {
+test('apt_retry helper passes each attempt through `timeout "$tmo"`', () => {
   const s = buildSetupScript(baseParams)
-  // HF-2b regression guard (2026-05-12): the env-var MUST be inside
-  // an `env VAR=val` clause AFTER `timeout 90`. The pre-2b layout
-  // `timeout 90 DEBIAN_FRONTEND=... apt-get update` made timeout(1)
-  // try to run the literal string "DEBIAN_FRONTEND=noninteractive"
-  // as its command — "No such file or directory" abort, customer
-  // VPS provisioning blocked at apt step.
-  assert.match(s, /timeout\s+90\s+env\s+DEBIAN_FRONTEND=noninteractive\s+apt-get update/)
+  // The retry helper (2026-05-16) preserves the HF-2 hang-hardening
+  // property: every apt attempt is still wrapped in timeout(1). The
+  // per-op timeout is passed as the helper's 3rd arg.
+  assert.match(s, /apt_retry\(\) \{/, 'apt_retry helper must be defined')
+  assert.match(s, /timeout "\$tmo" "\$@"/, 'apt_retry must wrap each attempt in timeout')
 })
 
-test('apt-get install: wrapped in `timeout 180 env DEBIAN_FRONTEND=...`', () => {
+test('apt-get update: run via apt_retry with a 90s per-attempt timeout', () => {
   const s = buildSetupScript(baseParams)
-  assert.match(s, /timeout\s+180\s+env\s+DEBIAN_FRONTEND=noninteractive\s+apt-get install/)
+  // HF-2b regression guard (2026-05-12): the env-var MUST be inside an
+  // `env VAR=val` clause. Here `env` follows the timeout value (90) in
+  // the apt_retry call; inside the helper it becomes `timeout 90 env …`.
+  assert.match(
+    s,
+    /apt_retry "apt-get update" \d+ 90 env DEBIAN_FRONTEND=noninteractive apt-get update/,
+  )
+})
+
+test('apt-get install: run via apt_retry with a 180s per-attempt timeout', () => {
+  const s = buildSetupScript(baseParams)
+  assert.match(
+    s,
+    /apt_retry "apt-get install base packages" \d+ 180 env DEBIAN_FRONTEND=noninteractive apt-get install/,
+  )
 })
 
 test('HF-2b regression: env-var prefix never directly follows `timeout N`', () => {
