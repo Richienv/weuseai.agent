@@ -915,3 +915,66 @@ test('wait-page race — getActiveVPSStatus read failure defers safely (no crash
   assert.equal(data.waiting_for_vps, true, 'read failure → safe defer')
   assert.equal(provisioning.refreshCalls.length, 0)
 })
+
+// ─── Bug-1 + Bug-2 fixes (2026-05-16) ───────────────────────────────
+
+test('Bug-2: happy path pushes TELEGRAM_HOME_CHANNEL = customer chat_id', async () => {
+  const { db, minter, provisioning, telegram } = setupHappyPath()
+  db.seedVPSStatus('running')
+
+  await handleCompleteOnboarding(
+    buildReq({
+      customer_id: 'cust-1',
+      whatsapp: '08123456789',
+      expectations_text: 'Bantu briefing pagi dan ringkas berita.',
+    }),
+    { db, minter, provisioning, telegram, publicBase: PUBLIC_BASE },
+  )
+
+  assert.equal(provisioning.refreshCalls.length, 1)
+  assert.equal(
+    provisioning.refreshCalls[0].envValues.TELEGRAM_HOME_CHANNEL,
+    '987654321',
+    'home channel pushed so Hermes never prompts /sethome',
+  )
+})
+
+test('Bug-1: happy-path greeting fires once + stamps greeting_sent_at', async () => {
+  const { db, minter, provisioning, telegram } = setupHappyPath()
+  db.seedVPSStatus('running')
+
+  const res = await handleCompleteOnboarding(
+    buildReq({
+      customer_id: 'cust-1',
+      whatsapp: '08123456789',
+      expectations_text: 'Bantu briefing pagi dan ringkas berita.',
+    }),
+    { db, minter, provisioning, telegram, publicBase: PUBLIC_BASE },
+  )
+  const data = await readJson(res)
+  assert.equal(data.greeting.ok, true, 'greeting delivered on the happy path')
+  const c = await db.findCustomerById('cust-1')
+  assert.ok(c?.greeting_sent_at, 'greeting_sent_at stamped — second-finisher will now skip')
+})
+
+test('Bug-1 idempotency: customer already greeted → complete-onboarding skips greeting', async () => {
+  const { db, minter, provisioning, telegram } = setupHappyPath()
+  db.seedVPSStatus('running')
+  // Simulate the second-finisher already greeted this customer.
+  await db.updateCustomer('cust-1', { greeting_sent_at: '2026-05-16T10:00:00Z' })
+
+  const res = await handleCompleteOnboarding(
+    buildReq({
+      customer_id: 'cust-1',
+      whatsapp: '08123456789',
+      expectations_text: 'Bantu briefing pagi dan ringkas berita.',
+    }),
+    { db, minter, provisioning, telegram, publicBase: PUBLIC_BASE },
+  )
+  const data = await readJson(res)
+  assert.equal(
+    data.greeting.source,
+    'skipped',
+    'greeting not re-sent when greeting_sent_at is already set',
+  )
+})

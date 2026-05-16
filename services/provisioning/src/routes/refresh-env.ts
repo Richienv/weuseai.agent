@@ -56,9 +56,18 @@ import { join } from 'node:path'
 // TELEGRAM_ALLOWED_USERS are in envValues, the script's
 // `set -euo pipefail` guard + restart-only-after-all-rewrites
 // ensures we never restart the gateway with a partial .env.
+//
+// TELEGRAM_HOME_CHANNEL added 2026-05-16 (Bug-2 fix): the customer's own
+// chat_id. Hermes upstream reads it (gateway/config.py) as the Telegram
+// home channel — suppresses the "No home channel is set… /sethome"
+// prompt that leaked to the customer on first message, and routes
+// cron / cross-platform delivery to their chat. Config-only, no
+// upstream Hermes patch. Written to .env in the same atomic awk-rewrite
+// as the other keys.
 export const ALLOWED_ENV_KEYS = [
   'TELEGRAM_BOT_TOKEN',
   'TELEGRAM_ALLOWED_USERS',
+  'TELEGRAM_HOME_CHANNEL',
   'OPENAI_API_KEY',
   'OPENROUTER_API_KEY',
 ] as const

@@ -56,6 +56,7 @@ export class FakeOnboardingStore implements IOnboardingStore {
       pairing_code: c.pairing_code ?? null,
       pairing_code_expires_at: c.pairing_code_expires_at ?? null,
       soul_md_text: c.soul_md_text ?? null,
+      greeting_sent_at: c.greeting_sent_at ?? null,
     }
     this.customers.set(c.id, row)
     return row
@@ -189,6 +190,16 @@ export class FakeOnboardingStore implements IOnboardingStore {
     const ciphertext = this.botTokensCiphertext.get(customer_id)
     if (!ciphertext) return null
     return ciphertext.startsWith('enc:') ? ciphertext.slice(4) : null
+  }
+
+  async markGreetingSent(customer_id: string): Promise<void> {
+    const existing = this.customers.get(customer_id)
+    if (existing) {
+      this.customers.set(customer_id, {
+        ...existing,
+        greeting_sent_at: new Date().toISOString(),
+      })
+    }
   }
 
   async getActiveVPSStatus(

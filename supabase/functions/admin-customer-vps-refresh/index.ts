@@ -18,6 +18,7 @@ import { handleAdminCustomerVpsRefresh } from '../_shared/admin-customer-vps-ref
 import { handleCors, withCors } from '../_shared/cors.ts'
 import { createOnboardingStore } from '../_shared/onboarding-store-supabase.ts'
 import { OnboardingProvisioningClient } from '../_shared/onboarding-provisioning-client.ts'
+import { TelegramBotClient } from '../_shared/telegram-client.ts'
 import { isServiceRoleCaller } from '../_shared/admin-auth.ts'
 
 // @ts-ignore — Deno global available at runtime
@@ -43,6 +44,14 @@ const provisioning = new OnboardingProvisioningClient({
   authToken: PROVISIONING_AUTH_TOKEN,
 })
 
+// Bug-1 fix (2026-05-16): the second-finisher path now delivers the
+// proactive greeting. sendProactiveGreeting only uses sendMessageAs with
+// the customer's OWN bot token (per-call), so the platform token here is
+// just a constructor placeholder — passed from the secret when present.
+const telegram = new TelegramBotClient({
+  token: Deno.env.get('TELEGRAM_BOT_TOKEN') ?? '',
+})
+
 Deno.serve(async (req) => {
   const preflight = handleCors(req)
   if (preflight) return preflight
@@ -58,6 +67,6 @@ Deno.serve(async (req) => {
     )
   }
 
-  const res = await handleAdminCustomerVpsRefresh(req, { db, provisioning })
+  const res = await handleAdminCustomerVpsRefresh(req, { db, provisioning, telegram })
   return withCors(res, req)
 })

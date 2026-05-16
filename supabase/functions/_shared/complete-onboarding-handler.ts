@@ -392,6 +392,15 @@ export async function handleCompleteOnboarding(
         // warnings that fire on every message otherwise.
         OPENAI_API_KEY: mintResult.key,
         OPENROUTER_API_KEY: mintResult.key,
+        // Bug-2 fix (2026-05-16): set the customer's chat as the Telegram
+        // home channel. Hermes reads TELEGRAM_HOME_CHANNEL from .env →
+        // suppresses the "No home channel is set… /sethome" prompt that
+        // leaked to the customer on first message + routes cron /
+        // cross-platform delivery to their chat. chat_id is non-null
+        // here (telegram_not_paired check above guarantees it).
+        ...(customer.telegram_chat_id
+          ? { TELEGRAM_HOME_CHANNEL: customer.telegram_chat_id }
+          : {}),
       },
       // Dry-run Stage 7 fix: pass SOUL.md content too. Without this, the
       // canonical xendit-webhook → onboarding flow leaves SOUL.md empty
@@ -466,8 +475,15 @@ export async function handleCompleteOnboarding(
   //
   // Only fires when both 8a + 8b succeeded. If either failed, the agent
   // isn't actually reachable yet so a greeting would land in a void.
+  //
+  // Bug-1 fix (2026-05-16): also gate on greeting_sent_at. In the
+  // fast-customer race, refreshResult is null here (deferred) so this
+  // block is skipped entirely — the provisioning second-finisher
+  // (admin-customer-vps-refresh) delivers the greeting instead. The
+  // greeting_sent_at guard makes the two paths mutually exclusive: the
+  // customer is greeted exactly once. On success we stamp the column.
   let greetingResult: { ok: boolean; source: string; error?: string } | null = null
-  if (refreshResult?.ok && webhookResult.ok) {
+  if (refreshResult?.ok && webhookResult.ok && !customer.greeting_sent_at) {
     greetingResult = await sendProactiveGreeting(
       {
         chatId: customer.telegram_chat_id,
@@ -478,7 +494,17 @@ export async function handleCompleteOnboarding(
       },
       { telegram: deps.telegram },
     )
-    if (!greetingResult.ok) {
+    if (greetingResult.ok) {
+      try {
+        await deps.db.markGreetingSent(customer_id)
+      } catch (e) {
+        // Stamp failure is non-fatal — worst case the second-finisher
+        // re-greets once (rare, mildly redundant, never broken).
+        console.error(
+          `[complete-onboarding] markGreetingSent failed for ${customer_id}: ${errMessage(e)}`,
+        )
+      }
+    } else {
       console.error(
         `[complete-onboarding] proactive greeting failed for ${customer_id}: ` +
           `source=${greetingResult.source} error=${greetingResult.error ?? 'n/a'}`,

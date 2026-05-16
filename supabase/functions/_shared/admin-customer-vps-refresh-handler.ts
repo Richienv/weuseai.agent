@@ -12,11 +12,18 @@
 import type {
   IOnboardingProvisioningClient,
   IOnboardingStore,
+  ITelegramClient,
 } from './types.ts'
+import { sendProactiveGreeting } from './proactive-greeting.ts'
 
 export type AdminCustomerVpsRefreshDeps = {
   db: IOnboardingStore
   provisioning: IOnboardingProvisioningClient
+  /** Bug-1 fix (2026-05-16): used to deliver the proactive greeting on
+   *  the second-finisher path. This handler is the path that starts the
+   *  gateway for a fast customer whose complete-onboarding deferred —
+   *  so it must also be the path that greets them. */
+  telegram: ITelegramClient
 }
 
 export type AdminCustomerVpsRefreshBody = {
@@ -88,11 +95,20 @@ export async function handleAdminCustomerVpsRefresh(
   // paired), pushing an empty allowlist would lock the bot to nobody —
   // we omit the key entirely instead (handler-side gate, mirrors
   // upstream pre-approve gating below).
-  const envValues: { TELEGRAM_BOT_TOKEN: string; TELEGRAM_ALLOWED_USERS?: string } = {
+  const envValues: {
+    TELEGRAM_BOT_TOKEN: string
+    TELEGRAM_ALLOWED_USERS?: string
+    TELEGRAM_HOME_CHANNEL?: string
+  } = {
     TELEGRAM_BOT_TOKEN: botToken,
   }
   if (customer.telegram_chat_id) {
     envValues.TELEGRAM_ALLOWED_USERS = customer.telegram_chat_id
+    // Bug-2 fix (2026-05-16): set the customer's chat as the Telegram
+    // home channel so Hermes never prompts "No home channel is set…
+    // /sethome". Config-only — Hermes reads TELEGRAM_HOME_CHANNEL from
+    // .env. Pushed in the same atomic .env rewrite as the token.
+    envValues.TELEGRAM_HOME_CHANNEL = customer.telegram_chat_id
   }
   const requestId = crypto.randomUUID()
   const refreshResult = await deps.provisioning.refreshEnv({
@@ -143,6 +159,46 @@ export async function handleAdminCustomerVpsRefresh(
     )
   }
 
+  // ─── Bug-1 fix (2026-05-16): second-finisher proactive greeting ────
+  // refreshEnv succeeded → the gateway is up with the customer's bot
+  // token. This handler is the path that starts the gateway for a fast
+  // customer whose complete-onboarding deferred (and therefore skipped
+  // the greeting). Deliver the greeting now, gated by greeting_sent_at
+  // so it fires exactly once across both paths. The admin path has no
+  // plaintext OpenRouter key, so sendProactiveGreeting falls back to
+  // the in-character Indonesian template — still a real greeting.
+  // Best-effort: a greeting failure never downgrades the refresh result.
+  let greeting: { ok: boolean; source: string } = { ok: false, source: 'skipped' }
+  if (customer.greeting_sent_at) {
+    greeting = { ok: true, source: 'already_sent' }
+  } else if (customer.telegram_chat_id) {
+    const g = await sendProactiveGreeting(
+      {
+        chatId: customer.telegram_chat_id,
+        botToken,
+        soulMdText: customer.soul_md_text,
+        customerName: (customer.display_name ?? '').trim() || customer.email,
+        openrouterApiKey: null,
+      },
+      { telegram: deps.telegram },
+    )
+    greeting = { ok: g.ok, source: g.source }
+    if (g.ok) {
+      try {
+        await deps.db.markGreetingSent(body.customer_id)
+      } catch (err) {
+        console.error(
+          `[admin-customer-vps-refresh] markGreetingSent failed cid=${body.customer_id}: ${errMsg(err)}`,
+        )
+      }
+    } else {
+      console.error(
+        `[admin-customer-vps-refresh] proactive greeting failed cid=${body.customer_id} ` +
+          `source=${g.source} error=${g.error ?? 'n/a'}`,
+      )
+    }
+  }
+
   return json({
     ok: true,
     customer_id: body.customer_id,
@@ -150,6 +206,7 @@ export async function handleAdminCustomerVpsRefresh(
     ip_address: refreshResult.ipAddress,
     applied: refreshResult.applied,
     hermes_restart_at: refreshResult.hermesRestartAt,
+    greeting,
     request_id: requestId,
   })
 }

@@ -156,6 +156,7 @@ export class OnboardingProvisioningClient implements IOnboardingProvisioningClie
       applied?: {
         TELEGRAM_BOT_TOKEN?: 'updated' | 'unchanged'
         TELEGRAM_ALLOWED_USERS?: 'updated' | 'unchanged'
+        TELEGRAM_HOME_CHANNEL?: 'updated' | 'unchanged'
         OPENROUTER_API_KEY?: 'updated' | 'unchanged'
         OPENAI_API_KEY?: 'updated' | 'unchanged'
       }

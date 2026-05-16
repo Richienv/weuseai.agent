@@ -10,6 +10,7 @@ import { handleAdminCustomerVpsRefresh } from '../supabase/functions/_shared/adm
 import { FakeOnboardingStore } from './_helpers/fake-onboarding-store.ts'
 import type {
   IOnboardingProvisioningClient,
+  ITelegramClient,
   RefreshEnvInput,
   RefreshEnvResult,
   SpinUpInput,
@@ -32,6 +33,27 @@ class FakeProvisioning implements IOnboardingProvisioningClient {
     this.refreshCalls.push(input)
     return this.refreshNext
   }
+}
+
+// Bug-1 fix (2026-05-16): the second-finisher path now delivers the
+// proactive greeting via deps.telegram.sendMessageAs. Capture those.
+class FakeTelegram implements ITelegramClient {
+  sendAsCalls: Array<{ token: string; chatId: string | number; text: string }> = []
+  failNextSend = false
+  async replyText() {}
+  async getMe() { return null }
+  async setWebhook() {}
+  async deleteWebhook() {}
+  async getWebhookInfo(): Promise<{ url: string }> { return { url: '' } }
+  async sendMessageAs(token: string, chatId: string | number, text: string) {
+    this.sendAsCalls.push({ token, chatId, text })
+    if (this.failNextSend) {
+      this.failNextSend = false
+      throw new Error('Telegram sendMessage -> 503')
+    }
+  }
+  async sendMessageWithButtonsAs() {}
+  async answerCallbackQuery() {}
 }
 
 function makeReq(body: unknown, method = 'POST'): Request {
@@ -57,7 +79,7 @@ test('happy path: decrypts bot token, calls refreshEnv, returns ok', async () =>
 
   const res = await handleAdminCustomerVpsRefresh(
     makeReq({ customer_id: 'cust-1', reason: 'rescue test' }),
-    { db, provisioning },
+    { db, provisioning, telegram: new FakeTelegram() },
   )
   assert.equal(res.status, 200)
   const body = (await res.json()) as { ok: boolean; vps_id: string; applied: unknown }
@@ -77,6 +99,7 @@ test('GET → 405', async () => {
   const res = await handleAdminCustomerVpsRefresh(makeReq({}, 'GET'), {
     db,
     provisioning: new FakeProvisioning(),
+    telegram: new FakeTelegram(),
   })
   assert.equal(res.status, 405)
 })
@@ -86,6 +109,7 @@ test('missing customer_id → 400', async () => {
   const res = await handleAdminCustomerVpsRefresh(makeReq({}), {
     db,
     provisioning: new FakeProvisioning(),
+    telegram: new FakeTelegram(),
   })
   assert.equal(res.status, 400)
 })
@@ -94,7 +118,7 @@ test('unknown customer → 404', async () => {
   const db = new FakeOnboardingStore()
   const res = await handleAdminCustomerVpsRefresh(
     makeReq({ customer_id: 'unknown-cid' }),
-    { db, provisioning: new FakeProvisioning() },
+    { db, provisioning: new FakeProvisioning(), telegram: new FakeTelegram() },
   )
   assert.equal(res.status, 404)
 })
@@ -105,7 +129,7 @@ test('customer has no bot token → 409 no_bot_token', async () => {
   // Don't seed any bot token.
   const res = await handleAdminCustomerVpsRefresh(
     makeReq({ customer_id: 'cust-1' }),
-    { db, provisioning: new FakeProvisioning() },
+    { db, provisioning: new FakeProvisioning(), telegram: new FakeTelegram() },
   )
   assert.equal(res.status, 409)
   const body = (await res.json()) as { error: string }
@@ -120,7 +144,7 @@ test('provisioning service returns 503 → handler maps to 503', async () => {
   provisioning.refreshNext = { ok: false, status: 503, body: 'ssh timeout', error: 'ssh_unreachable' }
   const res = await handleAdminCustomerVpsRefresh(
     makeReq({ customer_id: 'cust-1' }),
-    { db, provisioning },
+    { db, provisioning, telegram: new FakeTelegram() },
   )
   assert.equal(res.status, 503)
 })
@@ -146,7 +170,7 @@ test('Phase E: customer with chat_id → envValues has BOTH token AND allowlist'
   const provisioning = new FakeProvisioning()
   const res = await handleAdminCustomerVpsRefresh(
     makeReq({ customer_id: 'cust-renita', reason: 'Phase E atomic write' }),
-    { db, provisioning },
+    { db, provisioning, telegram: new FakeTelegram() },
   )
   assert.equal(res.status, 200)
   assert.equal(provisioning.refreshCalls.length, 1)
@@ -174,7 +198,7 @@ test('Phase E: customer WITHOUT chat_id → envValues has token only (graceful f
   const provisioning = new FakeProvisioning()
   const res = await handleAdminCustomerVpsRefresh(
     makeReq({ customer_id: 'cust-pre-pair' }),
-    { db, provisioning },
+    { db, provisioning, telegram: new FakeTelegram() },
   )
   assert.equal(res.status, 200)
   const env = provisioning.refreshCalls[0]!.envValues
@@ -202,7 +226,7 @@ test('Phase E atomicity invariant: when token is pushed AND chat_id exists, allo
   const provisioning = new FakeProvisioning()
   await handleAdminCustomerVpsRefresh(
     makeReq({ customer_id: 'cust-invariant' }),
-    { db, provisioning },
+    { db, provisioning, telegram: new FakeTelegram() },
   )
   const env = provisioning.refreshCalls[0]!.envValues
   if (env.TELEGRAM_BOT_TOKEN && !env.TELEGRAM_ALLOWED_USERS) {
@@ -211,4 +235,103 @@ test('Phase E atomicity invariant: when token is pushed AND chat_id exists, allo
         'is set. This regenerates the Renita Stage 5 bug class.',
     )
   }
+})
+
+// ─── Bug-1 fix (2026-05-16): second-finisher proactive greeting ──────
+//
+// The fast-customer race fix split the gateway-start path: a fast
+// customer's complete-onboarding DEFERS refreshEnv + the greeting; the
+// provisioning second-finisher (this handler) starts the gateway. So
+// this handler must also deliver the greeting. greeting_sent_at is the
+// exactly-once guard across both paths.
+
+test('Bug-1: paired customer, not yet greeted → greeting fires + greeting_sent_at stamped', async () => {
+  const db = new FakeOnboardingStore()
+  await db.seedCustomer({
+    id: 'cust-race',
+    email: 'fast@example.com',
+    display_name: 'Fast Customer',
+    telegram_chat_id: '6805409051',
+    soul_md_text: '# SOUL\nKamu agent yang membantu.',
+  })
+  await db.setBotTokenAndUsername('cust-race', '12345:bot_token', 'fastbot')
+  const telegram = new FakeTelegram()
+
+  const res = await handleAdminCustomerVpsRefresh(
+    makeReq({ customer_id: 'cust-race', reason: 'vps-ready second-finisher' }),
+    { db, provisioning: new FakeProvisioning(), telegram },
+  )
+  assert.equal(res.status, 200)
+  const body = (await res.json()) as { greeting: { ok: boolean; source: string } }
+  assert.equal(body.greeting.ok, true, 'greeting delivered')
+  assert.equal(telegram.sendAsCalls.length, 1, 'greeting sent via customer bot token')
+  assert.equal(telegram.sendAsCalls[0]!.token, '12345:bot_token')
+  assert.equal(telegram.sendAsCalls[0]!.chatId, '6805409051')
+  // greeting_sent_at stamped → the other path will now skip.
+  const c = await db.findCustomerById('cust-race')
+  assert.ok(c?.greeting_sent_at, 'greeting_sent_at stamped after delivery')
+})
+
+test('Bug-1 idempotency: customer already greeted → greeting skipped, not re-sent', async () => {
+  const db = new FakeOnboardingStore()
+  await db.seedCustomer({
+    id: 'cust-greeted',
+    email: 'greeted@example.com',
+    telegram_chat_id: '6805409051',
+    greeting_sent_at: '2026-05-16T10:00:00Z', // already greeted
+  })
+  await db.setBotTokenAndUsername('cust-greeted', '12345:bot_token', 'greetedbot')
+  const telegram = new FakeTelegram()
+
+  const res = await handleAdminCustomerVpsRefresh(
+    makeReq({ customer_id: 'cust-greeted' }),
+    { db, provisioning: new FakeProvisioning(), telegram },
+  )
+  assert.equal(res.status, 200)
+  const body = (await res.json()) as { greeting: { ok: boolean; source: string } }
+  assert.equal(telegram.sendAsCalls.length, 0, 'no duplicate greeting')
+  assert.equal(body.greeting.source, 'already_sent')
+})
+
+test('Bug-1: greeting send failure never downgrades the refresh result', async () => {
+  const db = new FakeOnboardingStore()
+  await db.seedCustomer({
+    id: 'cust-gfail',
+    email: 'gfail@example.com',
+    telegram_chat_id: '6805409051',
+  })
+  await db.setBotTokenAndUsername('cust-gfail', '12345:bot_token', 'gfailbot')
+  const telegram = new FakeTelegram()
+  telegram.failNextSend = true
+
+  const res = await handleAdminCustomerVpsRefresh(
+    makeReq({ customer_id: 'cust-gfail' }),
+    { db, provisioning: new FakeProvisioning(), telegram },
+  )
+  assert.equal(res.status, 200, 'refresh still ok even though greeting send failed')
+  const c = await db.findCustomerById('cust-gfail')
+  assert.equal(c?.greeting_sent_at, null, 'greeting_sent_at NOT stamped on a failed send')
+})
+
+// ─── Bug-2 fix (2026-05-16): TELEGRAM_HOME_CHANNEL ──────────────────
+
+test('Bug-2: paired customer → envValues includes TELEGRAM_HOME_CHANNEL = chat_id', async () => {
+  const db = new FakeOnboardingStore()
+  await db.seedCustomer({
+    id: 'cust-home',
+    email: 'home@example.com',
+    telegram_chat_id: '6805409051',
+  })
+  await db.setBotTokenAndUsername('cust-home', '12345:bot_token', 'homebot')
+  const provisioning = new FakeProvisioning()
+  await handleAdminCustomerVpsRefresh(
+    makeReq({ customer_id: 'cust-home' }),
+    { db, provisioning, telegram: new FakeTelegram() },
+  )
+  const env = provisioning.refreshCalls[0]!.envValues
+  assert.equal(
+    env.TELEGRAM_HOME_CHANNEL,
+    '6805409051',
+    'home channel must be set so Hermes does not prompt /sethome',
+  )
 })

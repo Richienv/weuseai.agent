@@ -266,6 +266,13 @@ type ChainDeps = {
   checkGatewayActive(vpsIp: string): Promise<void>
   /** Stage 8: Telegram getMe with the customer's bot token. */
   telegramGetMe(botToken: string): Promise<{ username: string }>
+  /** Stage 5.9 (FAST_CUSTOMER only — Bug-1 fix 2026-05-16): in the fast
+   *  race the proactive greeting is delivered by the provisioning
+   *  second-finisher, not by complete-onboarding's response. Confirm it
+   *  landed by checking customers.greeting_sent_at is non-null. Polls
+   *  internally so it tolerates the second-finisher finishing slightly
+   *  after the gateway goes active. */
+  checkGreetingSent(customerId: string): Promise<boolean>
   // Stages 9 + 10 (/start + /<persona> replies) are `manual` — not in
   // this interface. They need a real Telegram user account; the founder
   // confirms them by hand.
@@ -358,6 +365,10 @@ function makeLocalDeps(simClock: { nowMs: number }): ChainDeps {
     async telegramGetMe() {
       simClock.nowMs += SIM_ADVANCE_MS.getMe
       return { username: 'local_chain_bot' }
+    },
+    async checkGreetingSent() {
+      // Local mock: the second-finisher always greets in the sim.
+      return true
     },
     async teardown() {
       simClock.nowMs += SIM_ADVANCE_MS.teardown
@@ -803,6 +814,21 @@ function makeDeployedDeps(): ChainDeps {
       if (!r.ok || !body.ok) throw new Error(`getMe failed: ${JSON.stringify(body).slice(0, 200)}`)
       return { username: body.result?.username ?? 'unknown' }
     },
+    async checkGreetingSent(customerId) {
+      // Bug-1 fix (2026-05-16): the second-finisher stamps
+      // customers.greeting_sent_at the moment the proactive greeting is
+      // delivered. Poll for it — the second-finisher's greeting send
+      // can land a few seconds after the gateway goes active.
+      for (let i = 0; i < 12; i++) {
+        const rows = await pgSelect(
+          'customers',
+          `id=eq.${customerId}&select=greeting_sent_at`,
+        ).catch(() => [])
+        if (rows[0]?.greeting_sent_at) return true
+        await sleep(5000)
+      }
+      return false
+    },
     // Stages 9 + 10 are `manual` — no deps impl. A /start reply can only
     // be validated by a real Telegram user account; the founder confirms.
     async teardown(ctx) {
@@ -1000,20 +1026,28 @@ const STAGES: Stage[] = [
   {
     num: 5.9,
     name: 'auto-greet — proactive greeting delivered',
-    async run(ctx) {
+    async run(ctx, deps) {
       // The customer must NOT have to type /start. complete-onboarding
       // step 8c (sendProactiveGreeting) sends an in-character greeting to
       // the customer's chat the moment provisioning is wired. Stage 5.8
       // captured that outcome from the complete-onboarding response.
       //
-      // FAST_CUSTOMER exception (wait-page race fix 2026-05-16): when
-      // complete-onboarding deferred (VPS still provisioning), the
-      // proactive greeting is deferred too — the second-finisher does
-      // not re-send it. The customer is greeted by the /start skill
-      // instead (Stages 9-10, founder-confirmed). `deferred_vps` is the
-      // expected, correct outcome here — not a failure.
-      if (FAST_CUSTOMER && ctx.greetingSource === 'deferred_vps') {
-        return 'greeting deferred (source=deferred_vps) — /start skill greets the customer'
+      // FAST_CUSTOMER (Bug-1 fix 2026-05-16): complete-onboarding
+      // deferred, so the greeting is delivered by the provisioning
+      // second-finisher (admin-customer-vps-refresh), NOT by the
+      // complete-onboarding response. Verify it actually landed by
+      // checking customers.greeting_sent_at — the exactly-once stamp.
+      // Pre-fix this stage accepted `deferred_vps` as a pass, which is
+      // exactly how the missed auto-greet slipped through.
+      if (FAST_CUSTOMER) {
+        const sent = await deps.checkGreetingSent(ctx.customerId!)
+        if (!sent) {
+          throw new Error(
+            'FAST_CUSTOMER: auto-greet did NOT fire — customers.greeting_sent_at ' +
+              'is still null after the second-finisher. Bug-1 regression.',
+          )
+        }
+        return 'auto-greet delivered by the second-finisher (greeting_sent_at set)'
       }
       if (!ctx.greetingOk) {
         throw new Error(

@@ -114,10 +114,16 @@ test('fallback panel: visible-line copy is Bahasa, no apology, no support CTA', 
   }
 })
 
-test('fallback panel: expandable "Apa yang sedang terjadi" details element', () => {
+test('fallback panel: expandable "Mengapa lebih lama?" details element', () => {
   const src = fs.readFileSync(WELCOME, 'utf8')
   // Founder direction: "expandable 'what's happening' without infra reveal".
   // Use native <details>/<summary> so no JS state management.
+  //
+  // The summary was renamed from "Apa yang sedang terjadi" to "Mengapa
+  // lebih lama?" when the Phase 3 P3-CF-1 accordion introduced an
+  // identically-titled element (see welcome-trust-signals-phase3.spec.ts
+  // line ~205). This drift gate now pins the renamed text — keeping both
+  // spec files agreeing on the same source of truth.
   assert.match(
     src,
     /<details[^>]*id=["']b-longer-than-usual-details["']/,
@@ -125,8 +131,8 @@ test('fallback panel: expandable "Apa yang sedang terjadi" details element', () 
   )
   assert.match(
     src,
-    /<summary[^>]*>[^<]*Apa yang sedang terjadi/i,
-    'summary text must read "Apa yang sedang terjadi"',
+    /<summary[^>]*>[^<]*Mengapa lebih lama\?/i,
+    'summary text must read "Mengapa lebih lama?" (renamed to avoid collision)',
   )
 })
 

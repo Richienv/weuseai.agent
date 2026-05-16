@@ -46,43 +46,43 @@ test('STAGE_LABEL has an entry for every stage in the probe progression', () => 
   }
 })
 
-test('applyStageProgressToB updates label, progress bar, and ETA from probe', () => {
+test('applyStageProgressToB updates label, timeline bar, and % readout from probe', () => {
   const src = fs.readFileSync(WELCOME, 'utf8')
-  // Look for the function definition + the three DOM nodes it must
-  // update. If a future refactor renames a node, this test surfaces
-  // the drift.
+  // Look for the function definition + the DOM nodes it must update.
+  // Terminal redesign (2026-05-16): the standalone ETA line (b-eta-line)
+  // was folded into the timeline %; the function now drives b-label,
+  // b-progress-fill (timeline bar fill), and b-pct (big % readout).
   assert.match(src, /function applyStageProgressToB/)
   assert.match(src, /document\.getElementById\(['"]b-label['"]\)/)
   assert.match(src, /document\.getElementById\(['"]b-progress-fill['"]\)/)
-  assert.match(src, /document\.getElementById\(['"]b-eta-line['"]\)/)
+  assert.match(src, /document\.getElementById\(['"]b-pct['"]\)/)
 })
 
-test('B-state DOM contains soft + hard escalation hint nodes', () => {
+test('B-state DOM contains the soft escalation hint node', () => {
   const src = fs.readFileSync(WELCOME, 'utf8')
-  // 1.5x expected duration → soft hint (yellow). 3x → hard hint (red,
-  // with WhatsApp deeplink). Both initially hidden, revealed by
-  // applyStageProgressToB based on per-stage elapsed.
+  // 1.5x expected duration → soft hint (calm "lebih lama dari biasanya").
+  // Terminal redesign (2026-05-16) REMOVED the 3x hard "Hubungi tim via
+  // WhatsApp" escalation card: the wait page is calm + self-resolving
+  // now (the race fix means it no longer gets stuck). The soft hint is
+  // kept; it carries no support CTA.
   assert.match(src, /id="b-soft-hint"[^>]*hidden/)
-  assert.match(src, /id="b-hard-hint"[^>]*hidden/)
-  assert.match(src, /id="b-hard-wa"/, 'hard hint must include WA escalation link')
+  assert.equal(
+    /id="b-hard-hint"/.test(src),
+    false,
+    'hard escalation card was removed in the terminal redesign — must not return',
+  )
 })
 
-test('escalation thresholds: 1.5x and 3x of expected_current_stage_duration_seconds', () => {
+test('soft escalation threshold: 1.5x of expected_current_stage_duration_seconds', () => {
   const src = fs.readFileSync(WELCOME, 'utf8')
-  // The thresholds are the contract welcome.html and the founder
-  // agreed on — too-eager escalation creates panic on healthy slow
-  // builds, too-late escalation makes "stuck looks like working"
-  // (the original bug). Source-level pinning keeps a future tweak
-  // visible in PR review.
+  // The threshold is the contract welcome.html and the founder agreed
+  // on — too-eager escalation creates panic on healthy slow builds.
+  // Source-level pinning keeps a future tweak visible in PR review.
+  // (The 3x hard threshold was removed with the hard-hint card.)
   assert.match(
     src,
     /elapsed\s*>\s*1\.5\s*\*\s*expected/,
     'soft escalation must trigger at >1.5x expected stage duration',
-  )
-  assert.match(
-    src,
-    /elapsed\s*>\s*3\s*\*\s*expected/,
-    'hard escalation must trigger at >3x expected stage duration',
   )
 })
 
