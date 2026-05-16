@@ -275,9 +275,196 @@
       outline-offset: 3px;
     }
 
+    /* ════════════════════════════════════════════════════════════
+       WAIT-PAGE REDESIGN (Phase 3, 2026-05-16)
+       Retro/futuristic terminal aesthetic for state B — the
+       provisioning wait view. Monospace, brand colors, rectangle-block
+       loader (NOT a spinner), persistent accumulating log, timeline
+       progress bar with % milestones, blinking cursor, CRT scanlines.
+       ════════════════════════════════════════════════════════════ */
+    :root {
+      --oxblood: #4a1512;
+      --bone: #ece7dd;
+      --term-green: #6fcf7f;
+      --term-amber: #e5aa28;
+    }
+
+    /* Non-dismissible "don't leave / don't refresh" banner */
+    .term-warn {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      letter-spacing: 0.02em;
+      color: var(--bone);
+      background: linear-gradient(90deg, var(--oxblood), rgba(74, 21, 18, 0.55));
+      border: 1px solid var(--signal-red-glow);
+      border-radius: 8px;
+      padding: 11px 14px;
+      display: flex; align-items: center; gap: 10px;
+      line-height: 1.5;
+    }
+    .term-warn .blink-sq {
+      width: 9px; height: 9px; flex-shrink: 0;
+      background: var(--signal-red);
+      box-shadow: 0 0 8px var(--signal-red-glow);
+      animation: sqBlink 1s steps(1) infinite;
+    }
+    @keyframes sqBlink { 0%,49% { opacity: 1; } 50%,100% { opacity: 0.15; } }
+
+    /* Timeline progress bar + big % readout */
+    .term-timeline { margin-top: 18px; }
+    .term-pct-row { display: flex; align-items: baseline; gap: 10px; }
+    .term-pct {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 500;
+      font-size: 40px;
+      line-height: 1;
+      color: var(--signal-red);
+      text-shadow: 0 0 16px var(--signal-red-glow);
+      font-variant-numeric: tabular-nums;
+    }
+    .term-pct-unit { font-family: 'JetBrains Mono', monospace; font-size: 18px; color: var(--muted); }
+    .term-pct-stage {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px; color: rgba(245,245,245,0.78);
+      margin-left: auto; text-align: right; max-width: 55%;
+    }
+    .term-bar {
+      position: relative;
+      height: 14px;
+      margin-top: 12px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--line);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    /* Stepwise rectangle fill — quantised, retro (no smooth gradient slide) */
+    .term-bar-fill {
+      position: absolute; top: 0; bottom: 0; left: 0;
+      width: 5%;
+      background:
+        repeating-linear-gradient(90deg,
+          var(--signal-red) 0, var(--signal-red) 8px,
+          rgba(229,50,45,0.55) 8px, rgba(229,50,45,0.55) 11px);
+      box-shadow: 0 0 12px var(--signal-red-glow);
+      transition: width 600ms steps(12, end);
+    }
+    .term-bar-fill::after {
+      content: ''; position: absolute; top: 0; right: 0; bottom: 0;
+      width: 3px; background: var(--bone);
+      box-shadow: 0 0 10px rgba(236,231,221,0.8);
+    }
+    .term-milestones {
+      display: flex; justify-content: space-between;
+      margin-top: 8px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9.5px; letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: rgba(245,245,245,0.32);
+    }
+    .term-milestones .ms { flex: 1; text-align: center; transition: color 240ms ease; }
+    .term-milestones .ms:first-child { text-align: left; }
+    .term-milestones .ms:last-child { text-align: right; }
+    .term-milestones .ms.reached { color: var(--signal-red); }
+    .term-milestones .ms.done { color: var(--term-green); }
+
+    /* Rectangle-block loader — discrete blocks fill left-to-right in a
+       retro stepwise march. Explicitly NOT a spinner, NOT a smooth bar. */
+    .term-blocks { display: flex; gap: 5px; margin-top: 16px; }
+    .term-blocks .blk {
+      width: 26px; height: 14px;
+      border: 1px solid rgba(229,50,45,0.4);
+      background: rgba(255,255,255,0.03);
+      border-radius: 1px;
+    }
+    .term-blocks .blk.on {
+      background: var(--signal-red);
+      border-color: var(--signal-red);
+      box-shadow: 0 0 9px var(--signal-red-glow);
+    }
+    .term-blocks .blk.scan {
+      animation: blkScan 0.9s steps(1) infinite;
+    }
+    @keyframes blkScan {
+      0%,49% { background: rgba(229,50,45,0.55); border-color: var(--signal-red); }
+      50%,100% { background: rgba(255,255,255,0.03); border-color: rgba(229,50,45,0.4); }
+    }
+
+    /* The terminal screen — persistent accumulating log ("detail teknis") */
+    .term-screen {
+      margin-top: 18px;
+      background: #060606;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      position: relative;
+    }
+    /* CRT scanline overlay */
+    .term-screen::before {
+      content: ''; position: absolute; inset: 0; pointer-events: none;
+      background: repeating-linear-gradient(
+        0deg, rgba(0,0,0,0) 0, rgba(0,0,0,0) 2px,
+        rgba(0,0,0,0.28) 3px, rgba(0,0,0,0) 4px);
+      z-index: 2;
+    }
+    .term-screen-head {
+      display: flex; align-items: center; gap: 7px;
+      padding: 8px 12px;
+      background: #111;
+      border-bottom: 1px solid var(--line);
+    }
+    .term-screen-head .d { width: 9px; height: 9px; border-radius: 50%; }
+    .term-screen-head .d-r { background: #e5322d; }
+    .term-screen-head .d-y { background: #e5aa28; }
+    .term-screen-head .d-g { background: #6fcf7f; }
+    .term-screen-head .t {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px; letter-spacing: 0.13em; text-transform: uppercase;
+      color: rgba(245,245,245,0.45);
+      margin-left: 6px;
+    }
+    .term-body {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11.5px;
+      line-height: 1.7;
+      color: var(--bone);
+      padding: 14px 14px 12px;
+      max-height: 232px;
+      overflow-y: auto;
+      position: relative; z-index: 1;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(229,50,45,0.4) transparent;
+    }
+    .term-body::-webkit-scrollbar { width: 6px; }
+    .term-body::-webkit-scrollbar-thumb { background: rgba(229,50,45,0.4); border-radius: 3px; }
+    .term-line { white-space: pre-wrap; word-break: break-word; }
+    .term-line .pfx { color: rgba(245,245,245,0.34); }
+    .term-line.ok   .gl { color: var(--term-green); }
+    .term-line.work .gl { color: var(--signal-red); }
+    .term-line.warn { color: var(--term-amber); }
+    .term-line .gl { margin-right: 4px; }
+    .term-cursor {
+      display: inline-block; width: 8px; height: 13px;
+      background: var(--signal-red); vertical-align: -2px;
+      margin-left: 2px;
+      box-shadow: 0 0 8px var(--signal-red-glow);
+      animation: curBlink 1s steps(1) infinite;
+    }
+    @keyframes curBlink { 0%,49% { opacity: 1; } 50%,100% { opacity: 0; } }
+    .term-heartbeat {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: rgba(245,245,245,0.38);
+      padding: 7px 14px;
+      border-top: 1px solid var(--line);
+      background: #0c0c0c;
+      position: relative; z-index: 1;
+    }
+
     /* Reduce motion */
     @media (prefers-reduced-motion: reduce) {
-      .pulse-dot, .progress-fill, .fade-in { animation: none !important; }
+      .pulse-dot, .progress-fill, .fade-in,
+      .blink-sq, .term-blocks .blk.scan, .term-cursor,
+      .term-bar-fill { animation: none !important; transition: none !important; }
     }
   </style>
 </head>
@@ -523,46 +710,75 @@
           break;
         }
 
-        case 'B': { // pending / pending_provision (Track 2 observability 2026-05-10: stage-aware)
-          // Stage label is set INSIDE renderState by reading lastProbe.progress.
-          // We emit a placeholder here so the DOM nodes exist before the
-          // stage-driven update fires below.
+        case 'B': { // pending / pending_provision — RETRO TERMINAL WAIT VIEW
+          // Phase 3 redesign (2026-05-16). The provisioning wait is now a
+          // retro/futuristic terminal: a non-dismissible "don't refresh"
+          // banner, a timeline progress bar with % milestones, a
+          // rectangle-block loader (deliberately NOT a spinner / smooth
+          // bar), and a persistent accumulating log ("detail teknis")
+          // fed by REAL backend lines (customer-progress-proxy). The
+          // stale-tab refresh reconstructs the full log from server
+          // state on the first poll. The old "Hubungi tim" WhatsApp
+          // button is gone — the wait page is calm + self-resolving.
+          //
+          // DOM nodes are emitted as placeholders here; applyStageProgressToB
+          // + renderProgressOverlay (driven by tick()) fill them live.
           html = `
             <div class="fade-in">
-              <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
-                <span class="pulse-dot" aria-hidden="true"></span>
-                <span id="b-label" style="font-size:14px; color:rgba(245,245,245,0.85);">Memeriksa status agent…</span>
+              <!-- (B) non-dismissible warning -->
+              <div class="term-warn">
+                <span class="blink-sq" aria-hidden="true"></span>
+                <span>Jangan tinggalin halaman ini atau refresh selama proses jalan — agent kamu lagi disiapkan.</span>
               </div>
-              <div class="progress-track" role="progressbar" aria-label="Progress provisioning agent" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-                <div id="b-progress-fill" class="progress-fill" style="width: 0%;"></div>
-              </div>
-              <!-- Track 2 honesty fix (post-CORS-hotfix cascade, 2026-05-10):
-                   removed "kami kabari via email" claim — Resend integration
-                   isn't wired yet, so the promise was false. Replaced with
-                   stay-on-page CTA. Re-enable the email claim once
-                   transactional email lands (Sesi B P0 buildlist). -->
-              <div id="b-eta-line" style="margin-top:14px; font-size:12px; color:rgba(245,245,245,0.45);">Estimasi 5–7 menit total. Stay di halaman ini, agent kamu lagi disiapkan.</div>
-              <!-- Phase 3 P3-CF-1 (audit, 2026-05-13): always-visible 5-step
-                   explainer accordion. Demystifies the 6-min wait without
-                   exposing infra names. Default-collapsed for calm. -->
-              <details id="b-whats-happening" style="margin-top:14px;">
-                <summary style="cursor:pointer; font-size:12px; color:rgba(245,245,245,0.65); padding:4px 0;">Apa yang sedang terjadi?</summary>
-                <div style="margin-top:10px; padding:10px 12px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:6px; font-size:12px; color:rgba(245,245,245,0.75); line-height:1.6;">
-                  Kami menyiapkan infrastruktur khusus buat agent kamu — bukan shared, bukan generic. 5 langkah, totalnya sekitar 6 menit:
-                  <ol style="margin:10px 0 0 18px; padding:0; line-height:1.7;">
-                    <li>Menyalakan sistem dedicated di Singapura (~3 menit)</li>
-                    <li>Memasang otak agent dan dependensi (~2 menit)</li>
-                    <li>Menulis kepribadian dan keterampilan agent (~30 detik)</li>
-                    <li>Menyambungkan saluran Telegram pribadi kamu (~30 detik)</li>
-                    <li>Menunggu kamu mengirim pesan pertama</li>
-                  </ol>
+
+              <!-- (F) timeline progress bar + % milestones -->
+              <div class="term-timeline">
+                <div class="term-pct-row">
+                  <div><span class="term-pct" id="b-pct">5</span><span class="term-pct-unit">%</span></div>
+                  <div class="term-pct-stage" id="b-label">Memeriksa status agent…</div>
                 </div>
-              </details>
-              <!-- end b-whats-happening -->
-              <!-- Phase 3 P3-CF-2 (audit, 2026-05-13): micro-content during
-                   the 6-min wait. Sample prompts give customers something
-                   concrete to plan; founder note signals "made in Jakarta,
-                   you can reach me." Premium feel: wait becomes anticipation. -->
+                <div class="term-bar" role="progressbar" aria-label="Progress provisioning agent" aria-valuemin="0" aria-valuemax="100" aria-valuenow="5">
+                  <div id="b-progress-fill" class="term-bar-fill" style="width:5%;"></div>
+                </div>
+                <div class="term-milestones" id="b-milestones">
+                  <span class="ms" data-pct="5">bayar</span>
+                  <span class="ms" data-pct="15">sistem</span>
+                  <span class="ms" data-pct="40">otak</span>
+                  <span class="ms" data-pct="62">skill</span>
+                  <span class="ms" data-pct="85">telegram</span>
+                  <span class="ms" data-pct="100">siap</span>
+                </div>
+              </div>
+
+              <!-- (E) rectangle-block retro loader — populated by JS -->
+              <div class="term-blocks" id="b-blocks" aria-hidden="true"></div>
+
+              <!-- (C)+(D) detail teknis — persistent accumulating terminal log -->
+              <div class="term-screen" id="b-progress-line">
+                <div class="term-screen-head">
+                  <span class="d d-r" aria-hidden="true"></span>
+                  <span class="d d-y" aria-hidden="true"></span>
+                  <span class="d d-g" aria-hidden="true"></span>
+                  <span class="t">detail teknis · setup.log</span>
+                </div>
+                <div class="term-body" id="b-log" aria-live="polite"></div>
+                <div class="term-heartbeat" id="b-progress-heartbeat">menyambung ke sistem…</div>
+              </div>
+
+              <!-- calm escalation — no WhatsApp button (removed per redesign) -->
+              <div id="b-soft-hint" hidden style="margin-top:12px; padding:10px 12px; background:rgba(229,170,40,0.07); border:1px solid rgba(229,170,40,0.22); border-radius:6px; font-family:'JetBrains Mono',monospace; font-size:11.5px; color:rgba(229,170,40,0.95); line-height:1.55;">
+                Prosesnya sedang lebih lama dari biasanya. Tetap di halaman ini — agent kamu akan otomatis siap saat selesai.
+              </div>
+              <div id="b-longer-than-usual" hidden style="margin-top:12px; padding:12px 14px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.12); border-radius:6px; font-size:13px; color:rgba(245,245,245,0.85);">
+                <div style="font-weight:500; margin-bottom:6px;">Setup-nya sedang berjalan, kali ini lebih lama dari biasanya.</div>
+                <div style="font-size:12px; color:rgba(245,245,245,0.65); line-height:1.55;">Tetap di halaman ini. Agent kamu akan otomatis siap saat selesai — nggak perlu refresh.</div>
+                <details id="b-longer-than-usual-details" style="margin-top:10px;">
+                  <summary style="cursor:pointer; font-size:12px; color:rgba(245,245,245,0.75); padding:4px 0;">Mengapa lebih lama?</summary>
+                  <div style="margin-top:10px; font-size:12px; color:rgba(245,245,245,0.65); line-height:1.6;">Agent kamu butuh beberapa konfigurasi sebelum siap menerima pesan pertama. Beberapa langkah memang memakan waktu lebih lama tergantung kepadatan jaringan saat itu. Yang penting jalan, bukan cepat.</div>
+                </details>
+              </div>
+
+              <!-- sample prompts + founder note (kept from prior build) -->
               <div id="b-wait-content" style="margin-top:18px; padding:14px 16px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px; font-size:13px; color:rgba(245,245,245,0.78); line-height:1.6;">
                 <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color:rgba(245,245,245,0.45); margin-bottom:8px;">Sambil menunggu</div>
                 <div style="margin-bottom:12px;">Begitu agent kamu siap, kamu bisa langsung coba dari Telegram. Beberapa contoh untuk mulai:</div>
@@ -575,55 +791,6 @@
                   Dibuat di Jakarta untuk pengguna Indonesia. Pertanyaan teknis langsung ke saya: <a href="mailto:kidnovell.richie@gmail.com" style="color:rgba(245,245,245,0.75); text-decoration:underline;">kidnovell.richie@gmail.com</a> — Richie
                 </div>
               </div>
-              <!-- end b-wait-content -->
-              <!-- Phase 2 progress overlay (2026-05-13): customer-progress-proxy
-                   surfaces the actual setup-script line + heartbeat age so
-                   the customer sees real-time progress instead of a black box.
-                   Filled in by tick() via pollCustomerProgress(). Hidden until
-                   first successful poll.
-                   Phase 3 P3-CF-3 (2026-05-13): the raw log tail is now
-                   wrapped in a "Detail teknis" expandable so the default
-                   view stays calm. inferred_stage label remains visible. -->
-              <div id="b-progress-line" hidden style="margin-top:10px; padding:8px 12px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:6px; font-size:11px; color:rgba(245,245,245,0.65); line-height:1.45;">
-                <div id="b-progress-stage" style="font-family: 'Inter', sans-serif; font-size:12px; font-weight:500; color:rgba(245,245,245,0.85); margin-bottom:4px;"></div>
-                <details id="b-progress-tail-details" style="margin-top:6px;">
-                  <summary style="cursor:pointer; font-family:'Inter',sans-serif; font-size:10px; color:rgba(245,245,245,0.45); text-transform:uppercase; letter-spacing:0.06em; padding:2px 0;">Detail teknis</summary>
-                  <div id="b-progress-tail" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-family:'JetBrains Mono',monospace; margin-top:6px;"></div>
-                </details>
-                <div id="b-progress-heartbeat" style="font-family: 'Inter', sans-serif; font-size:10px; color:rgba(245,245,245,0.40); margin-top:4px;"></div>
-              </div>
-              <!-- Soft escalation hint: shown only when current stage exceeds
-                   1.5x its expected duration. Founder copy may iterate. -->
-              <div id="b-soft-hint" hidden style="margin-top:12px; padding:10px 12px; background:rgba(229,170,40,0.08); border:1px solid rgba(229,170,40,0.25); border-radius:6px; font-size:12px; color:rgba(229,170,40,0.95);">
-                Sedang lebih lama dari biasanya. Kalau berjam-jam tetap di sini, hubungi tim via WhatsApp.
-              </div>
-              <!-- Hard escalation: 3x expected stage duration. Surfaces a
-                   WhatsApp deeplink with cid + current stage in the message. -->
-              <div id="b-hard-hint" hidden style="margin-top:12px; padding:12px 14px; background:rgba(229,50,45,0.08); border:1px solid rgba(229,50,45,0.30); border-radius:6px; font-size:13px; color:rgba(245,245,245,0.95);">
-                <div style="font-weight:500; margin-bottom:6px;">Sedang lambat — tim sudah diberi tahu.</div>
-                <div style="font-size:12px; color:rgba(245,245,245,0.65); margin-bottom:10px;">Hubungi tim via WhatsApp untuk update langsung — kami bantu cek status agent kamu manual.</div>
-                <a id="b-hard-wa" href="https://wa.me/6282154902561" target="_blank" rel="noopener noreferrer" class="btn-secondary focus-ring" style="font-size:12px; padding:6px 12px;">
-                  Hubungi tim via WhatsApp
-                  <span aria-hidden="true">→</span>
-                </a>
-              </div>
-              <!-- Pre-scout 2026-05-13: elapsed-time fallback. Fires when
-                   total wait exceeds LONGER_THAN_USUAL_MS, independent of
-                   the per-stage soft/hard escalation. Calm-premium
-                   reassurance, no apology, no support CTA — Sesi D will
-                   decide if/how a support surface lives here.
-                   Expandable details element gives more context without
-                   revealing infra (VPS / Hermes / Vultr names are
-                   forbidden by founder spec). -->
-              <div id="b-longer-than-usual" hidden style="margin-top:14px; padding:12px 14px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.12); border-radius:6px; font-size:13px; color:rgba(245,245,245,0.85);">
-                <div style="font-weight:500; margin-bottom:6px;">Setup-nya sedang berjalan, kali ini lebih lama dari biasanya.</div>
-                <div style="font-size:12px; color:rgba(245,245,245,0.65); line-height:1.55;">Tetap di halaman ini. Agent kamu akan otomatis siap saat selesai.</div>
-                <details id="b-longer-than-usual-details" style="margin-top:10px;">
-                  <summary style="cursor:pointer; font-size:12px; color:rgba(245,245,245,0.75); padding:4px 0;">Mengapa lebih lama?</summary>
-                  <div style="margin-top:10px; font-size:12px; color:rgba(245,245,245,0.65); line-height:1.6;">Agent kamu butuh beberapa konfigurasi sebelum siap menerima pesan pertama. Beberapa langkah memang memakan waktu lebih lama tergantung kepadatan jaringan saat itu. Yang penting jalan, bukan cepat.</div>
-                </details>
-              </div>
-              <!-- end longer-than-usual -->
             </div>
           `;
           break;
@@ -818,6 +985,21 @@
       }
       StatusBox.innerHTML = html;
 
+      // Phase 3 redesign: re-hydrate the terminal wait view. renderState
+      // wipes StatusBox on every tick, so the accumulated log, the
+      // rectangle-block loader and the timeline must be re-painted from
+      // module-scope state on each B render. This is also exactly what
+      // makes a stale-tab refresh reconstruct the full log: termLog is
+      // rebuilt from the server's progress_lines on the first poll, then
+      // re-painted here.
+      if (state === 'B') {
+        renderTermBlocks(lastShownPct);
+        renderTermMilestones(lastShownPct);
+        termRenderLog();
+        if (lastProbe && lastProbe.progress) applyStageProgressToB(lastProbe.progress);
+        if (lastProgressSnapshot) renderProgressOverlay(lastProgressSnapshot);
+      }
+
       // Wire up F-state retry
       if (state === 'F') {
         document.getElementById('retry-now')?.addEventListener('click', () => {
@@ -896,6 +1078,115 @@
      */
     const STAGE_ORDER = ['vps_provisioning', 'vps_booting', 'hermes_starting', 'persona_writing', 'pairing_approval', 'ready'];
 
+    /** Phase 3 redesign: each stage maps to a milestone % band so the
+     *  timeline bar + big % readout advance in honest, named steps —
+     *  Invoice paid 5 · VPS provisioned 15 · setup running 15-70 ·
+     *  setup COMPLETE 70 · pairing 85 · auto-greet 100. */
+    const STAGE_PCT = {
+      vps_provisioning: 8,
+      vps_booting:      15,
+      hermes_starting:  40,
+      persona_writing:  62,
+      pairing_approval: 85,
+      ready:            100,
+    };
+
+    // ─── Terminal log accumulator (Phase 3 redesign 2026-05-16) ──────
+    //
+    // The wait view's "detail teknis" terminal shows REAL backend lines.
+    // customer-progress-proxy.progress_lines is the setup-script log
+    // tail; each poll's lines are merged into an ordered, deduped master
+    // list. Milestone markers are synthesized only from genuine state
+    // transitions — never faked progress.
+    //
+    // termLog lives at module scope, so a stale-tab refresh rebuilds the
+    // whole log from the first poll's progress_lines (server is the
+    // source of truth), and every renderState('B') re-render re-paints
+    // the full log into the freshly-created DOM.
+    const termLog = [];             // [{ kind, text }]
+    const termLogSeen = new Set();  // dedup by text
+    let lastShownPct = 5;
+
+    function termAppend(kind, text) {
+      const t = (text || '').trim();
+      if (!t || termLogSeen.has(t)) return;
+      termLogSeen.add(t);
+      termLog.push({ kind, text: t });
+    }
+
+    /** Classify a raw setup-script log line into a render kind. */
+    function termClassify(line) {
+      if (/⚠|warn|error|fail|gagal/i.test(line)) return 'warn';
+      if (/✓|complete|done|installed|berhasil|selesai/i.test(line)) return 'ok';
+      return 'plain';
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"]/g, (c) =>
+        ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    }
+
+    /** Paint termLog into the #b-log screen. The newest line carries the
+     *  blinking cursor; the screen auto-scrolls to it. */
+    function termRenderLog() {
+      const $body = document.getElementById('b-log');
+      if (!$body) return;
+      if (termLog.length === 0) {
+        $body.innerHTML =
+          '<div class="term-line"><span class="pfx">&gt;</span> menunggu sinyal dari sistem' +
+          '<span class="term-cursor" aria-hidden="true"></span></div>';
+        return;
+      }
+      const rows = termLog.map((e, i) => {
+        const last = i === termLog.length - 1;
+        const glyph =
+          e.kind === 'ok' ? '✓' : e.kind === 'warn' ? '⚠'
+          : e.kind === 'work' ? '▸' : '·';
+        const cursor = last ? '<span class="term-cursor" aria-hidden="true"></span>' : '';
+        return `<div class="term-line ${e.kind}">` +
+          `<span class="gl">${glyph}</span>${escapeHtml(e.text)}${cursor}</div>`;
+      });
+      $body.innerHTML = rows.join('');
+      $body.scrollTop = $body.scrollHeight;
+    }
+
+    /** Rectangle-block loader: blocks fill to match pct; the leading
+     *  edge block "scans" in a retro stepwise march (not a spinner). */
+    const TERM_BLOCK_COUNT = 14;
+    function renderTermBlocks(pct) {
+      const $blocks = document.getElementById('b-blocks');
+      if (!$blocks) return;
+      const p = Math.min(100, Math.max(0, pct));
+      const filled = Math.round((p / 100) * TERM_BLOCK_COUNT);
+      let html = '';
+      for (let i = 0; i < TERM_BLOCK_COUNT; i++) {
+        const cls = i < filled ? 'blk on'
+          : (i === filled && p < 100 ? 'blk scan' : 'blk');
+        html += `<span class="${cls}"></span>`;
+      }
+      $blocks.innerHTML = html;
+    }
+
+    /** Light milestone labels: passed = green (done), current = red. */
+    function renderTermMilestones(pct) {
+      const $ms = document.getElementById('b-milestones');
+      if (!$ms) return;
+      const items = [...$ms.querySelectorAll('.ms')];
+      let curIdx = 0;
+      items.forEach((el, i) => {
+        if (pct >= Number(el.dataset.pct || 0)) curIdx = i;
+      });
+      items.forEach((el, i) => {
+        el.classList.remove('done', 'reached');
+        if (i < curIdx) el.classList.add('done');
+        else if (i === curIdx) el.classList.add(pct >= 100 ? 'done' : 'reached');
+      });
+    }
+
+    // Seed line — a true statement (the customer is on welcome.html
+    // post-payment-redirect). Everything after this is real backend log.
+    termAppend('ok', 'Sesi penyiapan agent dimulai');
+
     /** Last probe response captured by tick(). renderState('B') reads
      *  from this; per-stage elapsed-tracker uses the timestamp. */
     let lastProbe = null;
@@ -925,19 +1216,14 @@
       if (currentState !== 'B' || !progress) return;
       const $label = document.getElementById('b-label');
       const $fill  = document.getElementById('b-progress-fill');
+      const $pct   = document.getElementById('b-pct');
       const $soft  = document.getElementById('b-soft-hint');
-      const $hard  = document.getElementById('b-hard-hint');
-      const $wa    = document.getElementById('b-hard-wa');
-      const $eta   = document.getElementById('b-eta-line');
 
       // Monotonic clamp (pre-scout 2026-05-13). Probe snapshots can race —
       // a stale replica read after a fresh probe returned `hermes_starting`
       // could return `vps_booting`, flipping the label / bar backwards.
       // We index the probe stage against STAGE_ORDER and clamp upward
-      // against the lastShownStageIndex high-water mark. The clamped
-      // stage drives the label; the probe's RAW current_stage still
-      // drives the per-stage elapsed-tracker (escalation hints) because
-      // hint timing IS allowed to reset on a real transition.
+      // against the lastShownStageIndex high-water mark.
       const probeIdx = STAGE_ORDER.indexOf(progress.current_stage);
       if (probeIdx >= 0) {
         lastShownStageIndex = Math.max(probeIdx, lastShownStageIndex);
@@ -946,62 +1232,51 @@
         ? STAGE_ORDER[lastShownStageIndex]
         : progress.current_stage;
 
-      // Reset per-stage timer on stage transition (uses RAW current_stage —
-      // hint timing reflects the actual current stage's elapsed window).
+      // Reset per-stage timer on stage transition + log the new stage as
+      // a milestone line in the terminal. Uses RAW current_stage so the
+      // hint timing reflects the actual current stage's elapsed window.
       if (lastSeenStage !== progress.current_stage) {
         lastSeenStage = progress.current_stage;
         currentStageStartedAt = Date.now();
         if ($soft) $soft.hidden = true;
-        if ($hard) $hard.hidden = true;
+        const stageLabel = STAGE_LABEL[clampedStage];
+        if (stageLabel && clampedStage !== 'ready') termAppend('work', stageLabel);
       }
 
       if ($label) {
         $label.textContent =
           STAGE_LABEL[clampedStage] ?? 'Sedang menyiapkan agent…';
       }
+
+      // Timeline % — milestone-band map, monotonically clamped. Within
+      // the "setup running" band the per-stage completed-count nudges
+      // the bar forward between named milestones.
+      let pct = STAGE_PCT[clampedStage] ?? 5;
+      const total = progress.total_stages || 6;
+      const probeDone = (progress.stages_completed?.length ?? 0);
+      const done = Math.max(lastShownStagesCompleted, probeDone);
+      lastShownStagesCompleted = done;
+      if (clampedStage === 'hermes_starting' || clampedStage === 'persona_writing') {
+        pct = Math.max(pct, Math.min(70, 15 + Math.round((done / total) * 55)));
+      }
+      pct = Math.min(100, Math.max(lastShownPct, pct));
+      lastShownPct = pct;
+      if ($pct) $pct.textContent = String(pct);
       if ($fill) {
-        const total = progress.total_stages || 1;
-        const probeDone = (progress.stages_completed?.length ?? 0);
-        // Monotonic clamp on completed-stages count — same race risk
-        // as current_stage above.
-        const done = Math.max(lastShownStagesCompleted, probeDone);
-        lastShownStagesCompleted = done;
-        const pct = Math.min(100, Math.max(5, Math.round((done / total) * 100)));
         $fill.style.width = pct + '%';
         const $bar = $fill.parentElement;
         if ($bar) $bar.setAttribute('aria-valuenow', String(pct));
       }
-      if ($eta && typeof progress.estimated_seconds_remaining === 'number') {
-        const eta = progress.estimated_seconds_remaining;
-        if (eta <= 0) {
-          $eta.textContent = 'Hampir siap. Sebentar lagi.';
-        } else {
-          const min = Math.max(1, Math.ceil(eta / 60));
-          // Track 2 honesty fix (post-CORS-hotfix cascade 2026-05-10):
-          // dropped "kami kabari via email" — Resend not yet wired.
-          $eta.textContent =
-            `Estimasi ${min} menit lagi. Stay di halaman ini, agent kamu lagi disiapkan.`;
-        }
-      }
+      renderTermBlocks(pct);
+      renderTermMilestones(pct);
 
-      // Escalation tiers based on elapsed in the CURRENT stage.
+      // Soft escalation only — the wait page is calm + self-resolving;
+      // the old 3x "Hubungi tim via WhatsApp" hard card was removed in
+      // the Phase 3 redesign.
       const expected = (progress.expected_current_stage_duration_seconds || 0) * 1000;
       const elapsed = Date.now() - (currentStageStartedAt || Date.now());
-      if (expected > 0) {
-        if ($soft) $soft.hidden = !(elapsed > 1.5 * expected && elapsed <= 3 * expected);
-        if ($hard) {
-          const hardOn = elapsed > 3 * expected;
-          $hard.hidden = !hardOn;
-          if (hardOn && $wa && cid) {
-            const stage = progress.current_stage;
-            const blocker = progress.current_stage_blocker?.detail ?? '';
-            const msg =
-              `Halo tim weuseai, agent saya stuck di tahap "${stage}" lebih dari beberapa menit.` +
-              ` Customer ID: ${cid}.` +
-              (blocker ? ` Detail: ${blocker.slice(0, 200)}` : '');
-            $wa.href = `https://wa.me/6282154902561?text=${encodeURIComponent(msg)}`;
-          }
-        }
+      if (expected > 0 && $soft) {
+        $soft.hidden = !(elapsed > 1.5 * expected);
       }
     }
 
@@ -1198,43 +1473,40 @@
      * the latest snapshot. Called from tick() after pollCustomerProgress().
      */
     function renderProgressOverlay(snapshot) {
-      const $overlay = document.getElementById('b-progress-line');
-      if (!$overlay) return;
-      if (!snapshot) {
-        $overlay.hidden = true;
-        return;
-      }
-      const $stage = document.getElementById('b-progress-stage');
-      const $tail = document.getElementById('b-progress-tail');
-      const $heartbeat = document.getElementById('b-progress-heartbeat');
+      // Phase 3 redesign: the progress snapshot feeds the persistent
+      // terminal log. customer-progress-proxy.progress_lines are the
+      // REAL setup-script log tail — merged (deduped) into termLog so
+      // the terminal accumulates rather than showing only the last
+      // line, and a stale-tab refresh rebuilds the whole log from here.
+      const $screen = document.getElementById('b-progress-line');
+      if (!$screen || !snapshot) return;
 
       if (snapshot.vps_ip_pending) {
-        if ($stage) $stage.textContent = 'Menunggu alokasi alamat IP…';
-        if ($tail) $tail.textContent = '';
-        if ($heartbeat) $heartbeat.textContent = '';
-        $overlay.hidden = false;
-        return;
-      }
-
-      const detail = STAGE_LABEL_DETAIL[snapshot.inferred_stage] ?? '';
-      if ($stage) $stage.textContent = detail;
-      const last = snapshot.progress_lines.length > 0
-        ? snapshot.progress_lines[snapshot.progress_lines.length - 1]
-        : '';
-      if ($tail) $tail.textContent = last;
-      if ($heartbeat) {
-        if (snapshot.heartbeat_age_sec === null) {
-          $heartbeat.textContent = '';
-        } else if (snapshot.heartbeat_stale) {
-          $heartbeat.textContent = `⚠ Tidak ada aktivitas ${snapshot.heartbeat_age_sec} detik. Hubungi tim kalau berlanjut.`;
-          $heartbeat.style.color = 'rgba(229,170,40,0.95)';
-        } else {
-          $heartbeat.textContent = `Aktivitas terakhir ${snapshot.heartbeat_age_sec} detik lalu`;
-          $heartbeat.style.color = 'rgba(245,245,245,0.40)';
+        termAppend('work', 'Menunggu alokasi alamat IP…');
+      } else {
+        const detail = STAGE_LABEL_DETAIL[snapshot.inferred_stage] ?? '';
+        if (detail) termAppend('work', detail);
+        for (const line of snapshot.progress_lines) {
+          // Strip a leading ISO timestamp the setup-script prefixes —
+          // the terminal renders its own glyph; the raw stamp is noise.
+          const clean = String(line).replace(/^\[[-0-9T:Z.]+\]\s*/, '');
+          termAppend(termClassify(clean), clean);
         }
       }
-      if (detail || last) {
-        $overlay.hidden = false;
+      termRenderLog();
+
+      const $hb = document.getElementById('b-progress-heartbeat');
+      if ($hb) {
+        if (snapshot.heartbeat_age_sec === null) {
+          $hb.textContent = 'sistem aktif · menunggu log berikutnya';
+          $hb.style.color = 'rgba(245,245,245,0.38)';
+        } else if (snapshot.heartbeat_stale) {
+          $hb.textContent = `⚠ tidak ada aktivitas ${snapshot.heartbeat_age_sec}s — masih nyambung, jangan refresh`;
+          $hb.style.color = 'rgba(229,170,40,0.95)';
+        } else {
+          $hb.textContent = `● aktivitas terakhir ${snapshot.heartbeat_age_sec}s lalu`;
+          $hb.style.color = 'rgba(111,207,127,0.78)';
+        }
       }
     }
 
