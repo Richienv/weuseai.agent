@@ -1,0 +1,164 @@
+{
+  "snapshot_taken": "2026-05-16T11:33:39.026Z",
+  "purpose": "Pre-retest wipe — wait-page race-fix workstream, Phase 4 (2026-05-16)",
+  "customer_id": "173a2228-1725-4281-add4-d838ed668131",
+  "tables": {
+    "customers": [
+      {
+        "id": "173a2228-1725-4281-add4-d838ed668131",
+        "email": "kidnovell.richie@gmail.com",
+        "display_name": "Richie Novell",
+        "telegram_chat_id": "6805409051",
+        "telegram_bot_token": "ww0ECQMCeKFq3hbi9Ot80l8BsFKgYInTw4OdrbZKqsxxE7lxJUILC8+ZAxyDortXSxyuNpDSDLK7\ndTysBzI7u9x3L9xJKYLE9nZu3Mpo82NqxSKItNW84iHEY6DRAsvcIWOKvuzL/5aRJcKqjlSiGA==",
+        "telegram_allowed_user_ids": null,
+        "whatsapp_number": "082154902561",
+        "created_at": "2026-05-16 09:14:14.786273+00",
+        "pairing_code": null,
+        "pairing_code_expires_at": null,
+        "soul_md_text": "# About me\n\nI am The Pro, a specialist agent built for Richie Novell as part of weuseai.agent. I work in their service, on their VPS, with their data. I am theirs.\n\nMy specialty: pendamping kerja harian — briefing pagi yang relevan, ingatan lintas sesi, dan adaptasi ke gaya kerja masing-masing. Aku belajar ritme, prioritas, dan preferensi kamu, lalu kembalikan sebagai bantuan yang terasa pribadi.\n\n# How I communicate\n\nLanguage: Bahasa Indonesia (default). Switch to English only if user writes in English first.\nTone: calm, observasional, dan anticipatory — gaya executive assistant yang sudah lama kerja sama kamu, bukan helper baru yang masih mencari nada.\nStyle: concise, kamu form, never lo/gue or Anda. Indonesian customers value short answers over long preambles.\n\n# Who I serve\n\nName: Richie Novell\nTime zone: Asia/Jakarta (WIB, UTC+7) unless customer indicates otherwise.\n\n# What this customer expects from me\n\nBantuan tugas\n\n# What I do\n\n- Aku kirim briefing pagi tiap hari jam 7 WIB — fokus pada hal yang berubah dari kemarin, bukan ulang headline. Default: kalender hari ini, satu update pasar yang relevan, tiga berita yang penting buat kamu.\n- Aku ingat percakapan lintas sesi. Kalau kamu cerita training Senin, hari Rabu aku tanya hasilnya tanpa kamu repeat context.\n- Aku belajar gaya nulis kamu — formal vs casual, panjang vs ringkas, BI vs campur English — dan match ketika bantu draft balasan.\n- Aku tracking commitments: deadline, follow-up, janji ke orang. Aku ingatkan sebelum lewat, bukan sesudahnya.\n- Aku rangkum percakapan jadi action items kalau diminta. Tujuannya bikin kamu lebih jernih, bukan lebih sibuk.\n\n# How I behave\n\n- Sapa kamu pakai nama saat natural (\"Pagi, Richie.\").\n- Kalau ada konflik prioritas, tunjukkan trade-off-nya, biar kamu yang putuskan.\n- Saat ragu, tanya satu pertanyaan klarifikasi — tidak menebak.\n- Surface progress proactively. Kalau task butuh lebih dari 30 detik, kasih status update.\n- Decline tasks yang melanggar hard limits — sopan, dengan alasan singkat.\n\n# Hard limits\n\nUniversal:\n\n- Tidak pernah share API key, password, atau data customer ke pihak ketiga.\n- Tidak melakukan transaksi atau commit uang tanpa konfirmasi eksplisit dalam sesi.\n- Tidak mengarang fakta. Kalau aku tidak tahu, aku bilang tidak tahu.\n- Tidak meniru kamu di pesan yang belum kamu approve.\n\nAgent-specific:\n\n- Tidak share isi memori lintas sesi ke orang lain — termasuk anggota tim, pasangan, atau staff — tanpa kamu sebut nama mereka secara eksplisit dalam percakapan saat ini.\n- Tidak menambah commitment ke kalender kamu otomatis. Aku flag, kamu approve.\n\n# Connected tools\n\n- Telegram (chat dengan @weuseaibot)\n\nSelain integrasi di atas, aku punya akses ke web search, calendar reading, email digest, dan memori percakapan lintas sesi yang built-in. Tool spesifik bisa berkembang seiring update Hermes.\n\n# When my customer first messages me\n\nSapa hangat pakai nama. Sebut spesialisasi singkat. Kasih tiga contoh konkret yang bisa dimulai sekarang. Tanya prioritas hari ini.\n\nContoh:\n\n\"Pagi, Richie. Aku The Pro, pendamping kerja harian kamu. Aku ingat percakapan lintas sesi dan belajar gaya kerja kamu. Beberapa yang bisa kita mulai sekarang:\n\n1. Set briefing pagi — kasih tahu aku 3 hal yang paling penting kamu monitor (kalender, pasar, berita industri, deadline tim), aku susun jadi format harian.\n2. Recap minggu lalu — aku sintesis percakapan lintas sesi jadi 5 highlight, biar kamu mulai minggu ini lebih jernih.\n3. Cek commitments — kalau kamu kasih daftar janji yang belum di-follow up, aku susun urutan prioritasnya.\n\nMau mulai dari mana?\"\n",
+        "bundle_versions": {},
+        "bundle_update_policy": "pin",
+        "telegram_bot_username": "richiepastibisabot",
+        "phase_5_enabled": false,
+        "phase_6_enabled": false,
+        "monthly_llm_budget_cents": 5000
+      }
+    ],
+    "subscriptions": [
+      {
+        "id": "f1b984a1-fe46-40cf-ba22-b338ecf062ea",
+        "customer_id": "173a2228-1725-4281-add4-d838ed668131",
+        "tier": "pro",
+        "status": "active",
+        "xendit_invoice_id": "6a0835670168694c2c30b215",
+        "always_on_enabled": false,
+        "hosting_active": true,
+        "started_at": "2026-05-16 09:14:15.670411+00",
+        "next_billing_at": "2026-06-15 09:14:39.223+00"
+      }
+    ],
+    "vps_instances": [
+      {
+        "id": "c3d795fa-c600-438c-96c1-82d07d5c0bcc",
+        "customer_id": "173a2228-1725-4281-add4-d838ed668131",
+        "idcloudhost_vps_id": null,
+        "ip_address": "66.42.59.231",
+        "ssh_key_id": null,
+        "region": "sgp",
+        "status": "running",
+        "created_at": "2026-05-16 09:14:44.093964+00",
+        "vps_id": "0b3ac7f3-5056-47cb-a5e3-940d3e33ad7d",
+        "provider": "vultr"
+      }
+    ],
+    "refresh_env_requests": [
+      {
+        "request_id": "ac9a37fd-a0ff-4e3b-a025-2f50573a0997",
+        "customer_id": "173a2228-1725-4281-add4-d838ed668131",
+        "started_at": "2026-05-16 09:16:19.508253+00",
+        "completed_at": "2026-05-16 09:16:42.519+00",
+        "outcome": {
+          "ok": false,
+          "error": "env_write_failed",
+          "detail": "ssh exit=4: Warning: Permanently added '66.42.59.231' (ED25519) to the list of known hosts.\r\nhermes-gateway unit missing — installing now...\nERROR: hermes binary not found at /home/weuseai/.local/bin/hermes — cannot install gateway",
+          "partial": {
+            "env_written": false
+          },
+          "request_id": "ac9a37fd-a0ff-4e3b-a025-2f50573a0997"
+        }
+      },
+      {
+        "request_id": "3c1e54d5-af21-4739-b7f6-d93405165afa",
+        "customer_id": "173a2228-1725-4281-add4-d838ed668131",
+        "started_at": "2026-05-16 10:06:46.324639+00",
+        "completed_at": "2026-05-16 10:07:05.215+00",
+        "outcome": {
+          "ok": true,
+          "vps_id": "0b3ac7f3-5056-47cb-a5e3-940d3e33ad7d",
+          "applied": {
+            "TELEGRAM_BOT_TOKEN": "updated",
+            "TELEGRAM_ALLOWED_USERS": "updated"
+          },
+          "ip_address": "66.42.59.231",
+          "request_id": "3c1e54d5-af21-4739-b7f6-d93405165afa",
+          "hermes_restart_at": "2026-05-16T10:07:05Z",
+          "hermes_active_after_restart": true
+        }
+      },
+      {
+        "request_id": "2acde0bf-ae34-4cc3-a88f-d15a0c05478c",
+        "customer_id": "173a2228-1725-4281-add4-d838ed668131",
+        "started_at": "2026-05-16 11:05:37.840164+00",
+        "completed_at": "2026-05-16 11:05:56.276+00",
+        "outcome": {
+          "ok": true,
+          "vps_id": "0b3ac7f3-5056-47cb-a5e3-940d3e33ad7d",
+          "applied": {
+            "TELEGRAM_BOT_TOKEN": "updated",
+            "TELEGRAM_ALLOWED_USERS": "updated"
+          },
+          "ip_address": "66.42.59.231",
+          "request_id": "2acde0bf-ae34-4cc3-a88f-d15a0c05478c",
+          "hermes_restart_at": "2026-05-16T11:05:55Z",
+          "hermes_active_after_restart": true
+        }
+      }
+    ],
+    "customer_openrouter_keys": [
+      {
+        "customer_id": "173a2228-1725-4281-add4-d838ed668131",
+        "openrouter_key_hash": "728f0866e6178f4397b6c217fed465f3ae3c9630fcd6e18b25246dfb76f42a42",
+        "credit_limit_usd_cents": 500,
+        "created_at": "2026-05-16 09:14:42.308079+00",
+        "last_topped_up_at": null
+      }
+    ],
+    "customer_persona_audit": [
+      {
+        "id": 31,
+        "customer_id": "173a2228-1725-4281-add4-d838ed668131",
+        "soul_md_sha256": "02b77f1eaa38292601277b1f30ac0b009ae467fb3d5f2a3ae0ad0e6f85139ca6",
+        "generated_at": "2026-05-16 09:16:16.875878+00"
+      }
+    ],
+    "consent_events": [
+      {
+        "id": "4359e02e-6c10-44dc-840f-b22711e775f5",
+        "customer_id": "173a2228-1725-4281-add4-d838ed668131",
+        "consent_type": "tos",
+        "accepted_at": "2026-05-16 09:14:10.034+00",
+        "ip_address": "185.193.159.14",
+        "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
+        "version": "v1.0",
+        "created_at": "2026-05-16 09:14:15.092873+00"
+      },
+      {
+        "id": "448f0d12-7f9c-404b-8093-389faf2258c2",
+        "customer_id": "173a2228-1725-4281-add4-d838ed668131",
+        "consent_type": "marketing",
+        "accepted_at": "2026-05-16 09:14:10.036+00",
+        "ip_address": "185.193.159.14",
+        "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
+        "version": "v1.0",
+        "created_at": "2026-05-16 09:14:15.38981+00"
+      }
+    ],
+    "subscription_invoices": [
+      {
+        "id": "2974e46d-44e8-48ba-a8af-71e22f73b6f9",
+        "subscription_id": "f1b984a1-fe46-40cf-ba22-b338ecf062ea",
+        "customer_id": "173a2228-1725-4281-add4-d838ed668131",
+        "xendit_invoice_id": "6a0835670168694c2c30b215",
+        "kind": "setup_first_month",
+        "amount_idr": 1398723,
+        "period_start": null,
+        "period_end": null,
+        "status": "paid",
+        "created_at": "2026-05-16 09:14:17.067332+00",
+        "paid_at": "2026-05-16 09:14:40.223+00"
+      }
+    ],
+    "credits": []
+  },
+  "errors": {}
+}
