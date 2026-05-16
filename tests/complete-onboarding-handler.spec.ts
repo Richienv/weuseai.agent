@@ -813,3 +813,105 @@ function minted(m: MockLlmKeyMinter, i: number) {
   if (!m.minted[i]) throw new Error(`no minted entry at index ${i}`)
   return m.minted[i]
 }
+
+// ─── wait-page race fix (2026-05-16) ───────────────────────────────
+//
+// THE RACE: a fast customer finishes the onboarding form before their
+// VPS setup-script finishes provisioning. Pre-fix, step 8a refreshEnv
+// SSHed the half-built VPS → `exit 4` → hermes-gateway never started →
+// welcome.html stuck. The handler now gates refreshEnv on
+// vps_instances.status === 'running'. See complete-onboarding-handler
+// step 8-pre + customer-flow.ts notifyVpsReady (the second-finisher).
+
+test('wait-page race — onboard BEFORE VPS ready: defers refreshEnv, waiting_for_vps:true, still persists onboarding', async () => {
+  const { db, minter, provisioning, telegram } = setupHappyPath()
+  db.seedVPSStatus('provisioning') // VPS still building when the form lands
+
+  const res = await handleCompleteOnboarding(
+    buildReq({
+      customer_id: 'cust-1',
+      whatsapp: '08123456789',
+      expectations_text: 'Bantu briefing pagi dan ringkas berita.',
+    }),
+    { db, minter, provisioning, telegram, publicBase: PUBLIC_BASE },
+  )
+
+  assert.equal(res.status, 200)
+  const data = await readJson(res)
+
+  // refreshEnv deferred — NOT called against the half-built VPS.
+  assert.equal(
+    provisioning.refreshCalls.length,
+    0,
+    'refreshEnv NOT called while VPS is still provisioning',
+  )
+  assert.equal(data.waiting_for_vps, true, 'waiting_for_vps flag set')
+  // Deferral is expected — no failure warning.
+  assert.equal(
+    data.vps_refresh_warning,
+    undefined,
+    'no vps_refresh_warning — a deferral is not a failure',
+  )
+  // Greeting deferred (the /start skill greets once the gateway starts).
+  assert.equal(data.greeting.ok, false)
+  assert.equal(data.greeting.source, 'deferred_vps')
+
+  // Onboarding state is still fully persisted.
+  const c = await db.findCustomerById('cust-1')
+  assert.ok(
+    c?.soul_md_text?.includes('Bantu briefing pagi dan ringkas berita.'),
+    'SOUL.md persisted despite the deferral',
+  )
+  const sub = await db.findActiveOrPendingSubscriptionByCustomer('cust-1')
+  assert.equal(sub?.status, 'active', 'subscription still flipped active')
+  assert.equal(sub?.hosting_active, true)
+})
+
+test('wait-page race — onboard AFTER VPS ready: refreshEnv runs normally, waiting_for_vps:false', async () => {
+  const { db, minter, provisioning, telegram } = setupHappyPath()
+  db.seedVPSStatus('running') // setup-script already finished
+
+  const res = await handleCompleteOnboarding(
+    buildReq({
+      customer_id: 'cust-1',
+      whatsapp: '08123456789',
+      expectations_text: 'Bantu briefing pagi dan ringkas berita.',
+    }),
+    { db, minter, provisioning, telegram, publicBase: PUBLIC_BASE },
+  )
+
+  assert.equal(res.status, 200)
+  const data = await readJson(res)
+
+  assert.equal(
+    provisioning.refreshCalls.length,
+    1,
+    'refreshEnv called once when the VPS is already running',
+  )
+  assert.equal(data.waiting_for_vps, false, 'waiting_for_vps cleared')
+  assert.notEqual(
+    data.greeting.source,
+    'deferred_vps',
+    'greeting not deferred when the VPS is ready',
+  )
+})
+
+test('wait-page race — getActiveVPSStatus read failure defers safely (no crash)', async () => {
+  const { db, minter, provisioning, telegram } = setupHappyPath()
+  db.throwOnGetActiveVPSStatus = true // status read blows up
+
+  const res = await handleCompleteOnboarding(
+    buildReq({
+      customer_id: 'cust-1',
+      whatsapp: '08123456789',
+      expectations_text: 'Bantu briefing pagi dan ringkas berita.',
+    }),
+    { db, minter, provisioning, telegram, publicBase: PUBLIC_BASE },
+  )
+
+  // A status-read failure must not 5xx the onboarding — it defers.
+  assert.equal(res.status, 200)
+  const data = await readJson(res)
+  assert.equal(data.waiting_for_vps, true, 'read failure → safe defer')
+  assert.equal(provisioning.refreshCalls.length, 0)
+})

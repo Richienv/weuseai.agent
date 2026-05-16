@@ -34,6 +34,14 @@ export class FakeOnboardingStore implements IOnboardingStore {
   /** When true, getDecryptedBotToken throws (simulates RPC failure
    *  / encryption-key misconfiguration). */
   throwOnDecryptBotToken = false
+  /** Wait-page race fix (2026-05-16): the status getActiveVPSStatus
+   *  returns. Defaults to 'running' so pre-existing tests (which never
+   *  seed a VPS) keep exercising the refreshEnv path unchanged. Tests
+   *  of the deferral path call seedVPSStatus('provisioning'). */
+  vpsStatus: 'provisioning' | 'running' | 'stopped' | 'failed' | null = 'running'
+  /** When true, getActiveVPSStatus throws (simulates a status-read
+   *  failure — the handler must defer, not crash). */
+  throwOnGetActiveVPSStatus = false
 
   // ── seeders ─────────────────────────────────────────────────────
 
@@ -68,6 +76,14 @@ export class FakeOnboardingStore implements IOnboardingStore {
     }
     this.subscriptions.set(s.id, row)
     return row
+  }
+
+  /** Wait-page race fix (2026-05-16): set the status getActiveVPSStatus
+   *  will return for this store. */
+  seedVPSStatus(
+    status: 'provisioning' | 'running' | 'stopped' | 'failed' | null,
+  ): void {
+    this.vpsStatus = status
   }
 
   // ── IOnboardingStore impl ───────────────────────────────────────
@@ -173,6 +189,15 @@ export class FakeOnboardingStore implements IOnboardingStore {
     const ciphertext = this.botTokensCiphertext.get(customer_id)
     if (!ciphertext) return null
     return ciphertext.startsWith('enc:') ? ciphertext.slice(4) : null
+  }
+
+  async getActiveVPSStatus(
+    _customer_id: string,
+  ): Promise<'provisioning' | 'running' | 'stopped' | 'failed' | null> {
+    if (this.throwOnGetActiveVPSStatus) {
+      throw new Error('fake-store: simulated getActiveVPSStatus failure')
+    }
+    return this.vpsStatus
   }
 
   async clearBotPairing(customer_id: string): Promise<void> {

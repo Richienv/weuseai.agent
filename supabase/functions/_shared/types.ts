@@ -269,6 +269,28 @@ export interface IOnboardingStore {
   // who pasted a wrong-bot token can re-paste a different one. Idempotent
   // — safe to call when fields are already null.
   clearBotPairing(customer_id: string): Promise<void>
+
+  /**
+   * Wait-page race fix (2026-05-16). Returns the status of the
+   * customer's vps_instances row, or null when no row exists yet.
+   *
+   * complete-onboarding-handler gates its step-8a refreshEnv on this.
+   * refreshEnv SSHes the VPS + runs the install-if-missing block, which
+   * hits `exit 4` when the setup-script hasn't installed the hermes
+   * binary yet (status still 'provisioning'). A fast customer who
+   * finishes the onboarding form (~2 min) before their VPS finishes
+   * provisioning (~6 min) would trip that race → gateway never starts →
+   * welcome.html stuck on the provisioning view forever. When
+   * status !== 'running' the handler DEFERS refreshEnv; the provisioning
+   * service runs it itself the moment the setup-script completes
+   * (customer-flow.ts notifyVpsReady → admin-customer-vps-refresh).
+   *
+   * Service-role read; one row per customer (vps_instances.customer_id
+   * unique post-PR #75).
+   */
+  getActiveVPSStatus(
+    customer_id: string,
+  ): Promise<'provisioning' | 'running' | 'stopped' | 'failed' | null>
 }
 
 // ─── LLM key minter (decoupled from Phase 2A merge) ───

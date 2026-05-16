@@ -106,6 +106,26 @@ if (TARGET !== 'local' && TARGET !== 'deployed') {
 const SSH_KEY = process.env.AUDIT_SSH_KEY_PATH ?? resolve(homedir(), '.ssh/weuseai-fleet')
 const CASCADE_LOG = resolve(process.cwd(), 'docs/cascades/2026-05-14-8min-flow-validation.md')
 
+// ─── Fast-customer-race variant (wait-page race fix, 2026-05-16) ──────
+//
+// E2E_CHAIN_FAST_CUSTOMER=1 exercises THE race that the wait-page stuck
+// bug came from: a customer who finishes the onboarding form BEFORE
+// their VPS setup-script finishes provisioning. In this mode the chain
+// is re-ordered so complete-onboarding (Stage 5.8) runs while the VPS
+// is still 'provisioning' — complete-onboarding must then DEFER
+// refreshEnv (return waiting_for_vps:true) instead of SSHing a
+// half-built VPS and tripping `exit 4`. The provisioning service's
+// second-finisher (customer-flow.ts notifyVpsReady → admin-customer-vps-
+// refresh) starts hermes-gateway once the setup-script completes; the
+// new Stage 5.85 polls until the gateway comes up, proving the
+// second-finisher closed the loop.
+//
+// Normal-order runs (flag unset) keep the original stage sequence and
+// the strict auto-greet assertion — unchanged.
+const FAST_CUSTOMER = process.env.E2E_CHAIN_FAST_CUSTOMER === '1'
+
+const chainSleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
+
 // ─── Per-stage timing budgets (milliseconds) ──────────────────────────
 //
 // Budgets are the per-stage CEILING. A stage that exceeds its budget
@@ -125,6 +145,7 @@ const STAGE_BUDGET_MS: Record<number, number> = {
   5.6: 5_000, // rotate-pairing-code
   5.7: 5_000, // synthetic /pair POST → telegram_chat_id set
   5.8: 60_000, // complete-onboarding → refreshEnv → gateway restart + bundle-pull
+  5.85: 180_000, // FAST_CUSTOMER only — second-finisher SSH refresh starts gateway
   5.9: 10_000, // auto-greet — proactive greeting fired by complete-onboarding step 8c
   6: 60_000, // bundle-pull installed all tier personas (widened 30→60s)
   7: 60_000, // systemctl is-active hermes-gateway (widened 30→60s)
@@ -182,6 +203,11 @@ type ChainCtx = {
   pairingCode?: string
   greetingOk?: boolean
   greetingSource?: string
+  /** Wait-page race fix (2026-05-16): set by Stage 5.8 from the
+   *  complete-onboarding response. true ⇒ refreshEnv was deferred
+   *  because the VPS was still provisioning (the FAST_CUSTOMER race);
+   *  the provisioning second-finisher will start the gateway. */
+  waitingForVps?: boolean
 }
 
 // ─── External-system clients (mocked in local, real in deployed) ──────
@@ -228,8 +254,12 @@ type ChainDeps = {
   /** Stage 5.8: complete-onboarding — renders SOUL.md + refreshEnv,
    *  which restarts hermes-gateway WITH the bot token; the gateway's
    *  ExecStartPre then runs bundle-pull. Returns the proactive-greeting
-   *  outcome (step 8c) so Stage 5.9 can verify the auto-greet fired. */
-  completeOnboarding(customerId: string): Promise<{ greetingOk: boolean; greetingSource: string }>
+   *  outcome (step 8c) so Stage 5.9 can verify the auto-greet fired, and
+   *  `waitingForVps` (wait-page race fix 2026-05-16) — true when
+   *  refreshEnv was deferred because the VPS was still provisioning. */
+  completeOnboarding(
+    customerId: string,
+  ): Promise<{ greetingOk: boolean; greetingSource: string; waitingForVps: boolean }>
   /** Stage 6: confirm bundle-pull installed all tier personas. */
   checkBundlePull(vpsIp: string, expectedPersonaCount: number): Promise<number>
   /** Stage 7: confirm hermes-gateway systemd unit is active. */
@@ -308,7 +338,15 @@ function makeLocalDeps(simClock: { nowMs: number }): ChainDeps {
     },
     async completeOnboarding() {
       simClock.nowMs += SIM_ADVANCE_MS.completeOnboarding
-      return { greetingOk: true, greetingSource: 'template' }
+      // FAST_CUSTOMER local sim: the VPS is still 'provisioning' when
+      // the form lands, so complete-onboarding defers refreshEnv +
+      // the greeting (the provisioning second-finisher + /start skill
+      // cover the customer). Normal order: refreshEnv runs, greeting
+      // fires inline.
+      if (FAST_CUSTOMER) {
+        return { greetingOk: false, greetingSource: 'deferred_vps', waitingForVps: true }
+      }
+      return { greetingOk: true, greetingSource: 'template', waitingForVps: false }
     },
     async checkBundlePull(_ip, expected) {
       simClock.nowMs += SIM_ADVANCE_MS.bundlePull
@@ -729,14 +767,20 @@ function makeDeployedDeps(): ChainDeps {
       })
       const body = (await r.json().catch(() => ({}))) as {
         greeting?: { ok?: boolean; source?: string }
+        waiting_for_vps?: boolean
       }
       if (!r.ok) {
         throw new Error(`complete-onboarding failed: HTTP ${r.status} ${JSON.stringify(body).slice(0, 300)}`)
       }
       // step 8c proactive-greeting outcome — Stage 5.9 verifies it.
+      // waiting_for_vps (wait-page race fix 2026-05-16) — true when the
+      // handler deferred refreshEnv because the VPS was still
+      // provisioning; the provisioning second-finisher starts the
+      // gateway and Stage 5.85 confirms it.
       return {
         greetingOk: body.greeting?.ok === true,
         greetingSource: body.greeting?.source ?? 'absent',
+        waitingForVps: body.waiting_for_vps === true,
       }
     },
     async checkBundlePull(vpsIp, expected) {
@@ -905,10 +949,52 @@ const STAGES: Stage[] = [
     num: 5.8,
     name: 'complete-onboarding → hermes-gateway starts',
     async run(ctx, deps) {
-      const { greetingOk, greetingSource } = await deps.completeOnboarding(ctx.customerId!)
+      const { greetingOk, greetingSource, waitingForVps } =
+        await deps.completeOnboarding(ctx.customerId!)
       ctx.greetingOk = greetingOk
       ctx.greetingSource = greetingSource
+      ctx.waitingForVps = waitingForVps
+      if (FAST_CUSTOMER) {
+        // Wait-page race fix (2026-05-16): in the FAST_CUSTOMER order
+        // this stage runs BEFORE Stage 5 — the VPS is still
+        // provisioning. complete-onboarding MUST defer refreshEnv
+        // (waiting_for_vps:true) instead of SSHing the half-built VPS.
+        // If it did NOT defer, the race gate is broken.
+        if (!waitingForVps) {
+          throw new Error(
+            'FAST_CUSTOMER: complete-onboarding did NOT defer refreshEnv ' +
+              '(waiting_for_vps was false) while the VPS was still ' +
+              'provisioning — the race gate is broken',
+          )
+        }
+        return 'race gate held — refreshEnv deferred to the second-finisher'
+      }
       return 'SOUL.md rendered + refreshEnv → gateway restarted'
+    },
+  },
+  {
+    // FAST_CUSTOMER-only stage. Stage 5.8 deferred refreshEnv; Stage 5
+    // then waited for status='running', which fires the provisioning
+    // service's second-finisher (customer-flow.ts notifyVpsReady →
+    // admin-customer-vps-refresh) asynchronously. Poll the gateway
+    // until that second-finisher has SSH-pushed the env + started it.
+    num: 5.85,
+    name: 'second-finisher → hermes-gateway started',
+    async run(ctx, deps) {
+      const deadline = Date.now() + STAGE_BUDGET_MS[5.85]
+      let lastErr = 'never checked'
+      while (Date.now() < deadline) {
+        try {
+          await deps.checkGatewayActive(ctx.vpsIp!)
+          return 'second-finisher started the gateway after the deferred onboarding'
+        } catch (e) {
+          lastErr = e instanceof Error ? e.message : String(e)
+          await chainSleep(10_000)
+        }
+      }
+      throw new Error(
+        `second-finisher did not bring hermes-gateway up in time — ${lastErr}`,
+      )
     },
   },
   {
@@ -919,6 +1005,16 @@ const STAGES: Stage[] = [
       // step 8c (sendProactiveGreeting) sends an in-character greeting to
       // the customer's chat the moment provisioning is wired. Stage 5.8
       // captured that outcome from the complete-onboarding response.
+      //
+      // FAST_CUSTOMER exception (wait-page race fix 2026-05-16): when
+      // complete-onboarding deferred (VPS still provisioning), the
+      // proactive greeting is deferred too — the second-finisher does
+      // not re-send it. The customer is greeted by the /start skill
+      // instead (Stages 9-10, founder-confirmed). `deferred_vps` is the
+      // expected, correct outcome here — not a failure.
+      if (FAST_CUSTOMER && ctx.greetingSource === 'deferred_vps') {
+        return 'greeting deferred (source=deferred_vps) — /start skill greets the customer'
+      }
       if (!ctx.greetingOk) {
         throw new Error(
           `proactive greeting did NOT fire (source=${ctx.greetingSource ?? 'absent'}) — ` +
@@ -1009,9 +1105,21 @@ test('Phase F: fresh-customer chain', async () => {
 
   // Every stage except teardown runs in sequence; first failure stops
   // the rest. Stage 11 (teardown) ALWAYS runs via the finally below.
+  //
+  // Wait-page race fix (2026-05-16): the stage ORDER is variant-aware.
+  // Normal runs keep the original sequence and skip Stage 5.85. The
+  // FAST_CUSTOMER variant re-orders so complete-onboarding (5.8) runs
+  // BEFORE setup-script-complete (5) — the actual race — then adds 5.85
+  // to confirm the provisioning second-finisher started the gateway.
+  const byNum = (n: number) => STAGES.find((s) => s.num === n)!
+  const NORMAL_ORDER = [1, 2, 3, 4, 5, 5.5, 5.6, 5.7, 5.8, 5.9, 6, 7, 8, 9, 10]
+  const FAST_ORDER = [1, 2, 3, 4, 5.5, 5.6, 5.7, 5.8, 5, 5.85, 5.9, 6, 7, 8, 9, 10]
+  const runStages = (FAST_CUSTOMER ? FAST_ORDER : NORMAL_ORDER).map(byNum)
+  // Expected total stage count for the verdict (run stages + teardown).
+  const expectedStageCount = runStages.length + 1
   const teardownStage = STAGES.find((s) => s.num === 11)!
   try {
-    for (const s of STAGES.filter((s) => s.num !== 11)) {
+    for (const s of runStages) {
       const budgetMs = STAGE_BUDGET_MS[s.num]
       if (firstFailedStage !== null) {
         record({ stage: s.num, name: s.name, status: 'skipped', elapsedMs: 0, budgetMs, detail: `skipped — Stage ${firstFailedStage} failed first` })
@@ -1089,7 +1197,7 @@ test('Phase F: fresh-customer chain', async () => {
   const stages1to9 = results.filter((r) => r.stage >= 1 && r.stage <= 9)
   // Clean = every stage is pass / over_budget / manual — no fail, no
   // skip. `manual` stages (9, 10) are founder-confirmed, not failures.
-  const allStagesClean = results.length === STAGES.length &&
+  const allStagesClean = results.length === expectedStageCount &&
     results.every(
       (r) => r.status === 'pass' || r.status === 'over_budget' || r.status === 'manual',
     )
@@ -1102,7 +1210,7 @@ test('Phase F: fresh-customer chain', async () => {
   // eslint-disable-next-line no-console
   console.log(`Phase F chain — target=${TARGET} runId=${runId}`)
   // eslint-disable-next-line no-console
-  console.log(`All ${STAGES.length} stages clean (no fail/skip): ${allStagesClean ? 'YES' : 'NO'}`)
+  console.log(`All ${expectedStageCount} stages clean (no fail/skip): ${allStagesClean ? 'YES' : 'NO'}`)
   // eslint-disable-next-line no-console
   console.log(`Chain time (Stages 1-9): ${(chainTimeMs / 1000 / 60).toFixed(2)} min  (budget ${budgetMin} min → ${underBudget ? 'UNDER' : 'OVER'})`)
   // eslint-disable-next-line no-console
@@ -1162,7 +1270,7 @@ function appendRunToCascadeLog(
     `- target: \`${TARGET}\``,
     `- email: \`${ctx.email}\``,
     `- customer: \`${ctx.customerId ?? '—'}\` · subscription: \`${ctx.subscriptionId ?? '—'}\` · vps: \`${ctx.vpsId ?? '—'}\``,
-    `- all ${STAGES.length} stages clean (no fail/skip): **${allStagesClean ? 'YES' : 'NO'}**`,
+    `- all ${results.length} stages clean (no fail/skip): **${allStagesClean ? 'YES' : 'NO'}**`,
     `- chain time (Stages 1-9): **${(chainTimeMs / 1000 / 60).toFixed(2)} min** (budget ${budgetMin} min → ${underBudget ? 'UNDER' : 'OVER'})`,
     `- unlock-eligible: **${allStagesClean && underBudget ? 'YES' : 'NO'}**`,
     ``,
