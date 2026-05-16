@@ -85,6 +85,7 @@ import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync, appendFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { resolve } from 'node:path'
+import { personasForTier } from '../../supabase/functions/_shared/tier-personas.ts'
 
 // ─── Configuration ────────────────────────────────────────────────────
 
@@ -1062,9 +1063,14 @@ const STAGES: Stage[] = [
     num: 6,
     name: 'bundle-pull installed all tier personas',
     async run(ctx, deps) {
-      // Pro tier = 8 personas.
-      const n = await deps.checkBundlePull(ctx.vpsIp!, 8)
-      return `${n}/8 personas installed`
+      // Persona-fix (2026-05-17): the expected count is derived from
+      // tier-personas.ts — the canonical source of truth — not a
+      // hard-coded literal. The harness fixture customer is Pro tier
+      // (see XENDIT_INVOICE_PAID_TEMPLATE description). If the Pro tier
+      // grows/shrinks a persona, this stays correct automatically.
+      const expected = personasForTier('pro').length
+      const n = await deps.checkBundlePull(ctx.vpsIp!, expected)
+      return `${n}/${expected} personas installed`
     },
   },
   {
