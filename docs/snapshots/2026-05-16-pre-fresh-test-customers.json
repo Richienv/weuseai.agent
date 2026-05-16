@@ -1,0 +1,551 @@
+{
+  "snapshot_taken": "2026-05-16T07:56:57.394Z",
+  "purpose": "Pre-fresh-customer-test wipe — Phase F cascade close-out 2026-05-16",
+  "customers_count": 30,
+  "subscriptions_count": 43,
+  "customers": [
+    {
+      "id": "999af211-6ef7-4d39-b7af-5d5c9d11af1a",
+      "email": "e2e-test2@example.id",
+      "display_name": "E2E Test",
+      "telegram_bot_username": null,
+      "telegram_chat_id": null,
+      "created_at": "2026-04-30 08:26:05.565895+00"
+    },
+    {
+      "id": "2dd6eefa-3b26-4073-8ed0-801ec66f0342",
+      "email": "cors-test@example.id",
+      "display_name": null,
+      "telegram_bot_username": null,
+      "telegram_chat_id": null,
+      "created_at": "2026-04-30 08:57:45.031846+00"
+    },
+    {
+      "id": "4d644821-f6a5-46ba-a410-e1d31184e7eb",
+      "email": "verify-test+2026-05-02@weuseai.agent",
+      "display_name": "CORS Verify Test",
+      "telegram_bot_username": null,
+      "telegram_chat_id": null,
+      "created_at": "2026-05-02 01:04:00.918496+00"
+    },
+    {
+      "id": "0f3a028a-451c-4fd6-805b-8378690d5c46",
+      "email": "post-deploy-verify+2026-05-02@weuseai.agent",
+      "display_name": "Post-Deploy Verify",
+      "telegram_bot_username": null,
+      "telegram_chat_id": null,
+      "created_at": "2026-05-02 01:36:17.362039+00"
+    },
+    {
+      "id": "9891e575-0ae5-498a-9db1-ecc69d193b33",
+      "email": "phase1-e2e+2026-05-03@weuseai.agent",
+      "display_name": "Phase 1 E2E Test",
+      "telegram_bot_username": null,
+      "telegram_chat_id": null,
+      "created_at": "2026-05-03 05:20:38.546339+00"
+    },
+    {
+      "id": "2264de28-2735-482f-b4c3-e2b99a097199",
+      "email": "day3-onboarding-stub@weuseai.example",
+      "display_name": "Hacked",
+      "telegram_bot_username": null,
+      "telegram_chat_id": null,
+      "created_at": "2026-05-06 06:40:16.84435+00"
+    },
+    {
+      "id": "b56ca197-d99b-40b3-95f2-7fa2c51bfbda",
+      "email": "day3-onboarding-clean@weuseai.example",
+      "display_name": "Day 3 Clean Stub",
+      "telegram_bot_username": null,
+      "telegram_chat_id": "7777777",
+      "created_at": "2026-05-06 06:46:55.674224+00"
+    },
+    {
+      "id": "04ffc7fd-2914-4ae3-ac88-d60fb7acb053",
+      "email": "day3-visual-stub@weuseai.example",
+      "display_name": "Sarah Test",
+      "telegram_bot_username": null,
+      "telegram_chat_id": "8888888",
+      "created_at": "2026-05-06 07:02:24.731526+00"
+    },
+    {
+      "id": "dbcced00-906d-48eb-9fbd-1fa06f9a8a66",
+      "email": "day5-pricesync-stub@weuseai.example",
+      "display_name": "Day 5 Stub",
+      "telegram_bot_username": null,
+      "telegram_chat_id": null,
+      "created_at": "2026-05-06 16:13:21.92781+00"
+    },
+    {
+      "id": "e282ce25-764d-4d88-b592-d4ef2c6cc360",
+      "email": "kidnovell.richie@gmail.com",
+      "display_name": "Richie Novell",
+      "telegram_bot_username": null,
+      "telegram_chat_id": null,
+      "created_at": "2026-05-06 17:12:15.985147+00"
+    },
+    {
+      "id": "42c024ce-a4d6-4374-8dcf-1e396ae9e750",
+      "email": "kdwb.co@gmail.com",
+      "display_name": "Renita",
+      "telegram_bot_username": "kamis14maybot",
+      "telegram_chat_id": "6805409051",
+      "created_at": "2026-05-10 11:02:24.769124+00"
+    },
+    {
+      "id": "a3827996-c2d7-4254-a92d-7bf74616e27b",
+      "email": "richiekidnovellyt@gmail.com",
+      "display_name": "Renita",
+      "telegram_bot_username": null,
+      "telegram_chat_id": null,
+      "created_at": "2026-05-11 02:37:01.604313+00"
+    },
+    {
+      "id": "c835797b-34bb-4649-8363-348232846c61",
+      "email": "e2e-smoke-1778726664528@weuseai.test",
+      "display_name": null,
+      "telegram_bot_username": null,
+      "telegram_chat_id": null,
+      "created_at": "2026-05-14 02:44:28.127302+00"
+    },
+    {
+      "id": "b9a02f8f-1a47-4b97-9950-32b4d36141b3",
+      "email": "e2e-smoke-1778727607731@weuseai.test",
+      "display_name": null,
+      "telegram_bot_username": null,
+      "telegram_chat_id": null,
+      "created_at": "2026-05-14 03:00:12.566153+00"
+    },
+    {
+      "id": "6d87069a-36da-4c05-aa46-d95ff327d9d2",
+      "email": "e2e-smoke-1778728809495@weuseai.test",
+      "display_name": null,
+      "telegram_bot_username": null,
+      "telegram_chat_id": null,
+      "created_at": "2026-05-14 03:20:13.03022+00"
+    },
+    {
+      "id": "08f367fa-613b-4233-8c6b-73ffb1809fae",
+      "email": "e2e-smoke-1778728814881@weuseai.test",
+      "display_name": null,
+      "telegram_bot_username": null,
+      "telegram_chat_id": null,
+      "created_at": "2026-05-14 03:20:18.492661+00"
+    },
+    {
+      "id": "f7cbad0c-f1f9-4edf-b37a-38d3e6ee1f52",
+      "email": "e2e-smoke-1778728997425@weuseai.test",
+      "display_name": null,
+      "telegram_bot_username": null,
+      "telegram_chat_id": null,
+      "created_at": "2026-05-14 03:23:20.259392+00"
+    },
+    {
+      "id": "b2430462-0387-4614-991c-9294f1b68c72",
+      "email": "e2e-smoke-1778729119720@weuseai.test",
+      "display_name": null,
+      "telegram_bot_username": null,
+      "telegram_chat_id": null,
+      "created_at": "2026-05-14 03:25:21.091998+00"
+    },
+    {
+      "id": "bb83ef80-a1ab-435a-a7a0-fa08991e70a8",
+      "email": "e2e-smoke-1778740708604@weuseai.test",
+      "display_name": null,
+      "telegram_bot_username": null,
+      "telegram_chat_id": null,
+      "created_at": "2026-05-14 06:38:33.043215+00"
+    },
+    {
+      "id": "406fb944-8f9c-422e-aed7-3c28ce9ab12e",
+      "email": "e2e-smoke-1778740806860@weuseai.test",
+      "display_name": null,
+      "telegram_bot_username": null,
+      "telegram_chat_id": null,
+      "created_at": "2026-05-14 06:40:09.678892+00"
+    },
+    {
+      "id": "e0c0e14b-d9e7-4b4e-a219-9e1d894f4472",
+      "email": "e2e-smoke-1778740951714@weuseai.test",
+      "display_name": null,
+      "telegram_bot_username": null,
+      "telegram_chat_id": null,
+      "created_at": "2026-05-14 06:42:34.324026+00"
+    },
+    {
+      "id": "a082b421-951b-4db0-a5dc-c61f6acc002b",
+      "email": "e2e-smoke-1778741038225@weuseai.test",
+      "display_name": null,
+      "telegram_bot_username": null,
+      "telegram_chat_id": null,
+      "created_at": "2026-05-14 06:44:02.588184+00"
+    },
+    {
+      "id": "f17bad8a-2cf6-4865-a8d0-2143831010f7",
+      "email": "e2e-smoke-1778741051908@weuseai.test",
+      "display_name": null,
+      "telegram_bot_username": null,
+      "telegram_chat_id": null,
+      "created_at": "2026-05-14 06:44:14.522961+00"
+    },
+    {
+      "id": "43932200-bce7-4566-bcad-d9273b8a3db7",
+      "email": "e2e-smoke-1778743381862@weuseai.test",
+      "display_name": null,
+      "telegram_bot_username": null,
+      "telegram_chat_id": null,
+      "created_at": "2026-05-14 07:23:04.66437+00"
+    },
+    {
+      "id": "22fc1845-1e6d-4c0b-8882-90f92c753d7e",
+      "email": "e2e-smoke-1778756009187@weuseai.test",
+      "display_name": null,
+      "telegram_bot_username": null,
+      "telegram_chat_id": null,
+      "created_at": "2026-05-14 10:53:31.920708+00"
+    },
+    {
+      "id": "6dcd6d21-ef81-409e-a407-7aad83176e89",
+      "email": "e2e-smoke-1778809797143@weuseai.test",
+      "display_name": null,
+      "telegram_bot_username": null,
+      "telegram_chat_id": null,
+      "created_at": "2026-05-15 01:50:00.327899+00"
+    },
+    {
+      "id": "527cc462-fee9-4f8c-b477-3f34aeb4366a",
+      "email": "e2e-smoke-1778810463687@weuseai.test",
+      "display_name": null,
+      "telegram_bot_username": null,
+      "telegram_chat_id": null,
+      "created_at": "2026-05-15 02:01:06.731426+00"
+    },
+    {
+      "id": "7023e7a7-7889-42b2-ba5e-8b39ab3b5179",
+      "email": "e2e-smoke-1778826101486@weuseai.test",
+      "display_name": null,
+      "telegram_bot_username": null,
+      "telegram_chat_id": null,
+      "created_at": "2026-05-15 06:21:43.669809+00"
+    },
+    {
+      "id": "640e6801-e880-421a-9181-d26d5991348f",
+      "email": "e2e-smoke-1778910233121@weuseai.test",
+      "display_name": null,
+      "telegram_bot_username": null,
+      "telegram_chat_id": null,
+      "created_at": "2026-05-16 05:43:55.722324+00"
+    },
+    {
+      "id": "335dfcd5-a9a9-4d29-8efc-d95f256ba019",
+      "email": "e2e-smoke-1778918059457@weuseai.test",
+      "display_name": null,
+      "telegram_bot_username": null,
+      "telegram_chat_id": null,
+      "created_at": "2026-05-16 07:54:21.982279+00"
+    }
+  ],
+  "subscriptions": [
+    {
+      "id": "0ffe44f6-988d-462b-84bc-e3e4a24968fc",
+      "customer_id": "999af211-6ef7-4d39-b7af-5d5c9d11af1a",
+      "tier": "starter",
+      "status": "pending",
+      "started_at": "2026-04-30 08:26:05.698349+00"
+    },
+    {
+      "id": "9c919077-32f1-465a-92e6-2d6a8900102d",
+      "customer_id": "2dd6eefa-3b26-4073-8ed0-801ec66f0342",
+      "tier": "starter",
+      "status": "failed",
+      "started_at": "2026-04-30 08:57:45.16455+00"
+    },
+    {
+      "id": "3b07e28b-6d5c-4098-8f28-2969fab9c081",
+      "customer_id": "0f3a028a-451c-4fd6-805b-8378690d5c46",
+      "tier": "pro",
+      "status": "failed",
+      "started_at": "2026-05-02 01:36:17.425504+00"
+    },
+    {
+      "id": "24dc415f-e026-462e-a086-08cdfa474c0c",
+      "customer_id": "9891e575-0ae5-498a-9db1-ecc69d193b33",
+      "tier": "pro",
+      "status": "failed",
+      "started_at": "2026-05-03 05:20:38.626996+00"
+    },
+    {
+      "id": "89b2840c-3d74-4aa1-a7fe-eaaf3a64e4b1",
+      "customer_id": "2264de28-2735-482f-b4c3-e2b99a097199",
+      "tier": "pro",
+      "status": "failed",
+      "started_at": "2026-05-06 06:40:16.918296+00"
+    },
+    {
+      "id": "3590c7b4-a9de-44ac-b1e4-cc3aeb4bdc5f",
+      "customer_id": "b56ca197-d99b-40b3-95f2-7fa2c51bfbda",
+      "tier": "pro",
+      "status": "failed",
+      "started_at": "2026-05-06 06:46:55.755757+00"
+    },
+    {
+      "id": "7e0a03fa-f643-4c05-871a-dea8a266ffdb",
+      "customer_id": "04ffc7fd-2914-4ae3-ac88-d60fb7acb053",
+      "tier": "pro",
+      "status": "failed",
+      "started_at": "2026-05-06 07:02:24.794053+00"
+    },
+    {
+      "id": "09716635-e664-4bc0-8bc2-aa1574c87b90",
+      "customer_id": "dbcced00-906d-48eb-9fbd-1fa06f9a8a66",
+      "tier": "pro",
+      "status": "failed",
+      "started_at": "2026-05-06 16:13:21.9831+00"
+    },
+    {
+      "id": "7bc6970d-fd9f-4324-a317-63df60f21053",
+      "customer_id": "e282ce25-764d-4d88-b592-d4ef2c6cc360",
+      "tier": "pro",
+      "status": "canceled",
+      "started_at": "2026-05-06 17:12:16.055484+00"
+    },
+    {
+      "id": "24ad926f-cdf7-4d6d-8146-18507c28273e",
+      "customer_id": "e282ce25-764d-4d88-b592-d4ef2c6cc360",
+      "tier": "pro",
+      "status": "canceled",
+      "started_at": "2026-05-07 03:46:17.910026+00"
+    },
+    {
+      "id": "cca4e74a-8480-4ed9-a221-7cd7ec595463",
+      "customer_id": "e282ce25-764d-4d88-b592-d4ef2c6cc360",
+      "tier": "pro",
+      "status": "canceled",
+      "started_at": "2026-05-08 22:36:48.226157+00"
+    },
+    {
+      "id": "0bab4569-ef6a-4b0e-8b81-85fea82d93c9",
+      "customer_id": "e282ce25-764d-4d88-b592-d4ef2c6cc360",
+      "tier": "pro",
+      "status": "canceled",
+      "started_at": "2026-05-08 22:39:01.733952+00"
+    },
+    {
+      "id": "fc36a0d7-d032-4931-a944-c74da4e5c498",
+      "customer_id": "e282ce25-764d-4d88-b592-d4ef2c6cc360",
+      "tier": "pro",
+      "status": "canceled",
+      "started_at": "2026-05-09 18:58:52.445624+00"
+    },
+    {
+      "id": "92d03da6-e707-4574-8ac4-545af5755da4",
+      "customer_id": "e282ce25-764d-4d88-b592-d4ef2c6cc360",
+      "tier": "pro",
+      "status": "canceled",
+      "started_at": "2026-05-09 23:54:09.46838+00"
+    },
+    {
+      "id": "90870e92-7cdd-474c-ba4f-ee0ef45d5be8",
+      "customer_id": "e282ce25-764d-4d88-b592-d4ef2c6cc360",
+      "tier": "pro",
+      "status": "canceled",
+      "started_at": "2026-05-10 03:12:33.685549+00"
+    },
+    {
+      "id": "99f79f4b-44d8-4d4d-94f5-2318e1db2582",
+      "customer_id": "42c024ce-a4d6-4374-8dcf-1e396ae9e750",
+      "tier": "pro",
+      "status": "canceled",
+      "started_at": "2026-05-10 11:02:24.91456+00"
+    },
+    {
+      "id": "779ea6e2-5e66-4de8-888d-9d8d003e9120",
+      "customer_id": "e282ce25-764d-4d88-b592-d4ef2c6cc360",
+      "tier": "pro",
+      "status": "canceled",
+      "started_at": "2026-05-10 14:26:52.59717+00"
+    },
+    {
+      "id": "19be8a3a-618b-4bb0-905c-390f275563fc",
+      "customer_id": "e282ce25-764d-4d88-b592-d4ef2c6cc360",
+      "tier": "pro",
+      "status": "canceled",
+      "started_at": "2026-05-10 14:50:41.720827+00"
+    },
+    {
+      "id": "00066e2e-57c2-4b01-9d08-84ccdbf6434b",
+      "customer_id": "e282ce25-764d-4d88-b592-d4ef2c6cc360",
+      "tier": "pro",
+      "status": "canceled",
+      "started_at": "2026-05-10 16:13:18.713139+00"
+    },
+    {
+      "id": "34bd83a0-3059-4ea8-8b6d-610d6531af5d",
+      "customer_id": "a3827996-c2d7-4254-a92d-7bf74616e27b",
+      "tier": "pro",
+      "status": "canceled",
+      "started_at": "2026-05-11 02:37:01.768179+00"
+    },
+    {
+      "id": "c8d55762-0e5c-4a3a-88f3-ec89343bd922",
+      "customer_id": "42c024ce-a4d6-4374-8dcf-1e396ae9e750",
+      "tier": "pro",
+      "status": "canceled",
+      "started_at": "2026-05-12 07:24:32.735915+00"
+    },
+    {
+      "id": "ecfada43-fbc2-4798-9aa7-a9cdbfd13a53",
+      "customer_id": "e282ce25-764d-4d88-b592-d4ef2c6cc360",
+      "tier": "pro",
+      "status": "canceled",
+      "started_at": "2026-05-12 08:20:01.816793+00"
+    },
+    {
+      "id": "d3198bf4-603f-4d63-814d-cb93b4cf8233",
+      "customer_id": "e282ce25-764d-4d88-b592-d4ef2c6cc360",
+      "tier": "pro",
+      "status": "active",
+      "started_at": "2026-05-13 00:36:49.293501+00"
+    },
+    {
+      "id": "2779d6df-ad4c-47bb-ae07-696075c31c34",
+      "customer_id": "c835797b-34bb-4649-8363-348232846c61",
+      "tier": "starter",
+      "status": "failed",
+      "started_at": "2026-05-14 02:44:28.409286+00"
+    },
+    {
+      "id": "468bd266-970b-4318-a90c-94033dd94a34",
+      "customer_id": "b9a02f8f-1a47-4b97-9950-32b4d36141b3",
+      "tier": "starter",
+      "status": "failed",
+      "started_at": "2026-05-14 03:00:12.815297+00"
+    },
+    {
+      "id": "8bf98476-4e61-416a-b8f9-ef7a34312a19",
+      "customer_id": "6d87069a-36da-4c05-aa46-d95ff327d9d2",
+      "tier": "starter",
+      "status": "failed",
+      "started_at": "2026-05-14 03:20:13.29087+00"
+    },
+    {
+      "id": "4968ceea-a6b9-4354-b178-e874e0e5e18f",
+      "customer_id": "08f367fa-613b-4233-8c6b-73ffb1809fae",
+      "tier": "starter",
+      "status": "failed",
+      "started_at": "2026-05-14 03:20:18.713815+00"
+    },
+    {
+      "id": "99c4e0d5-edbd-4dcf-a6b3-0308d67bceaf",
+      "customer_id": "f7cbad0c-f1f9-4edf-b37a-38d3e6ee1f52",
+      "tier": "starter",
+      "status": "failed",
+      "started_at": "2026-05-14 03:23:20.906893+00"
+    },
+    {
+      "id": "8b4b0887-6bc5-44cf-9ced-8a9a767fba59",
+      "customer_id": "b2430462-0387-4614-991c-9294f1b68c72",
+      "tier": "starter",
+      "status": "failed",
+      "started_at": "2026-05-14 03:25:21.733223+00"
+    },
+    {
+      "id": "f35ea8a5-838f-4ae6-a3f7-e733a2f816fe",
+      "customer_id": "bb83ef80-a1ab-435a-a7a0-fa08991e70a8",
+      "tier": "starter",
+      "status": "failed",
+      "started_at": "2026-05-14 06:38:33.328283+00"
+    },
+    {
+      "id": "9073ac48-05f9-43a9-b65a-2aa592f34349",
+      "customer_id": "406fb944-8f9c-422e-aed7-3c28ce9ab12e",
+      "tier": "starter",
+      "status": "failed",
+      "started_at": "2026-05-14 06:40:09.917613+00"
+    },
+    {
+      "id": "02160fdd-b759-4bfe-ba35-64ad7d6c0555",
+      "customer_id": "e0c0e14b-d9e7-4b4e-a219-9e1d894f4472",
+      "tier": "starter",
+      "status": "failed",
+      "started_at": "2026-05-14 06:42:35.168484+00"
+    },
+    {
+      "id": "61b28b9c-d3af-4419-a8e6-1779deb73eed",
+      "customer_id": "a082b421-951b-4db0-a5dc-c61f6acc002b",
+      "tier": "starter",
+      "status": "failed",
+      "started_at": "2026-05-14 06:44:02.855622+00"
+    },
+    {
+      "id": "2985cd17-83a1-41ac-9aaf-39a178026a5f",
+      "customer_id": "f17bad8a-2cf6-4865-a8d0-2143831010f7",
+      "tier": "starter",
+      "status": "failed",
+      "started_at": "2026-05-14 06:44:14.743863+00"
+    },
+    {
+      "id": "f3161c54-3078-4a16-abf8-5eecae3016ea",
+      "customer_id": "42c024ce-a4d6-4374-8dcf-1e396ae9e750",
+      "tier": "pro",
+      "status": "active",
+      "started_at": "2026-05-14 06:47:36.844793+00"
+    },
+    {
+      "id": "af85c3bd-01fb-49fd-a5ca-dfb4c479f316",
+      "customer_id": "43932200-bce7-4566-bcad-d9273b8a3db7",
+      "tier": "starter",
+      "status": "failed",
+      "started_at": "2026-05-14 07:23:06.277897+00"
+    },
+    {
+      "id": "0469b41f-ebfc-4ee8-839f-3ea3af494090",
+      "customer_id": "e282ce25-764d-4d88-b592-d4ef2c6cc360",
+      "tier": "pro",
+      "status": "active",
+      "started_at": "2026-05-14 07:57:38.05987+00"
+    },
+    {
+      "id": "72be700e-51c9-4ba2-8511-6bc428727cb0",
+      "customer_id": "22fc1845-1e6d-4c0b-8882-90f92c753d7e",
+      "tier": "starter",
+      "status": "failed",
+      "started_at": "2026-05-14 10:53:32.410536+00"
+    },
+    {
+      "id": "92ef60a7-cf09-4c57-b46a-39333ec41781",
+      "customer_id": "6dcd6d21-ef81-409e-a407-7aad83176e89",
+      "tier": "starter",
+      "status": "failed",
+      "started_at": "2026-05-15 01:50:01.926231+00"
+    },
+    {
+      "id": "a77e24c9-2776-497f-8465-6cbfbcadd5ac",
+      "customer_id": "527cc462-fee9-4f8c-b477-3f34aeb4366a",
+      "tier": "starter",
+      "status": "failed",
+      "started_at": "2026-05-15 02:01:07.649334+00"
+    },
+    {
+      "id": "c6e745ff-a269-44ab-bf86-7eaad1429033",
+      "customer_id": "7023e7a7-7889-42b2-ba5e-8b39ab3b5179",
+      "tier": "starter",
+      "status": "failed",
+      "started_at": "2026-05-15 06:21:45.233773+00"
+    },
+    {
+      "id": "6ce5321b-476f-4c3d-82a0-364ae7e8cd26",
+      "customer_id": "640e6801-e880-421a-9181-d26d5991348f",
+      "tier": "starter",
+      "status": "pending",
+      "started_at": "2026-05-16 05:43:56.758821+00"
+    },
+    {
+      "id": "bcac1b25-d7bd-4933-af18-5357bde5ac61",
+      "customer_id": "335dfcd5-a9a9-4d29-8efc-d95f256ba019",
+      "tier": "starter",
+      "status": "pending",
+      "started_at": "2026-05-16 07:54:23.003553+00"
+    }
+  ]
+}
