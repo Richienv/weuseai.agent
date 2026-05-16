@@ -65,6 +65,16 @@ export function parseSpinUpRequest(
         | undefined,
       alwaysOnEnabled: body.alwaysOnEnabled as boolean | undefined,
       useStarterCredits: body.useStarterCredits as boolean | undefined,
+      // Persona selection (2026-05-17): the customer's chosen persona
+      // slug. complete-onboarding validated it against the tier already;
+      // spinUpCustomer's buildScriptFor uses it as the primary persona
+      // (WEUSEAI_AGENT_SLUG). Undefined when absent → buildScriptFor
+      // falls back to DEFAULT_PERSONA. Coerced to a non-empty string so
+      // a blank body value behaves like absent.
+      agentSlug:
+        typeof body.agentSlug === 'string' && body.agentSlug.length > 0
+          ? (body.agentSlug as string)
+          : undefined,
     },
   }
 }
