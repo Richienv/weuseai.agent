@@ -344,3 +344,68 @@ test('wait-page race: a throw from notifyVpsReady never fails the provision', as
   const vps = await deps.store.findActiveVPSByCustomer('cust-race-3')
   assert.equal(vps?.status, 'running', 'VPS still running despite hook throw')
 })
+
+// ─── persona selection (2026-05-17) ─────────────────────────────────
+//
+// spinUpCustomer accepts opts.agentSlug — the customer's chosen persona.
+// buildScriptFor must thread it into the setup-script as the primary
+// persona (WEUSEAI_AGENT_SLUG), which drives which bundle the VPS's
+// bundle-pull fetches first + which persona scaffold the first-boot
+// SOUL.md uses.
+
+test('flow: opts.agentSlug threads into setup-script as WEUSEAI_AGENT_SLUG', async () => {
+  const deps = makeDeps()
+  ;(deps.vps as any).getPublicIp = async () => '5.6.7.8'
+
+  const r = await spinUpCustomer(
+    {
+      customerId: 'cust-persona-1',
+      tier: 'pro',
+      customerTelegramBotToken: '8630424948:AAGmM1ND-test',
+      customerTelegramAllowedUserIds: '6805409051',
+      agentSlug: 'doc-expert',
+    },
+    deps,
+  )
+  await r.done
+
+  const script = deps.ssh.calls[0].script
+  // Primary persona env var = the chosen slug.
+  assert.match(
+    script,
+    /WEUSEAI_AGENT_SLUG=doc-expert/,
+    'chosen agentSlug drives the primary-persona env var',
+  )
+  // First-of-list invariant: chosen slug is hoisted to the front of the
+  // CSV bundle-pull list.
+  assert.match(
+    script,
+    /WEUSEAI_AGENT_SLUGS=doc-expert,/,
+    'chosen persona hoisted to first of the bundle-pull CSV',
+  )
+  // First-boot SOUL.md is the chosen persona's scaffold, not The Pro.
+  assert.match(script, /Doc Expert/, 'first-boot SOUL.md uses the chosen persona')
+})
+
+test('flow: omitted agentSlug defaults the primary persona to the-pro', async () => {
+  const deps = makeDeps()
+  ;(deps.vps as any).getPublicIp = async () => '5.6.7.9'
+
+  const r = await spinUpCustomer(
+    {
+      customerId: 'cust-persona-2',
+      tier: 'pro',
+      customerTelegramBotToken: '8630424948:AAGmM1ND-test',
+      // agentSlug omitted
+    },
+    deps,
+  )
+  await r.done
+
+  const script = deps.ssh.calls[0].script
+  assert.match(
+    script,
+    /WEUSEAI_AGENT_SLUG=the-pro/,
+    'absent agentSlug → the-pro primary (default-persona invariant)',
+  )
+})

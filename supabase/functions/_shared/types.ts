@@ -210,6 +210,13 @@ export type CustomerRow = {
   pairing_code: string | null
   pairing_code_expires_at: string | null   // ISO timestamp
   soul_md_text: string | null
+  /** Persona selection (2026-05-17): the persona slug the customer chose
+   *  at onboarding — one of personasForTier(tier). Defaults to 'the-pro'
+   *  at the DB level (migration 20260517000000) so a pre-picker customer
+   *  row is never null. complete-onboarding validates the submitted slug
+   *  against the tier before persisting it here, then threads it into
+   *  spinUp + renderSoulMd. */
+  agent_slug: string
   /** Bug-1 fix (2026-05-16): set the first time the proactive greeting
    *  is delivered. Idempotency guard so the greeting fires exactly once
    *  whether complete-onboarding's happy path OR the provisioning
@@ -440,6 +447,13 @@ export type SpinUpInput = {
   openrouterApiKey: string
   soulMdContent: string
   alwaysOnEnabled: boolean
+  /** Persona selection (2026-05-17): the customer's chosen persona slug.
+   *  Provisioning forwards this to the /spin-up route → spinUpCustomer's
+   *  opts.agentSlug → setup-script WEUSEAI_AGENT_SLUG, which drives which
+   *  bundle the VPS's bundle-pull fetches as the primary persona.
+   *  Optional for back-compat; complete-onboarding always supplies it
+   *  post-picker (defaults to 'the-pro' when omitted, downstream). */
+  agentSlug?: string
 }
 
 export type SpinUpResult =

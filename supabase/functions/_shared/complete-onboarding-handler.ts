@@ -23,6 +23,7 @@ import {
 import { properDeleteWebhook } from './proper-delete-webhook.ts'
 import { sendProactiveGreeting } from './proactive-greeting.ts'
 import { buildWelcomeEmailBody } from './email-delivery.ts'
+import { personasForTier, DEFAULT_PERSONA } from './tier-personas.ts'
 
 export type CompleteOnboardingDeps = {
   db: IOnboardingStore
@@ -54,6 +55,13 @@ export type CompleteOnboardingBody = {
   customer_id: string
   whatsapp: string
   expectations_text: string
+  /** Persona selection (2026-05-17): the slug the customer picked in the
+   *  onboarding picker. Validated against personasForTier(tier) before
+   *  use — a slug not granted by the customer's tier is rejected (reuses
+   *  the bundle-fetch tier-persona gate pattern). Optional on the wire
+   *  for back-compat with the Phase F harness + pre-picker clients;
+   *  falls back to DEFAULT_PERSONA ('the-pro', granted on every tier). */
+  agent_slug?: string
 }
 
 export async function handleCompleteOnboarding(
@@ -86,6 +94,31 @@ export async function handleCompleteOnboarding(
     .findActiveOrPendingSubscriptionByCustomer(customer_id)
   if (!subscription) {
     return json({ error: 'no_paid_subscription' }, 404)
+  }
+
+  // ─── 1b. Resolve + validate the chosen persona (2026-05-17) ───────
+  // The onboarding picker submits agent_slug. It MUST be one of the
+  // personas the customer's tier grants — same gate the bundle-fetch
+  // Edge Function enforces (tier_does_not_grant_persona, PR #92), applied
+  // here at the selection boundary so an out-of-tier slug never reaches
+  // the DB, spinUp, or the SOUL.md render.
+  //
+  // Omitted slug → DEFAULT_PERSONA ('the-pro'), which every tier grants
+  // (first-of-list invariant). This keeps the Phase F harness + any
+  // pre-picker client working: no agent_slug == the historical behavior.
+  const tierPersonas = personasForTier(subscription.tier)
+  const chosenSlug =
+    typeof body.agent_slug === 'string' && body.agent_slug.length > 0
+      ? body.agent_slug
+      : DEFAULT_PERSONA
+  if (!tierPersonas.includes(chosenSlug)) {
+    return json(
+      {
+        error: 'tier_does_not_grant_persona',
+        detail: `agent_slug "${chosenSlug}" not available on tier "${subscription.tier}"`,
+      },
+      403,
+    )
   }
 
   // ─── 2. Idempotency — BRANCHED (Track 1 persona-refinement 2026-05-10) ──
@@ -157,9 +190,15 @@ export async function handleCompleteOnboarding(
   }
 
   const customerName = (customer.display_name ?? '').trim() || customer.email
+  // Persona selection (2026-05-17): render the chosen persona's SOUL.md
+  // scaffold, not the default. This is what makes the customer's running
+  // agent actually BE the persona they picked — proactive-greeting.ts
+  // uses soul_md_text as the system prompt, and refreshEnv/spinUp push
+  // this file to the VPS's /home/weuseai/.hermes/SOUL.md.
   const soulMdText = renderSoulMd({
     customerName,
     expectationsClean: sanitized.clean,
+    personaSlug: chosenSlug,
   })
   const soulMdSha256 = await sha256Hex(soulMdText)
 
@@ -198,6 +237,10 @@ export async function handleCompleteOnboarding(
   await deps.db.updateCustomer(customer_id, {
     whatsapp_number: trimmedWhatsapp,
     soul_md_text: soulMdText,
+    // Persona selection (2026-05-17): persist the validated choice. On a
+    // persona-refinement re-onboard this also lets the customer switch
+    // personas — chosenSlug is re-validated against the tier every time.
+    agent_slug: chosenSlug,
     pairing_code: null,
     pairing_code_expires_at: null,
   })
@@ -294,6 +337,11 @@ export async function handleCompleteOnboarding(
     openrouterApiKey: mintResult.key,
     soulMdContent: soulMdText,
     alwaysOnEnabled: subscription.always_on_enabled,
+    // Persona selection (2026-05-17): forward the chosen persona so the
+    // provisioning service drives the VPS's primary-persona bundle pull
+    // (setup-script WEUSEAI_AGENT_SLUG → bundle-pull-script fetches this
+    // slug's bundle from Storage).
+    agentSlug: chosenSlug,
   })
 
   if (!spinResult.ok) {

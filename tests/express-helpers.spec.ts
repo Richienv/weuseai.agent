@@ -53,6 +53,32 @@ test('parseSpinUpRequest: reads body fields correctly', () => {
   assert.equal(r.opts.alwaysOnEnabled, true)
 })
 
+test('parseSpinUpRequest: parses agentSlug from the body (persona selection 2026-05-17)', () => {
+  const r = parseSpinUpRequest(
+    { customerId: 'cust-1', tier: 'pro', agentSlug: 'doc-expert' },
+    {},
+  )
+  assert.equal(r.ok, true)
+  if (!r.ok) return
+  assert.equal(r.opts.agentSlug, 'doc-expert', 'chosen persona slug parsed')
+})
+
+test('parseSpinUpRequest: agentSlug undefined when absent or blank', () => {
+  const absent = parseSpinUpRequest({ customerId: 'c', tier: 'pro' }, {})
+  assert.equal(absent.ok, true)
+  if (absent.ok) {
+    assert.equal(absent.opts.agentSlug, undefined, 'absent → undefined')
+  }
+  const blank = parseSpinUpRequest(
+    { customerId: 'c', tier: 'pro', agentSlug: '' },
+    {},
+  )
+  assert.equal(blank.ok, true)
+  if (blank.ok) {
+    assert.equal(blank.opts.agentSlug, undefined, 'blank string → undefined')
+  }
+})
+
 test('parseSpinUpRequest: falls back to env TELEGRAM_BOT_TOKEN when body omits it', () => {
   const r = parseSpinUpRequest(
     { customerId: 'cust-1', tier: 'pro' },

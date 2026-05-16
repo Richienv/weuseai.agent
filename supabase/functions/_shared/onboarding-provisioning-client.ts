@@ -52,6 +52,11 @@ export class OnboardingProvisioningClient implements IOnboardingProvisioningClie
       openrouterApiKey: input.openrouterApiKey,
       soulMdContent: input.soulMdContent,
       alwaysOnEnabled: input.alwaysOnEnabled,
+      // Persona selection (2026-05-17): forward the chosen persona slug.
+      // parseSpinUpRequest on the provisioning side reads `agentSlug` and
+      // threads it into spinUpCustomer's opts.agentSlug. Omitted when the
+      // caller didn't supply one (back-compat — defaults to 'the-pro').
+      ...(input.agentSlug ? { agentSlug: input.agentSlug } : {}),
     }
     let r: Response
     try {

@@ -978,3 +978,118 @@ test('Bug-1 idempotency: customer already greeted → complete-onboarding skips 
     'greeting not re-sent when greeting_sent_at is already set',
   )
 })
+
+// ─── persona selection (2026-05-17) ─────────────────────────────────
+//
+// The onboarding picker submits agent_slug. The handler must:
+//   1. validate it ∈ personasForTier(subscription.tier) — reject 403
+//      tier_does_not_grant_persona otherwise (same gate as bundle-fetch),
+//   2. persist it to customers.agent_slug,
+//   3. thread it into the spinUp call as agentSlug,
+//   4. render the chosen persona's SOUL.md (personaSlug → renderSoulMd).
+
+test('persona: valid-in-tier agent_slug persists + threads into spinUp', async () => {
+  const { db, minter, provisioning, telegram } = setupHappyPath()
+  // tier=pro grants doc-expert.
+  const res = await handleCompleteOnboarding(
+    buildReq({
+      customer_id: 'cust-1',
+      whatsapp: '08123456789',
+      expectations_text: 'Bantu draft laporan dan proposal klien.',
+      agent_slug: 'doc-expert',
+    }),
+    { db, minter, provisioning, telegram, publicBase: PUBLIC_BASE },
+  )
+  assert.equal(res.status, 200, 'valid-in-tier persona accepted')
+  // Persisted on the customers row.
+  const customer = await db.findCustomerById('cust-1')
+  assert.equal(customer?.agent_slug, 'doc-expert', 'agent_slug persisted')
+  // Threaded into the spinUp call.
+  assert.equal(provisioning.calls.length, 1, 'spinUp called once')
+  assert.equal(
+    provisioning.calls[0].agentSlug,
+    'doc-expert',
+    'chosen agentSlug forwarded to spinUp',
+  )
+  // The rendered SOUL.md is the chosen persona's scaffold, not The Pro.
+  assert.match(
+    customer?.soul_md_text ?? '',
+    /Doc Expert/,
+    'SOUL.md rendered for the chosen persona',
+  )
+})
+
+test('persona: not-in-tier agent_slug rejected 403 tier_does_not_grant_persona', async () => {
+  const { db, minter, provisioning, telegram } = setupHappyPath()
+  // setupHappyPath seeds tier=pro; business-agent is studio-only.
+  const res = await handleCompleteOnboarding(
+    buildReq({
+      customer_id: 'cust-1',
+      whatsapp: '08123456789',
+      expectations_text: 'Bantu briefing pagi dan ringkas berita.',
+      agent_slug: 'business-agent',
+    }),
+    { db, minter, provisioning, telegram, publicBase: PUBLIC_BASE },
+  )
+  assert.equal(res.status, 403, 'out-of-tier persona rejected')
+  const data = await readJson(res)
+  assert.equal(data.error, 'tier_does_not_grant_persona')
+  // Nothing provisioned / persisted past the gate.
+  assert.equal(provisioning.calls.length, 0, 'spinUp not called')
+  const customer = await db.findCustomerById('cust-1')
+  assert.equal(customer?.agent_slug, 'the-pro', 'agent_slug unchanged (default)')
+})
+
+test('persona: unknown agent_slug rejected 403 (not in any tier)', async () => {
+  const { db, minter, provisioning, telegram } = setupHappyPath()
+  const res = await handleCompleteOnboarding(
+    buildReq({
+      customer_id: 'cust-1',
+      whatsapp: '08123456789',
+      expectations_text: 'Bantu briefing pagi dan ringkas berita.',
+      agent_slug: 'not-a-real-persona',
+    }),
+    { db, minter, provisioning, telegram, publicBase: PUBLIC_BASE },
+  )
+  assert.equal(res.status, 403, 'unknown slug rejected')
+  assert.equal((await readJson(res)).error, 'tier_does_not_grant_persona')
+})
+
+test('persona: omitted agent_slug falls back to the-pro (back-compat)', async () => {
+  const { db, minter, provisioning, telegram } = setupHappyPath()
+  const res = await handleCompleteOnboarding(
+    buildReq({
+      customer_id: 'cust-1',
+      whatsapp: '08123456789',
+      expectations_text: 'Bantu briefing pagi dan ringkas berita.',
+      // agent_slug intentionally omitted — Phase F harness / pre-picker.
+    }),
+    { db, minter, provisioning, telegram, publicBase: PUBLIC_BASE },
+  )
+  assert.equal(res.status, 200, 'omitted persona still onboards')
+  assert.equal(provisioning.calls[0].agentSlug, 'the-pro', 'defaults to the-pro')
+  const customer = await db.findCustomerById('cust-1')
+  assert.equal(customer?.agent_slug, 'the-pro', 'agent_slug defaulted')
+})
+
+test('persona: starter tier rejects a pro-only persona', async () => {
+  const { db, minter, provisioning, telegram } = setupHappyPath()
+  // Re-seed the subscription as starter (only the-pro/doc-expert/slide-master).
+  db.seedSubscription({
+    id: 'sub-1',
+    customer_id: 'cust-1',
+    tier: 'starter',
+    status: 'pending_provision',
+    always_on_enabled: false,
+  })
+  const res = await handleCompleteOnboarding(
+    buildReq({
+      customer_id: 'cust-1',
+      whatsapp: '08123456789',
+      expectations_text: 'Bantu riset mendalam dan banding sumber.',
+      agent_slug: 'deep-researcher', // pro-only
+    }),
+    { db, minter, provisioning, telegram, publicBase: PUBLIC_BASE },
+  )
+  assert.equal(res.status, 403, 'starter cannot pick a pro-only persona')
+})
