@@ -125,6 +125,7 @@ const STAGE_BUDGET_MS: Record<number, number> = {
   5.6: 5_000, // rotate-pairing-code
   5.7: 5_000, // synthetic /pair POST → telegram_chat_id set
   5.8: 60_000, // complete-onboarding → refreshEnv → gateway restart + bundle-pull
+  5.9: 10_000, // auto-greet — proactive greeting fired by complete-onboarding step 8c
   6: 60_000, // bundle-pull installed all tier personas (widened 30→60s)
   7: 60_000, // systemctl is-active hermes-gateway (widened 30→60s)
   8: 10_000, // Telegram getMe (widened 5→10s)
@@ -179,6 +180,8 @@ type ChainCtx = {
   botToken?: string
   botChatId?: string
   pairingCode?: string
+  greetingOk?: boolean
+  greetingSource?: string
 }
 
 // ─── External-system clients (mocked in local, real in deployed) ──────
@@ -224,8 +227,9 @@ type ChainDeps = {
   submitPairingCode(customerId: string, code: string, chatId: string): Promise<void>
   /** Stage 5.8: complete-onboarding — renders SOUL.md + refreshEnv,
    *  which restarts hermes-gateway WITH the bot token; the gateway's
-   *  ExecStartPre then runs bundle-pull. */
-  completeOnboarding(customerId: string): Promise<void>
+   *  ExecStartPre then runs bundle-pull. Returns the proactive-greeting
+   *  outcome (step 8c) so Stage 5.9 can verify the auto-greet fired. */
+  completeOnboarding(customerId: string): Promise<{ greetingOk: boolean; greetingSource: string }>
   /** Stage 6: confirm bundle-pull installed all tier personas. */
   checkBundlePull(vpsIp: string, expectedPersonaCount: number): Promise<number>
   /** Stage 7: confirm hermes-gateway systemd unit is active. */
@@ -304,6 +308,7 @@ function makeLocalDeps(simClock: { nowMs: number }): ChainDeps {
     },
     async completeOnboarding() {
       simClock.nowMs += SIM_ADVANCE_MS.completeOnboarding
+      return { greetingOk: true, greetingSource: 'template' }
     },
     async checkBundlePull(_ip, expected) {
       simClock.nowMs += SIM_ADVANCE_MS.bundlePull
@@ -722,9 +727,16 @@ function makeDeployedDeps(): ChainDeps {
             'kasih draft jawaban yang sopan dan cepat, plus rangkuman pesanan tiap pagi.',
         }),
       })
-      const body = (await r.json().catch(() => ({}))) as Record<string, unknown>
+      const body = (await r.json().catch(() => ({}))) as {
+        greeting?: { ok?: boolean; source?: string }
+      }
       if (!r.ok) {
         throw new Error(`complete-onboarding failed: HTTP ${r.status} ${JSON.stringify(body).slice(0, 300)}`)
+      }
+      // step 8c proactive-greeting outcome — Stage 5.9 verifies it.
+      return {
+        greetingOk: body.greeting?.ok === true,
+        greetingSource: body.greeting?.source ?? 'absent',
       }
     },
     async checkBundlePull(vpsIp, expected) {
@@ -893,8 +905,27 @@ const STAGES: Stage[] = [
     num: 5.8,
     name: 'complete-onboarding → hermes-gateway starts',
     async run(ctx, deps) {
-      await deps.completeOnboarding(ctx.customerId!)
+      const { greetingOk, greetingSource } = await deps.completeOnboarding(ctx.customerId!)
+      ctx.greetingOk = greetingOk
+      ctx.greetingSource = greetingSource
       return 'SOUL.md rendered + refreshEnv → gateway restarted'
+    },
+  },
+  {
+    num: 5.9,
+    name: 'auto-greet — proactive greeting delivered',
+    async run(ctx) {
+      // The customer must NOT have to type /start. complete-onboarding
+      // step 8c (sendProactiveGreeting) sends an in-character greeting to
+      // the customer's chat the moment provisioning is wired. Stage 5.8
+      // captured that outcome from the complete-onboarding response.
+      if (!ctx.greetingOk) {
+        throw new Error(
+          `proactive greeting did NOT fire (source=${ctx.greetingSource ?? 'absent'}) — ` +
+            `customer would land on a silent bot`,
+        )
+      }
+      return `auto-greet delivered (source=${ctx.greetingSource})`
     },
   },
   {

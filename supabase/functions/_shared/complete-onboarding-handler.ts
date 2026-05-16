@@ -470,6 +470,13 @@ export async function handleCompleteOnboarding(
   return json({
     provisioning_job_id: spinResult.jobId,
     redirect_url: `${deps.publicBase}/welcome.html?cid=${customer_id}&job=${spinResult.jobId}`,
+    // Proactive-greeting outcome (Track 2, step 8c). Surfaced so the
+    // Phase F harness (Stage 5.9) and production monitoring can confirm
+    // the customer's bot greeted them without a manual /start. `skipped`
+    // = step 8c didn't run because refreshEnv or webhook-delete failed.
+    greeting: greetingResult
+      ? { ok: greetingResult.ok, source: greetingResult.source }
+      : { ok: false, source: 'skipped' },
     ...(webhookResult.ok
       ? {}
       : {

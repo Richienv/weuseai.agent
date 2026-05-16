@@ -23,6 +23,7 @@ Per-stage ceiling. A stage that exceeds budget still completes but is flagged `o
 | 5.6 | Pair — rotate pairing code | 5s | `POST /rotate-pairing-code` — mint the 6-digit code. |
 | 5.7 | Pair — /pair links telegram_chat_id | 5s | Synthetic `/pair <code>` update POSTed to `pair-customer-bot-webhook` with the `X-Telegram-Bot-Api-Secret-Token` — real handler, real code match. |
 | 5.8 | complete-onboarding → gateway starts | 60s | `POST /complete-onboarding` — renders SOUL.md, `refreshEnv` restarts hermes-gateway WITH the bot token; the gateway's `ExecStartPre` then runs bundle-pull. |
+| 5.9 | auto-greet delivered | 10s | **Added 2026-05-16.** complete-onboarding step 8c (`sendProactiveGreeting`) sends an in-character greeting to the customer's chat so they never face a silent bot — no manual `/start` needed. Stage 5.9 asserts the `greeting.ok` outcome surfaced in the complete-onboarding response. |
 | 6 | bundle-pull installed all tier personas | **60s** | Pro tier = 8 personas. Widened 30→60s. |
 | 7 | hermes-gateway active | **60s** | Widened 30→60s. |
 | 8 | Telegram getMe | **10s** | Widened 5→10s. |
@@ -30,7 +31,7 @@ Per-stage ceiling. A stage that exceeds budget still completes but is flagged `o
 | 10 | /<persona> → persona-correct response | **manual** | **MANUAL (2026-05-16).** Same reason as Stage 9 — founder sends `/the-pro` and confirms a persona-correct reply. |
 | 11 | Teardown (delete VPS, cancel sub) | 30s | always runs (finally block) |
 
-**Budget ceiling:** the 13 automated stages' budgets sum to **860s ≈ 14 min** worst-case (Stages 9-10 are `manual`, 0s). These are observational ceilings (each stage's slack-padded worst case), NOT an expected total — a stage rarely runs near its ceiling. The pass criterion is the *measured* run finishing under 15 min with every automated stage clean (pass / over_budget) and Stages 9-10 `manual`; local + deployed runs land around 7-10 min. Setup-script (Stage 5) is the long pole and its optimization is explicitly deferred to post-cascade.
+**Budget ceiling:** the 14 automated stages' budgets sum to **870s ≈ 14.5 min** worst-case (Stages 9-10 are `manual`, 0s). These are observational ceilings (each stage's slack-padded worst case), NOT an expected total — a stage rarely runs near its ceiling. The pass criterion is the *measured* run finishing under 15 min with every automated stage clean (pass / over_budget) and Stages 9-10 `manual`; local + deployed runs land around 7-10 min. Setup-script (Stage 5) is the long pole and its optimization is explicitly deferred to post-cascade.
 
 ---
 
@@ -334,3 +335,30 @@ Each Phase F run appends a block below automatically (the harness writes to this
 | 9 | /start → first response | 0.0s | 90s | manual |
 | 10 | /<persona> → persona-correct response | 0.0s | 90s | manual |
 | 11 | Teardown (delete VPS, cancel sub) | 3.6s | 30s | pass |
+
+### Run `deployed-1778901980688` — 2026-05-16T03:33:17.094Z
+
+- target: `deployed`
+- email: `e2e-chain-1778901980688@weuseai.test`
+- customer: `d4d57d23-6407-49e9-baad-a1a1a8c7b2ff` · subscription: `6b990053-e43a-41f4-9cac-5db421de9748` · vps: `43e67556-a349-46d4-88d1-016846c3b1c3`
+- all 15 stages clean (no fail/skip): **YES**
+- chain time (Stages 1-9): **6.94 min** (budget 15.00 min → UNDER)
+- unlock-eligible: **YES**
+
+| Stage | Name | Elapsed | Budget | Status |
+|---|---|---|---|---|
+| 1 | Create Xendit test invoice | 3.7s | 5s | pass |
+| 2 | Pay invoice + webhook delivered | 6.1s | 10s | pass |
+| 3 | Customer + subscription rows created | 1.1s | 5s | pass |
+| 4 | VPS provisioned (ip_address assigned) | 18.4s | 120s | pass |
+| 5 | setup-script COMPLETE (status=running) | 349.3s | 480s | pass |
+| 5.5 | Pair — validate bot token | 2.7s | 10s | pass |
+| 5.6 | Pair — rotate pairing code | 0.7s | 5s | pass |
+| 5.7 | Pair — /pair message links telegram_chat_id | 0.7s | 5s | pass |
+| 5.8 | complete-onboarding → hermes-gateway starts | 30.3s | 60s | pass |
+| 6 | bundle-pull installed all tier personas | 1.3s | 60s | pass |
+| 7 | hermes-gateway active | 1.0s | 60s | pass |
+| 8 | Telegram getMe | 1.2s | 10s | pass |
+| 9 | /start → first response | 0.0s | 90s | manual |
+| 10 | /<persona> → persona-correct response | 0.0s | 90s | manual |
+| 11 | Teardown (delete VPS, cancel sub) | 0.0s | 30s | manual |
