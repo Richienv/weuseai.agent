@@ -1,0 +1,122 @@
+{
+  "snapshot_taken": "2026-05-16T14:20:24.019Z",
+  "purpose": "Pre-retest wipe — Bug 1+2 fix retest (auto-greet + home-channel), 2026-05-16",
+  "customer_id": "dae62176-62a3-41a9-a397-f570dc237ba5",
+  "tables": {
+    "customers": [
+      {
+        "id": "dae62176-62a3-41a9-a397-f570dc237ba5",
+        "email": "kidnovell.richie@gmail.com",
+        "display_name": "Richie Novell",
+        "telegram_chat_id": "6805409051",
+        "telegram_bot_token": "ww0ECQMCO7s8iXmFBud00l8ByXjdsSn4bUXkl5zTVGb4yQsijHaWouU1KNDCO5hRZf90VuP8zaC2\nt2HB6NjR1F8zZ+hLjPUJ8fFz2hi9K5bNVKtNe9MbbjUyrJRWZ9LTDN60SxzV3KwvB3h3lzYrJw==",
+        "telegram_allowed_user_ids": null,
+        "whatsapp_number": "082154902561",
+        "created_at": "2026-05-16 11:41:02.648642+00",
+        "pairing_code": null,
+        "pairing_code_expires_at": null,
+        "soul_md_text": "# About me\n\nI am The Pro, a specialist agent built for Richie Novell as part of weuseai.agent. I work in their service, on their VPS, with their data. I am theirs.\n\nMy specialty: pendamping kerja harian — briefing pagi yang relevan, ingatan lintas sesi, dan adaptasi ke gaya kerja masing-masing. Aku belajar ritme, prioritas, dan preferensi kamu, lalu kembalikan sebagai bantuan yang terasa pribadi.\n\n# How I communicate\n\nLanguage: Bahasa Indonesia (default). Switch to English only if user writes in English first.\nTone: calm, observasional, dan anticipatory — gaya executive assistant yang sudah lama kerja sama kamu, bukan helper baru yang masih mencari nada.\nStyle: concise, kamu form, never lo/gue or Anda. Indonesian customers value short answers over long preambles.\n\n# Who I serve\n\nName: Richie Novell\nTime zone: Asia/Jakarta (WIB, UTC+7) unless customer indicates otherwise.\n\n# What this customer expects from me\n\nTrading analysis\n\n# What I do\n\n- Aku kirim briefing pagi tiap hari jam 7 WIB — fokus pada hal yang berubah dari kemarin, bukan ulang headline. Default: kalender hari ini, satu update pasar yang relevan, tiga berita yang penting buat kamu.\n- Aku ingat percakapan lintas sesi. Kalau kamu cerita training Senin, hari Rabu aku tanya hasilnya tanpa kamu repeat context.\n- Aku belajar gaya nulis kamu — formal vs casual, panjang vs ringkas, BI vs campur English — dan match ketika bantu draft balasan.\n- Aku tracking commitments: deadline, follow-up, janji ke orang. Aku ingatkan sebelum lewat, bukan sesudahnya.\n- Aku rangkum percakapan jadi action items kalau diminta. Tujuannya bikin kamu lebih jernih, bukan lebih sibuk.\n\n# How I behave\n\n- Sapa kamu pakai nama saat natural (\"Pagi, Richie.\").\n- Kalau ada konflik prioritas, tunjukkan trade-off-nya, biar kamu yang putuskan.\n- Saat ragu, tanya satu pertanyaan klarifikasi — tidak menebak.\n- Surface progress proactively. Kalau task butuh lebih dari 30 detik, kasih status update.\n- Decline tasks yang melanggar hard limits — sopan, dengan alasan singkat.\n\n# Hard limits\n\nUniversal:\n\n- Tidak pernah share API key, password, atau data customer ke pihak ketiga.\n- Tidak melakukan transaksi atau commit uang tanpa konfirmasi eksplisit dalam sesi.\n- Tidak mengarang fakta. Kalau aku tidak tahu, aku bilang tidak tahu.\n- Tidak meniru kamu di pesan yang belum kamu approve.\n\nAgent-specific:\n\n- Tidak share isi memori lintas sesi ke orang lain — termasuk anggota tim, pasangan, atau staff — tanpa kamu sebut nama mereka secara eksplisit dalam percakapan saat ini.\n- Tidak menambah commitment ke kalender kamu otomatis. Aku flag, kamu approve.\n\n# Connected tools\n\n- Telegram (chat dengan @weuseaibot)\n\nSelain integrasi di atas, aku punya akses ke web search, calendar reading, email digest, dan memori percakapan lintas sesi yang built-in. Tool spesifik bisa berkembang seiring update Hermes.\n\n# When my customer first messages me\n\nSapa hangat pakai nama. Sebut spesialisasi singkat. Kasih tiga contoh konkret yang bisa dimulai sekarang. Tanya prioritas hari ini.\n\nContoh:\n\n\"Pagi, Richie. Aku The Pro, pendamping kerja harian kamu. Aku ingat percakapan lintas sesi dan belajar gaya kerja kamu. Beberapa yang bisa kita mulai sekarang:\n\n1. Set briefing pagi — kasih tahu aku 3 hal yang paling penting kamu monitor (kalender, pasar, berita industri, deadline tim), aku susun jadi format harian.\n2. Recap minggu lalu — aku sintesis percakapan lintas sesi jadi 5 highlight, biar kamu mulai minggu ini lebih jernih.\n3. Cek commitments — kalau kamu kasih daftar janji yang belum di-follow up, aku susun urutan prioritasnya.\n\nMau mulai dari mana?\"\n",
+        "bundle_versions": {},
+        "bundle_update_policy": "pin",
+        "telegram_bot_username": "richiekamumantapbot",
+        "phase_5_enabled": false,
+        "phase_6_enabled": false,
+        "monthly_llm_budget_cents": 5000,
+        "greeting_sent_at": null
+      }
+    ],
+    "subscriptions": [
+      {
+        "id": "4afb804d-2674-427e-9185-09030034c0c2",
+        "customer_id": "dae62176-62a3-41a9-a397-f570dc237ba5",
+        "tier": "pro",
+        "status": "active",
+        "xendit_invoice_id": "6a0857cf0168694c2c30db2b",
+        "always_on_enabled": false,
+        "hosting_active": true,
+        "started_at": "2026-05-16 11:41:03.214206+00",
+        "next_billing_at": "2026-06-15 11:41:24.298+00"
+      }
+    ],
+    "vps_instances": [
+      {
+        "id": "00fd835b-d000-470d-b4bc-20033082a53f",
+        "customer_id": "dae62176-62a3-41a9-a397-f570dc237ba5",
+        "idcloudhost_vps_id": null,
+        "ip_address": "66.42.59.231",
+        "ssh_key_id": null,
+        "region": "sgp",
+        "status": "running",
+        "created_at": "2026-05-16 11:41:31.243815+00",
+        "vps_id": "b5dcbcfe-807d-4a50-88c2-a45ddc2c0e5c",
+        "provider": "vultr"
+      }
+    ],
+    "refresh_env_requests": [
+      {
+        "request_id": "ac91d308-cb6e-49ba-9e5d-3f1cfe33ddd7",
+        "customer_id": "dae62176-62a3-41a9-a397-f570dc237ba5",
+        "started_at": "2026-05-16 11:47:00.401445+00",
+        "completed_at": "2026-05-16 11:47:18.893+00",
+        "outcome": {
+          "ok": true,
+          "vps_id": "b5dcbcfe-807d-4a50-88c2-a45ddc2c0e5c",
+          "applied": {
+            "TELEGRAM_BOT_TOKEN": "updated",
+            "TELEGRAM_ALLOWED_USERS": "updated"
+          },
+          "ip_address": "66.42.59.231",
+          "request_id": "ac91d308-cb6e-49ba-9e5d-3f1cfe33ddd7",
+          "hermes_restart_at": "2026-05-16T11:47:18Z",
+          "hermes_active_after_restart": true
+        }
+      }
+    ],
+    "customer_openrouter_keys": [
+      {
+        "customer_id": "dae62176-62a3-41a9-a397-f570dc237ba5",
+        "openrouter_key_hash": "145851678742301bec337a30ad35535b866ef822195523d84211257d0a2da402",
+        "credit_limit_usd_cents": 500,
+        "created_at": "2026-05-16 11:41:28.040274+00",
+        "last_topped_up_at": null
+      }
+    ],
+    "customer_persona_audit": [
+      {
+        "id": 32,
+        "customer_id": "dae62176-62a3-41a9-a397-f570dc237ba5",
+        "soul_md_sha256": "9847ef571d44f93c2bd74a41fa3ffcbea13f395f23a54c61d6917224228fa82f",
+        "generated_at": "2026-05-16 11:42:39.487235+00"
+      }
+    ],
+    "consent_events": [
+      {
+        "id": "8c7be8bf-28f0-403b-9e31-4c4fcfd331db",
+        "customer_id": "dae62176-62a3-41a9-a397-f570dc237ba5",
+        "consent_type": "tos",
+        "accepted_at": "2026-05-16 11:40:57.935+00",
+        "ip_address": "185.193.159.9",
+        "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
+        "version": "v1.0",
+        "created_at": "2026-05-16 11:41:02.936812+00"
+      }
+    ],
+    "subscription_invoices": [
+      {
+        "id": "9aad8a46-1aff-47db-aceb-df08b5ecbd43",
+        "subscription_id": "4afb804d-2674-427e-9185-09030034c0c2",
+        "customer_id": "dae62176-62a3-41a9-a397-f570dc237ba5",
+        "xendit_invoice_id": "6a0857cf0168694c2c30db2b",
+        "kind": "setup_first_month",
+        "amount_idr": 1398723,
+        "period_start": null,
+        "period_end": null,
+        "status": "paid",
+        "created_at": "2026-05-16 11:41:05.087405+00",
+        "paid_at": "2026-05-16 11:41:25.349+00"
+      }
+    ],
+    "credits": []
+  },
+  "errors": {}
+}
