@@ -136,7 +136,11 @@ const UNLOCK_BUDGET_MS = 15 * 60 * 1000
 type StageResult = {
   stage: number
   name: string
-  status: 'pass' | 'fail' | 'skipped' | 'over_budget'
+  // `manual` = a stage the harness deliberately does NOT automate (the
+  // /start + persona replies need a real Telegram USER account, which a
+  // bot token can't be). It is NOT a failure — the founder confirms it
+  // by hand, exactly as the unlock criterion already requires.
+  status: 'pass' | 'fail' | 'skipped' | 'over_budget' | 'manual'
   elapsedMs: number
   budgetMs: number
   detail?: string
@@ -145,7 +149,12 @@ const results: StageResult[] = []
 
 function record(r: StageResult) {
   results.push(r)
-  const icon = r.status === 'pass' ? '✓' : r.status === 'over_budget' ? '⚠' : r.status === 'skipped' ? '·' : '✗'
+  const icon =
+    r.status === 'pass' ? '✓'
+    : r.status === 'over_budget' ? '⚠'
+    : r.status === 'skipped' ? '·'
+    : r.status === 'manual' ? '⊙'
+    : '✗'
   const t = `${(r.elapsedMs / 1000).toFixed(1)}s/${(r.budgetMs / 1000).toFixed(0)}s`
   // eslint-disable-next-line no-console
   console.log(`${icon} Stage ${r.stage} [${t}]: ${r.name}${r.detail ? '\n    ' + r.detail.replace(/\n/g, '\n    ') : ''}`)
@@ -164,8 +173,6 @@ type ChainCtx = {
   botToken?: string
   botChatId?: string
   pairingCode?: string
-  startResponseText?: string
-  personaResponseText?: string
 }
 
 // ─── External-system clients (mocked in local, real in deployed) ──────
@@ -219,10 +226,9 @@ type ChainDeps = {
   checkGatewayActive(vpsIp: string): Promise<void>
   /** Stage 8: Telegram getMe with the customer's bot token. */
   telegramGetMe(botToken: string): Promise<{ username: string }>
-  /** Stage 9: send /start as the customer, poll for the bot's first reply. */
-  sendStartAndAwaitReply(botToken: string, chatId: string): Promise<string>
-  /** Stage 10: send /<persona> hi, poll for a persona-correct reply. */
-  sendPersonaAndAwaitReply(botToken: string, chatId: string, slug: string): Promise<string>
+  // Stages 9 + 10 (/start + /<persona> replies) are `manual` — not in
+  // this interface. They need a real Telegram user account; the founder
+  // confirms them by hand.
   /** Stage 11: tear down — delete VPS, cancel subscription. Returns a
    *  human summary of what was actually torn down. */
   teardown(ctx: ChainCtx): Promise<string>
@@ -251,8 +257,6 @@ function makeLocalDeps(simClock: { nowMs: number }): ChainDeps {
     bundlePull: 6_000,
     gatewayActive: 3_000,
     getMe: 800,
-    startReply: 12_000,
-    personaReply: 9_000,
     teardown: 7_000,
   }
   // Deterministic local ids from email so Stage 1 and Stage 3 agree.
@@ -305,14 +309,6 @@ function makeLocalDeps(simClock: { nowMs: number }): ChainDeps {
     async telegramGetMe() {
       simClock.nowMs += SIM_ADVANCE_MS.getMe
       return { username: 'local_chain_bot' }
-    },
-    async sendStartAndAwaitReply() {
-      simClock.nowMs += SIM_ADVANCE_MS.startReply
-      return 'Pagi. Aku The Pro, pendamping kerja harian kamu. Beberapa yang bisa kita mulai sekarang: ...'
-    },
-    async sendPersonaAndAwaitReply() {
-      simClock.nowMs += SIM_ADVANCE_MS.personaReply
-      return 'The Pro di sini. Mau mulai dari mana hari ini?'
     },
     async teardown() {
       simClock.nowMs += SIM_ADVANCE_MS.teardown
@@ -745,40 +741,8 @@ function makeDeployedDeps(): ChainDeps {
       if (!r.ok || !body.ok) throw new Error(`getMe failed: ${JSON.stringify(body).slice(0, 200)}`)
       return { username: body.result?.username ?? 'unknown' }
     },
-    async sendStartAndAwaitReply(botToken, chatId) {
-      await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ chat_id: chatId, text: '/start' }),
-      })
-      for (let i = 0; i < 30; i++) {
-        await sleep(2000)
-        const r = await fetch(`https://api.telegram.org/bot${botToken}/getUpdates?offset=-1`)
-        const body = (await r.json().catch(() => ({}))) as any
-        const msg = body.result?.[body.result.length - 1]?.message
-        if (msg && String(msg.chat?.id) === String(chatId) && msg.text && !/^\//.test(msg.text)) {
-          return msg.text as string
-        }
-      }
-      throw new Error('no bot reply to /start within 60s')
-    },
-    async sendPersonaAndAwaitReply(botToken, chatId, slug) {
-      await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ chat_id: chatId, text: `/${slug} hi` }),
-      })
-      for (let i = 0; i < 30; i++) {
-        await sleep(2000)
-        const r = await fetch(`https://api.telegram.org/bot${botToken}/getUpdates?offset=-1`)
-        const body = (await r.json().catch(() => ({}))) as any
-        const msg = body.result?.[body.result.length - 1]?.message
-        if (msg && String(msg.chat?.id) === String(chatId) && msg.text && !/^\//.test(msg.text)) {
-          return msg.text as string
-        }
-      }
-      throw new Error(`no bot reply to /${slug} within 60s`)
-    },
+    // Stages 9 + 10 are `manual` — no deps impl. A /start reply can only
+    // be validated by a real Telegram user account; the founder confirms.
     async teardown(ctx) {
       // Best-effort cleanup. Each step independent — a failure in one
       // doesn't block the others. If something here leaks, the daily
@@ -836,6 +800,11 @@ type Stage = {
   num: number
   name: string
   run: (ctx: ChainCtx, deps: ChainDeps) => Promise<string | void>
+  /** A `manual` stage is recorded as status='manual' (not run, not a
+   *  failure) — the founder confirms it by hand. `run` is ignored. */
+  manual?: boolean
+  /** Note shown for a manual stage. */
+  manualNote?: string
 }
 
 const STAGES: Stage[] = [
@@ -950,19 +919,24 @@ const STAGES: Stage[] = [
   {
     num: 9,
     name: '/start → first response',
-    async run(ctx, deps) {
-      const reply = await deps.sendStartAndAwaitReply(ctx.botToken!, ctx.botChatId!)
-      ctx.startResponseText = reply
-      return `reply: "${reply.slice(0, 80)}..."`
+    // MANUAL: validating a /start reply needs a real Telegram USER
+    // sending /start and reading the answer. The harness holds only a
+    // bot token — it cannot be the user, and a bot's getUpdates poll
+    // also conflicts with the hermes-gateway's own long-poll. The
+    // founder confirms this by hand (already in the unlock criterion).
+    manual: true,
+    manualNote: 'founder sends /start to the bot on Telegram + confirms the agent replies',
+    async run() {
+      return
     },
   },
   {
     num: 10,
     name: '/<persona> → persona-correct response',
-    async run(ctx, deps) {
-      const reply = await deps.sendPersonaAndAwaitReply(ctx.botToken!, ctx.botChatId!, 'the-pro')
-      ctx.personaResponseText = reply
-      return `reply: "${reply.slice(0, 80)}..."`
+    manual: true,
+    manualNote: 'founder sends /the-pro on Telegram + confirms a persona-correct reply',
+    async run() {
+      return
     },
   },
   {
@@ -1004,6 +978,13 @@ test('Phase F: fresh-customer chain', async () => {
       const budgetMs = STAGE_BUDGET_MS[s.num]
       if (firstFailedStage !== null) {
         record({ stage: s.num, name: s.name, status: 'skipped', elapsedMs: 0, budgetMs, detail: `skipped — Stage ${firstFailedStage} failed first` })
+        continue
+      }
+      if (s.manual) {
+        // Not automated — recorded as `manual`, not a failure. The
+        // founder confirms it by hand (unlock criterion already requires
+        // a personal Telegram check after a fresh payment).
+        record({ stage: s.num, name: s.name, status: 'manual', elapsedMs: 0, budgetMs, detail: `manual — ${s.manualNote ?? 'founder confirms'}` })
         continue
       }
       const startMs = now()
@@ -1051,8 +1032,12 @@ test('Phase F: fresh-customer chain', async () => {
   // (no fail, no skip) AND the Stages 1-9 flow finishes under the 15-min
   // ceiling. Reliability over speed — a clean 13-min run passes.
   const stages1to9 = results.filter((r) => r.stage >= 1 && r.stage <= 9)
+  // Clean = every stage is pass / over_budget / manual — no fail, no
+  // skip. `manual` stages (9, 10) are founder-confirmed, not failures.
   const allStagesClean = results.length === STAGES.length &&
-    results.every((r) => r.status === 'pass' || r.status === 'over_budget')
+    results.every(
+      (r) => r.status === 'pass' || r.status === 'over_budget' || r.status === 'manual',
+    )
   const chainTimeMs = stages1to9.reduce((sum, r) => sum + r.elapsedMs, 0)
   const underBudget = chainTimeMs <= UNLOCK_BUDGET_MS
   const budgetMin = (UNLOCK_BUDGET_MS / 1000 / 60).toFixed(2)

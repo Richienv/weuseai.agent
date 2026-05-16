@@ -26,11 +26,11 @@ Per-stage ceiling. A stage that exceeds budget still completes but is flagged `o
 | 6 | bundle-pull installed all tier personas | **60s** | Pro tier = 8 personas. Widened 30→60s. |
 | 7 | hermes-gateway active | **60s** | Widened 30→60s. |
 | 8 | Telegram getMe | **10s** | Widened 5→10s. |
-| 9 | /start → first response | **90s** | Widened 60→90s for Telegram long-poll warm-up. |
-| 10 | /<persona> → persona-correct response | **90s** | Widened 60→90s. |
+| 9 | /start → first response | **manual** | **MANUAL (2026-05-16).** A /start reply can only be validated by a real Telegram USER account — the harness holds only a bot token, and a bot's `getUpdates` poll conflicts with the hermes-gateway's own long-poll. Recorded `manual` (not pass, not fail). The founder confirms by hand — the "founder personally confirms a working agent reply" half of the unlock criterion. |
+| 10 | /<persona> → persona-correct response | **manual** | **MANUAL (2026-05-16).** Same reason as Stage 9 — founder sends `/the-pro` and confirms a persona-correct reply. |
 | 11 | Teardown (delete VPS, cancel sub) | 30s | always runs (finally block) |
 
-**Budget ceiling:** the 15 per-stage budgets sum to **1040s ≈ 17 min** worst-case. These are observational ceilings (each stage's slack-padded worst case), NOT an expected total — a stage rarely runs near its ceiling. The pass criterion is the *measured* run finishing under 15 min with every stage clean; local + early deployed runs land around 7-13 min. Setup-script (Stage 5) is the long pole and its optimization is explicitly deferred to post-cascade.
+**Budget ceiling:** the 13 automated stages' budgets sum to **860s ≈ 14 min** worst-case (Stages 9-10 are `manual`, 0s). These are observational ceilings (each stage's slack-padded worst case), NOT an expected total — a stage rarely runs near its ceiling. The pass criterion is the *measured* run finishing under 15 min with every automated stage clean (pass / over_budget) and Stages 9-10 `manual`; local + deployed runs land around 7-10 min. Setup-script (Stage 5) is the long pole and its optimization is explicitly deferred to post-cascade.
 
 ---
 
@@ -42,6 +42,8 @@ Permanent record of findings that cost investigation time. A future agent must N
 - **Xendit emits `payment_method: "QR_CODE"` for QRIS payments, NOT `"QRIS"`.** `"QRIS"` is the `payment_channel`, not the `payment_method`. Stage 2's synthetic body (`XENDIT_INVOICE_PAID_TEMPLATE` in the harness) is locked to `QR_CODE`, captured verbatim from a real Xendit API response for invoice `6a0570080168694c2c2d0ceb` (the founder's real test-mode payment 2026-05-14). Do not re-explore.
 - **`vps_instances.status='running'` means the SSH setup-script has FINISHED — not that the VM is up.** The provisioning service (`services/provisioning/src/customer-flow.ts`) sets `status='running'` only after the setup-script exits 0, and `status='failed'` on error. The VM-booted signal is `ip_address` being non-null (set much earlier). Harness Stage 4 polls `ip_address`; Stage 5 polls `status='running'`. Run #1-retry (2026-05-15) failed because Stage 4 wrongly waited for `status='running'` at a 120s budget.
 - **The Vultr API key's IP allowlist is IPv4-only.** Node Happy-Eyeballs intermittently egressed IPv6 from the Fly provisioning machine → Vultr `401 Unauthorized IP address`, flaking spin-up + tear-down. Fix: `services/provisioning/src/index.ts` forces IPv4 egress (`dns.setDefaultResultOrder('ipv4first')` + `net.setDefaultAutoSelectFamily(false)`); `vultr-vps.ts` logs the resolved IP family per call as regression evidence.
+- **The harness ssh() MUST pin `UserKnownHostsFile=/dev/null`.** Vultr recycles public IPs across runs; each fresh VPS has a different host key. A shared `~/.ssh/known_hosts` then hits a CHANGED-key mismatch — which `StrictHostKeyChecking=no` does NOT bypass (it triggers the MITM warning + flaky connections). `/dev/null` makes every ephemeral VPS simply "new".
+- **Stages 9-10 (/start + /<persona> replies) are `manual`, not automated — do not try to automate them.** Validating a bot's reply needs a real Telegram USER account; the harness holds only a bot token (a bot can't `/start` a bot, and the bot's own `getUpdates` poll conflicts with the hermes-gateway's long-poll). Recorded as status `manual` (not pass, not fail). The founder confirms /start + persona replies by hand — which is already the "founder personally confirms a working agent reply" half of the unlock criterion. Founder decision 2026-05-16.
 
 ---
 
@@ -143,3 +145,57 @@ Each Phase F run appends a block below automatically (the harness writes to this
 | 9 | /start → first response | 0.0s | 90s | skipped |
 | 10 | /<persona> → persona-correct response | 0.0s | 90s | skipped |
 | 11 | Teardown (delete VPS, cancel sub) | 2.9s | 30s | pass |
+
+### Run `deployed-1778834122615` — 2026-05-15T08:42:27.835Z
+
+- target: `deployed`
+- email: `e2e-chain-1778834122615@weuseai.test`
+- customer: `a6c264d8-8990-4981-ab2d-a9faacfa2fa2` · subscription: `1d673597-6afa-4999-817c-1d070d63f4c8` · vps: `ceaaa734-f00e-4697-91ae-02fb494a1d91`
+- all 15 stages clean (no fail/skip): **NO**
+- chain time (Stages 1-9): **7.01 min** (budget 15.00 min → UNDER)
+- unlock-eligible: **NO**
+
+| Stage | Name | Elapsed | Budget | Status |
+|---|---|---|---|---|
+| 1 | Create Xendit test invoice | 4.3s | 5s | pass |
+| 2 | Pay invoice + webhook delivered | 7.3s | 10s | pass |
+| 3 | Customer + subscription rows created | 1.0s | 5s | pass |
+| 4 | VPS provisioned (ip_address assigned) | 13.4s | 120s | pass |
+| 5 | setup-script COMPLETE (status=running) | 344.2s | 480s | pass |
+| 5.5 | Pair — validate bot token | 7.5s | 10s | pass |
+| 5.6 | Pair — rotate pairing code | 3.0s | 5s | pass |
+| 5.7 | Pair — /pair message links telegram_chat_id | 0.8s | 5s | pass |
+| 5.8 | complete-onboarding → hermes-gateway starts | 33.9s | 60s | pass |
+| 6 | bundle-pull installed all tier personas | 4.8s | 60s | pass |
+| 7 | hermes-gateway active | 0.6s | 60s | fail |
+| 8 | Telegram getMe | 0.0s | 10s | skipped |
+| 9 | /start → first response | 0.0s | 90s | skipped |
+| 10 | /<persona> → persona-correct response | 0.0s | 90s | skipped |
+| 11 | Teardown (delete VPS, cancel sub) | 4.4s | 30s | pass |
+
+### Run `deployed-1778834969861` — 2026-05-15T08:59:28.880Z
+
+- target: `deployed`
+- email: `e2e-chain-1778834969861@weuseai.test`
+- customer: `0f08bbcd-7ee7-4296-ade5-123e8dd0e248` · subscription: `ff652ae8-ba7b-441c-a76a-e73a0aa8fea4` · vps: `1f985253-5256-4cf6-97b8-3fb612dfd299`
+- all 15 stages clean (no fail/skip): **NO**
+- chain time (Stages 1-9): **9.82 min** (budget 15.00 min → UNDER)
+- unlock-eligible: **NO**
+
+| Stage | Name | Elapsed | Budget | Status |
+|---|---|---|---|---|
+| 1 | Create Xendit test invoice | 3.0s | 5s | pass |
+| 2 | Pay invoice + webhook delivered | 5.5s | 10s | pass |
+| 3 | Customer + subscription rows created | 1.0s | 5s | pass |
+| 4 | VPS provisioned (ip_address assigned) | 22.6s | 120s | pass |
+| 5 | setup-script COMPLETE (status=running) | 395.0s | 480s | pass |
+| 5.5 | Pair — validate bot token | 3.0s | 10s | pass |
+| 5.6 | Pair — rotate pairing code | 0.9s | 5s | pass |
+| 5.7 | Pair — /pair message links telegram_chat_id | 0.7s | 5s | pass |
+| 5.8 | complete-onboarding → hermes-gateway starts | 28.1s | 60s | pass |
+| 6 | bundle-pull installed all tier personas | 2.3s | 60s | pass |
+| 7 | hermes-gateway active | 2.7s | 60s | pass |
+| 8 | Telegram getMe | 1.4s | 10s | pass |
+| 9 | /start → first response | 123.0s | 90s | fail |
+| 10 | /<persona> → persona-correct response | 0.0s | 90s | skipped |
+| 11 | Teardown (delete VPS, cancel sub) | 10.0s | 30s | fail |
