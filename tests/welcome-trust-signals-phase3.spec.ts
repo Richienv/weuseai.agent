@@ -30,62 +30,14 @@ import * as path from 'node:path'
 
 const WELCOME = path.resolve(process.cwd(), 'welcome.html')
 
-// ─── P3-CF-1: 5-step explainer accordion ─────────────────────────────
-
-test('P3-CF-1: state B has an always-visible "Apa yang sedang terjadi?" 5-step accordion', () => {
-  const src = fs.readFileSync(WELCOME, 'utf8')
-  // Stable id so future drift / Sesi D edits can target it.
-  assert.match(
-    src,
-    /id=["']b-whats-happening["']/,
-    'must have <details id="b-whats-happening"> for the 5-step explainer',
-  )
-  // Summary text — audit-locked phrasing.
-  assert.match(
-    src,
-    /<summary[^>]*>[^<]*Apa yang sedang terjadi\?/i,
-    'summary text must be "Apa yang sedang terjadi?"',
-  )
-})
-
-test('P3-CF-1: explainer lists 5 numbered steps with timing estimates', () => {
-  const src = fs.readFileSync(WELCOME, 'utf8')
-  const block = src.match(
-    /id=["']b-whats-happening["'][\s\S]*?<\/details>/,
-  )
-  assert.ok(block, 'b-whats-happening block findable')
-  if (block) {
-    // Five distinct list items inside an <ol> (or 5 lines via <br> /
-    // similar structure). We don't pin every word — Sesi D may iterate
-    // copy — but the structural shape (5 entries) stays.
-    const liCount = (block[0].match(/<li\b/g) ?? []).length
-    assert.ok(
-      liCount >= 5,
-      `5-step explainer must include >=5 <li> entries (found ${liCount})`,
-    )
-    // At least one timing estimate in parens (audit says ~3 menit / ~2 menit / etc.)
-    assert.match(
-      block[0],
-      /~\d+\s*menit/i,
-      'explainer must show at least one "~N menit" timing estimate',
-    )
-  }
-})
-
-test('P3-CF-1: explainer body must not reveal infra (VPS / Hermes / Vultr / Supabase)', () => {
-  const src = fs.readFileSync(WELCOME, 'utf8')
-  const block = src.match(/id=["']b-whats-happening["'][\s\S]*?<\/details>/)
-  assert.ok(block, 'b-whats-happening block findable')
-  if (block) {
-    for (const term of ['VPS', 'Hermes', 'Vultr', 'IDCloudHost', 'Supabase', 'OpenRouter']) {
-      assert.equal(
-        new RegExp(`\\b${term}\\b`).test(block[0]),
-        false,
-        `explainer must not reveal backend infra: ${term}`,
-      )
-    }
-  }
-})
+// ─── P3-CF-1 — RETIRED (terminal redesign 2026-05-16) ────────────────
+//
+// The "Apa yang sedang terjadi?" 5-step explainer accordion
+// (#b-whats-happening) was removed by the wait-page terminal redesign
+// (PR #124). Its job — telling the customer what is happening during
+// the wait — is now done by the persistent terminal log, which streams
+// the real setup progress. The three P3-CF-1 drift gates that pinned
+// #b-whats-happening are retired with it.
 
 // ─── P3-CF-2: micro-content during wait ──────────────────────────────
 
@@ -145,39 +97,25 @@ test('P3-CF-2: wait-content includes founder note with email', () => {
   }
 })
 
-// ─── P3-CF-3: log tail collapse ─────────────────────────────────────
-
-test('P3-CF-3: setup-script log tail is wrapped in "Detail teknis" expandable', () => {
+// ─── P3-CF-3 — RETIRED (terminal redesign 2026-05-16) ────────────────
+//
+// The collapsed `<details id="b-progress-tail-details">` "Detail teknis"
+// expandable (last-log-line only) was replaced by the terminal redesign
+// (PR #124) with a first-class persistent terminal screen — header
+// "detail teknis · setup.log", a full accumulating log body (#b-log).
+// The two P3-CF-3 drift gates that pinned the old collapsed element are
+// retired; the terminal screen has its own coverage in
+// welcome-stage-aware-progress.spec.ts.
+test('terminal redesign: state B has the persistent "detail teknis" log screen', () => {
   const src = fs.readFileSync(WELCOME, 'utf8')
-  // The existing #b-progress-tail (log line) must now live INSIDE a
-  // <details> with summary "Detail teknis" — calmer default view.
-  // Inferred-stage label (#b-progress-stage) stays visible directly,
-  // not collapsed.
+  // The terminal log is the redesign's replacement for both the old
+  // b-whats-happening accordion AND the b-progress-tail collapse.
+  assert.match(src, /id=["']b-log["']/, 'terminal log body #b-log must exist')
   assert.match(
     src,
-    /<summary[^>]*>[^<]*Detail teknis/i,
-    'progress overlay must have a "Detail teknis" summary',
+    /detail teknis/i,
+    'the terminal screen must carry the "detail teknis" label',
   )
-  // Stable id for the wrapping <details>.
-  assert.match(
-    src,
-    /<details[^>]*id=["']b-progress-tail-details["']/,
-    'log tail must be wrapped in <details id="b-progress-tail-details">',
-  )
-})
-
-test('P3-CF-3: inferred_stage label (#b-progress-stage) stays OUTSIDE the Detail teknis collapse', () => {
-  const src = fs.readFileSync(WELCOME, 'utf8')
-  // Structural: #b-progress-stage must NOT be inside #b-progress-tail-details.
-  const detailsBlock = src.match(/<details[^>]*id=["']b-progress-tail-details["'][\s\S]*?<\/details>/)
-  assert.ok(detailsBlock, 'b-progress-tail-details block findable')
-  if (detailsBlock) {
-    assert.equal(
-      /id=["']b-progress-stage["']/.test(detailsBlock[0]),
-      false,
-      'b-progress-stage must remain OUTSIDE the Detail teknis collapse (always visible)',
-    )
-  }
 })
 
 // ─── P3-CF-6: footer trust-signal drift gate ─────────────────────────

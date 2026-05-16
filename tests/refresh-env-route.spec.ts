@@ -107,7 +107,7 @@ test('builds command for OpenAI + OpenRouter dual-name key (2026-05-12 Fix 2)', 
   assert.equal(restarts.length, 1, 'one restart regardless of key count')
 })
 
-test('ALLOWED_ENV_KEYS list (Phase E 2026-05-14): 4 keys including TELEGRAM_ALLOWED_USERS', async () => {
+test('ALLOWED_ENV_KEYS list (Bug-2 2026-05-16): 5 keys including TELEGRAM_HOME_CHANNEL', async () => {
   const { ALLOWED_ENV_KEYS } = await import(
     '../services/provisioning/src/routes/refresh-env.ts'
   )
@@ -118,10 +118,13 @@ test('ALLOWED_ENV_KEYS list (Phase E 2026-05-14): 4 keys including TELEGRAM_ALLO
       'OPENROUTER_API_KEY',
       'TELEGRAM_ALLOWED_USERS',
       'TELEGRAM_BOT_TOKEN',
+      'TELEGRAM_HOME_CHANNEL',
     ].sort(),
     'TELEGRAM_ALLOWED_USERS must be in the allowlist so admin-customer-vps-refresh ' +
       'can push it alongside TELEGRAM_BOT_TOKEN in a single SSH session — without it, ' +
-      'Hermes restarts with a bot token but denies the customer (Renita Stage 5 bug class).',
+      'Hermes restarts with a bot token but denies the customer (Renita Stage 5 bug class). ' +
+      'TELEGRAM_HOME_CHANNEL added 2026-05-16 (Bug-2): Hermes reads it as the home ' +
+      'channel so the "No home channel is set… /sethome" prompt never leaks to the customer.',
   )
 })
 

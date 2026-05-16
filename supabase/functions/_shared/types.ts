@@ -210,6 +210,12 @@ export type CustomerRow = {
   pairing_code: string | null
   pairing_code_expires_at: string | null   // ISO timestamp
   soul_md_text: string | null
+  /** Bug-1 fix (2026-05-16): set the first time the proactive greeting
+   *  is delivered. Idempotency guard so the greeting fires exactly once
+   *  whether complete-onboarding's happy path OR the provisioning
+   *  second-finisher (admin-customer-vps-refresh) is the one that
+   *  completes the gateway-start sequence. Null = not yet greeted. */
+  greeting_sent_at: string | null
 }
 
 // Data-store contract for the onboarding handlers.
@@ -291,6 +297,16 @@ export interface IOnboardingStore {
   getActiveVPSStatus(
     customer_id: string,
   ): Promise<'provisioning' | 'running' | 'stopped' | 'failed' | null>
+
+  /**
+   * Bug-1 fix (2026-05-16): stamp customers.greeting_sent_at = now().
+   * Called once, by whichever path actually delivers the proactive
+   * greeting (complete-onboarding step 8c OR the admin-customer-vps-
+   * refresh second-finisher). The other path reads greeting_sent_at on
+   * the customer row and skips when it is already set — so the customer
+   * is greeted exactly once. Idempotent: a second call just re-stamps.
+   */
+  markGreetingSent(customer_id: string): Promise<void>
 }
 
 // ─── LLM key minter (decoupled from Phase 2A merge) ───
@@ -453,6 +469,14 @@ export type RefreshEnvInput = {
     // sub-key to silence aux warnings on every message (2026-05-12).
     OPENAI_API_KEY?: string
     OPENROUTER_API_KEY?: string
+    // Bug-2 fix (2026-05-16): TELEGRAM_HOME_CHANNEL is the customer's
+    // own chat_id. Hermes upstream reads this env var (gateway/config.py
+    // load_gateway_config) and sets it as the platform home channel —
+    // which (a) suppresses the "No home channel is set for Telegram…
+    // type /sethome" prompt that otherwise leaks to the customer on
+    // first message, and (b) makes cron / cross-platform delivery route
+    // to their chat. Config-only — no upstream Hermes patch.
+    TELEGRAM_HOME_CHANNEL?: string
   }
   /** Optional: SOUL.md persona content. When provided, written to
    *  /home/weuseai/.hermes/SOUL.md on the VPS before hermes-gateway
@@ -482,6 +506,7 @@ export type RefreshEnvResult =
       applied: {
         TELEGRAM_BOT_TOKEN?: 'updated' | 'unchanged'
         TELEGRAM_ALLOWED_USERS?: 'updated' | 'unchanged'
+        TELEGRAM_HOME_CHANNEL?: 'updated' | 'unchanged'
         OPENAI_API_KEY?: 'updated' | 'unchanged'
         OPENROUTER_API_KEY?: 'updated' | 'unchanged'
       }
