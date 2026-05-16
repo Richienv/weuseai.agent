@@ -773,10 +773,13 @@ log "✓ Hermes binary verified"
 # default value. Hermes-config only — no upstream code is patched.
 CONFIG_YAML=/home/weuseai/.hermes/config.yaml
 if [ -f "$CONFIG_YAML" ]; then
-  sed -i -E 's/^[[:space:]]*tool_progress:.*/  tool_progress: off/' "$CONFIG_YAML"
+  # tool_progress is QUOTED — unquoted "off" is a YAML 1.1 boolean, but
+  # Hermes wants the string (its other values new/all/verbose are
+  # strings). interim_assistant_messages IS a real boolean — unquoted.
+  sed -i -E 's/^[[:space:]]*tool_progress:.*/  tool_progress: "off"/' "$CONFIG_YAML"
   sed -i -E 's/^[[:space:]]*interim_assistant_messages:.*/  interim_assistant_messages: false/' "$CONFIG_YAML"
   chown weuseai:weuseai "$CONFIG_YAML"
-  log "✓ config.yaml display tweaked (tool_progress=off, interim_assistant_messages=false)"
+  log "✓ config.yaml display tweaked (tool_progress=\"off\", interim_assistant_messages=false)"
 else
   log "⚠ config.yaml not found at setup time — display tweak skipped (non-fatal)"
 fi
