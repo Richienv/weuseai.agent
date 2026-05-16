@@ -852,6 +852,23 @@ const PERSONAS: Record<string, string> = {
 
 const DEFAULT_PERSONA_SLUG = 'the-pro'
 
+/**
+ * Persona selection (2026-05-17): return a persona's raw SOUL.md scaffold
+ * with template tokens ({customer_name}, {first_name}, … ) LEFT
+ * UNRESOLVED. Used by the provisioning setup-script for the first-boot
+ * SOUL.md write — that file is a placeholder (the customer can't talk to
+ * the agent before onboarding completes), later overwritten by
+ * complete-onboarding's renderSoulMd via refreshEnv. Selecting by the
+ * chosen slug here means a customer who messages early still sees their
+ * picked persona's voice instead of always The Pro.
+ *
+ * Unknown slug → The Pro scaffold (never a blank SOUL.md).
+ */
+export function personaScaffold(personaSlug?: string): string {
+  const slug = personaSlug ?? DEFAULT_PERSONA_SLUG
+  return PERSONAS[slug] ?? PERSONAS[DEFAULT_PERSONA_SLUG]
+}
+
 // Exported for tests + drift-detection only. Not part of the runtime API.
 export const __INTERNAL_THE_PRO_SCAFFOLD = THE_PRO_SCAFFOLD
 export const __INTERNAL_DEEP_RESEARCHER_SCAFFOLD = DEEP_RESEARCHER_SCAFFOLD

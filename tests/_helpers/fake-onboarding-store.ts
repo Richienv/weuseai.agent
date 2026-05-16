@@ -56,6 +56,11 @@ export class FakeOnboardingStore implements IOnboardingStore {
       pairing_code: c.pairing_code ?? null,
       pairing_code_expires_at: c.pairing_code_expires_at ?? null,
       soul_md_text: c.soul_md_text ?? null,
+      // Persona selection (2026-05-17): mirrors the DB default 'the-pro'
+      // (migration 20260517000000) so tests that don't care about persona
+      // get a valid-in-every-tier slug. Tests of the picker seed an
+      // explicit value.
+      agent_slug: c.agent_slug ?? 'the-pro',
       greeting_sent_at: c.greeting_sent_at ?? null,
     }
     this.customers.set(c.id, row)

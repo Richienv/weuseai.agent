@@ -50,7 +50,7 @@ export function createOnboardingStore(opts: {
       const { data } = await supabase
         .from('customers')
         .select(
-          'id, email, display_name, whatsapp_number, telegram_chat_id, telegram_bot_username, pairing_code, pairing_code_expires_at, soul_md_text, greeting_sent_at',
+          'id, email, display_name, whatsapp_number, telegram_chat_id, telegram_bot_username, pairing_code, pairing_code_expires_at, soul_md_text, agent_slug, greeting_sent_at',
         )
         .eq('id', id)
         .maybeSingle()
@@ -61,7 +61,7 @@ export function createOnboardingStore(opts: {
       const { data } = await supabase
         .from('customers')
         .select(
-          'id, email, display_name, whatsapp_number, telegram_chat_id, telegram_bot_username, pairing_code, pairing_code_expires_at, soul_md_text, greeting_sent_at',
+          'id, email, display_name, whatsapp_number, telegram_chat_id, telegram_bot_username, pairing_code, pairing_code_expires_at, soul_md_text, agent_slug, greeting_sent_at',
         )
         .eq('pairing_code', code)
         .maybeSingle()
@@ -93,7 +93,7 @@ export function createOnboardingStore(opts: {
         .update(patch)
         .eq('id', id)
         .select(
-          'id, email, display_name, whatsapp_number, telegram_chat_id, telegram_bot_username, pairing_code, pairing_code_expires_at, soul_md_text, greeting_sent_at',
+          'id, email, display_name, whatsapp_number, telegram_chat_id, telegram_bot_username, pairing_code, pairing_code_expires_at, soul_md_text, agent_slug, greeting_sent_at',
         )
         .single()
       if (error) throw error
