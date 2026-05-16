@@ -211,5 +211,29 @@ export function createOnboardingStore(opts: {
         .eq('id', customer_id)
       if (error) throw error
     },
+
+    async getActiveVPSStatus(customer_id) {
+      // Wait-page race fix (2026-05-16). One row per customer
+      // (vps_instances.customer_id is unique post-PR #75), so a plain
+      // eq + limit(1) is unambiguous. A read failure surfaces as null
+      // to the caller, which the handler treats as "defer" — the safe
+      // direction (the provisioning second-finisher still runs).
+      const { data } = await supabase
+        .from('vps_instances')
+        .select('status')
+        .eq('customer_id', customer_id)
+        .limit(1)
+        .maybeSingle()
+      const status = (data as { status: string } | null)?.status ?? null
+      if (
+        status === 'provisioning' ||
+        status === 'running' ||
+        status === 'stopped' ||
+        status === 'failed'
+      ) {
+        return status
+      }
+      return null
+    },
   }
 }

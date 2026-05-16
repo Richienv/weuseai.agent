@@ -13,6 +13,7 @@ import {
   type ITelegramClient,
   type CustomerRow,
   type SubscriptionRow,
+  type RefreshEnvResult,
 } from './types.ts'
 import {
   renderSoulMd,
@@ -327,6 +328,38 @@ export async function handleCompleteOnboarding(
     )
   }
 
+  // ─── 8-pre. Wait-page race gate (2026-05-16) ──────────────────────
+  // THE RACE this fixes: a fast customer finishes this onboarding form
+  // (~2 min) before their VPS setup-script finishes provisioning
+  // (~6 min). Pre-fix, step 8a refreshEnv would SSH the half-built VPS;
+  // refresh-env's install-if-missing block hits `exit 4` (no hermes
+  // binary on disk yet) → hermes-gateway never starts → welcome.html
+  // is stuck on the provisioning view forever. "the same bug we keep
+  // encountering" (founder, 2026-05-16).
+  //
+  // Fix: only call refreshEnv when the VPS row is already 'running'
+  // (= setup-script finished). When it is still 'provisioning' (or the
+  // status read failed) we DEFER: skip refreshEnv + the proactive
+  // greeting here, but still persist every onboarding field + flip the
+  // subscription active. The provisioning service runs the env push
+  // itself the moment the setup-script completes — customer-flow.ts
+  // notifyVpsReady → admin-customer-vps-refresh (the "second-finisher"
+  // path). welcome.html shows the wait page meanwhile and transitions
+  // when the readiness probe goes green.
+  let vpsStatus: string | null = null
+  try {
+    vpsStatus = await deps.db.getActiveVPSStatus(customer_id)
+  } catch (e) {
+    // A status-read failure must never block onboarding. Treat it as
+    // not-ready → defer; that is the safe direction (the provisioning
+    // second-finisher still runs once the setup-script completes).
+    console.error(
+      `[complete-onboarding] getActiveVPSStatus failed for ${customer_id}: ` +
+        errMessage(e),
+    )
+  }
+  const vpsReadyForRefresh = vpsStatus === 'running'
+
   // ─── 8a. Self-heal VPS .env (Track 3b 2026-05-10) ─────────────────
   // spinUp's idempotency returns the existing VPS without updating
   // .env when a customer re-onboards. Pre-fix: customer e282ce25 paid
@@ -340,41 +373,55 @@ export async function handleCompleteOnboarding(
   // warning in the response so the frontend can show "Setup belum
   // selesai — tim kami sedang memperbaiki" without blocking the
   // redirect (admin can rescue via admin-customer-vps-refresh).
-  const refreshResult = await deps.provisioning.refreshEnv({
-    customerId: customer_id,
-    envValues: {
-      TELEGRAM_BOT_TOKEN: customerBotToken,
-      // 2026-05-12 — Phase 2A architecture writes the OpenRouter sub-key
-      // under OPENAI_API_KEY (Hermes primary chat path is OpenAI-compat).
-      // Hermes aux tasks (context compression, title generation) read
-      // OPENROUTER_API_KEY specifically — same value, different name.
-      // Pushing both silences the "No auxiliary LLM provider configured"
-      // warnings that fire on every message otherwise.
-      OPENAI_API_KEY: mintResult.key,
-      OPENROUTER_API_KEY: mintResult.key,
-    },
-    // Dry-run Stage 7 fix: pass SOUL.md content too. Without this, the
-    // canonical xendit-webhook → onboarding flow leaves SOUL.md empty
-    // on disk (setup-script writes it from spinUp's soulMdContent
-    // param, which xendit-webhook doesn't have at first provision).
-    // Provisioning service writes the file + restarts hermes in the
-    // same SSH round-trip.
-    soulMdContent: soulMdText,
-    // Pre-approve customer's Telegram chat_id so first /start lands
-    // directly on the in-character agent (skips Hermes upstream's
-    // pairing-code prompt). chat_id is captured during onboarding
-    // step 3 /pair flow; non-null by the time we reach step 8a per
-    // the early telegram_not_paired check above. display_name is the
-    // cosmetic label that appears in `hermes pairing list`.
-    telegramChatId: customer.telegram_chat_id ?? undefined,
-    telegramUserName: customer.display_name ?? undefined,
-    requestId: cryptoRandomUuid(),
-  })
-  if (!refreshResult.ok) {
-    console.error(
-      `[complete-onboarding] refreshEnv failed for ${customer_id}: ` +
-        `status=${refreshResult.status} error=${refreshResult.error ?? 'n/a'} ` +
-        `body=${refreshResult.body.slice(0, 200)}`,
+  //
+  // refreshResult stays null when the VPS is not yet ready (deferred,
+  // see 8-pre) — distinct from a failed refresh. The response builder
+  // below treats null as "deferred" (no warning) and an ok:false
+  // RefreshEnvResult as a genuine failure (warning surfaced).
+  let refreshResult: RefreshEnvResult | null = null
+  if (vpsReadyForRefresh) {
+    refreshResult = await deps.provisioning.refreshEnv({
+      customerId: customer_id,
+      envValues: {
+        TELEGRAM_BOT_TOKEN: customerBotToken,
+        // 2026-05-12 — Phase 2A architecture writes the OpenRouter sub-key
+        // under OPENAI_API_KEY (Hermes primary chat path is OpenAI-compat).
+        // Hermes aux tasks (context compression, title generation) read
+        // OPENROUTER_API_KEY specifically — same value, different name.
+        // Pushing both silences the "No auxiliary LLM provider configured"
+        // warnings that fire on every message otherwise.
+        OPENAI_API_KEY: mintResult.key,
+        OPENROUTER_API_KEY: mintResult.key,
+      },
+      // Dry-run Stage 7 fix: pass SOUL.md content too. Without this, the
+      // canonical xendit-webhook → onboarding flow leaves SOUL.md empty
+      // on disk (setup-script writes it from spinUp's soulMdContent
+      // param, which xendit-webhook doesn't have at first provision).
+      // Provisioning service writes the file + restarts hermes in the
+      // same SSH round-trip.
+      soulMdContent: soulMdText,
+      // Pre-approve customer's Telegram chat_id so first /start lands
+      // directly on the in-character agent (skips Hermes upstream's
+      // pairing-code prompt). chat_id is captured during onboarding
+      // step 3 /pair flow; non-null by the time we reach step 8a per
+      // the early telegram_not_paired check above. display_name is the
+      // cosmetic label that appears in `hermes pairing list`.
+      telegramChatId: customer.telegram_chat_id ?? undefined,
+      telegramUserName: customer.display_name ?? undefined,
+      requestId: cryptoRandomUuid(),
+    })
+    if (!refreshResult.ok) {
+      console.error(
+        `[complete-onboarding] refreshEnv failed for ${customer_id}: ` +
+          `status=${refreshResult.status} error=${refreshResult.error ?? 'n/a'} ` +
+          `body=${refreshResult.body.slice(0, 200)}`,
+      )
+    }
+  } else {
+    console.log(
+      `[complete-onboarding] VPS not ready (status=${vpsStatus ?? 'none'}) for ` +
+        `${customer_id} — deferring refreshEnv to the provisioning ` +
+        `second-finisher (customer-flow notifyVpsReady)`,
     )
   }
 
@@ -420,7 +467,7 @@ export async function handleCompleteOnboarding(
   // Only fires when both 8a + 8b succeeded. If either failed, the agent
   // isn't actually reachable yet so a greeting would land in a void.
   let greetingResult: { ok: boolean; source: string; error?: string } | null = null
-  if (refreshResult.ok && webhookResult.ok) {
+  if (refreshResult?.ok && webhookResult.ok) {
     greetingResult = await sendProactiveGreeting(
       {
         chatId: customer.telegram_chat_id,
@@ -470,13 +517,22 @@ export async function handleCompleteOnboarding(
   return json({
     provisioning_job_id: spinResult.jobId,
     redirect_url: `${deps.publicBase}/welcome.html?cid=${customer_id}&job=${spinResult.jobId}`,
+    // Wait-page race fix (2026-05-16): true when refreshEnv was deferred
+    // because the VPS was still provisioning. welcome.html + the Phase F
+    // harness read this to know the gateway will come up via the
+    // provisioning second-finisher (customer-flow notifyVpsReady) rather
+    // than this request — a normal, expected state, not an error.
+    waiting_for_vps: !vpsReadyForRefresh,
     // Proactive-greeting outcome (Track 2, step 8c). Surfaced so the
     // Phase F harness (Stage 5.9) and production monitoring can confirm
     // the customer's bot greeted them without a manual /start. `skipped`
     // = step 8c didn't run because refreshEnv or webhook-delete failed.
+    // `deferred_vps` = step 8c didn't run because the VPS wasn't ready;
+    // the customer is greeted by the /start skill once the second-
+    // finisher starts the gateway.
     greeting: greetingResult
       ? { ok: greetingResult.ok, source: greetingResult.source }
-      : { ok: false, source: 'skipped' },
+      : { ok: false, source: vpsReadyForRefresh ? 'skipped' : 'deferred_vps' },
     ...(webhookResult.ok
       ? {}
       : {
@@ -487,16 +543,19 @@ export async function handleCompleteOnboarding(
             error: webhookResult.finalError,
           },
         }),
-    ...(refreshResult.ok
-      ? {}
-      : {
+    // Only a GENUINE refresh failure surfaces a warning. A deferred
+    // refresh (refreshResult === null, VPS still provisioning) is
+    // expected — the second-finisher handles it — so no warning.
+    ...(refreshResult && !refreshResult.ok
+      ? {
           vps_refresh_warning: {
             message:
               'Konfigurasi agent belum berhasil di-update. Agent kamu mungkin pakai bot lama. Tim kami akan retry otomatis.',
             status: refreshResult.status,
             error: refreshResult.error,
           },
-        }),
+        }
+      : {}),
   })
 }
 

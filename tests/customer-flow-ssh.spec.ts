@@ -275,3 +275,72 @@ test('flow: minter failure → subscription marked failed + alert + throws', asy
   assert.equal(deps.ssh.calls.length, 0, 'no SSH when minter failed')
   assert.ok(alerts.some((a: any) => /provisioning alert/i.test(a.text)), 'admin alerted')
 })
+
+// ─── wait-page race fix (2026-05-16): second-finisher hook ─────────
+//
+// When the setup-script finishes and the VPS row flips to 'running',
+// spinUpCustomer must invoke deps.notifyVpsReady exactly once. In
+// production that hook pings admin-customer-vps-refresh so a customer
+// who already finished onboarding (their complete-onboarding deferred
+// refreshEnv) gets hermes-gateway started. It must NOT fire on a
+// failed provision, and a throw from it must never fail the run.
+
+test('wait-page race: notifyVpsReady fires once after setup-script success', async () => {
+  const calls: string[] = []
+  const deps = makeDeps({
+    notifyVpsReady: async (cid: string) => {
+      calls.push(cid)
+    },
+  })
+
+  const r = await spinUpCustomer(
+    { customerId: 'cust-race-1', tier: 'pro', customerTelegramBotToken: 'tok' },
+    deps,
+  )
+  await r.done
+
+  assert.deepEqual(
+    calls,
+    ['cust-race-1'],
+    'notifyVpsReady called once with the customer id after status→running',
+  )
+  const vps = await deps.store.findActiveVPSByCustomer('cust-race-1')
+  assert.equal(vps?.status, 'running', 'VPS row flipped to running')
+})
+
+test('wait-page race: notifyVpsReady NOT fired when the setup-script fails', async () => {
+  const calls: string[] = []
+  const deps = makeDeps({
+    notifyVpsReady: async (cid: string) => {
+      calls.push(cid)
+    },
+  })
+  // Force ssh.runSetup to report a non-zero exit → background fails.
+  deps.ssh.setNextResult({ ok: false, stdout: '', stderr: 'boom', exitCode: 1 })
+
+  const r = await spinUpCustomer(
+    { customerId: 'cust-race-2', tier: 'pro', customerTelegramBotToken: 'tok' },
+    deps,
+  )
+  await assert.rejects(r.done, 'background provision rejects on SSH failure')
+
+  assert.deepEqual(calls, [], 'notifyVpsReady NOT called on a failed provision')
+})
+
+test('wait-page race: a throw from notifyVpsReady never fails the provision', async () => {
+  const deps = makeDeps({
+    notifyVpsReady: async () => {
+      throw new Error('supabase unreachable')
+    },
+  })
+
+  const r = await spinUpCustomer(
+    { customerId: 'cust-race-3', tier: 'pro', customerTelegramBotToken: 'tok' },
+    deps,
+  )
+  // Must resolve — the provision itself succeeded; the hook is best-effort.
+  await r.done
+
+  const vps = await deps.store.findActiveVPSByCustomer('cust-race-3')
+  assert.equal(vps?.status, 'running', 'VPS still running despite hook throw')
+})

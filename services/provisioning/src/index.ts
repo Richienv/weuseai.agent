@@ -72,6 +72,48 @@ if (isDryRun) {
 const ssh = isDryRun ? new MockSshProvisioner() : new ExecSshProvisioner()
 const llmMinter = isDryRun ? new MockLlmKeyMinter() : new OpenRouterKeyMinter()
 
+// Wait-page race fix (2026-05-16): second-finisher. spinUpCustomer
+// invokes this the moment a VPS flips to status='running'. It pings the
+// Supabase admin-customer-vps-refresh Edge Function, which decrypts the
+// customer's bot token and SSH-pushes it (+ TELEGRAM_ALLOWED_USERS +
+// SOUL.md + chat_id pre-approve) to the now-ready VPS, starting
+// hermes-gateway. Closes the race where a fast customer's
+// complete-onboarding deferred refreshEnv because the VPS was still
+// provisioning → gateway never started → welcome.html stuck.
+//
+// Best-effort: logs the outcome, never throws (customer-flow.ts also
+// guards). A 409 no_bot_token means the customer hasn't finished
+// onboarding yet — benign; their complete-onboarding will refreshEnv
+// itself once it sees status='running'.
+async function notifyVpsReady(customerId: string): Promise<void> {
+  const url = process.env.SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !key) {
+    console.warn(
+      `[provisioning] notifyVpsReady skipped for ${customerId} — ` +
+        'SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY not set',
+    )
+    return
+  }
+  const endpoint = `${url.replace(/\/+$/, '')}/functions/v1/admin-customer-vps-refresh`
+  const res = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      authorization: `Bearer ${key}`,
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      customer_id: customerId,
+      reason: 'vps-ready second-finisher (wait-page race fix 2026-05-16)',
+    }),
+  })
+  const bodyText = await res.text().catch(() => '')
+  console.log(
+    `[provisioning] notifyVpsReady cid=${customerId} http=${res.status} ` +
+      `body=${bodyText.slice(0, 200)}`,
+  )
+}
+
 const sharedDeps: SpinUpDeps = {
   vps: createVPSProvider(),
   store: createDataStore(),
@@ -86,6 +128,7 @@ const sharedDeps: SpinUpDeps = {
     ? 'mock'
     : (process.env.VPS_PROVIDER ?? 'vultr'),
   alertChatId: process.env.RICHIE_CHAT_ID,
+  notifyVpsReady,
 }
 
 const app = express()

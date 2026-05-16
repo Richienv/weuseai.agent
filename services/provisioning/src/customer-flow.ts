@@ -98,6 +98,29 @@ export type SpinUpDeps = {
   sshPollIntervalMs?: number
   sshReadyTimeoutMs?: number
   log?: (msg: string, ...rest: unknown[]) => void
+  /**
+   * Wait-page race fix (2026-05-16): second-finisher hook. Called
+   * exactly once, AFTER the setup-script completes and the VPS row
+   * flips to status='running'. Production wires it (services/
+   * provisioning/src/index.ts) to a POST to the Supabase
+   * admin-customer-vps-refresh Edge Function, which decrypts the
+   * customer's bot token and SSH-pushes it (+ TELEGRAM_ALLOWED_USERS +
+   * SOUL.md + chat_id pre-approve) to the now-ready VPS, starting
+   * hermes-gateway.
+   *
+   * This unsticks the "fast customer": one who finished the onboarding
+   * form while the VPS was still provisioning. Their complete-onboarding
+   * deferred refreshEnv (it would have raced a half-built VPS → exit 4),
+   * so the gateway would otherwise never start. admin-customer-vps-
+   * refresh self-gates on "customer has a bot token" — when the
+   * customer has not onboarded yet it is a benign 409 no-op (their
+   * complete-onboarding will refreshEnv itself once it sees
+   * status='running').
+   *
+   * Best-effort: a throw is caught + logged inside the background
+   * task; it never fails the provisioning run.
+   */
+  notifyVpsReady?: (customerId: string) => Promise<void>
 }
 
 export type SpinUpResult = {
@@ -312,6 +335,27 @@ export async function spinUpCustomer(
       log('✓ Setup script complete')
 
       await deps.store.updateVPSInstance(vps.uuid, { status: 'running' })
+
+      // Wait-page race fix (2026-05-16): second-finisher. The setup-
+      // script is done + the VPS row is now 'running', so it is finally
+      // safe to SSH-refresh the .env (the hermes binary is installed →
+      // refresh-env's install-if-missing block won't hit `exit 4`). If
+      // the customer already finished onboarding while we were
+      // provisioning, their complete-onboarding deferred refreshEnv —
+      // fire it now via the hook so hermes-gateway starts and
+      // welcome.html un-sticks. Best-effort: a throw never escapes the
+      // background task (the provision itself already succeeded).
+      if (deps.notifyVpsReady) {
+        try {
+          await deps.notifyVpsReady(opts.customerId)
+        } catch (e) {
+          log(
+            `notifyVpsReady failed (non-fatal): ${
+              e instanceof Error ? e.message : String(e)
+            }`,
+          )
+        }
+      }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)
       log(`✗ Background provision failed: ${msg}`)
