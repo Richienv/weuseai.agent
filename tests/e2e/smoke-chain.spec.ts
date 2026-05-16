@@ -27,6 +27,12 @@
  *     below). Founder amended lock 2026-05-14: all 3 runs on Xendit
  *     test mode, spend 0.
  *
+ *   E2E_CHAIN_HOLD_VPS=1 (optional, deployed only)
+ *     Skips Stage 11 teardown — leaves the VPS + bot UP so the founder
+ *     can do the manual /start confirmation against the live agent.
+ *     The held VPS MUST be torn down by hand afterwards (POST
+ *     /tear-down with the customerId the run reports).
+ *
  * ── DEPLOYED-MODE ENV (only for E2E_CHAIN_TARGET=deployed) ──
  *   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
  *   XENDIT_WEBHOOK_TOKEN             — the x-callback-token shared
@@ -1013,17 +1019,35 @@ test('Phase F: fresh-customer chain', async () => {
       }
     }
   } finally {
-    // Stage 11 — teardown. Runs no matter what the earlier stages did.
+    // Stage 11 — teardown. Runs no matter what the earlier stages did,
+    // UNLESS E2E_CHAIN_HOLD_VPS=1 — a hold-VPS confirmation run that
+    // deliberately leaves the VPS + bot up so the founder can do the
+    // manual /start check on the live agent. The held VPS must then be
+    // torn down by hand (POST /tear-down) once the check is done.
     const s = teardownStage
     const budgetMs = STAGE_BUDGET_MS[11]
-    const startMs = now()
-    try {
-      const detail = await s.run(ctx, deps)
-      const elapsedMs = now() - startMs
-      record({ stage: 11, name: s.name, status: elapsedMs > budgetMs ? 'over_budget' : 'pass', elapsedMs, budgetMs, detail: typeof detail === 'string' ? detail : undefined })
-    } catch (e) {
-      const elapsedMs = now() - startMs
-      record({ stage: 11, name: s.name, status: 'fail', elapsedMs, budgetMs, detail: e instanceof Error ? e.message : String(e) })
+    if (process.env.E2E_CHAIN_HOLD_VPS === '1') {
+      record({
+        stage: 11,
+        name: s.name,
+        status: 'manual',
+        elapsedMs: 0,
+        budgetMs,
+        detail:
+          `HELD — E2E_CHAIN_HOLD_VPS=1. VPS ${ctx.vpsId ?? '?'} (${ctx.vpsIp ?? '?'}) ` +
+          `left UP for the founder /start test. customer=${ctx.customerId ?? '?'} ` +
+          `sub=${ctx.subscriptionId ?? '?'} — tear down by hand after the check.`,
+      })
+    } else {
+      const startMs = now()
+      try {
+        const detail = await s.run(ctx, deps)
+        const elapsedMs = now() - startMs
+        record({ stage: 11, name: s.name, status: elapsedMs > budgetMs ? 'over_budget' : 'pass', elapsedMs, budgetMs, detail: typeof detail === 'string' ? detail : undefined })
+      } catch (e) {
+        const elapsedMs = now() - startMs
+        record({ stage: 11, name: s.name, status: 'fail', elapsedMs, budgetMs, detail: e instanceof Error ? e.message : String(e) })
+      }
     }
   }
 
