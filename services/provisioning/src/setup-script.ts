@@ -711,8 +711,24 @@ if [ -f "$CONFIG_YAML" ]; then
   # strings). interim_assistant_messages IS a real boolean — unquoted.
   sed -i -E 's/^[[:space:]]*tool_progress:.*/  tool_progress: "off"/' "$CONFIG_YAML"
   sed -i -E 's/^[[:space:]]*interim_assistant_messages:.*/  interim_assistant_messages: false/' "$CONFIG_YAML"
+  # ── P0 cost fix (2026-05-17): pin the agent model to DeepSeek v4-pro ──
+  # A fresh non-interactive Hermes install leaves config.yaml's top-level
+  # model key empty (Hermes DEFAULT_CONFIG ships an empty model string),
+  # and the agent then resolved to Claude Opus 4.6 via OpenRouter — it
+  # burned a customer OpenRouter sub-key 5-dollar cap to 41 percent in 3
+  # hours. The .env OPENAI_MODEL is NOT authoritative for the main agent;
+  # the top-level config.yaml model key is. DeepSeek v4-pro (about
+  # 0.44/0.87 USD per M tokens) is ~1/55th the cost — customer agents
+  # must never run a premium model. The model key is a top-level scalar
+  # here (non-interactive install = no setup wizard, so it never becomes
+  # a dict block); replace it, or append it if Hermes omitted the key.
+  if grep -qE '^model:' "$CONFIG_YAML"; then
+    sed -i -E 's|^model:.*|model: deepseek/deepseek-v4-pro|' "$CONFIG_YAML"
+  else
+    printf '\\nmodel: deepseek/deepseek-v4-pro\\n' >> "$CONFIG_YAML"
+  fi
   chown weuseai:weuseai "$CONFIG_YAML"
-  log "✓ config.yaml display tweaked (tool_progress=\"off\", interim_assistant_messages=false)"
+  log "✓ config.yaml tweaked (tool_progress=\"off\", interim_assistant_messages=false, model=deepseek/deepseek-v4-pro)"
 else
   log "⚠ config.yaml not found at setup time — display tweak skipped (non-fatal)"
 fi
