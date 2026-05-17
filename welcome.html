@@ -461,44 +461,62 @@
     }
 
     /* ════════════════════════════════════════════════════════════
-       EPIC SUCCESS PAGE (Phase 4, 2026-05-17)
-       State C2 — the agent-is-ready moment — becomes a full-bleed
-       cinematic takeover: a red-duotone video (welcome-success.mp4,
-       ffmpeg-baked brand palette) under a dot-halftone screen + an
-       oxblood vignette, with a bold serif title and the white
-       "Buka Telegram" CTA centred over it.
+       EPIC SUCCESS PAGE (Phase 4 + video-treatment pass, 2026-05-17)
+       State C2 — the agent-is-ready moment. The success video is NOT
+       full-bleed: it sits in a thick-padded framed plate, rendered as a
+       red dot-matrix by the same Canvas halftone technique the landing
+       hero uses (DottedVideo). Bigger/dimmer dots + a heavy film-grain
+       overlay so the impression is "a red dot matrix with motion
+       beneath" — the video itself is barely perceptible.
        ════════════════════════════════════════════════════════════ */
+    body[data-state="C2"] { background: #050505; }
     #epic-bg { display: none; }
     body[data-state="C2"] #epic-bg {
       display: block;
-      position: fixed; inset: 0; z-index: 0;
+      /* thick padding — the matrix is a framed plate, not a takeover */
+      position: fixed;
+      inset: clamp(24px, 7.5vmin, 104px);
+      z-index: 0;
       overflow: hidden;
-      background: #060606;
+      border-radius: 14px;
+      background: #050505;
+      box-shadow:
+        0 0 0 1px rgba(229,50,45,0.16),
+        0 44px 120px -34px rgba(0,0,0,0.92);
     }
-    #epic-bg video {
+    /* the canvas IS the render — red dots, luminance-modulated from the
+       hidden source video (same DottedVideo technique as the hero). */
+    #epic-canvas {
       position: absolute; inset: 0;
       width: 100%; height: 100%;
-      object-fit: cover;
-      /* slow drift so a 5s loop never feels like a hard cut */
-      animation: epicDrift 32s ease-in-out infinite alternate;
+      display: block;
     }
-    @keyframes epicDrift {
-      from { transform: scale(1.06) translateY(0); }
-      to   { transform: scale(1.14) translateY(-1.5%); }
+    /* hidden source video — sampled by the canvas, never shown directly */
+    #epic-bg video {
+      position: absolute; width: 2px; height: 2px;
+      opacity: 0; pointer-events: none;
     }
-    /* dot-halftone screen — the brand red-halftone matrix texture */
-    #epic-bg .halftone {
-      position: absolute; inset: 0;
-      background-image: radial-gradient(rgba(6,6,6,0.62) 1.05px, transparent 1.5px);
-      background-size: 6px 6px;
-      mix-blend-mode: multiply;
+    /* film grain — heavier than the hero's so the video reads as
+       incidental texture under the dot matrix, not a video. */
+    #epic-bg .epic-grain {
+      position: absolute; inset: 0; pointer-events: none;
+      z-index: 2;
+      opacity: 0.62;
+      mix-blend-mode: overlay;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' seed='11'/><feColorMatrix values='0 0 0 0 0.62 0 0 0 0 0.20 0 0 0 0 0.18 0 0 0 0.7 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+      background-size: 200px 200px;
+      animation: epicGrain 0.62s steps(6) infinite;
     }
-    /* oxblood vignette + top/bottom fades so text always reads */
-    #epic-bg .vignette {
-      position: absolute; inset: 0;
+    @keyframes epicGrain {
+      0%   { background-position: 0 0; }
+      100% { background-position: -200px 120px; }
+    }
+    /* dim — oxblood-tinted darkening so the matrix is moodier and the
+       title always reads against it. */
+    #epic-bg .epic-dim {
+      position: absolute; inset: 0; z-index: 1; pointer-events: none;
       background:
-        radial-gradient(ellipse 78% 64% at center, transparent 30%, rgba(74,21,18,0.55) 78%, rgba(10,10,10,0.92) 100%),
-        linear-gradient(180deg, rgba(10,10,10,0.7) 0%, transparent 26%, transparent 52%, rgba(10,10,10,0.95) 100%);
+        radial-gradient(ellipse 86% 72% at center, rgba(5,5,5,0.30) 34%, rgba(40,11,9,0.62) 74%, rgba(5,5,5,0.93) 100%);
     }
     /* C2 takeover — hide the normal page chrome */
     body[data-state="C2"] header.site,
@@ -566,23 +584,25 @@
       .pulse-dot, .progress-fill, .fade-in,
       .blink-sq, .term-blocks .blk.scan, .term-cursor,
       .term-bar-fill, .epic-fade,
-      #epic-bg video { animation: none !important; transition: none !important; }
+      #epic-bg .epic-grain { animation: none !important; transition: none !important; }
     }
   </style>
 </head>
 <body>
-  <!-- Epic success page (Phase 4) — full-bleed cinematic background.
-       Always in the DOM; revealed only on body[data-state="C2"]. The
-       red-duotone treatment is baked into welcome-success.mp4 (ffmpeg);
-       the dot-halftone + vignette are CSS overlays. -->
+  <!-- Epic success page — state C2. The success video is rendered as a
+       red dot-matrix onto #epic-canvas (the landing hero's DottedVideo
+       Canvas technique). The source <video> is hidden — only sampled,
+       never shown. Thick padding + heavy grain + dim make it read as a
+       red dot matrix with motion beneath, not a video. Revealed only on
+       body[data-state="C2"]; startEpicMatrix() drives the render. -->
   <div id="epic-bg" aria-hidden="true">
+    <canvas id="epic-canvas"></canvas>
     <video
       src="assets/welcome-success.mp4"
-      poster="assets/welcome-success-poster.jpg"
-      autoplay muted loop playsinline preload="auto"
+      muted loop playsinline preload="auto" crossorigin="anonymous"
     ></video>
-    <div class="halftone"></div>
-    <div class="vignette"></div>
+    <div class="epic-dim"></div>
+    <div class="epic-grain"></div>
   </div>
 
   <header class="site">
@@ -789,6 +809,90 @@
       const idStr = cid ? ` Customer ID: ${cid}.` : '';
       const msg = `Halo tim weuseai, agent saya ${reason}.${idStr}`;
       return `https://wa.me/6282154902561?text=${encodeURIComponent(msg)}`;
+    }
+
+    // ─── Epic success page — red dot-matrix renderer ──────────
+    //
+    // Video-treatment pass (2026-05-17). Ports the landing hero's
+    // DottedVideo Canvas technique: sample the hidden success video
+    // frame-by-frame, draw each cell as a red dot whose radius tracks
+    // that cell's luminance. Tuned vs the hero — bigger cells (thicker
+    // dots) + lower alpha (dimmer) — so combined with the heavy grain
+    // overlay the result reads as a red dot matrix with motion beneath,
+    // not a video. Idempotent: first state-C2 render starts it.
+    let epicMatrixStarted = false;
+    function startEpicMatrix() {
+      if (epicMatrixStarted) return;
+      const wrap = document.getElementById('epic-bg');
+      const video = wrap && wrap.querySelector('video');
+      const canvas = document.getElementById('epic-canvas');
+      if (!wrap || !video || !canvas) return;
+      epicMatrixStarted = true;
+
+      const ctx = canvas.getContext('2d');
+      const sample = document.createElement('canvas');
+      const sampleCtx = sample.getContext('2d', { willReadFrequently: true });
+
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const isMobile = window.matchMedia('(max-width: 767px)').matches;
+      const CELL = isMobile ? 13 : 10;   // hero uses 6 — bigger = thicker dots
+      const THRESHOLD = 0.085;           // dark cells drop out → matrix feel
+      const DOT_ALPHA = 0.74;            // dimmer than the hero's solid fill
+      const frameModulo = isMobile ? 3 : 2;
+
+      function resize() {
+        const r = wrap.getBoundingClientRect();
+        canvas.width = Math.max(1, Math.floor(r.width));
+        canvas.height = Math.max(1, Math.floor(r.height));
+      }
+      resize();
+      window.addEventListener('resize', resize);
+
+      function draw() {
+        if (video.readyState < 2) return;
+        const w = canvas.width, h = canvas.height;
+        const cols = Math.ceil(w / CELL), rows = Math.ceil(h / CELL);
+        if (sample.width !== cols) sample.width = cols;
+        if (sample.height !== rows) sample.height = rows;
+        const vw = video.videoWidth, vh = video.videoHeight;
+        if (!vw || !vh) return;
+        const scale = Math.max(cols / vw, rows / vh);
+        const dw = vw * scale, dh = vh * scale;
+        sampleCtx.drawImage(video, (cols - dw) / 2, (rows - dh) / 2, dw, dh);
+        let data;
+        try {
+          data = sampleCtx.getImageData(0, 0, cols, rows).data;
+        } catch { return; }  // tainted-canvas guard (never on same-origin)
+        ctx.clearRect(0, 0, w, h);
+        ctx.fillStyle = 'rgba(229,50,45,' + DOT_ALPHA + ')';
+        const half = CELL / 2, maxR = half * 0.92;
+        for (let y = 0; y < rows; y++) {
+          for (let x = 0; x < cols; x++) {
+            const i = (y * cols + x) * 4;
+            const lum = (0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]) / 255;
+            if (lum < THRESHOLD) continue;
+            ctx.beginPath();
+            ctx.arc(x * CELL + half, y * CELL + half, lum * maxR, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      }
+
+      const p = video.play();
+      if (p && p.catch) p.catch(() => {});
+
+      if (reduced) {
+        // Honour reduced-motion: render one static matrix frame, no loop.
+        if (video.readyState >= 2) draw();
+        else video.addEventListener('loadeddata', draw, { once: true });
+        return;
+      }
+      let frame = 0;
+      (function tick() {
+        requestAnimationFrame(tick);
+        if ((frame++ % frameModulo) !== 0) return;
+        draw();
+      })();
     }
 
     // ─── State renderers ──────────────────────────────────────
@@ -1126,13 +1230,10 @@
         if (lastProgressSnapshot) renderProgressOverlay(lastProgressSnapshot);
       }
 
-      // Phase 4: the epic success page autoplays its background video.
-      // A muted+playsinline video autoplays, but if the browser deferred
-      // it while #epic-bg was display:none, nudge it once on reveal.
-      if (state === 'C2') {
-        const v = document.querySelector('#epic-bg video');
-        if (v) { const p = v.play(); if (p && p.catch) p.catch(() => {}); }
-      }
+      // Phase 4 + video-treatment (2026-05-17): the epic success page
+      // renders the success video as a red dot-matrix on a Canvas.
+      // startEpicMatrix() is idempotent — first C2 render kicks it off.
+      if (state === 'C2') startEpicMatrix();
 
       // Wire up F-state retry
       if (state === 'F') {
