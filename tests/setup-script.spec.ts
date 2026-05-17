@@ -410,3 +410,42 @@ test('script (2E-3): JSON-stringifies the pubkey to handle special chars safely'
   // Also confirm the raw literal '$vars' is preserved (not shell-expanded).
   assert.match(s, /FLEET_KEY="ssh-rsa AAAA\\"weird'comment with \$vars and \\"quotes\\""/)
 })
+
+// ─── P0 cost fix (2026-05-17): customer agents run DeepSeek, not Opus ──
+//
+// A fresh non-interactive Hermes install left config.yaml's model key
+// empty; the agent resolved to Claude Opus 4.6 via OpenRouter and burned
+// a customer's $5 sub-key cap to 41% in 3 hours. The setup-script must
+// pin BOTH the .env OPENAI_MODEL and the config.yaml top-level model key
+// to DeepSeek v4-pro — and must never wire a premium (Claude/Opus) model.
+
+test('P0: setup-script pins .env OPENAI_MODEL to deepseek/deepseek-v4-pro', () => {
+  // The .env OpenRouter block only emits when an openRouterKey is passed
+  // (the production path — Phase 2A mints one per customer).
+  const s = buildSetupScript({ ...baseParams, openRouterKey: 'sk-or-v1-EXAMPLE' })
+  assert.match(
+    s,
+    /OPENAI_MODEL=deepseek\/deepseek-v4-pro/,
+    '.env must set OPENAI_MODEL to deepseek/deepseek-v4-pro',
+  )
+})
+
+test('P0: setup-script pins config.yaml model: to deepseek/deepseek-v4-pro', () => {
+  const s = buildSetupScript(baseParams)
+  // The config.yaml top-level model key is authoritative for the main
+  // agent — the .env var alone is not enough (that was the Opus bug).
+  assert.match(
+    s,
+    /model: deepseek\/deepseek-v4-pro/,
+    'setup-script must pin config.yaml model: to deepseek/deepseek-v4-pro',
+  )
+})
+
+test('P0: setup-script never wires a premium Claude/Opus model', () => {
+  const s = buildSetupScript(baseParams)
+  assert.equal(
+    /claude-opus|claude-sonnet|anthropic\/claude/i.test(s),
+    false,
+    'customer agents must never be configured with a premium Claude/Opus model',
+  )
+})
