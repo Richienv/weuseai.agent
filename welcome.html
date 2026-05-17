@@ -1369,16 +1369,16 @@
     let currentStageStartedAt = null;
     let lastSeenStage = null;
 
-    /** Monotonic-clamp high-water marks (pre-scout 2026-05-13).
+    /** Monotonic-clamp high-water mark (pre-scout 2026-05-13).
      *
      * lastShownStageIndex defaults to -1 so the first probe seen wins.
-     * lastShownStagesCompleted defaults to 0 so the bar starts empty
-     * and only grows. Both persist across applyStageProgressToB calls
-     * and across renderState('B') re-renders — they live at module
-     * scope (NOT inside the function) so a fresh state-B render after
-     * a brief network hiccup doesn't reset them. */
+     * It persists across applyStageProgressToB calls and renderState('B')
+     * re-renders — module scope (NOT inside the function) — so a fresh
+     * state-B render after a network hiccup doesn't reset it. (The
+     * Phase 4 smoothing rework, 2026-05-17, retired the separate
+     * stages-completed high-water mark: displayPct is now the monotonic
+     * value and it only ever rises.) */
     let lastShownStageIndex = -1;
-    let lastShownStagesCompleted = 0;
 
     /**
      * Fold the latest probe.progress snapshot into the B-state DOM:

@@ -22,36 +22,40 @@ test('step 1 form has editable Name input (no readonly attribute)', () => {
   )
 })
 
-test('step 1 form Email input is editable + required (regression-fix 2026-05-10)', () => {
-  // History: Track 4 of post-pair polish made this readonly +
-  // prefilled-from-server. That broke EVERY customer because anon
-  // SELECT on customers.email is REVOKED per Sesi D P0-2 — the
-  // browser couldn't read the email back, so the field was readonly
-  // AND empty AND validation rejected empty. Customers were locked
-  // out of step 1.
+test('step 1 form Email input is server-sourced + readonly (email-mismatch fix 2026-05-17)', () => {
+  // History: the email was previously sourced from a GLOBAL browser
+  // localStorage key ('onboarding_checkout_email'). A browser that ran
+  // more than one checkout — a shared/family machine, or one person
+  // buying two agents — showed the WRONG (previous) customer's email on
+  // this form. The email is metadata of the PAYMENT.
   //
-  // Fix: editable again, prefill best-effort from localStorage cache
-  // that checkout.html writes on Bayar Sekarang submit. Save-onboarding-
-  // profile-handler accepts email updates and writes back via service-
-  // role. Customers who type a different email here than at checkout
-  // get the customers.email row updated — no silent inconsistency.
+  // Fix (2026-05-17): the email is resolved server-side from the
+  // customers row (xendit-webhook's payer_email) via the X-CID-gated
+  // customer-onboarding-info Edge Function, and the field is `readonly`
+  // — it is not user-editable. The old anon-REVOKE problem that once
+  // forced an editable field is moot now: the lookup runs service-role.
   const src = fs.readFileSync(ONBOARDING, 'utf8')
   const m = src.match(/<input[^>]*id="f-email"[^>]*>/)
   assert.ok(m, 'must find <input id="f-email">')
   assert.ok(
-    !/\breadonly\b/.test(m[0]),
-    `f-email input must NOT be readonly (regression of Track 4 readonly): ${m[0]}`,
+    /\breadonly\b/.test(m[0]),
+    `f-email input must be readonly — the email is payment metadata: ${m[0]}`,
   )
   assert.ok(
     /\brequired\b/.test(m[0]),
     `f-email input must be required: ${m[0]}`,
   )
-  // Prefill mechanism: render path reads from localStorage when
-  // customer.email is empty (covers Sesi-D-P0-2 anon-REVOKE case).
+  assert.match(m[0], /autocomplete="off"/, 'f-email must disable browser autofill')
+  // Email is resolved server-side, NOT from browser state.
   assert.match(
     src,
-    /onboarding_checkout_email/,
-    'render path must consult localStorage cache for email prefill',
+    /customer-onboarding-info/,
+    'render path must resolve the email via the customer-onboarding-info Edge Function',
+  )
+  assert.equal(
+    /onboarding_checkout_email/.test(src),
+    false,
+    'the old global-localStorage email source must be gone — it was the mismatch bug',
   )
 })
 

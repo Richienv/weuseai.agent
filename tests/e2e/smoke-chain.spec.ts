@@ -234,6 +234,12 @@ type ChainDeps = {
   /** Stage 3: poll Supabase until the customer + subscription rows are
    *  committed + queryable. */
   pollCustomerRows(email: string): Promise<{ customerId: string; subscriptionId: string }>
+  /** Stage 3 (email-mismatch fix 2026-05-17): the email the onboarding
+   *  form will show, resolved via the customer-onboarding-info Edge
+   *  Function — the SAME source onboarding.html uses. Stage 3 asserts
+   *  this equals the email the customer paid with, so a regression that
+   *  re-sources the form email from browser state fails the chain. */
+  checkOnboardingEmail(customerId: string): Promise<string>
   /** Stage 4: poll vps_instances until ip_address is set — i.e. the VM
    *  has booted and Vultr assigned an IP. (status='running' is NOT used
    *  here: the provisioning service only sets that after the whole
@@ -309,6 +315,11 @@ function makeLocalDeps(simClock: { nowMs: number }): ChainDeps {
   }
   // Deterministic local ids from email so Stage 1 and Stage 3 agree.
   const localSlug = (email: string) => email.replace(/[^a-z0-9]/gi, '').slice(0, 12)
+  // Email-mismatch fix (2026-05-17): the local chain captures the email
+  // createInvoice was called with so checkOnboardingEmail can echo it —
+  // simulating the customer-onboarding-info Edge Function returning the
+  // payment-record email. The real assertion runs in deployed mode.
+  let localChainEmail = ''
   return {
     async createInvoice(email) {
       simClock.nowMs += SIM_ADVANCE_MS.createInvoice
@@ -324,8 +335,14 @@ function makeLocalDeps(simClock: { nowMs: number }): ChainDeps {
     },
     async pollCustomerRows(email) {
       simClock.nowMs += SIM_ADVANCE_MS.customerRows
+      localChainEmail = email
       const slug = localSlug(email)
       return { customerId: `cust_local_${slug}`, subscriptionId: `sub_local_${slug}` }
+    },
+    async checkOnboardingEmail() {
+      // Local mock: the onboarding form resolves the payment-record
+      // email correctly (deployed mode runs the real check).
+      return localChainEmail
     },
     async pollVpsHasIp() {
       simClock.nowMs += SIM_ADVANCE_MS.vpsRunning
@@ -664,6 +681,29 @@ function makeDeployedDeps(): ChainDeps {
       }
       throw new Error('customer/subscription rows did not appear within 30s')
     },
+    async checkOnboardingEmail(customerId) {
+      // Email-mismatch fix (2026-05-17): call the real
+      // customer-onboarding-info Edge Function — the same source
+      // onboarding.html now uses — and return the email it resolves.
+      // Stage 3 asserts this equals the email the customer paid with.
+      const r = await fetch(`${SUPABASE_URL()}/functions/v1/customer-onboarding-info`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          apikey: SERVICE_KEY(),
+          authorization: `Bearer ${SERVICE_KEY()}`,
+          'x-cid': customerId,
+        },
+        body: JSON.stringify({ customer_id: customerId }),
+      })
+      const body = (await r.json().catch(() => ({}))) as { email?: string }
+      if (!r.ok || typeof body.email !== 'string') {
+        throw new Error(
+          `customer-onboarding-info failed: HTTP ${r.status} ${JSON.stringify(body).slice(0, 200)}`,
+        )
+      }
+      return body.email
+    },
     async pollVpsHasIp(customerId) {
       // Stage 4 = "VM booted, IP assigned". The provisioning service
       // writes the vps_instances row as status='provisioning' with
@@ -921,12 +961,22 @@ const STAGES: Stage[] = [
   },
   {
     num: 3,
-    name: 'Customer + subscription rows created',
+    name: 'Customer + subscription rows created + onboarding email matches payment',
     async run(ctx, deps) {
       const { customerId, subscriptionId } = await deps.pollCustomerRows(ctx.email)
       ctx.customerId = customerId
       ctx.subscriptionId = subscriptionId
-      return `customer=${customerId} subscription=${subscriptionId}`
+      // Email-mismatch fix (2026-05-17): the onboarding form sources the
+      // email from customer-onboarding-info. Assert it is the email the
+      // customer actually paid with — a regression that re-sources it
+      // from browser state (the old global-localStorage bug) fails here.
+      const formEmail = await deps.checkOnboardingEmail(customerId)
+      if (formEmail !== ctx.email) {
+        throw new Error(
+          `onboarding email mismatch: form would show "${formEmail}" but customer paid with "${ctx.email}"`,
+        )
+      }
+      return `customer=${customerId} subscription=${subscriptionId} · onboarding email = payment email`
     },
   },
   {
