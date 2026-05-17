@@ -249,6 +249,11 @@ type ChainDeps = {
    *  provisioning service sets that the moment the SSH setup-script
    *  exits 0 (customer-flow.ts). Bails immediately on status='failed'. */
   pollSetupComplete(customerId: string): Promise<void>
+  /** Stage 5 (P0 cost fix 2026-05-17): read the agent's pinned model
+   *  from ~/.hermes/config.yaml on the VPS. Stage 5 asserts it is
+   *  deepseek/deepseek-v4-pro — a regression that lets the agent fall
+   *  back to Claude Opus (the $-burning bug) fails the chain. */
+  checkVpsModel(vpsIp: string): Promise<string>
   /** Stage 5.5: validate-bot-token — Telegram getMe, set the bot's
    *  webhook, persist the encrypted token on the customer row. */
   validateBotToken(customerId: string, botToken: string): Promise<void>
@@ -350,6 +355,11 @@ function makeLocalDeps(simClock: { nowMs: number }): ChainDeps {
     },
     async pollSetupComplete() {
       simClock.nowMs += SIM_ADVANCE_MS.setupComplete
+    },
+    async checkVpsModel() {
+      // Local mock: the setup-script always pins DeepSeek (deployed mode
+      // reads the real config.yaml off the VPS).
+      return 'deepseek/deepseek-v4-pro'
     },
     async validateBotToken() {
       simClock.nowMs += SIM_ADVANCE_MS.validateBotToken
@@ -743,6 +753,15 @@ function makeDeployedDeps(): ChainDeps {
       }
       throw new Error('VPS did not reach status=running within 480s')
     },
+    async checkVpsModel(vpsIp) {
+      // P0 cost fix (2026-05-17): read the top-level `model:` key from
+      // the agent's config.yaml on the VPS. The setup-script pins it to
+      // deepseek/deepseek-v4-pro; an empty/Opus value is the $-burning
+      // regression.
+      const r = ssh(vpsIp, "grep -m1 -E '^model:' /home/weuseai/.hermes/config.yaml 2>&1 || echo 'model: <none>'")
+      const m = /^model:\s*(\S+)/m.exec(r.stdout.trim())
+      return m ? m[1] : '<unreadable>'
+    },
     async validateBotToken(customerId, botToken) {
       // Real onboarding path: validate-bot-token does Telegram getMe,
       // sets the bot's webhook → pair-customer-bot-webhook, and persists
@@ -991,10 +1010,21 @@ const STAGES: Stage[] = [
   },
   {
     num: 5,
-    name: 'setup-script COMPLETE (status=running)',
+    name: 'setup-script COMPLETE (status=running) + agent model = DeepSeek',
     async run(ctx, deps) {
       await deps.pollSetupComplete(ctx.customerId!)
-      return 'vps_instances.status = running'
+      // P0 cost fix (2026-05-17): the agent must run DeepSeek v4-pro, not
+      // Claude Opus. A fresh Hermes install left config.yaml's model key
+      // empty and the agent resolved to Opus 4.6 over OpenRouter, burning
+      // a customer's $5 sub-key cap. Assert the pin held.
+      const model = await deps.checkVpsModel(ctx.vpsIp!)
+      if (model !== 'deepseek/deepseek-v4-pro') {
+        throw new Error(
+          `agent model is "${model}" — must be deepseek/deepseek-v4-pro ` +
+            `(a premium model regresses the P0 cost fix)`,
+        )
+      }
+      return `vps_instances.status = running · agent model = ${model}`
     },
   },
   {
