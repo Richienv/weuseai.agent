@@ -207,26 +207,23 @@ test('applyStageProgressToB clamps stage index monotonically (cannot regress)', 
   }
 })
 
-test('progress bar fill clamps stages_completed.length monotonically', () => {
+test('progress bar (displayPct) is monotonic — never jumps backward', () => {
   const src = fs.readFileSync(WELCOME, 'utf8')
-  // The progress bar's `done` value (used to compute pct) was the
-  // raw `progress.stages_completed?.length ?? 0`. Pre-fix bug: a
-  // probe race could return a stale snapshot with FEWER completed
-  // stages, jumping the bar backwards. Fix: clamp against a high-
-  // water-mark variable.
-  assert.match(
-    src,
-    /lastShownStagesCompleted/,
-    'monotonic clamp must track lastShownStagesCompleted high-water mark',
-  )
+  // Pre-fix bug: a probe race could return a stale snapshot with fewer
+  // completed stages, jerking the bar backward. The Phase 4 smoothing
+  // rework (2026-05-17) retired the stages-completed high-water mark;
+  // the monotonic guarantee is now carried by `displayPct`. In
+  // applyStageProgressToB displayPct can only be RAISED (Math.max
+  // against itself + the band floor), and the time-creep + per-log-line
+  // nudge only ADD to it, each capped at targetPct. The bar never
+  // regresses.
   const fnBody = src.match(/function applyStageProgressToB[\s\S]*?\n\s{4}\}/)
-  if (fnBody) {
-    assert.match(
-      fnBody[0],
-      /Math\.max\([^)]*lastShownStagesCompleted/,
-      'progress bar `done` must be Math.max(..., lastShownStagesCompleted)',
-    )
-  }
+  assert.ok(fnBody, 'applyStageProgressToB body must be findable')
+  assert.match(
+    fnBody[0],
+    /displayPct\s*=\s*Math\.min\(\s*targetPct\s*,\s*Math\.max\(\s*displayPct/,
+    'displayPct must only ever be raised (Math.max against displayPct), never lowered',
+  )
 })
 
 test('stage tracking state survives a fresh state B render (not reset by renderState)', () => {

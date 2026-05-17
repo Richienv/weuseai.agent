@@ -576,12 +576,13 @@
               id="f-email"
               class="field-input focus-ring"
               type="email"
-              autocomplete="email"
+              autocomplete="off"
               placeholder="kamu@email.com"
+              readonly
               required
             />
             <p id="f-email-help" class="field-help">
-              Email kamu — dipakai untuk receipt + kabar penting. Pastikan benar.
+              Email pembayaran kamu — diambil otomatis dari data pembayaran, tidak perlu diubah.
             </p>
             <p id="f-email-error" class="field-error" aria-live="polite"></p>
           </div>
@@ -1105,6 +1106,7 @@
     // ─── State ──────────────────────────────────────────────────
     let currentStep   = '1';
     let customer      = null;          // CustomerRow from Supabase
+    let paymentEmail  = null;          // email from the payment record (customer-onboarding-info)
     let pairingCode   = null;
     let pairingExpiry = null;          // Date
     let expiryTimer   = null;
@@ -1147,6 +1149,31 @@
      * welcome.html's pollOnce uses. Returns 'starter' | 'pro' | 'studio'
      * or null on any failure (caller falls back to 'starter').
      */
+    /**
+     * Email-mismatch fix (2026-05-17): resolve the customer's email from
+     * the PAYMENT record (the customers row xendit-webhook created from
+     * Xendit's payer_email), server-side, via the X-CID-gated
+     * customer-onboarding-info Edge Function. This replaces the old
+     * global-localStorage source that showed the wrong email when a
+     * browser ran more than one checkout. Returns the email string, or
+     * null on any failure (caller leaves the field editable).
+     */
+    async function fetchOnboardingInfo() {
+      const r = await fetch(`${SUPABASE_URL}/functions/v1/customer-onboarding-info`, {
+        method: 'POST',
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          'X-CID': cid,
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ customer_id: cid }),
+      });
+      if (!r.ok) throw new Error(`customer-onboarding-info: ${r.status}`);
+      const j = await r.json();
+      return (j && typeof j.email === 'string' && j.email) ? j.email : null;
+    }
+
     function fetchTier() {
       const url =
         `${SUPABASE_URL}/rest/v1/subscriptions` +
@@ -1423,27 +1450,22 @@
 
     function renderStep1() {
       $name.value = customer.display_name ?? '';
-      // Email: prefill from localStorage cache (checkout writes it on
-      // Bayar Sekarang submit) since anon SELECT on customers.email is
-      // REVOKED per Sesi D P0-2 — the browser cannot read the email
-      // back from the server. If neither cache nor customer object has
-      // it, leave blank for the customer to type. The save-onboarding-
-      // profile call on submit will UPSERT the value to customers row.
-      //
-      // This restores editable behavior intentionally (was readonly +
-      // empty in the prior cascade — locked debug-reset customers out
-      // of completing step 1).
-      let prefillEmail = customer.email ?? '';
-      if (!prefillEmail) {
-        try {
-          // checkout.html stores under a CID-less key (the cid isn't
-          // known at checkout time — it's minted by xendit-webhook
-          // after payment). Same browser session continues to onboarding
-          // where we read it back here.
-          prefillEmail = localStorage.getItem('onboarding_checkout_email') ?? '';
-        } catch { /* localStorage may be disabled */ }
+      // Email-mismatch fix (2026-05-17): the email shown is the PAYMENT
+      // record's email, resolved server-side by fetchOnboardingInfo()
+      // (customer-onboarding-info, X-CID gated). It is metadata of the
+      // payment — NOT user-editable — so the field stays readonly when
+      // resolved. The old code sourced this from a global localStorage
+      // key, which showed the wrong customer's email on any browser that
+      // ran more than one checkout. localStorage is no longer consulted
+      // for the email. If the server lookup failed (paymentEmail null),
+      // the field is made editable so the customer can still proceed.
+      if (paymentEmail) {
+        $email.value = paymentEmail;
+        $email.readOnly = true;
+      } else {
+        $email.value = customer.email ?? '';
+        $email.readOnly = false;
       }
-      $email.value = prefillEmail;
       if (customer.whatsapp_number) $whatsapp.value = customer.whatsapp_number;
     }
 
@@ -2101,6 +2123,17 @@
       if (!customer) {
         setStep('E');
         return;
+      }
+
+      // Email-mismatch fix (2026-05-17): resolve the email from the
+      // PAYMENT record server-side (customer-onboarding-info, X-CID
+      // gated) — never from browser localStorage. localStorage held a
+      // single global key, so a browser that ran more than one checkout
+      // showed the wrong (previous) customer's email on this form.
+      try {
+        paymentEmail = await fetchOnboardingInfo();
+      } catch {
+        paymentEmail = null; // renderStep1 leaves the field editable
       }
 
       // Restore in-flight WA from localStorage (only relevant when the
