@@ -1,7 +1,7 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "slide-master",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description_id": "Bundle skill + template Slide Master v2. Dua mode: narrative-arc (default — story arc 12 slide) dan template-picker (8 template student/worker). Tier change v2: Pro+ → All tiers (Starter+).",
   "skills": [
     {
@@ -28,6 +28,16 @@
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:template-deck-builder",
       "enabled_for_tiers": ["starter", "pro", "studio"]
+    },
+    {
+      "id": "pitch-deck",
+      "skill_kind": "playbook",
+      "description_id": "Playbook 6 langkah untuk bikin pitch deck dari nol: intake, riset, kerangka cerita, checkpoint approval, draft semua slide, polish dan export. Berhenti minta approval kerangka sebelum semua slide ditulis.",
+      "description_en": "A 6-step playbook to build a pitch deck end to end: intake, research, narrative outline, an approval checkpoint, full draft, then polish and export. Pauses for outline approval before drafting every slide.",
+      "templates_used": [],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:pitch-deck",
+      "enabled_for_tiers": ["pro", "studio"]
     },
     {
       "id": "extend-capabilities",
