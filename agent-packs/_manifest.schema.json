@@ -43,6 +43,11 @@
             "minLength": 10,
             "maxLength": 500
           },
+          "skill_kind": {
+            "type": "string",
+            "enum": ["skill", "playbook"],
+            "description": "Discriminates a single-shot skill ('skill', the default when absent) from a multi-step playbook ('playbook' — SKILL.md carries a ## Langkah-langkah section of ordered gated steps, driven by the flow-state state-machine engine)."
+          },
           "templates_used": {
             "type": "array",
             "items": { "type": "string" },
