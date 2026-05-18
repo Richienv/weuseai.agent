@@ -49,3 +49,19 @@ direction — they are parked, ordered roughly by founder-impact.
    `display_name` flows from the onboarding form into the proactive greeting
    (CASE A — expected to work; the harness can't cover it because it skips the
    onboarding form). Monitor that first payment closely.
+
+---
+
+## Convention notes (not deferred work — reference for future authors)
+
+**Playbook file layout (Phase 1 Week 2, 2026-05-18).** A persona *playbook*
+ships as `agent-packs/<persona>/skills/<playbook-id>/SKILL.md` — the same
+directory form every single-shot skill uses (`skills/<id>/SKILL.md`), NOT a
+flat `<id>.flow.md` file. The directory form is the only layout both the
+bundle-publish pipeline (`scripts/publish-persona-bundles.mjs` copies the pack
+tree wholesale) and Hermes skill discovery recognise. The playbook is
+distinguished from a single-shot skill purely by its manifest entry's
+`skill_kind: "playbook"` discriminator and the `## Langkah-langkah` section in
+its SKILL.md — no new file type, no new distribution mechanism. Future template
+/ playbook authors: follow the directory form; the `.flow.md` shorthand seen in
+some planning notes is not a real on-disk convention.
