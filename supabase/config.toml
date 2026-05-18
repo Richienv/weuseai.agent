@@ -75,6 +75,13 @@ verify_jwt = false
 [functions.workflow-execute]
 verify_jwt = false
 
+# Playbook state-machine engine (Phase 1 Week 2, 2026-05-18 consult).
+# Hermes on the customer's VPS calls this server-to-server to drive a
+# persona playbook. Bypasses Supabase JWT — same model as workflow-execute
+# — and the handler does its own X-CID == customer_id gate.
+[functions.flow-state]
+verify_jwt = false
+
 [functions.invoice-generator-handler]
 verify_jwt = false
 
