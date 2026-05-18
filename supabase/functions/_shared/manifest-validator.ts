@@ -21,10 +21,21 @@ import {
 
 export type SkillTier = 'starter' | 'pro' | 'studio'
 
+/**
+ * Discriminates a single-shot skill from a multi-step playbook.
+ * Absent ⇒ 'skill' (a single-shot capability — the legacy default).
+ * 'playbook' ⇒ the skill's SKILL.md carries a `## Langkah-langkah`
+ * section of ordered, gated steps and is driven by the flow-state
+ * state-machine engine (Phase 1 Week 2, 2026-05-18 consult).
+ */
+export type SkillKind = 'skill' | 'playbook'
+
 export type ManifestSkill = {
   id: string
   description_id: string
   description_en?: string
+  /** Defaults to 'skill' when absent. */
+  skill_kind?: SkillKind
   templates_used?: string[]
   execution: 'edge-function' | 'hermes-skill' | 'composite' | 'external-api'
   handler_ref: string
@@ -148,6 +159,7 @@ export const MANIFEST_SCHEMA = {
           id: { type: 'string', pattern: '^[a-z][a-z0-9-]+$' },
           description_id: { type: 'string', minLength: 10, maxLength: 500 },
           description_en: { type: 'string', minLength: 10, maxLength: 500 },
+          skill_kind: { type: 'string', enum: ['skill', 'playbook'] },
           templates_used: { type: 'array', items: { type: 'string' } },
           execution: {
             type: 'string',

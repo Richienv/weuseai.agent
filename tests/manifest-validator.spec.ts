@@ -91,6 +91,28 @@ test('manifest with $schema field stripped silently', () => {
   assert.equal(r.ok, true)
 })
 
+// ─── skill_kind discriminator (Phase 1 Week 2) ─────────────────────────
+
+test('skill with skill_kind "playbook" validates', () => {
+  const m: Manifest = {
+    ...VALID_BASE,
+    skills: [{ ...VALID_BASE.skills[0], skill_kind: 'playbook' }],
+  }
+  assert.equal(validateManifest(m).ok, true)
+})
+
+test('skill with an unknown skill_kind is rejected', () => {
+  const m = {
+    ...VALID_BASE,
+    skills: [{ ...VALID_BASE.skills[0], skill_kind: 'bogus' }],
+  }
+  assert.equal(validateManifest(m).ok, false)
+})
+
+test('skill_kind is optional — absent still validates (legacy default)', () => {
+  assert.equal(validateManifest(VALID_BASE).ok, true)
+})
+
 // ─── schema-level errors ───────────────────────────────────────────────
 
 test('rejects missing agent_slug', () => {
