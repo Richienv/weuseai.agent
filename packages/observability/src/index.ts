@@ -17,3 +17,16 @@ export type { RenderTextOptions } from './render-text.ts'
 export { renderStatusReportHtml } from './render-html.js'
 export { fetchCustomerSnapshot } from './fetch.js'
 export type { FetchSnapshotEnv } from './fetch.ts'
+export {
+  deriveLlmCostReport,
+  fetchLlmCostRows,
+  fetchOpenRouterUsageCents,
+} from './llm-cost.js'
+export type {
+  CostSource,
+  DeriveLlmCostOptions,
+  FetchLlmCostEnv,
+  LlmCostCustomer,
+  LlmCostInputRow,
+  LlmCostReport,
+} from './llm-cost.ts'
