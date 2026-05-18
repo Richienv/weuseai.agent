@@ -6731,96 +6731,9 @@
       );
     }
 
-    // ─────────────────────── SECURITY NARRATIVE (A2) ─────────────────────
-    // Premium tone for average-joe SMB owners. No mention of BotFather /
-    // Telegram / Supabase / VPS / Hermes / OpenRouter by name. Each bullet
-    // is one idea, one short body sentence. Five pillars: dedicated
-    // instance, encrypted credentials, owned data location, audit trail,
-    // exit control.
-    function SecurityNarrativeSection() {
-      const pillars = [
-        {
-          n: '01',
-          title: 'Agent eksklusif kamu sendiri',
-          body:  'Setiap pelanggan dapat agent sendiri di lingkungan terisolasi. Tidak ada antrian, tidak ada data kamu yang campur dengan pelanggan lain.',
-        },
-        {
-          n: '02',
-          title: 'Kredensial diamankan standar enterprise',
-          body:  'API key, password, dan token pribadi kamu disimpan terenkripsi end-to-end, dengan rotasi otomatis dan akses terbatas.',
-        },
-        {
-          n: '03',
-          title: 'Data tinggal di server premium milik kamu',
-          body:  'Riwayat percakapan, dokumen, dan workflow kamu tersimpan di lokasi khusus yang hanya kamu akses. Bukan masuk pool training data publik.',
-        },
-        {
-          n: '04',
-          title: 'Setiap percakapan tercatat, transparan',
-          body:  'Kamu bisa lihat persis apa yang agent kerjakan, kapan, dan output-nya. Bukan kotak hitam tanpa jejak.',
-        },
-        {
-          n: '05',
-          title: 'Kontrol penuh kapan saja',
-          body:  'Pause, export semua data, atau hapus akses tools langsung dari dashboard kamu. Tidak ada lock-in, tidak ada negosiasi.',
-        },
-      ];
-
-      return (
-        <section id="keamanan" className="relative overflow-hidden py-20 md:py-32 px-5 md:px-6 lg:px-16 bg-black">
-          <FadeTop /> <FadeBottom />
-          <div className="relative z-10 max-w-6xl mx-auto">
-            <div className="flex flex-col items-center text-center mb-14 md:mb-20">
-              <div
-                className="liquid-glass rounded-full px-3.5 py-1 text-xs font-medium font-body text-white/90"
-                style={{ borderColor: 'rgba(229, 50, 45, 0.45)' }}
-              >
-                Keamanan
-              </div>
-              <BlurText
-                as="h2"
-                text="Privat. Terenkripsi. Milik kamu."
-                className="mt-5 md:mt-6 text-3xl md:text-5xl lg:text-6xl font-heading text-white tracking-tight leading-[1.0] md:leading-[0.95] max-w-3xl"
-                style={{ letterSpacing: '-0.04em' }}
-                delay={70}
-              />
-              <p className="mt-5 md:mt-6 max-w-xl text-white/55 font-body font-light text-sm md:text-base leading-relaxed">
-                Lima prinsip yang bikin agent kamu tetap private — dari hari pertama sampai hari kamu memilih berhenti.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
-              {pillars.map((p, i) => (
-                <Mot.div
-                  key={p.n}
-                  initial={{ opacity: 0, y: 16 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, amount: 0.3 }}
-                  transition={{ duration: 0.55, ease: EASE, delay: 0.06 * i }}
-                  className="liquid-glass rounded-2xl p-7 md:p-8 flex flex-col"
-                >
-                  <div
-                    className="text-xs font-body font-medium text-white/45"
-                    style={{ letterSpacing: '0.08em' }}
-                  >
-                    {p.n}
-                  </div>
-                  <h3
-                    className="mt-4 font-heading text-white text-lg md:text-xl leading-[1.15]"
-                    style={{ letterSpacing: '-0.02em' }}
-                  >
-                    {p.title}
-                  </h3>
-                  <p className="mt-3 text-sm md:text-[15px] text-white/65 font-body font-light leading-relaxed">
-                    {p.body}
-                  </p>
-                </Mot.div>
-              ))}
-            </div>
-          </div>
-        </section>
-      );
-    }
+    // SecurityNarrativeSection ("Keamanan" — Privat. Terenkripsi. Milik
+    // kamu.) removed 2026-05-18 per founder direction — the section was
+    // judged unnecessary on the landing page.
 
     function Pricing() {
       const [breakdownTier, setBreakdownTier] = React.useState(null);
@@ -7561,7 +7474,6 @@
               <FeaturesGrid />
               <ChatVsAgentSection />
               <CostComparisonSection />
-              <SecurityNarrativeSection />
               <Pricing />
               <CommunitySection />
               <FAQ />
