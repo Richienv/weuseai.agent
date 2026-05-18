@@ -149,7 +149,7 @@ Kita pakai NousResearch/hermes-agent (https://github.com/NousResearch/hermes-age
 - Update Hermes = re-install di VPS pelanggan, bukan rebuild image. Currently pinned to `v0.13.0` (HERMES_VERSION env override pulls a different tag on next-provisioned VPS).
 
 **Sanctioned upstream contribution (NOT a fork):** When a needed knob doesn't exist upstream, the path is a clean PR to NousResearch/hermes-agent — never a fork or local patch of the pinned install.
-- **PR #27771** (open, 2026-05-18) — `feat(config): add agent.sanitize_provider_errors`. Adds an opt-in config knob so a managed-service operator can replace the raw user-facing provider error (which leaks billing-dashboard URLs / account IDs / endpoint hosts on an exhausted 402/429) with a generic category-based message. Default `false` = legacy behavior. URL: https://github.com/NousResearch/hermes-agent/pull/27771 — if upstream rejects or stays dormant >60 days, escalate to founder.
+- Upstream PR #27771 contributed (`feat(config): add agent.sanitize_provider_errors`, https://github.com/NousResearch/hermes-agent/pull/27771); no active pursuit — NousResearch can merge or close on their own schedule. Item 2 mitigation = cost monitoring (Item 3) prevents 402 from firing in normal flow.
 
 ---
 
