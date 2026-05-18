@@ -440,6 +440,7 @@ test('every pilot manifest skill handler_ref points to a known edge function, he
     // Slide Master (v2)
     'narrative-arc-deck-builder',
     'template-deck-builder',
+    'pitch-deck',
     // Trade Pro (v2)
     'market-briefing',
     'alert-watcher',
