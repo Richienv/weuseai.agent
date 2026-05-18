@@ -259,12 +259,18 @@ function workflowEnvLines(p: SetupScriptParams): string[] {
   // agentSlug (e.g., legacy test fixtures).
   const slugs = p.agentSlugs && p.agentSlugs.length > 0 ? p.agentSlugs : [slug]
   const url = p.workflowExecuteUrl ?? DEFAULT_WORKFLOW_EXECUTE_URL
+  // The playbook state-machine engine (Phase 1 Week 2) lives at the
+  // `flow-state` Edge Function — same functions base as workflow-execute.
+  // Derive it from the workflow-execute URL so a test/staging override of
+  // workflowExecuteUrl carries the flow-state URL along with it.
+  const flowStateUrl = url.replace(/\/workflow-execute(\/?)$/, '/flow-state$1')
   return [
     `WEUSEAI_AGENT_SLUG=${slug}`,
     `WEUSEAI_AGENT_SLUGS=${slugs.join(',')}`,
     `WEUSEAI_TIER=${p.tier}`,
     `WEUSEAI_CUSTOMER_ID=${p.customerId}`,
     `WEUSEAI_WORKFLOW_EXECUTE_URL=${url}`,
+    `WEUSEAI_FLOW_STATE_URL=${flowStateUrl}`,
   ]
 }
 

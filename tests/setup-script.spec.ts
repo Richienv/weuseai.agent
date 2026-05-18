@@ -305,6 +305,31 @@ test('script (2E-2): writes WEUSEAI_AGENT_SLUG + WEUSEAI_CUSTOMER_ID + WEUSEAI_W
   assert.match(s, /WEUSEAI_WORKFLOW_EXECUTE_URL=https:\/\/gtjgsligllbjcisiyrah/)
 })
 
+test('script (Week 2): writes WEUSEAI_FLOW_STATE_URL pointing at the flow-state fn', () => {
+  const s = buildSetupScript({
+    ...baseParams,
+    bundleTarBase64: FAKE_BUNDLE_BASE64,
+    agentSlug: 'deep-researcher',
+  })
+  // Derived from the workflow-execute URL → same functions base, /flow-state.
+  assert.match(
+    s,
+    /WEUSEAI_FLOW_STATE_URL=https:\/\/gtjgsligllbjcisiyrah\.supabase\.co\/functions\/v1\/flow-state/,
+  )
+})
+
+test('script (Week 2): flow-state URL tracks a workflowExecuteUrl override', () => {
+  const s = buildSetupScript({
+    ...baseParams,
+    bundleTarBase64: FAKE_BUNDLE_BASE64,
+    workflowExecuteUrl: 'https://staging.example.co/functions/v1/workflow-execute',
+  })
+  assert.match(
+    s,
+    /WEUSEAI_FLOW_STATE_URL=https:\/\/staging\.example\.co\/functions\/v1\/flow-state/,
+  )
+})
+
 test('script (2E-2): defaults agentSlug to "the-pro" when unspecified', () => {
   const s = buildSetupScript({
     ...baseParams,
