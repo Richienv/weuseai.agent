@@ -1,7 +1,7 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "the-pro",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description_id": "Bundle skill + template The Pro. Briefing pagi, ingatan lintas sesi, pendamping kerja harian.",
   "skills": [
     {
@@ -20,6 +20,16 @@
       "templates_used": [],
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:extend-capabilities",
+      "enabled_for_tiers": ["starter", "pro", "studio"]
+    },
+    {
+      "id": "customer-reply",
+      "skill_kind": "playbook",
+      "description_id": "Playbook lima langkah untuk menyusun balasan pesan masuk dalam gaya nulis customer. Klasifikasi, ingat thread, draft, lalu gerbang keras: kirim hanya setelah customer approve eksplisit.",
+      "description_en": "Five-step playbook that drafts a reply to an incoming message in the customer's learned voice. Classify, recall thread, draft, then a hard gate: sends only after explicit customer approval.",
+      "templates_used": [],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:customer-reply",
       "enabled_for_tiers": ["starter", "pro", "studio"]
     }
   ],
