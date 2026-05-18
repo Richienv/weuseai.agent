@@ -430,6 +430,8 @@ test('every pilot manifest skill handler_ref points to a known edge function, he
   // separate drift test.
   const knownHermesSkills = new Set([
     'extend-capabilities',
+    // The Pro (playbook)
+    'customer-reply',
     // Web Creator (v2)
     'landing-page-builder',
     'multi-page-site-builder',
