@@ -1,7 +1,7 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "deep-researcher",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description_id": "Bundle skill + template Deep Researcher v2. Riset topik kompleks dari banyak sumber, evaluasi kredibilitas per sumber, citation rapi per claim, dan sintesis jadi laporan terstruktur. Literature review, market analysis, competitor scan, kebijakan / regulasi research.",
   "skills": [
     {
@@ -38,6 +38,16 @@
       "templates_used": ["synthesis-structure.md"],
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:synthesis-report",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
+      "id": "market-research",
+      "skill_kind": "playbook",
+      "description_id": "Playbook riset pasar enam langkah — intake scope, kumpulkan sumber, grading kredibilitas, checkpoint tinjau sumber bersama customer, susun citation, lalu sintesis laporan. Merangkai web-research, source-evaluator, citation-builder, dan synthesis-report jadi satu alur yang tahan jeda antar pesan.",
+      "description_en": "Six-step market-research playbook — scope intake, source gathering, credibility grading, a customer checkpoint to review the graded source set, citation building, then report synthesis. Orchestrates web-research, source-evaluator, citation-builder, and synthesis-report into one gap-resilient flow.",
+      "templates_used": ["source-credibility-rubric.md", "synthesis-structure.md"],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:market-research",
       "enabled_for_tiers": ["pro", "studio"]
     },
     {
