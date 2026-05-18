@@ -148,6 +148,9 @@ Kita pakai NousResearch/hermes-agent (https://github.com/NousResearch/hermes-age
 - Bug di agent core → upstream issue, bukan kita fix
 - Update Hermes = re-install di VPS pelanggan, bukan rebuild image. Currently pinned to `v0.13.0` (HERMES_VERSION env override pulls a different tag on next-provisioned VPS).
 
+**Sanctioned upstream contribution (NOT a fork):** When a needed knob doesn't exist upstream, the path is a clean PR to NousResearch/hermes-agent — never a fork or local patch of the pinned install.
+- **PR #27771** (open, 2026-05-18) — `feat(config): add agent.sanitize_provider_errors`. Adds an opt-in config knob so a managed-service operator can replace the raw user-facing provider error (which leaks billing-dashboard URLs / account IDs / endpoint hosts on an exhausted 402/429) with a generic category-based message. Default `false` = legacy behavior. URL: https://github.com/NousResearch/hermes-agent/pull/27771 — if upstream rejects or stays dormant >60 days, escalate to founder.
+
 ---
 
 ## Security gates on the customer flow (pass-3, 2026-05-13)
