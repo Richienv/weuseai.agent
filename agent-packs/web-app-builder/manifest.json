@@ -1,7 +1,7 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "web-app-builder",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description_id": "Bundle skill + template Web Creator. Bikin website komplit (landing, multi-page, blog), deploy ke Vercel, sarankan domain Indonesia (Niagahoster, IDwebhost, Hostinger), dan extract data dari 6 situs Indonesia populer (Tokopedia, Shopee, Glints, Kompas, OLX, Lamudi) — Phase 4-3 seed skills, DRAFT scaffolding sampai founder graduate via Autobrowse.",
   "skills": [
     {
@@ -61,6 +61,23 @@
       ],
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:domain-advisory",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
+      "id": "site-launch",
+      "skill_kind": "playbook",
+      "description_id": "Playbook 6 langkah yang membawa satu website dari brief sampai live — intake, build, checkpoint review preview lokal, deploy ke preview, checkpoint approve URL preview, lalu promote ke production. Dua titik henti supaya customer cek hasil sebelum lanjut.",
+      "description_en": "Six-step playbook that takes a website from brief to live — intake, build, local-preview review checkpoint, preview deploy, preview-URL approval checkpoint, then production promote. Two checkpoints so the customer reviews before each next stage.",
+      "templates_used": [
+        "landing/saas/v1.html",
+        "landing/agency/v1.html",
+        "landing/course/v1.html",
+        "landing/portfolio/v1.html",
+        "landing/ecommerce/v1.html",
+        "multipage/umkm-default/v1"
+      ],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:site-launch",
       "enabled_for_tiers": ["pro", "studio"]
     },
     {
