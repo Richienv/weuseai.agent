@@ -453,6 +453,8 @@ test('every pilot manifest skill handler_ref points to a known edge function, he
     'task-decomposer',
     'multi-agent-router',
     'progress-monitor',
+    // Project Conductor (v2.1 — playbook)
+    'project-orchestration',
     // Business Director (v2.1 — Phase 5-2 dept packs replace department-task-spawner)
     'business-roadmap-tracker',
     'incorporation-advisor',

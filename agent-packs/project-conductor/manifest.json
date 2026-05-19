@@ -1,7 +1,7 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "project-conductor",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description_id": "Bundle skill + template Project Conductor v2 (renamed dari Macro Strategist). Kanban orchestrator pakai Hermes v0.13.0 native — bagi project jadi task, spawn specialist agents per task, monitor dashboard, weekly recap. Tier change v1: Studio → v2: Pro+.",
   "skills": [
     {
@@ -47,6 +47,16 @@
       "templates_used": [],
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:extend-capabilities",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
+      "id": "project-orchestration",
+      "skill_kind": "playbook",
+      "description_id": "Playbook enam langkah yang menjalankan satu project dari goal sampai eksekusi terpantau — decompose jadi task, bangun kanban, checkpoint approve plan plus owner, dispatch ke specialist agent, lalu monitor progress sampai selesai.",
+      "description_en": "Six-step playbook that runs a project from goal to monitored execution — decompose into tasks, build the kanban, a plan-and-owner approval checkpoint, dispatch to specialist agents, then monitor progress to completion.",
+      "templates_used": [],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:project-orchestration",
       "enabled_for_tiers": ["pro", "studio"]
     }
   ],
