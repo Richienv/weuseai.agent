@@ -1,7 +1,7 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "business-agent",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "description_id": "Master Agent Business Director v3 (Phase 5). Panduin pelanggan Indonesia dari ide ke launched company dengan first 10 paying customers. 5-tahap roadmap (Idea → Setup → Identity → Build → Sell) — state persisted di business_roadmap_state. Dispatch ke 5 department packs (Sales, Marketing, Engineering, Legal, Finance) facade-routing ke specialist persona. Approval queue untuk irreversible actions (incorporate, contract_sign, public_emission, regulatory_filing) dengan per-action expiry. Cross-session memory via bd_decisions_log. Studio-tier only (phase_5_enabled gate).",
   "skills": [
     {
@@ -29,6 +29,16 @@
       "templates_used": ["compliance/indonesian-due-dates.md"],
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:compliance-checker",
+      "enabled_for_tiers": ["studio"]
+    },
+    {
+      "id": "compliance-cycle",
+      "skill_kind": "playbook",
+      "description_id": "Playbook siklus compliance berkala — identifikasi kewajiban jatuh tempo, kumpulkan input filing, siapkan draft, gerbang keras persetujuan filing via approval queue, lalu serahkan filing siap submit. Lima langkah berurutan dijalankan flow-state engine; gerbang keras membuka approval_requests regulatory_filing 48 jam. Studio-tier only.",
+      "description_en": "Recurring compliance-cycle playbook — identify due obligations, gather filing inputs, prepare the draft, hard-gate filing approval through the approval queue, then deliver a submit-ready filing. Five sequential steps run by the flow-state engine; the hard-gate opens a 48-hour regulatory_filing approval_requests row. Studio-tier only.",
+      "templates_used": ["compliance/indonesian-due-dates.md"],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:compliance-cycle",
       "enabled_for_tiers": ["studio"]
     },
     {
