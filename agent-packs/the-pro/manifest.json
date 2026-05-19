@@ -1,7 +1,7 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "the-pro",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description_id": "Bundle skill + template The Pro. Briefing pagi, ingatan lintas sesi, pendamping kerja harian.",
   "skills": [
     {
@@ -45,6 +45,18 @@
       "kind": "fixture",
       "description_id": "Mock Gmail fixture (10 emails: 3 important + 5 noise + 2 follow-up).",
       "best_for": "Demo + integration testing"
+    },
+    {
+      "id": "mocks/calendar/empty.json",
+      "kind": "fixture",
+      "description_id": "Mock calendar fixture untuk skenario hari kosong (tidak ada acara). Pasangan typical-day untuk menguji jalur briefing tanpa kalender.",
+      "best_for": "Empty-state testing — briefing path with no calendar events"
+    },
+    {
+      "id": "mocks/gmail/empty.json",
+      "kind": "fixture",
+      "description_id": "Mock Gmail fixture untuk skenario kotak masuk kosong (tidak ada email). Pasangan typical-day untuk menguji jalur briefing tanpa email.",
+      "best_for": "Empty-state testing — briefing path with no email"
     }
   ],
   "self_extend": true,

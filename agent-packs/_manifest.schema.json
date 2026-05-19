@@ -26,7 +26,8 @@
       "minItems": 1,
       "items": {
         "type": "object",
-        "required": ["id", "description_id", "execution", "handler_ref", "tier"],
+        "comment": "tier is deprecated (Phase 2E-2) — use enabled_for_tiers. Neither is required at the schema layer; validateManifest enforces the 'at least one present' cross-field invariant and translates legacy tier -> enabled_for_tiers.",
+        "required": ["id", "description_id", "execution", "handler_ref"],
         "properties": {
           "id": {
             "type": "string",
@@ -63,7 +64,14 @@
           },
           "tier": {
             "type": "string",
-            "enum": ["starter", "pro", "studio"]
+            "enum": ["starter", "pro", "studio"],
+            "description": "DEPRECATED (Phase 2E-2). Legacy single-tier field; translated to enabled_for_tiers by validateManifest. Use enabled_for_tiers in new manifests."
+          },
+          "enabled_for_tiers": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string", "enum": ["starter", "pro", "studio"] },
+            "description": "Canonical tier eligibility. Bundle-pull filters skills by intersecting the customer's tier with this array."
           }
         }
       }
