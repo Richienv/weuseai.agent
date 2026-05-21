@@ -1,8 +1,8 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "project-conductor",
-  "version": "2.1.0",
-  "description_id": "Bundle skill + template Project Conductor v2 (renamed dari Macro Strategist). Kanban orchestrator pakai Hermes v0.13.0 native — bagi project jadi task, spawn specialist agents per task, monitor dashboard, weekly recap. Tier change v1: Studio → v2: Pro+.",
+  "version": "2.2.0",
+  "description_id": "Bundle skill + template Project Conductor v2 (renamed dari Macro Strategist). Kanban orchestrator pakai Hermes v0.13.0 native — bagi project jadi task, spawn specialist agents per task, monitor dashboard, weekly recap. Tier change v1: Studio → v2: Pro+. v2.1: tambah playbook project-orchestration. v2.2: tambah playbook pt-perorangan-registration — 7 langkah memandu customer membuka PT Perorangan dari nol sampai akun Xendit produksi aktif, dengan 6 gerbang keras yang membuka approval_requests untuk tiap langkah berbiaya.",
   "skills": [
     {
       "id": "kanban-orchestrator",
@@ -57,6 +57,16 @@
       "templates_used": [],
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:project-orchestration",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
+      "id": "pt-perorangan-registration",
+      "skill_kind": "playbook",
+      "description_id": "Playbook tujuh langkah yang memandu customer membuka PT Perorangan dari nol sampai akun Xendit produksi aktif — intake plus cek kesiapan, kunci nama plus KBLI plus alamat plus modal, pendaftaran AHU (Rp 50 ribu PNBP), NPWP badan di Coretax, NIB di OSS-RBA, domisili plus rekening bank badan, lalu aktivasi Xendit. Enam dari tujuh langkah adalah gerbang keras yang membuka approval_requests action_kind incorporate (14 hari) atau regulatory_filing (48 jam) — tiap langkah berbiaya menahan run di status escalated sampai customer setuju eksplisit. Alur multi-hari, sekitar 10 sampai 18 hari kalender ujung ke ujung. Project Conductor tidak login portal pemerintah, tidak bayar PNBP, dan tidak buka rekening atas nama customer.",
+      "description_en": "Seven-step playbook that walks a customer from zero to a live Xendit production account by registering a PT Perorangan — intake and readiness check, lock company name plus KBLI plus address plus capital, AHU registration (Rp 50k PNBP), Coretax company NPWP, OSS-RBA NIB, domicile plus business bank account, then Xendit activation. Six of seven steps are hard-gates that open approval_requests of action_kind incorporate (14 days) or regulatory_filing (48 hours) — every cost-bearing step parks the run as escalated until the customer explicitly approves. Multi-day flow, roughly 10 to 18 calendar days end to end. Project Conductor does not log into government portals, does not pay PNBP, and does not open accounts on behalf of the customer.",
+      "templates_used": [],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:pt-perorangan-registration",
       "enabled_for_tiers": ["pro", "studio"]
     }
   ],
