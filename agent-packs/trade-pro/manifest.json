@@ -1,8 +1,8 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "trade-pro",
-  "version": "2.1.0",
-  "description_id": "Bundle skill + template Trade Pro v2.1. Briefing pasar pagi, alert saham + crypto, ringkas laporan keuangan emiten, plus IDR/BI rate watcher (pindahan dari Macro Strategist) + Bitget read-only (P1). v2.1 menambah template format briefing, schema alert, format earnings, dan rate-watch reference.",
+  "version": "2.2.0",
+  "description_id": "Bundle skill + template Trade Pro v2.2. Briefing pasar pagi, alert saham + crypto, ringkas laporan keuangan emiten, plus IDR/BI rate watcher (pindahan dari Macro Strategist) + Bitget read-only (P1). v2.1 menambah template format briefing, schema alert, format earnings, dan rate-watch reference. v2.2 menambah playbook bitget-onboarding — alur 8 langkah memandu pemasangan API key Bitget dengan verifikasi scope read-only di sisi platform sebelum akses dibuka.",
   "skills": [
     {
       "id": "market-briefing",
@@ -47,6 +47,16 @@
       "templates_used": [],
       "execution": "external-api",
       "handler_ref": "external:bitget-readonly",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
+      "id": "bitget-onboarding",
+      "skill_kind": "playbook",
+      "description_id": "Playbook 8 langkah memandu pemasangan API key Bitget dengan kontrak read-only. Akses surface bitget-readonly baru dibuka setelah scope key diverifikasi bersih lewat panggilan permissions Bitget. Gerbang keras langkah 7 menahan akses inline platform-side tanpa membuka baris approval — kalau scope keliru, customer regenerate key, paste ulang, dan verifikasi diulang sampai bersih.",
+      "description_en": "Eight-step playbook that walks customer through Bitget API key setup with a read-only contract. Access to the bitget-readonly surface unlocks only after the key's scope is verified clean via a Bitget permissions call. Step 7's hard gate rejects inline platform-side without opening an approval row — if scope is wrong, customer regenerates the key, re-pastes, and verification re-runs until clean.",
+      "templates_used": [],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:bitget-onboarding",
       "enabled_for_tiers": ["pro", "studio"]
     },
     {
