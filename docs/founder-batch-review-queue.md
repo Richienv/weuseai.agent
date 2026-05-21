@@ -20,7 +20,9 @@ bundle tarball contains the playbook SKILL.md.
 | 1 | [#151](https://github.com/Richienv/weuseai.agent/pull/151) | **web-app-builder `site-launch` playbook** — 6 steps, 2 checkpoints, 0 hard-gates (build → preview → approve → deploy). | Content quality + persona-voice judgment | ~25 min | Low — lowest-risk Phase 2 playbook, no money/legal surface |
 | 2 | [#152](https://github.com/Richienv/weuseai.agent/pull/152) | **project-conductor `project-orchestration` playbook** — 6 steps, 1 checkpoint, includes the monitoring loop-step pattern. | Content quality + the loop-step explanation | ~25 min | Low |
 | 3 | [#153](https://github.com/Richienv/weuseai.agent/pull/153) | **business-agent `compliance-cycle` playbook** — 5 steps, 1 checkpoint, **1 hard-gate per filing** wired through `approval_requests` (per your Q2 confirmation). | First playbook composing flow-state + approval_requests — verify the composition reads cleanly to a customer | ~30 min | Medium — defines the composition pattern PT-registration will copy |
-| 4 | TBD (agent in flight) | **project-conductor `pt-perorangan-registration` playbook** — ~7 steps, 5–6 hard-gates, headline deliverable. Real money, multi-day flow. | Highest-stakes playbook — every step needs your eye | ~45 min | High — this is the headline; correctness here determines whether the workstream pays off |
+| 4 | [#154](https://github.com/Richienv/weuseai.agent/pull/154) | **project-conductor `pt-perorangan-registration` playbook** — 7 steps, 1 checkpoint + 6 hard-gates, headline deliverable. Multi-day flow (3–10+ day waits on AHU / Coretax / OSS / Xendit). Each hard-gate wired through `approval_requests` (`incorporate` action_kind, 14d expiry; step 6 uses `regulatory_filing`, 48h). | Highest-stakes playbook — every step needs your eye. Verify the action-plan specifics (KBLI gotcha, virtual-office advice, ~Rp 1.5–2.5jt service-assisted estimate) land right. | ~45 min | High — this is the headline; correctness here determines whether the workstream pays off |
+
+**⚠ Version conflict:** PR #152 (project-orchestration) AND PR #154 (PT-registration) both bump `project-conductor` 2.0.0 → 2.1.0. Whichever you merge SECOND will need a rebase to 2.2.0 + manual merge of the `skills[]` array. I'll handle the rebase after your APPROVED — no founder action needed beyond the per-PR APPROVED verdict.
 
 **Phase 1 playbooks** (PR #143 deep-researcher market-research / #144 slide-master pitch-deck / #145 the-pro customer-reply) are merged + published. You'll batch-retest all 6 live in one session per the autonomous-mode plan.
 
@@ -49,6 +51,21 @@ bundle tarball contains the playbook SKILL.md.
 |---|---|---|
 | Phase 1 Week 1 audit: composable playbook-of-playbooks (per-persona playbooks as project-conductor steps) — RESOLVED by Q3: shipping flat in Phase 2, composition deferred to Phase 3 post-PMF. | Closed | 0 min |
 | Worktree-isolation hiccup (agents reported `isolation: worktree` not taking effect during Phase 2 Wk2) — task #6, low priority, parking as post-cascade item if non-trivial. | Sesi A | ~5 min FYI |
+| **Phase 3 Week 1 audit landed (`docs/audits/2026-05-18-phase-3-persona-playbook-audit.md`)** — 5 playbook candidates recommended: trade-pro `bitget-onboarding`, project-conductor `weekly-recap-cycle`, social-conductor `voice-onboarding`, business-agent `finance-cycle`, social-conductor `campaign-execution`. Audit confirms the Cowork-pre-resolved persona set is the right one. One soft dependency (`weekly-recap-cycle` ⇒ #152 merged) and one hard (`finance-cycle` ⇒ #153 merged) — the build order I'll follow sequences `finance-cycle` at position #4 so #153 has time to land. | FYI only — Cowork drives Phase 3 authoring during the hands-off window | ~10 min skim |
+
+---
+
+## D2. Phase 3 content authoring (Cowork autonomous, no founder review needed pre-batch)
+
+These will be authored during the hands-off window using the proven Phase 2 Week 2 pattern (parallel agents, one playbook each). When founder returns, they'll appear in **section A** as additional PRs awaiting per-PR APPROVED.
+
+| # | Persona | Playbook | Step count | Gate profile | Dependency |
+|---|---|---|---|---|---|
+| 1 | trade-pro | `bitget-onboarding` | ~8 | 1 checkpoint, 1 hard-gate (no approval_requests — inline platform reject) | None |
+| 2 | project-conductor | `weekly-recap-cycle` | 6–7 | 1 conditional checkpoint | Soft — wants #152 merged for consistency |
+| 3 | social-conductor | `voice-onboarding` | ~6 | 1 checkpoint | None |
+| 4 | business-agent | `finance-cycle` | ~8 | 1+ hard-gate per filing (`regulatory_filing`, 48h approval_requests) | **Hard — needs #153 merged first** (mirrors compliance-cycle pattern) |
+| 5 | social-conductor | `campaign-execution` | ~8 | 2 checkpoints | None |
 
 ---
 
