@@ -62,6 +62,21 @@ bundle-publish pipeline (`scripts/publish-persona-bundles.mjs` copies the pack
 tree wholesale) and Hermes skill discovery recognise. The playbook is
 distinguished from a single-shot skill purely by its manifest entry's
 `skill_kind: "playbook"` discriminator and the `## Langkah-langkah` section in
-its SKILL.md — no new file type, no new distribution mechanism. Future template
+its SKILL.md — no new file type, no new distribution mechanism. The drift gate
+at `tests/playbook-skill-md-drift.spec.ts` (Phase 2 Wk3) catches manifest /
+SKILL.md drift automatically on every new playbook PR. Future template
 / playbook authors: follow the directory form; the `.flow.md` shorthand seen in
 some planning notes is not a real on-disk convention.
+
+**Agent worktree isolation — operational gotcha (Phase 3, 2026-05-18).** The
+Claude `Agent` tool's `isolation: "worktree"` mode requires the *dispatching*
+shell's CWD to be inside a git repo at dispatch time. If the parent shell's
+CWD is one level above the repo (a common state when a session opens at a
+project root that contains the repo as a sibling directory), the Agent tool
+errors with "Cannot create agent worktree: not in a git repository" before
+the agent ever runs. The workaround that worked all session: `cd` into the
+repo immediately before each `Agent` call, OR omit `isolation: "worktree"`
+and have the agent prompt instruct the agent to create its own branch off
+`main` inside the shared main working tree (the same pattern the Phase 2 Wk2
+agents fell back to when their isolation hiccupped). Either way the resulting
+PR is clean. No code fix needed — this is a dispatch-time operational rule.
