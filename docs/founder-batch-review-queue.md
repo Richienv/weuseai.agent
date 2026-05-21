@@ -24,11 +24,12 @@ bundle tarball contains the playbook SKILL.md.
 | 5 | [#155](https://github.com/Richienv/weuseai.agent/pull/155) | **trade-pro `bitget-onboarding` playbook** — 8 steps, 1 checkpoint + 1 hard-gate (**inline-platform** — no `approval_requests`; Bitget's permissions endpoint is the durable ledger). The hard-gate proves that not every irreversible gate needs `approval_requests` when the platform itself is the durable yes/no — contrast with #153 and #154 which both do. | Verify the "Gerbang keras tanpa baris approval terpisah" `Cara kerja` explanation reads cleanly + the read-only scope guard reads as customer-protective | ~30 min | Medium — sets the precedent for inline-platform gates in future playbooks |
 | 6 | [#156](https://github.com/Richienv/weuseai.agent/pull/156) | **social-conductor `voice-onboarding` playbook** — 6 steps, 1 checkpoint, 0 hard-gates. Customer rates 5 trial drafts in Langkah 5 before voice-locker activates the profile for downstream drafting. Content-only, no money/legal surface. | Content quality + brand-voice judgment on whether the activation/re-lock UX feels right | ~20 min | Low |
 | 7 | [#157](https://github.com/Richienv/weuseai.agent/pull/157) | **social-conductor `campaign-execution` playbook** — 8 steps, 2 checkpoints + 0 hard-gates. Step 6 is a **recurring per-slot checkpoint** (loop-inside-a-step, mirrors project-orchestration's monitoring loop): cron fires H-2 reminders per scheduled slot, each parks `awaiting_customer` for that slot only, cursor doesn't move until every slot reaches `posted`/`skipped`. Steps 4/5/8 also use loop-inside-a-step (fan-out: stage slots, pre-draft per slot, daily engagement digest). | Verify the loop-inside-a-step explanation lands cleanly + the H-2 cron handoff is unambiguous | ~30 min | Medium — proves the recurring-checkpoint pattern; informs future scheduled-flow playbooks |
+| 8 | [#158](https://github.com/Richienv/weuseai.agent/pull/158) | **project-conductor `weekly-recap-cycle` playbook** — 7 steps, 1 **conditional** checkpoint, 0 hard-gates. Langkah 6's gate reads `state_data.audience`: `checkpoint` (park `awaiting_customer`) when audience is non-self (team/client/board), `none` (auto-deliver) when audience is self. Introduces a new gate-syntax convention — Phase 4 audit may normalize, but the audit endorsed the inline `kalau X · kalau Y` notation. Style-paired with #152 (read project-orchestration's branch before drafting). | Verify the conditional-gate syntax reads cleanly + content quality | ~25 min | Low — content-only flow, but the new conditional convention sets future precedent |
 
 **⚠ Version conflicts** (all post-APPROVED Sesi A handles via rebase; no founder action beyond APPROVED):
-- **project-conductor**: PR #152 (project-orchestration) AND PR #154 (PT-registration) AND PR #TBD (weekly-recap-cycle, in flight) all bump from 2.0.0 → will land at 2.1.0 / 2.2.0 / 2.3.0 after merge sequencing.
-- **social-conductor**: PR #156 (voice-onboarding) AND PR #157 (campaign-execution) both bump 2.0.0 → 2.1.0; whichever merges second rebases to 2.2.0.
-- **trade-pro**: PR #155 stands alone — no conflict.
+- **project-conductor (3-way):** PR #152 (project-orchestration, 2.1.0) + PR #154 (pt-perorangan-registration, 2.1.0) + PR #158 (weekly-recap-cycle, **2.2.0** — already bumped two steps to acknowledge the third bumper). Merge sequence + rebase chain is mine; final version after all three land = 2.3.0.
+- **social-conductor (2-way):** PR #156 (voice-onboarding, 2.1.0) + PR #157 (campaign-execution, 2.1.0). Whichever merges second rebases to 2.2.0.
+- **trade-pro:** PR #155 stands alone — no conflict.
 
 **Phase 1 playbooks** (PR #143 deep-researcher market-research / #144 slide-master pitch-deck / #145 the-pro customer-reply) are merged + published. You'll batch-retest all 6 live in one session per the autonomous-mode plan.
 
@@ -63,25 +64,37 @@ bundle tarball contains the playbook SKILL.md.
 
 ## D2. Phase 3 content authoring (Cowork autonomous, no founder review needed pre-batch)
 
-These will be authored during the hands-off window using the proven Phase 2 Week 2 pattern (parallel agents, one playbook each). When founder returns, they'll appear in **section A** as additional PRs awaiting per-PR APPROVED.
+Authored during the hands-off window using the proven Phase 2 Week 2 pattern. **4 of 5 landed** — they're in **section A** as PRs awaiting per-PR APPROVED. The 5th (`finance-cycle`) is hard-blocked on PR #153 (compliance-cycle) merging — it copies that PR's `approval_requests` composition.
 
-| # | Persona | Playbook | Step count | Gate profile | Dependency |
-|---|---|---|---|---|---|
-| 1 | trade-pro | `bitget-onboarding` | ~8 | 1 checkpoint, 1 hard-gate (no approval_requests — inline platform reject) | None |
-| 2 | project-conductor | `weekly-recap-cycle` | 6–7 | 1 conditional checkpoint | Soft — wants #152 merged for consistency |
-| 3 | social-conductor | `voice-onboarding` | ~6 | 1 checkpoint | None |
-| 4 | business-agent | `finance-cycle` | ~8 | 1+ hard-gate per filing (`regulatory_filing`, 48h approval_requests) | **Hard — needs #153 merged first** (mirrors compliance-cycle pattern) |
-| 5 | social-conductor | `campaign-execution` | ~8 | 2 checkpoints | None |
+| # | Persona | Playbook | Status |
+|---|---|---|---|
+| 1 | trade-pro | `bitget-onboarding` | ✅ PR #155 open (see section A row 5) |
+| 2 | project-conductor | `weekly-recap-cycle` | ✅ PR #158 open (see section A row 8) |
+| 3 | social-conductor | `voice-onboarding` | ✅ PR #156 open (see section A row 6) |
+| 4 | business-agent | `finance-cycle` | ⏸ **BLOCKED on #153 merge** — will dispatch as soon as you APPROVE + I merge #153 |
+| 5 | social-conductor | `campaign-execution` | ✅ PR #157 open (see section A row 7) |
 
 ---
 
 ## E. Recommended batch-session sequence (when you return)
 
-~3 hours total:
-1. **20 min** — read this doc top-to-bottom, prioritize.
-2. **2 hours** — read all 4 Phase 2 playbook PRs (#151/#152/#153/#PT-registration) + leave APPROVED / CHANGES comments.
-3. **60 min** — live retest of all 6 personas (Phase 1 + Phase 2), reply per persona.
-4. **~5 min** — rotate `XENDIT_API_KEY` if you're ready for the first real customer (optional).
-5. Anything in CHANGES → Sesi A iterates that PR, re-pings.
+**Total queue: 8 PRs open (4 Phase 2 + 4 Phase 3), ~3.5–4 hours founder time.**
 
-After your batch session lands: I run `publish:bundles` for any newly-merged playbooks, verify the bundle tarballs, and clean up.
+Suggested order:
+1. **15 min** — read this doc top-to-bottom, prioritize.
+2. **~2.5 hours** — read all 8 playbook PRs in section A + leave APPROVED / CHANGES comments. Suggested reading order:
+   - **Phase 2 first** (these are merged downstream):
+     - #151 site-launch (lowest stakes warm-up, ~25 min)
+     - #152 project-orchestration (~25 min)
+     - #153 compliance-cycle (~30 min — composition pattern; APPROVING this unblocks Phase 3 finance-cycle authoring)
+     - #154 pt-perorangan-registration (~45 min — headline, save your eye for this when fresh)
+   - **Phase 3 second**:
+     - #155 bitget-onboarding (~30 min — inline-platform gate precedent)
+     - #156 voice-onboarding (~20 min — content-only)
+     - #157 campaign-execution (~30 min — recurring-checkpoint precedent)
+     - #158 weekly-recap-cycle (~25 min — conditional-gate precedent)
+3. **~60 min** — live retest pass of the Phase 1 (already live) personas + any Phase 2/3 personas you've merged. (Use the per-persona script from the prior ping — open weuseai-agent.vercel.app incognito → pay test → pick persona → trigger playbook → walk 3+ steps → reply WORKS / CHANGES.)
+4. **~5 min** — rotate `XENDIT_API_KEY` if ready for first real customer (optional).
+5. CHANGES verdicts → I iterate the specific PR, re-ping.
+
+After your batch session lands: I merge approved PRs in dependency order (Phase 2 first so the project-conductor 3-way + social-conductor 2-way rebases chain cleanly), run `publish:bundles` for each, verify each bundle tarball contains its SKILL.md, dispatch the `finance-cycle` agent as soon as #153 lands, and update this doc.
