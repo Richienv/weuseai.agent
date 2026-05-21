@@ -1,7 +1,7 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "social-conductor",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description_id": "Bundle skill + template Social Conductor v2 (Option B scope). Content calendar, post drafting cross-platform, engagement log, voice-consistency checker. NO scraping, NO auto-post — kamu yang submit ke platform.",
   "skills": [
     {
@@ -65,6 +65,16 @@
       "templates_used": [],
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:extend-capabilities",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
+      "id": "voice-onboarding",
+      "skill_kind": "playbook",
+      "description_id": "Playbook enam langkah yang menyetel voice brand customer sebelum draft mode aktif — intake, kumpulkan minimum 20 sample, lock profile via voice-locker, generate 5 draft uji coba, checkpoint rate-fit, lalu aktifkan atau re-lock berdasarkan rating.",
+      "description_en": "Six-step playbook that locks the customer's brand voice before drafting goes live — intake, collect at least 20 samples, lock the profile via voice-locker, generate 5 test drafts, a rate-the-fit checkpoint, then activate or re-lock based on the rating.",
+      "templates_used": [],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:voice-onboarding",
       "enabled_for_tiers": ["pro", "studio"]
     }
   ],
