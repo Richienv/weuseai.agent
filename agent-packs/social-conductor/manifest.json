@@ -1,7 +1,7 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "social-conductor",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description_id": "Bundle skill + template Social Conductor v2 (Option B scope). Content calendar, post drafting cross-platform, engagement log, voice-consistency checker. NO scraping, NO auto-post — kamu yang submit ke platform.",
   "skills": [
     {
@@ -56,6 +56,16 @@
       "templates_used": ["campaign-template.md"],
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:campaign-planner",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
+      "id": "campaign-execution",
+      "skill_kind": "playbook",
+      "description_id": "Playbook 8 langkah yang menjalankan satu campaign multi-minggu dari plan sampai semua slot terposting dan engagement tertangani. Dua titik henti: customer approve plan di awal, lalu reminder H-2 per slot sebelum jam posting target. Posting tetap kamu yang submit, aku draft dan ingatkan.",
+      "description_en": "8-step playbook running one multi-week campaign from plan through all slots posted and engagement tracked. Two checkpoints: plan approval at start, then recurring H-2 reminder per slot before posting time. Customer submits posts; agent drafts and reminds.",
+      "templates_used": ["campaign-template.md", "calendar-schema.md", "platform-length-rules.md", "voice-fit-rubric.md", "engagement-schema.md"],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:campaign-execution",
       "enabled_for_tiers": ["pro", "studio"]
     },
     {
