@@ -49,6 +49,10 @@
             "enum": ["skill", "playbook"],
             "description": "Discriminates a single-shot skill ('skill', the default when absent) from a multi-step playbook ('playbook' — SKILL.md carries a ## Langkah-langkah section of ordered gated steps, driven by the flow-state state-machine engine)."
           },
+          "template_fetch_required": {
+            "type": "boolean",
+            "description": "P1 strict template-fetch flow (2026-05-22 consult). When true, the SKILL.md must carry a ## Fetch template section instructing the agent to consult its persona's template library before improvising. Enforced by tests/template-fetch-required-drift.spec.ts."
+          },
           "templates_used": {
             "type": "array",
             "items": { "type": "string" },

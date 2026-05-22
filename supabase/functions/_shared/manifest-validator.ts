@@ -36,6 +36,16 @@ export type ManifestSkill = {
   description_en?: string
   /** Defaults to 'skill' when absent. */
   skill_kind?: SkillKind
+  /**
+   * P1 strict template-fetch flow (2026-05-22 consult). When true, the
+   * skill's SKILL.md must instruct the agent to consult its persona's
+   * template library before improvising — the body must carry a
+   * `## Fetch template` section. The template-fetch-required drift gate
+   * (`tests/template-fetch-required-drift.spec.ts`) enforces the
+   * SKILL.md body shape. Defaults to false when absent (legacy skills
+   * not yet migrated; opt-in per skill as templates land).
+   */
+  template_fetch_required?: boolean
   templates_used?: string[]
   execution: 'edge-function' | 'hermes-skill' | 'composite' | 'external-api'
   handler_ref: string
@@ -160,6 +170,7 @@ export const MANIFEST_SCHEMA = {
           description_id: { type: 'string', minLength: 10, maxLength: 500 },
           description_en: { type: 'string', minLength: 10, maxLength: 500 },
           skill_kind: { type: 'string', enum: ['skill', 'playbook'] },
+          template_fetch_required: { type: 'boolean' },
           templates_used: { type: 'array', items: { type: 'string' } },
           execution: {
             type: 'string',
