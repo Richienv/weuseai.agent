@@ -1,14 +1,14 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "doc-expert",
-  "version": "2.0.0",
-  "description_id": "Bundle skill + template Doc Expert v2. Bikin invoice, plus academic docs (skripsi BAB I-V, thesis, tugas, abstract) dengan citation styles APA/MLA/Chicago — konvensi Indonesia.",
+  "version": "2.1.0",
+  "description_id": "Bundle skill + template Doc Expert v2.1. Invoice (5 styles termasuk W-INVOICE profesional + minimal + recurring + PT/CV existing), proposal layanan + fixed-bid, report 3 panjang, email 4 register (formal / casual / urgent / apology), surat formal + memo internal + draft kontrak layanan, plus academic docs (skripsi BAB I-V, thesis, tugas, abstract) dengan citation styles APA / MLA / Chicago — konvensi Indonesia.",
   "skills": [
     {
       "id": "invoice-generator",
-      "description_id": "Bikin invoice profesional dari list item dan info klien. Output HTML + PDF (Phase 2E-3 pipeline) siap kirim atau cetak.",
-      "description_en": "Generate professional invoice from itemized client info. Returns HTML + PDF (Phase 2E-3 pipeline).",
-      "templates_used": ["invoice-pro.html"],
+      "description_id": "Bikin invoice profesional dari list item dan info klien. Output HTML + PDF (Phase 2E-3 pipeline) siap kirim atau cetak. Lima style template tersedia: invoice-pro (default), invoice-w-professional (W-style premium), invoice-minimal (single-page), invoice-recurring (subscription).",
+      "description_en": "Generate professional invoice from itemized client info. Returns HTML + PDF (Phase 2E-3 pipeline). Five style templates available: invoice-pro (default), invoice-w-professional (W-style premium), invoice-minimal (single-page), invoice-recurring (subscription).",
+      "templates_used": ["invoice-pro.html", "invoice-w-professional.html", "invoice-minimal.html", "invoice-recurring.html"],
       "execution": "edge-function",
       "handler_ref": "edge-fn:invoice-generator-handler",
       "enabled_for_tiers": ["starter", "pro", "studio"]
@@ -42,8 +42,98 @@
     {
       "id": "invoice-pro.html",
       "kind": "invoice",
-      "description_id": "Invoice profesional dengan PPN 11%, slot NPWP, footer brand weuseai.agent. Fit klien PT/CV (badan usaha) di Indonesia.",
-      "best_for": "Klien PT/CV (badan usaha)"
+      "description_id": "Invoice profesional default dengan PPN 11%, slot NPWP, footer brand weuseai.agent. Fit klien PT/CV (badan usaha) di Indonesia.",
+      "best_for": "Klien PT/CV (badan usaha) — default invoice"
+    },
+    {
+      "id": "invoice-w-professional.html",
+      "kind": "invoice",
+      "description_id": "Invoice W-style premium dengan serif header + INVOICE prominent kanan-atas, contact block, BILL TO + PROJECT DETAILS dua-kolom, tabel deliverables header gelap, TOTAL DUE menonjol, payment methods Indonesia (BCA / Mandiri / GoPay / OVO / DANA), terms + signature lines. Untuk freelancer / agency yang butuh tampilan business-grade.",
+      "best_for": "Premium business invoice — freelancer / agency klien B2B kelas korporat"
+    },
+    {
+      "id": "invoice-minimal.html",
+      "kind": "invoice",
+      "description_id": "Invoice single-page bare minimum — line items, total, info bank. Tanpa branding berat, tanpa PPN block, tanpa signature line. Untuk transaksi kecil yang nggak perlu invoice formal.",
+      "best_for": "Micro-merchant / freelancer untuk transaksi kecil sederhana"
+    },
+    {
+      "id": "invoice-recurring.html",
+      "kind": "invoice",
+      "description_id": "Invoice untuk subscription bulanan — billing period, next-bill-date, auto-renew note, slot untuk recurring item dengan periode jelas. Pas untuk SaaS, retainer bulanan, sewa.",
+      "best_for": "Subscription / retainer bulanan — explicit periodicity"
+    },
+    {
+      "id": "proposal-services.md",
+      "kind": "proposal",
+      "description_id": "Proposal layanan untuk klien B2B yang sudah punya minat awal tapi belum committed. Struktur: problem → approach → scope → timeline → investment → next steps. Markdown untuk LLM-filling mudah.",
+      "best_for": "B2B service proposal — decision-maker UMKM / corporate"
+    },
+    {
+      "id": "proposal-fixed-bid.md",
+      "kind": "proposal",
+      "description_id": "Proposal harga tetap (fixed-price) untuk proyek scope-jelas dengan milestone + deliverable per milestone. Cocok kalau klien butuh kepastian budget dan timeline.",
+      "best_for": "Fixed-price project proposal — milestone-driven"
+    },
+    {
+      "id": "report-brief.md",
+      "kind": "report",
+      "description_id": "Laporan eksekutif 1-halaman: TL;DR + 3 temuan kunci + rekomendasi. Audience: executive / decision-maker yang punya <5 menit baca.",
+      "best_for": "1-page exec brief — quick decision input"
+    },
+    {
+      "id": "report-standard.md",
+      "kind": "report",
+      "description_id": "Laporan standar 3-5 halaman: executive summary + temuan terstruktur + detail + langkah berikutnya + appendix. Untuk middle management / cross-functional stakeholder.",
+      "best_for": "3-5 page standard report — middle management"
+    },
+    {
+      "id": "report-full.md",
+      "kind": "report",
+      "description_id": "Laporan long-form 10+ halaman: cover, exec summary, metodologi, temuan, analisis mendalam, kesimpulan, appendix, sitasi. Untuk auditor / regulator / board / akademisi.",
+      "best_for": "Long-form full report — auditor / regulator / board"
+    },
+    {
+      "id": "email-formal.md",
+      "kind": "email",
+      "description_id": "Email bisnis formal untuk korespondensi resmi — first contact, surat menyurat antar institusi, atau email ke pihak yang belum dikenal. Anda form, no contractions, full sign-off.",
+      "best_for": "Formal first-contact business email — Anda form"
+    },
+    {
+      "id": "email-casual.md",
+      "kind": "email",
+      "description_id": "Email casual-profesional untuk hubungan kerja yang sudah cair — kolega di perusahaan lain, klien lama, partner kerja, freelancer langganan. Kamu form, conversational, brief.",
+      "best_for": "Casual professional email — known contact, kamu form"
+    },
+    {
+      "id": "email-urgent.md",
+      "kind": "email",
+      "description_id": "Email untuk minta tindakan cepat dengan deadline jelas — persetujuan tertunda, dokumen blocking, response <24 jam. Untuk stakeholder yang sudah dikenal, bukan first contact.",
+      "best_for": "Urgent action-required email — clear ask + deadline"
+    },
+    {
+      "id": "email-apology.md",
+      "kind": "email",
+      "description_id": "Email permohonan maaf / pengakuan kesalahan — keterlambatan, kesalahan teknis, miskomunikasi. Own the issue, fix yang ditawarkan, janji prevent-recurrence, tanpa berlebihan.",
+      "best_for": "Apology / problem-acknowledgment email"
+    },
+    {
+      "id": "letter-formal.md",
+      "kind": "letter",
+      "description_id": "Surat formal Bahasa Indonesia lengkap dengan Kop Surat, Nomor Surat, Salam Pembuka, Isi, Salam Penutup, dan tanda tangan. Untuk pihak eksternal yang butuh dokumen tertulis resmi (instansi pemerintah, mitra korporat, klien institusional).",
+      "best_for": "Formal Indonesian letter — institutional correspondence"
+    },
+    {
+      "id": "memo-internal.md",
+      "kind": "memo",
+      "description_id": "Memo internal untuk komunikasi resmi antar-divisi atau dari atasan ke bawahan dalam satu organisasi. Format Kepada / Dari / Perihal / Tanggal + body. Audit-trail-ready.",
+      "best_for": "Internal organizational memo — directive or notice"
+    },
+    {
+      "id": "contract-draft-services.md",
+      "kind": "contract",
+      "description_id": "Draft perjanjian kerja sama layanan untuk dua pihak (penyedia jasa + pengguna jasa) di yurisdiksi Indonesia. Para pihak, scope, fee, timeline, IP, terminasi, yurisdiksi. WAJIB direview oleh advokat sebelum tanda tangan — bukan nasihat hukum.",
+      "best_for": "Services contract DRAFT — pre-lawyer-review starting point only"
     },
     {
       "id": "academic/skripsi-bab-i.md",

@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Invoice {{invoice_number}} — {{billing_period_label}}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    color: #141413;
+    background: #faf9f5;
+    padding: 40px 24px;
+    line-height: 1.55;
+  }
+  .invoice {
+    max-width: 720px;
+    margin: 0 auto;
+    background: #ffffff;
+    padding: 48px;
+    border: 1px solid rgba(20, 20, 19, 0.08);
+  }
+
+  /* Recurring strip — visual cue that this is a subscription invoice */
+  .recurring-strip {
+    background: #141413;
+    color: #f5f4ef;
+    padding: 10px 16px;
+    margin: -48px -48px 32px;
+    font-size: 11.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .recurring-strip .badge { font-weight: 600; }
+  .recurring-strip .period { font-weight: 400; opacity: 0.85; }
+
+  .header {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+    margin-bottom: 32px;
+  }
+  .sender-name { font-size: 16px; font-weight: 600; color: #141413; }
+  .sender-detail { font-size: 12px; color: rgba(20, 20, 19, 0.65); margin-top: 3px; }
+  .stamp { text-align: right; }
+  .stamp .title {
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: rgba(20, 20, 19, 0.55);
+    margin-bottom: 4px;
+  }
+  .stamp .number { font-size: 17px; font-weight: 600; color: #141413; }
+  .meta-grid {
+    display: grid;
+    grid-template-columns: auto auto;
+    gap: 4px 14px;
+    margin-top: 10px;
+    font-size: 12px;
+    color: rgba(20, 20, 19, 0.65);
+    justify-content: end;
+    text-align: left;
+  }
+  .meta-grid .label {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 10px;
+    color: rgba(20, 20, 19, 0.5);
+    align-self: center;
+  }
+  .meta-grid .value { color: #141413; font-weight: 500; }
+
+  .billing-card {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 0;
+    margin-bottom: 32px;
+    border: 1px solid rgba(20, 20, 19, 0.12);
+  }
+  .billing-cell {
+    padding: 16px;
+    border-right: 1px solid rgba(20, 20, 19, 0.08);
+  }
+  .billing-cell:last-child { border-right: none; }
+  .billing-cell .cell-label {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(20, 20, 19, 0.55);
+    margin-bottom: 4px;
+  }
+  .billing-cell .cell-value {
+    font-size: 14px;
+    color: #141413;
+    font-weight: 500;
+  }
+  .billing-cell .cell-sub {
+    font-size: 11.5px;
+    color: rgba(20, 20, 19, 0.65);
+    margin-top: 2px;
+  }
+
+  .parties {
+    margin-bottom: 28px;
+  }
+  .parties .section-label {
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: rgba(20, 20, 19, 0.5);
+    margin-bottom: 6px;
+  }
+  .client-name { font-size: 14px; font-weight: 500; color: #141413; }
+  .client-detail { font-size: 12px; color: rgba(20, 20, 19, 0.65); margin-top: 2px; }
+
+  table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+  th {
+    text-align: left;
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: rgba(20, 20, 19, 0.55);
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(20, 20, 19, 0.18);
+    font-weight: 500;
+  }
+  th.right, td.right { text-align: right; }
+  td { font-size: 13px; padding: 12px 0; border-bottom: 1px solid rgba(20, 20, 19, 0.06); color: #141413; }
+
+  .totals {
+    margin-left: auto;
+    width: 280px;
+    margin-bottom: 32px;
+  }
+  .total-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px; color: rgba(20, 20, 19, 0.7); }
+  .total-row.grand {
+    margin-top: 6px;
+    padding-top: 12px;
+    border-top: 2px solid #141413;
+    font-size: 15.5px;
+    font-weight: 600;
+    color: #141413;
+  }
+
+  .auto-renew {
+    padding: 14px 18px;
+    background: #f5f4ef;
+    border: 1px solid rgba(20, 20, 19, 0.1);
+    font-size: 12px;
+    color: rgba(20, 20, 19, 0.75);
+    line-height: 1.7;
+    margin-bottom: 18px;
+  }
+  .auto-renew strong { color: #141413; font-weight: 500; }
+  .auto-renew .renew-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: rgba(20, 20, 19, 0.55);
+    margin-bottom: 6px;
+  }
+
+  .pay-line {
+    font-size: 12px;
+    color: rgba(20, 20, 19, 0.7);
+    line-height: 1.7;
+    margin-bottom: 24px;
+  }
+  .pay-line strong { color: #141413; font-weight: 500; }
+
+  .footer {
+    padding-top: 18px;
+    border-top: 1px solid rgba(20, 20, 19, 0.08);
+    font-size: 11px;
+    color: rgba(20, 20, 19, 0.5);
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+<div class="invoice">
+
+  <div class="recurring-strip">
+    <span class="badge">Invoice berlangganan</span>
+    <span class="period">Periode {{billing_period_label}}</span>
+  </div>
+
+  <div class="header">
+    <div>
+      <div class="sender-name">{{sender_name}}</div>
+      <div class="sender-detail">{{sender_email}}</div>
+      <div class="sender-detail">{{sender_phone}}</div>
+    </div>
+    <div class="stamp">
+      <div class="title">Invoice</div>
+      <div class="number">{{invoice_number}}</div>
+      <div class="meta-grid">
+        <div class="label">Diterbitkan</div><div class="value">{{issue_date}}</div>
+        <div class="label">Jatuh tempo</div><div class="value">{{due_date}}</div>
+        <div class="label">Subscription ID</div><div class="value">{{subscription_id}}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="billing-card">
+    <div class="billing-cell">
+      <div class="cell-label">Periode tagihan</div>
+      <div class="cell-value">{{billing_period_start}} — {{billing_period_end}}</div>
+      <div class="cell-sub">{{billing_cycle_label}} (mis. bulanan / tahunan)</div>
+    </div>
+    <div class="billing-cell">
+      <div class="cell-label">Tagihan berikutnya</div>
+      <div class="cell-value">{{next_bill_date}}</div>
+      <div class="cell-sub">{{next_bill_amount_formatted}}</div>
+    </div>
+    <div class="billing-cell">
+      <div class="cell-label">Status</div>
+      <div class="cell-value">Aktif</div>
+      <div class="cell-sub">Auto-renew menyala</div>
+    </div>
+  </div>
+
+  <div class="parties">
+    <div class="section-label">Ditagihkan kepada</div>
+    <div class="client-name">{{client_name}}</div>
+    <div class="client-detail">{{client_email}}</div>
+    <div class="client-detail">{{client_address}}</div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Layanan</th>
+        <th class="right">Qty</th>
+        <th class="right">Harga</th>
+        <th class="right">Subtotal</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{items_rows}}
+      <!--
+        Format per baris:
+        <tr>
+          <td>{{item_name}}<br><span style="font-size:11px;color:rgba(20,20,19,0.6);">{{item_description}}</span></td>
+          <td class="right">{{item_qty}}</td>
+          <td class="right">{{item_unit_price_formatted}}</td>
+          <td class="right">{{item_total_formatted}}</td>
+        </tr>
+      -->
+    </tbody>
+  </table>
+
+  <div class="totals">
+    <div class="total-row">
+      <span>Subtotal</span>
+      <span>{{subtotal_formatted}}</span>
+    </div>
+    <div class="total-row">
+      <span>PPN ({{tax_rate_percent}}%)</span>
+      <span>{{tax_formatted}}</span>
+    </div>
+    <div class="total-row grand">
+      <span>Total bulan ini</span>
+      <span>{{total_formatted}}</span>
+    </div>
+  </div>
+
+  <div class="auto-renew">
+    <div class="renew-label">Auto-renew</div>
+    Berlangganan ini diperpanjang otomatis pada <strong>{{next_bill_date}}</strong> dengan tagihan <strong>{{next_bill_amount_formatted}}</strong>.
+    Untuk berhenti berlangganan, kirim pemberitahuan minimal {{cancel_notice_days}} hari sebelum tanggal perpanjangan via email ke {{sender_email}}.
+    Pembatalan setelah tanggal perpanjangan akan berlaku untuk periode berikutnya.
+  </div>
+
+  <div class="pay-line">
+    Pembayaran transfer ke <strong>{{bank_name}}</strong> nomor <strong>{{bank_account_number}}</strong> a.n. <strong>{{bank_account_holder}}</strong>,
+    atau via e-wallet GoPay / OVO / DANA ke <strong>{{ewallet_number}}</strong>.
+    Cantumkan nomor invoice ({{invoice_number}}) pada keterangan transfer.
+  </div>
+
+  <div class="footer">
+    {{sender_name}} &middot; Dokumen ini diterbitkan elektronik dan sah tanpa cap basah.
+  </div>
+
+</div>
+</body>
+</html>

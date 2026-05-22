@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Invoice {{invoice_number}} — {{client_name}}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    color: #1a1a1a;
+    background: #f5f4ef;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .page {
+    max-width: 820px;
+    margin: 40px auto;
+    background: #ffffff;
+    padding: 56px 64px 48px;
+    border: 1px solid rgba(26, 26, 26, 0.08);
+  }
+
+  /* ── HEADER ─────────────────────────────────────────── */
+  .header {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+    align-items: flex-start;
+    margin-bottom: 40px;
+  }
+  .sender .logo {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    color: #1a1a1a;
+    margin-bottom: 12px;
+  }
+  .sender .contact-line {
+    font-size: 12px;
+    color: rgba(26, 26, 26, 0.7);
+    margin-top: 3px;
+  }
+  .invoice-title-block { text-align: right; }
+  .invoice-title {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 42px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: #1a1a1a;
+    line-height: 1;
+    margin-bottom: 20px;
+  }
+  .meta-grid {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 6px 14px;
+    font-size: 12px;
+    color: rgba(26, 26, 26, 0.75);
+    justify-content: end;
+    text-align: left;
+    width: max-content;
+    margin-left: auto;
+  }
+  .meta-grid .label {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(26, 26, 26, 0.5);
+    font-size: 10px;
+    align-self: center;
+  }
+  .meta-grid .value {
+    color: #1a1a1a;
+    font-weight: 500;
+  }
+
+  /* ── BILL TO + PROJECT DETAILS ──────────────────────── */
+  .parties {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    margin-bottom: 36px;
+    padding-top: 24px;
+    border-top: 1px solid rgba(26, 26, 26, 0.1);
+  }
+  .party .section-label {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: #1a1a1a;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid rgba(26, 26, 26, 0.18);
+  }
+  .party-name { font-size: 14px; font-weight: 500; color: #1a1a1a; margin-bottom: 4px; }
+  .party-detail { font-size: 12px; color: rgba(26, 26, 26, 0.7); margin-top: 2px; }
+
+  /* ── DELIVERABLES TABLE ─────────────────────────────── */
+  table.items {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 28px;
+  }
+  table.items thead th {
+    background: #1a1a1a;
+    color: #f5f4ef;
+    text-align: left;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 500;
+    padding: 12px 14px;
+  }
+  table.items thead th.right { text-align: right; }
+  table.items tbody td {
+    font-size: 13px;
+    padding: 14px;
+    border-bottom: 1px solid rgba(26, 26, 26, 0.08);
+    vertical-align: top;
+  }
+  table.items tbody td.right { text-align: right; }
+  table.items tbody tr:last-child td { border-bottom: 1px solid rgba(26, 26, 26, 0.18); }
+  .item-desc { color: #1a1a1a; font-weight: 500; }
+  .item-sub { color: rgba(26, 26, 26, 0.6); font-size: 12px; margin-top: 3px; }
+
+  /* ── TOTALS ─────────────────────────────────────────── */
+  .totals {
+    margin-left: auto;
+    width: 320px;
+    margin-bottom: 36px;
+  }
+  .total-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 14px;
+    font-size: 13px;
+  }
+  .total-row.subtotal { color: rgba(26, 26, 26, 0.7); }
+  .total-row.tax { color: rgba(26, 26, 26, 0.7); }
+  .total-row.grand {
+    margin-top: 6px;
+    padding: 14px;
+    background: #1a1a1a;
+    color: #f5f4ef;
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: 0.02em;
+  }
+  .total-row.grand .label-text { text-transform: uppercase; letter-spacing: 0.1em; font-size: 12px; }
+
+  /* ── PAYMENT METHODS ────────────────────────────────── */
+  .panel {
+    border-top: 1px solid rgba(26, 26, 26, 0.1);
+    padding-top: 22px;
+    margin-bottom: 22px;
+  }
+  .panel .section-label {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: #1a1a1a;
+    margin-bottom: 12px;
+  }
+  .payment-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  .payment-method {
+    font-size: 12px;
+    color: rgba(26, 26, 26, 0.75);
+  }
+  .payment-method .method-name {
+    color: #1a1a1a;
+    font-weight: 500;
+    margin-bottom: 2px;
+  }
+  .payment-method .method-detail { line-height: 1.6; }
+
+  /* ── TERMS ──────────────────────────────────────────── */
+  .terms {
+    font-size: 11.5px;
+    color: rgba(26, 26, 26, 0.7);
+    line-height: 1.7;
+    margin-bottom: 36px;
+  }
+
+  /* ── SIGNATURES ─────────────────────────────────────── */
+  .signatures {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 60px;
+    margin-bottom: 32px;
+    padding-top: 16px;
+  }
+  .signature-block { font-size: 12px; }
+  .signature-line {
+    border-top: 1px solid rgba(26, 26, 26, 0.4);
+    margin-top: 56px;
+    padding-top: 8px;
+  }
+  .signature-label {
+    font-family: 'Playfair Display', Georgia, serif;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-size: 10px;
+    color: rgba(26, 26, 26, 0.6);
+    font-weight: 600;
+  }
+  .signature-name { color: #1a1a1a; font-weight: 500; margin-top: 4px; font-size: 12.5px; }
+
+  /* ── FOOTER ─────────────────────────────────────────── */
+  .footer {
+    padding-top: 18px;
+    border-top: 1px solid rgba(26, 26, 26, 0.08);
+    font-size: 10.5px;
+    color: rgba(26, 26, 26, 0.5);
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+
+  @media print {
+    body { background: #ffffff; }
+    .page { margin: 0; border: none; padding: 32px 40px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="sender">
+      <div class="logo">{{sender_name}}</div>
+      <div class="contact-line">{{sender_address_line_1}}</div>
+      <div class="contact-line">{{sender_address_line_2}}</div>
+      <div class="contact-line">Telp: {{sender_phone}}</div>
+      <div class="contact-line">Email: {{sender_email}}</div>
+    </div>
+    <div class="invoice-title-block">
+      <div class="invoice-title">INVOICE</div>
+      <div class="meta-grid">
+        <div class="label">Tanggal</div><div class="value">{{issue_date}}</div>
+        <div class="label">Invoice #</div><div class="value">{{invoice_number}}</div>
+        <div class="label">PO #</div><div class="value">{{po_number}}</div>
+        <div class="label">Untuk</div><div class="value">{{for_subject}}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BILL TO + PROJECT DETAILS -->
+  <div class="parties">
+    <div class="party">
+      <div class="section-label">Ditagihkan kepada</div>
+      <div class="party-name">{{client_name}}</div>
+      <div class="party-detail">{{client_company}}</div>
+      <div class="party-detail">{{client_address_line_1}}</div>
+      <div class="party-detail">{{client_address_line_2}}</div>
+      <div class="party-detail">{{client_phone}}</div>
+      <div class="party-detail">{{client_email}}</div>
+    </div>
+    <div class="party">
+      <div class="section-label">Detail proyek</div>
+      <div class="party-name">{{project_title}}</div>
+      <div class="party-detail">Periode: {{project_period}}</div>
+      <div class="party-detail">Lokasi: {{project_location}}</div>
+      <div class="party-detail">PIC: {{project_pic}}</div>
+    </div>
+  </div>
+
+  <!-- DELIVERABLES TABLE -->
+  <table class="items">
+    <thead>
+      <tr>
+        <th style="width:54%">Deskripsi / Deliverables</th>
+        <th class="right" style="width:10%">Qty</th>
+        <th class="right" style="width:18%">Harga satuan</th>
+        <th class="right" style="width:18%">Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{items_rows}}
+      <!--
+        Setiap baris item di-render dengan format:
+        <tr>
+          <td>
+            <div class="item-desc">{{item_name}}</div>
+            <div class="item-sub">{{item_description}}</div>
+          </td>
+          <td class="right">{{item_qty}}</td>
+          <td class="right">{{item_unit_price_formatted}}</td>
+          <td class="right">{{item_total_formatted}}</td>
+        </tr>
+      -->
+    </tbody>
+  </table>
+
+  <!-- TOTALS -->
+  <div class="totals">
+    <div class="total-row subtotal">
+      <span>Subtotal</span>
+      <span>{{subtotal_formatted}}</span>
+    </div>
+    <div class="total-row tax">
+      <span>PPN ({{tax_rate_percent}}%)</span>
+      <span>{{tax_formatted}}</span>
+    </div>
+    <div class="total-row grand">
+      <span class="label-text">Total Jatuh Tempo</span>
+      <span>{{total_formatted}}</span>
+    </div>
+  </div>
+
+  <!-- PAYMENT METHODS -->
+  <div class="panel">
+    <div class="section-label">Metode Pembayaran</div>
+    <div class="payment-grid">
+      <div class="payment-method">
+        <div class="method-name">Transfer Bank — {{bank_primary_name}}</div>
+        <div class="method-detail">
+          Nomor rekening: {{bank_primary_account_number}}<br>
+          Atas nama: {{bank_primary_account_holder}}<br>
+          Cabang: {{bank_primary_branch}}
+        </div>
+      </div>
+      <div class="payment-method">
+        <div class="method-name">Transfer Bank — {{bank_secondary_name}}</div>
+        <div class="method-detail">
+          Nomor rekening: {{bank_secondary_account_number}}<br>
+          Atas nama: {{bank_secondary_account_holder}}<br>
+          Cabang: {{bank_secondary_branch}}
+        </div>
+      </div>
+      <div class="payment-method">
+        <div class="method-name">E-Wallet</div>
+        <div class="method-detail">
+          GoPay / OVO / DANA: {{ewallet_number}}<br>
+          Atas nama: {{ewallet_holder}}
+        </div>
+      </div>
+      <div class="payment-method">
+        <div class="method-name">QRIS</div>
+        <div class="method-detail">
+          Scan QR yang disertakan terpisah, atau hubungi {{sender_phone}} untuk request QR code.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TERMS -->
+  <div class="panel">
+    <div class="section-label">Syarat &amp; Ketentuan Pembayaran</div>
+    <div class="terms">
+      Pembayaran jatuh tempo dalam {{payment_terms_days}} hari kalender sejak tanggal invoice diterbitkan, paling lambat {{due_date}}.
+      Keterlambatan pembayaran lebih dari 14 hari setelah jatuh tempo akan dikenakan denda sebesar {{late_fee_percent}}% per bulan dari total tagihan.
+      Mohon cantumkan nomor invoice ({{invoice_number}}) pada keterangan transfer untuk mempermudah rekonsiliasi.
+      Bukti transfer dapat dikirim ke {{sender_email}} atau via WhatsApp ke {{sender_phone}}.
+    </div>
+  </div>
+
+  <!-- SIGNATURES -->
+  <div class="signatures">
+    <div class="signature-block">
+      <div class="signature-line">
+        <div class="signature-label">Authorized by</div>
+        <div class="signature-name">{{sender_authorized_name}}</div>
+        <div class="party-detail">{{sender_authorized_title}}</div>
+      </div>
+    </div>
+    <div class="signature-block">
+      <div class="signature-line">
+        <div class="signature-label">Client Signature</div>
+        <div class="signature-name">{{client_signatory_name}}</div>
+        <div class="party-detail">{{client_signatory_title}}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    {{sender_name}} &middot; {{sender_legal_note}} &middot; Dokumen ini diterbitkan secara elektronik dan sah tanpa cap basah.
+  </div>
+
+</div>
+</body>
+</html>
