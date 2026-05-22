@@ -1,7 +1,7 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "social-conductor",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "description_id": "Bundle skill + template Social Conductor v2 (Option B scope). Content calendar, post drafting cross-platform, engagement log, voice-consistency checker. NO scraping, NO auto-post — kamu yang submit ke platform.",
   "skills": [
     {
@@ -136,6 +136,54 @@
       "kind": "reference",
       "description_id": "Campaign plan template — phase, week-by-week deliverables, KPI hooks.",
       "best_for": "campaign-planner output frame"
+    },
+    {
+      "id": "platforms/instagram-post.md",
+      "kind": "post-template",
+      "description_id": "Template caption Instagram — hook line (≤220 char preview), body 2-4 paragraf pendek, CTA satu kalimat, 3-5 hashtag, max 1 emoji. Tone guide IG-aware: scroll-stopper hook, soft CTA, hindari forced engagement-bait.",
+      "best_for": "post-drafter saat platform=instagram (carousel atau single image)"
+    },
+    {
+      "id": "platforms/tiktok-script.md",
+      "kind": "post-template",
+      "description_id": "Template script TikTok 3-4 beat — hook ≤3 detik dengan visual + audio cue, setup, payoff, optional CTA. Caption terpisah ikut platform-length-rules. Tone guide TikTok-aware: 3-second rule, cut antar beat, voice dominan di beat hook.",
+      "best_for": "post-drafter saat platform=tiktok dan customer butuh script video, bukan caption only"
+    },
+    {
+      "id": "platforms/linkedin-post.md",
+      "kind": "post-template",
+      "description_id": "Template LinkedIn long-form — hook line drives see-more click, hook expansion, 3-4 paragraf single-sentence dengan line break, closer reflection atau soft CTA, 3-5 hashtag professional. Sweet spot 600-1300 char. Tone guide LinkedIn-aware: claim-driven opening, calm-reflective register.",
+      "best_for": "post-drafter saat platform=linkedin dan customer mau long-form post"
+    },
+    {
+      "id": "platforms/twitter-thread.md",
+      "kind": "post-template",
+      "description_id": "Template Twitter (X) thread — 1 hook tweet dengan 🧵 indikator, 5-10 body tweet bernomor, 1 CTA tweet dengan /end. Tiap tweet ≤280 char, target 250-280. Tone guide X-aware: satu ide per tweet, hashtag minimal (0-2), CTA opt-in.",
+      "best_for": "post-drafter saat platform=x dan customer minta thread, bukan single tweet"
+    },
+    {
+      "id": "content-calendar.md",
+      "kind": "calendar",
+      "description_id": "Template content calendar 4 minggu × 7 hari — grid markdown dengan kolom tanggal, hari, platform, post type, tema, status (draft→scheduled→posted), owner, copy URL. Bisa di-paste ke Google Sheets atau Notion database. Default sort by date asc, secondary platform.",
+      "best_for": "content-calendar-builder saat customer minta render-out yang bisa di-share atau di-paste"
+    },
+    {
+      "id": "campaign-brief.md",
+      "kind": "brief",
+      "description_id": "Template campaign brief satu halaman — goal, audience, key message, 3-5 deliverables × platform × count × due, 2-4 KPI dengan target + cara ukur, timeline + milestone, budget optional, voice profile reference, risks + mitigations. Brief operational, bukan pitch deck.",
+      "best_for": "campaign-planner saat mulai campaign baru dan butuh brief singkat sebelum plan multi-week disusun"
+    },
+    {
+      "id": "content-angle-worksheet.md",
+      "kind": "angle",
+      "description_id": "Worksheet ideation angle — satu topic dipecah ke 10 frame berbeda: educational, contrarian, behind-the-scenes, data-led, customer-story, how-to, mistake-to-avoid, list, quote, question. Tiap angle: frame, hook contoh, format suggestion, fit platform. Inventory ide, bukan plan final.",
+      "best_for": "post-drafter atau campaign-planner saat customer punya satu topic dan butuh variasi angle lintas platform"
+    },
+    {
+      "id": "engagement-response.md",
+      "kind": "response",
+      "description_id": "Template balasan comment dan DM dengan 5 tone variant — helpful (default pertanyaan teknis), curious (POV berbeda), playful (audience reguler, pakai hemat), firm (clarify misinterpretasi), redirect-to-DM (pricing, detail sensitif). Maksimal 3 baris per variant supaya feel natural di reply chain. Tiap variant opens dengan kalimat berbeda.",
+      "best_for": "engagement-log-tracker saat draft reply siap kirim manual"
     }
   ],
   "self_extend": true,
