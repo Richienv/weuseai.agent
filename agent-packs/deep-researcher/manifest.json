@@ -1,8 +1,8 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "deep-researcher",
-  "version": "2.1.0",
-  "description_id": "Bundle skill + template Deep Researcher v2. Riset topik kompleks dari banyak sumber, evaluasi kredibilitas per sumber, citation rapi per claim, dan sintesis jadi laporan terstruktur. Literature review, market analysis, competitor scan, kebijakan / regulasi research.",
+  "version": "2.2.0",
+  "description_id": "Bundle skill + template Deep Researcher v2.2. Riset topik kompleks dari banyak sumber, evaluasi kredibilitas per sumber, citation rapi per claim, dan sintesis jadi laporan terstruktur. Template batch: research brief + question decomposition, market sizing (TAM/SAM/SOM dengan rentang sensitivitas), competitor matrix + deep dive, citation APA + Chicago konvensi Indonesia, exec summary satu halaman.",
   "skills": [
     {
       "id": "web-research",
@@ -72,6 +72,54 @@
       "kind": "reference",
       "description_id": "Kerangka tetap laporan riset — TL;DR, key findings, detail, konflik antar sumber, gaps, sumber. Tiga format: brief-memo, executive-summary, full-report.",
       "best_for": "synthesis-report report skeleton"
+    },
+    {
+      "id": "research-brief.md",
+      "kind": "research-brief",
+      "description_id": "Brief scoping pra-riset — research question utama, why-now, scope in/out, periode, geografi, source preference, deadline. Customer isi sebelum playbook riset besar dijalankan supaya scope tidak melebar di tengah jalan.",
+      "best_for": "pre-playbook scope lock"
+    },
+    {
+      "id": "research-question-decomposition.md",
+      "kind": "research-brief",
+      "description_id": "Worksheet memecah pertanyaan riset fuzzy jadi 3-6 sub-pertanyaan tertutup — masing-masing dengan search angle, tipe sumber utama, dan evidence threshold. Cocok dipakai setelah research brief saat pertanyaan utama masih terlalu luas untuk satu pass.",
+      "best_for": "fuzzy question to search-ready sub-questions"
+    },
+    {
+      "id": "market-sizing.md",
+      "kind": "sizing",
+      "description_id": "Kerangka market sizing TAM / SAM / SOM dengan rentang low-mid-high, tabel asumsi eksplisit lengkap source + tingkat ketidakpastian per asumsi, sensitivity note, dan caveats. Memaksa ketidakpastian ditampilkan, bukan disembunyikan di balik satu angka.",
+      "best_for": "TAM/SAM/SOM with explicit uncertainty ranges"
+    },
+    {
+      "id": "competitor-analysis.md",
+      "kind": "competitor",
+      "description_id": "Matrix komparasi 5-10 kompetitor di axis pricing, positioning, market share, kekuatan, kelemahan, GTM, plus narasi landscape summary yang menyebut clustering positioning + gap kosong + tren. Untuk landscape-level scan.",
+      "best_for": "landscape-level competitor matrix + narrative"
+    },
+    {
+      "id": "competitor-deep-dive.md",
+      "kind": "competitor",
+      "description_id": "Profil mendalam satu kompetitor — history, produk core + adjacent, pricing publik + sinyal negosiasi, GTM motion + channel, organisasi + key people, financials (kalau publik), customer base + voice signals, kekuatan + kelemahan dengan evidence, aksi 12 bulan terakhir, open questions.",
+      "best_for": "single-competitor mendalam profile"
+    },
+    {
+      "id": "citation-format-apa.md",
+      "kind": "citation",
+      "description_id": "Reference format APA edisi ke-7 dengan contoh per tipe sumber (jurnal dengan/tanpa DOI, buku, buku terjemahan, laporan lembaga, website, berita, wawancara, working paper, skripsi/tesis, dataset, podcast, konferensi) + konvensi Indonesia (nama satu kata, gelar akademik, lembaga sebagai penulis, bulan dalam Bahasa Indonesia).",
+      "best_for": "APA 7 reference list — Indonesian conventions"
+    },
+    {
+      "id": "citation-format-chicago.md",
+      "kind": "citation",
+      "description_id": "Reference format Chicago Manual of Style edisi ke-17, gaya Notes-Bibliography (NB) dengan footnote + bibliography. Contoh full note, short note, dan bibliography entry per tipe sumber + konvensi Indonesia.",
+      "best_for": "Chicago Notes-Bibliography 17th ed reference list"
+    },
+    {
+      "id": "exec-summary-findings.md",
+      "kind": "summary",
+      "description_id": "Exec summary satu halaman — TL;DR 3-5 kalimat + 3 temuan utama dengan evidence + source ref + caveat per temuan + rekomendasi konkret + pertanyaan lanjutan + confidence level. Untuk pembaca yang hanya punya 60 detik tapi butuh inti laporan riset yang lebih panjang.",
+      "best_for": "1-page exec summary of research findings"
     }
   ],
   "self_extend": true,
