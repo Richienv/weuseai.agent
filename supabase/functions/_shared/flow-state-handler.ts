@@ -40,7 +40,17 @@ export type FlowStateRow = {
   state_data: Record<string, unknown>
   created_at: string
   updated_at: string
+  /**
+   * Set when the run is parked at `awaiting_customer` or `escalated`,
+   * NULL otherwise. The flow-state-ttl-sweep function aborts rows past
+   * this timestamp. Default TTL: 14 days from park. P4G parked-run TTL
+   * (2026-05-22 consult).
+   */
+  expires_at: string | null
 }
+
+/** Default TTL for a parked run, in milliseconds. 14 days. */
+export const PARKED_RUN_TTL_MS = 14 * 24 * 60 * 60 * 1000
 
 export type FlowStateOperation =
   | 'start'
@@ -103,10 +113,26 @@ const ADVANCEABLE: ReadonlySet<FlowStatus> = new Set([
   'escalated',
 ])
 
+/** Compute the expires_at value for a given target status. NULL when the
+ * status is not a parked status. P4G parked-run TTL. */
+function ttlForStatus(status: FlowStatus, now: Date): string | null {
+  if (status === 'awaiting_customer' || status === 'escalated') {
+    return new Date(now.getTime() + PARKED_RUN_TTL_MS).toISOString()
+  }
+  return null
+}
+
+export type HandleFlowStateOptions = {
+  /** Injectable clock for deterministic TTL tests. Defaults to new Date(). */
+  now?: Date
+}
+
 export async function handleFlowState(
   input: FlowStateInput,
   store: FlowStateStore,
+  opts: HandleFlowStateOptions = {},
 ): Promise<FlowStateResult> {
+  const now = opts.now ?? new Date()
   // ── Validation ──────────────────────────────────────────────────
   if (!input.customer_id) {
     return { ok: false, status: 400, error: 'missing_customer_id' }
@@ -174,6 +200,8 @@ export async function handleFlowState(
   if (input.operation === 'complete' || input.operation === 'abort') {
     const updated = await store.update(row.id, {
       status: input.operation === 'complete' ? 'completed' : 'aborted',
+      // Clear the TTL — terminated runs do not expire further.
+      expires_at: null,
     })
     return { ok: true, status: 200, body: updated }
   }
@@ -197,10 +225,13 @@ export async function handleFlowState(
     }
   }
 
+  const nextStatus: FlowStatus = input.set_status ?? 'in_progress'
   const updated = await store.update(row.id, {
     current_step: row.current_step + 1,
-    status: input.set_status ?? 'in_progress',
+    status: nextStatus,
     state_data: { ...row.state_data, ...(input.step_output ?? {}) },
+    // P4G parked-run TTL: stamp expiry on a parked transition; clear on resume.
+    expires_at: ttlForStatus(nextStatus, now),
   })
   return { ok: true, status: 200, body: updated }
 }

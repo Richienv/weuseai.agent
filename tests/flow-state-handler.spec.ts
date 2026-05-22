@@ -46,6 +46,7 @@ class FakeStore implements FlowStateStore {
       state_data: {},
       created_at: now,
       updated_at: now,
+      expires_at: null,
     }
     this.rows.set(`${input.customer_id}:${input.playbook_id}`, row)
     return row
@@ -232,4 +233,84 @@ test('an unknown operation is rejected', async () => {
     new FakeStore(),
   )
   assert.equal(r.ok === false && r.status, 400)
+})
+
+// ─── P4G parked-run TTL ────────────────────────────────────────────────────
+
+const PARK_TIME = new Date('2026-05-22T12:00:00.000Z')
+const EXPECTED_EXPIRY = new Date(PARK_TIME.getTime() + 14 * 24 * 60 * 60 * 1000).toISOString()
+
+test('TTL: a fresh start has no expires_at', async () => {
+  const store = new FakeStore()
+  const r = await handleFlowState(
+    { ...base(), operation: 'start', total_steps: 6 },
+    store,
+    { now: PARK_TIME },
+  )
+  assert.equal(r.ok && r.body.expires_at, null)
+})
+
+test('TTL: advance with set_status awaiting_customer stamps expiry 14d out', async () => {
+  const store = new FakeStore()
+  await handleFlowState({ ...base(), operation: 'start', total_steps: 6 }, store, { now: PARK_TIME })
+  const r = await handleFlowState(
+    { ...base(), operation: 'advance', set_status: 'awaiting_customer' },
+    store,
+    { now: PARK_TIME },
+  )
+  assert.equal(r.ok && r.body.status, 'awaiting_customer')
+  assert.equal(r.ok && r.body.expires_at, EXPECTED_EXPIRY)
+})
+
+test('TTL: advance with set_status escalated also stamps expiry 14d out', async () => {
+  const store = new FakeStore()
+  await handleFlowState({ ...base(), operation: 'start', total_steps: 6 }, store, { now: PARK_TIME })
+  const r = await handleFlowState(
+    { ...base(), operation: 'advance', set_status: 'escalated' },
+    store,
+    { now: PARK_TIME },
+  )
+  assert.equal(r.ok && r.body.status, 'escalated')
+  assert.equal(r.ok && r.body.expires_at, EXPECTED_EXPIRY)
+})
+
+test('TTL: resuming a parked run (advance to in_progress) clears expires_at', async () => {
+  const store = new FakeStore()
+  await handleFlowState({ ...base(), operation: 'start', total_steps: 6 }, store, { now: PARK_TIME })
+  await handleFlowState(
+    { ...base(), operation: 'advance', set_status: 'awaiting_customer' },
+    store,
+    { now: PARK_TIME },
+  )
+  const r = await handleFlowState(
+    { ...base(), operation: 'advance' }, // default set_status = in_progress
+    store,
+    { now: PARK_TIME },
+  )
+  assert.equal(r.ok && r.body.status, 'in_progress')
+  assert.equal(r.ok && r.body.expires_at, null)
+})
+
+test('TTL: complete clears expires_at', async () => {
+  const store = new FakeStore()
+  await handleFlowState({ ...base(), operation: 'start', total_steps: 6 }, store, { now: PARK_TIME })
+  await handleFlowState(
+    { ...base(), operation: 'advance', set_status: 'escalated' },
+    store,
+    { now: PARK_TIME },
+  )
+  const r = await handleFlowState({ ...base(), operation: 'complete' }, store, { now: PARK_TIME })
+  assert.equal(r.ok && r.body.expires_at, null)
+})
+
+test('TTL: abort clears expires_at', async () => {
+  const store = new FakeStore()
+  await handleFlowState({ ...base(), operation: 'start', total_steps: 6 }, store, { now: PARK_TIME })
+  await handleFlowState(
+    { ...base(), operation: 'advance', set_status: 'awaiting_customer' },
+    store,
+    { now: PARK_TIME },
+  )
+  const r = await handleFlowState({ ...base(), operation: 'abort' }, store, { now: PARK_TIME })
+  assert.equal(r.ok && r.body.expires_at, null)
 })
