@@ -1,7 +1,7 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "the-pro",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description_id": "Bundle skill + template The Pro. Briefing pagi, ingatan lintas sesi, pendamping kerja harian.",
   "skills": [
     {
@@ -57,6 +57,84 @@
       "kind": "fixture",
       "description_id": "Mock Gmail fixture untuk skenario kotak masuk kosong (tidak ada email). Pasangan typical-day untuk menguji jalur briefing tanpa email.",
       "best_for": "Empty-state testing — briefing path with no email"
+    },
+    {
+      "id": "briefings/morning-briefing.md",
+      "kind": "briefing",
+      "description_id": "Template briefing pagi harian — kalender, email penting, follow-up, berita, plus satu reflection prompt. Dipakai tiap pagi default 07:00 WIB. Audiens: customer sendiri.",
+      "best_for": "Daily morning briefing — mirrors daily-briefing skill output shape with a reflection prompt at the end"
+    },
+    {
+      "id": "briefings/weekly-recap.md",
+      "kind": "briefing",
+      "description_id": "Template recap mingguan — yang selesai, yang slip, tiga komitmen minggu depan, satu hal yang sengaja di-drop. Dipakai Jumat sore atau Minggu malam. Audiens: customer sendiri.",
+      "best_for": "End-of-week reset — what shipped, what slipped, next commitments, intentional drops"
+    },
+    {
+      "id": "briefings/monthly-review.md",
+      "kind": "briefing",
+      "description_id": "Template tinjauan bulanan — wins, losses, tema bulan, lookahead, dan satu pertanyaan reflektif untuk dibawa beberapa hari. Audiens: customer sendiri di akhir bulan.",
+      "best_for": "End-of-month reflective review — deeper than weekly, surfaces patterns across weeks"
+    },
+    {
+      "id": "replies/reply-friendly.md",
+      "kind": "reply",
+      "description_id": "Template balasan nada hangat-akrab untuk kontak dekat. Sapaan ringan, kalimat singkat, optional baris personal. Di-draft lewat playbook customer-reply, kirim hanya setelah customer approve.",
+      "best_for": "Replies to close contacts — warm, conversational, kamu form"
+    },
+    {
+      "id": "replies/reply-professional.md",
+      "kind": "reply",
+      "description_id": "Template balasan nada profesional netral untuk konteks business standar. Struktur jelas: konteks, jawaban, langkah berikutnya, penutup. Tanda tangan eksplisit.",
+      "best_for": "Standard business replies — neutral, structured, clear next step"
+    },
+    {
+      "id": "replies/reply-decline.md",
+      "kind": "reply",
+      "description_id": "Template balasan untuk menolak permintaan dengan elegan — empati, pernyataan menolak yang jelas, alasan singkat, alternatif kalau ada, penutup tetap hangat.",
+      "best_for": "Graceful decline — close the door without burning the bridge"
+    },
+    {
+      "id": "replies/reply-follow-up.md",
+      "kind": "reply",
+      "description_id": "Template follow-up lembut untuk thread yang stall. Anchor ke percakapan sebelumnya, check-in yang menawarkan jalan keluar, value offer, penutup netral tanpa nagih.",
+      "best_for": "Gentle follow-up — re-surface stalled thread without nagging"
+    },
+    {
+      "id": "replies/reply-handoff.md",
+      "kind": "reply",
+      "description_id": "Template handoff ke kolega, vendor, atau channel lain yang lebih tepat. Acknowledgment singkat, alasan handoff, nama + kontak penerima baru, jaminan konteks sudah diteruskan.",
+      "best_for": "Redirect to a more appropriate person/channel with context already passed along"
+    },
+    {
+      "id": "meeting-prep.md",
+      "kind": "meeting",
+      "description_id": "Template persiapan meeting — peserta, tujuan, tiga talking point, pertanyaan terbuka, materi checklist, plus slot log keputusan dan action item untuk diisi setelah meeting.",
+      "best_for": "Pre-meeting prep + post-meeting log in one file"
+    },
+    {
+      "id": "status-update.md",
+      "kind": "status",
+      "description_id": "Template status update singkat untuk stakeholder — done, next, blockers, asks. Maksimum 5 baris isi. Cocok untuk laporan mingguan ke atasan, investor, klien, atau partner.",
+      "best_for": "5-line stakeholder status update — done / next / blockers / asks"
+    },
+    {
+      "id": "daily-summary.md",
+      "kind": "summary",
+      "description_id": "Template penutup hari untuk customer sendiri — accomplishments, fokus besok, langkah pertama besok pagi, dan satu kemenangan kecil untuk diingat. Bukan untuk dikirim ke orang lain.",
+      "best_for": "End-of-day closing ritual — accomplishments + tomorrow + one moment to remember"
+    },
+    {
+      "id": "commitment-tracker.md",
+      "kind": "tracker",
+      "description_id": "Template tracker append-only untuk semua janji yang customer buat ke orang lain. Tanggal, isi komitmen, kepada siapa, due, sumber, status, catatan. Di-review di weekly recap.",
+      "best_for": "Append-only ledger of cross-thread commitments — nothing falls through"
+    },
+    {
+      "id": "one-on-one-notes.md",
+      "kind": "notes",
+      "description_id": "Template catatan 1-on-1 dengan manager atau direct report. Pra-meeting: what worked, what didn't, asks, tema. Post-meeting: ringkasan, komitmen baru, hal yang dibawa ke pertemuan berikutnya.",
+      "best_for": "1-on-1 prep + after-the-fact log so themes carry across sessions"
     }
   ],
   "self_extend": true,
