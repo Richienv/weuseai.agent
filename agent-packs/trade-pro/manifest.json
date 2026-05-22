@@ -1,8 +1,8 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "trade-pro",
-  "version": "2.2.0",
-  "description_id": "Bundle skill + template Trade Pro v2.2. Briefing pasar pagi, alert saham + crypto, ringkas laporan keuangan emiten, plus IDR/BI rate watcher (pindahan dari Macro Strategist) + Bitget read-only (P1). v2.1 menambah template format briefing, schema alert, format earnings, dan rate-watch reference. v2.2 menambah playbook bitget-onboarding — alur 8 langkah memandu pemasangan API key Bitget dengan verifikasi scope read-only di sisi platform sebelum akses dibuka.",
+  "version": "2.3.0",
+  "description_id": "Bundle skill + template Trade Pro v2.3. Briefing pasar pagi, alert saham + crypto, ringkas laporan keuangan emiten, plus IDR/BI rate watcher (pindahan dari Macro Strategist) + Bitget read-only (P1). v2.1 menambah template format briefing, schema alert, format earnings, dan rate-watch reference. v2.2 menambah playbook bitget-onboarding — alur 8 langkah memandu pemasangan API key Bitget dengan verifikasi scope read-only di sisi platform sebelum akses dibuka. v2.3 menambah 7 template disiplin trading: trading journal entry, position size calculator, exit plan, market analysis, sentiment analysis, weekly review, dan risk checklist — semua memperkuat risk-first DNA dan menggantikan improvisasi dengan struktur tertulis.",
   "skills": [
     {
       "id": "market-briefing",
@@ -93,6 +93,48 @@
       "kind": "reference",
       "description_id": "Reference IDR/BI rate — level psikologis IDR/USD, sumber data, dan framing per konteks customer (import, export, usd-debt, portfolio).",
       "best_for": "idr-bi-rate-watcher level + framing reference"
+    },
+    {
+      "id": "trading-journal-entry.md",
+      "kind": "journal",
+      "description_id": "Template entry journal trading — satu trade per entry, append-only. Field: tanggal, instrument, arah, entry, exit, size, risk, thesis, hasil, plan-diikuti, pelajaran. Dipakai untuk catat trade closed dan lihat pola di 20-30 entry.",
+      "best_for": "per-trade post-mortem and pattern discovery"
+    },
+    {
+      "id": "position-size-calculator.md",
+      "kind": "sizing",
+      "description_id": "Worksheet sizing posisi sebelum entry — account size, risk per trade, entry, stop, dan formula deterministik (risk_amount / stop_distance). Output ukuran posisi yang terikat ke stop yang sudah di-set, bukan ke confidence.",
+      "best_for": "pre-trade position sizing tied to stop distance"
+    },
+    {
+      "id": "exit-plan.md",
+      "kind": "exit",
+      "description_id": "Exit plan wajib pre-entry — stop-loss + alasan, profit target (T1/T2) dengan aksi konkret, time-stop, scaling-out, dan R:R ratio. Stop tidak boleh digeser ke arah loss saat trade berjalan.",
+      "best_for": "pre-entry exit planning with stop + target + time-stop"
+    },
+    {
+      "id": "market-analysis.md",
+      "kind": "analysis",
+      "description_id": "Analisis terstruktur satu instrumen atau market — tren, key levels, catalysts, setup, risk yang membatalkan thesis, confidence tag (high/moderate/low), dan source line. Bukan rekomendasi beli/jual.",
+      "best_for": "deep single-instrument or single-market analysis"
+    },
+    {
+      "id": "sentiment-analysis.md",
+      "kind": "analysis",
+      "description_id": "Dashboard sentimen asset class atau pair — fear/greed, volume vs rata-rata, open interest, funding rate, social signal, interpretasi, bias, dan implikasi ke size + timing (bukan ke arah trade).",
+      "best_for": "sentiment snapshot informing sizing and timing, not direction"
+    },
+    {
+      "id": "weekly-review.md",
+      "kind": "review",
+      "description_id": "Review mingguan trading — PnL, win rate, best trade (apa yang dilakukan benar), worst trade (apa yang bisa dipelajari), tema minggu, plan adherence, dan adjustments konkret untuk minggu depan.",
+      "best_for": "Friday or weekend reflection on process not just results"
+    },
+    {
+      "id": "risk-checklist.md",
+      "kind": "risk",
+      "description_id": "Checklist pre-market daily — inventory posisi open, total exposure vs cap pribadi, korelasi antar posisi, kapital available, macro flags hari ini, self-rating emosional 1-5, dan decision rule (GO / REDUCED SIZE / NO TRADE TODAY).",
+      "best_for": "pre-market open daily readiness gate"
     }
   ],
   "self_extend": true,
