@@ -1,8 +1,8 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "video-producer",
-  "version": "2.1.0",
-  "description_id": "Bundle skill + template Video Producer v2.1. Script TikTok dan Reels, hashtag research, sound trend tracking, caption drafting, HyperFrames storyboard spec, dan HyperFrames render execution (Runway primary + Pika fallback) — output mp4 ke kamu, bukan storyboard JSON.",
+  "version": "2.2.0",
+  "description_id": "Bundle skill + template Video Producer v2.2. Script TikTok dan Reels, hashtag research, sound trend tracking, caption drafting, HyperFrames storyboard spec, HyperFrames render execution (Runway primary + Pika fallback), plus template pack baru: short-form / long-form / voiceover scripts, shot list + shoot plan + b-roll brief, dan video description + thumbnail brief.",
   "skills": [
     {
       "id": "tiktok-script-builder",
@@ -98,6 +98,54 @@
       "kind": "reference",
       "description_id": "Caption pattern library — hook openers, CTA variants per platform, length guidelines.",
       "best_for": "Reference saat draft / iterate caption"
+    },
+    {
+      "id": "scripts/short-form-script.md",
+      "kind": "script",
+      "description_id": "Template skrip short-form (TikTok / Reels / Shorts) — 4 beat: hook 3 detik, setup, payoff, CTA. Per-beat visual cue dan audio cue terpisah biar editor langsung eksekusi tanpa nebak intent.",
+      "best_for": "Draft skrip 15-90s vertical, batch output harian"
+    },
+    {
+      "id": "scripts/long-form-script.md",
+      "kind": "script",
+      "description_id": "Template skrip long-form YouTube 8-15 menit — hook 30 detik, intro, 3-5 segmen dengan retention check, CTA, outro. Timecode summary auto-generate buat description chapters.",
+      "best_for": "YouTube horizontal 8-15 menit dengan struktur retention-aware"
+    },
+    {
+      "id": "scripts/voiceover-script.md",
+      "kind": "script",
+      "description_id": "Template skrip voiceover-only (product video, explainer, ads) — paragraph chunks, tone note per paragraf, pause cue, dan pronunciation sheet buat term BI/EN yang tricky.",
+      "best_for": "Product walkthrough, explainer, atau ads tanpa on-cam talent"
+    },
+    {
+      "id": "production/shot-list.md",
+      "kind": "production",
+      "description_id": "Shot list sortable grid — scene, shot type (wide / medium / close / insert), camera move, duration, subject, notes. Termasuk legend shot type, legend camera move, priority marker, dan coverage check 3-shot rule.",
+      "best_for": "Hari shoot — handoff DP / camera op tanpa briefing ulang"
+    },
+    {
+      "id": "production/shot-plan.md",
+      "kind": "production",
+      "description_id": "Full shoot plan multi-lokasi atau multi-hari — locations dengan access notes, shoot order optimized per light dan travel, gear list, crew call sheet, schedule per hari, dan 4 contingency wajib (cuaca, talent, gear, lokasi).",
+      "best_for": "Production yang lebih dari 1 lokasi atau 1 hari shoot"
+    },
+    {
+      "id": "production/b-roll-brief.md",
+      "kind": "production",
+      "description_id": "B-roll capture brief — subject, narrative purpose, 5-10 shot spesifik dengan komposisi + lighting note per shot, safety captures (room tone, establish, negative space), dan anti-pattern guard.",
+      "best_for": "B-roll session terpisah dari main shoot — biar editor punya overlay yang punya rencana"
+    },
+    {
+      "id": "publishing/video-description.md",
+      "kind": "publishing",
+      "description_id": "Template description / caption per platform — 4 varian (YouTube long, YouTube Shorts, TikTok, IG Reels). Hook line, ringkasan, chapter timecode untuk long-form, link section, dan hashtag count per platform.",
+      "best_for": "Publish hari yang sama, lintas platform — caption yang berdiri sendiri tanpa nonton dulu"
+    },
+    {
+      "id": "publishing/thumbnail-brief.md",
+      "kind": "thumbnail",
+      "description_id": "Brief desain thumbnail YouTube atau cover Reels / TikTok — main subject + posisi, emosi tunggal, teks overlay maksimal 4 kata, palet 60/30/10, reference image, mobile preview test, dan anti-pattern list (clickbait cliche yang sudah saturated).",
+      "best_for": "Handoff ke designer atau self-design — thumbnail yang klik-able tanpa visual cliche"
     }
   ],
   "self_extend": true,
