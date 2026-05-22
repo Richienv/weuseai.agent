@@ -93,14 +93,22 @@ test('BD SOUL.md does NOT reference deprecated department-task-spawner', () => {
 
 // ─── BD manifest version bump ──────────────────────────────────────
 
-test('business-director manifest version bumped to 3.0.0', () => {
+test('business-director manifest version bumped to 3.0.0 or higher', () => {
   const m = JSON.parse(
     fs.readFileSync(
       path.join(ROOT, 'agent-packs/business-agent/manifest.json'),
       'utf8',
     ),
   ) as { version: string; description_id: string }
-  assert.equal(m.version, '3.0.0', 'BD v3 manifest should be 3.0.0')
+  // Drift defense: BD v3 SOUL.md rewrite locked at 3.0.0 (Phase 5-3.a).
+  // Subsequent Phase 2/3 playbook additions (compliance-cycle 3.1.0,
+  // finance-cycle 3.2.0, …) keep major version 3. Asserting on the major
+  // is the durable check; the exact minor moves with each playbook PR.
+  const major = Number(m.version.split('.')[0])
+  assert.ok(
+    major >= 3,
+    `BD v3 manifest should be ≥3.0.0; got ${m.version}`,
+  )
   assert.ok(
     /v3/.test(m.description_id),
     'manifest description_id should mention v3',
