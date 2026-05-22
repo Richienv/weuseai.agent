@@ -1,7 +1,7 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "business-agent",
-  "version": "3.2.0",
+  "version": "3.3.0",
   "description_id": "Master Agent Business Director v3 (Phase 5). Panduin pelanggan Indonesia dari ide ke launched company dengan first 10 paying customers. 5-tahap roadmap (Idea → Setup → Identity → Build → Sell) — state persisted di business_roadmap_state. Dispatch ke 5 department packs (Sales, Marketing, Engineering, Legal, Finance) facade-routing ke specialist persona. Approval queue untuk irreversible actions (incorporate, contract_sign, public_emission, regulatory_filing) dengan per-action expiry. Cross-session memory via bd_decisions_log. Studio-tier only (phase_5_enabled gate).",
   "skills": [
     {
@@ -114,7 +114,49 @@
     { "id": "finance/bpjs-registration-paths.md", "kind": "markdown", "description_id": "BPJS Kesehatan + Ketenagakerjaan (4 program: JHT, JKK, JKM, JP) registration steps, biaya, threshold per status (PT/CV/Perorangan). Phase 5-4." },
     { "id": "finance/djp-tax-filing-cycle.md", "kind": "markdown", "description_id": "Monthly + annual DJP tax cycle (PPh 21/23/25/Final UMKM, PPN, SPT Tahunan 1771/1770) + PKP threshold + decision PPh 25 vs Final UMKM 0.5%. Phase 5-4." },
     { "id": "finance/bank-account-checklist.md", "kind": "markdown", "description_id": "Rekening badan setup checklist — dokumen per bentuk badan, bank comparison (BCA/Mandiri/BNI/BRI/Jago/Permata) + multi-account strategy. Phase 5-4." },
-    { "id": "legal/uu-pdp-basic-compliance.md", "kind": "markdown", "description_id": "UU 27/2022 (PDP) basic compliance checklist — 3 tier (basic / platform-tier / sensitive-data tier), DPO appointment, breach response, vendor processor agreements. Phase 5-4." }
+    { "id": "legal/uu-pdp-basic-compliance.md", "kind": "markdown", "description_id": "UU 27/2022 (PDP) basic compliance checklist — 3 tier (basic / platform-tier / sensitive-data tier), DPO appointment, breach response, vendor processor agreements. Phase 5-4." },
+    {
+      "id": "finance/pnl-summary.md",
+      "kind": "financial",
+      "description_id": "Ringkasan laba-rugi bulanan / kuartalan exec-grade — breakdown revenue / COGS / OpEx + gross & operating margin + narasi 2-3 kalimat Bahasa Indonesia. Anda form, IDR rapi, untuk konsumsi founder / exec / board.",
+      "best_for": "Monthly or quarterly P&L summary for founder / exec / board"
+    },
+    {
+      "id": "finance/cash-runway.md",
+      "kind": "financial",
+      "description_id": "Tracker runway kas bulanan dengan skenario best / base / worst — starting cash + net burn + runway dalam bulan + rekomendasi action. Asumsi eksplisit per skenario, IDR konteks Indonesia.",
+      "best_for": "Monthly cash runway tracker with scenario rows"
+    },
+    {
+      "id": "finance/kpi-dashboard.md",
+      "kind": "financial",
+      "description_id": "Dashboard KPI bulanan internal — revenue, new customers, churn, ARPU, gross margin, runway. Target vs aktual dengan status RAG (Red / Amber / Green), catatan per KPI Amber/Red, target periode berikutnya.",
+      "best_for": "Monthly KPI dashboard with target vs actual and RAG status"
+    },
+    {
+      "id": "strategic/board-update.md",
+      "kind": "strategic",
+      "description_id": "Update bulanan untuk board / investor / advisor — ringkasan eksekutif, highlight, finansial, KPI, risiko + mitigasi, decision sought, milestone bulan depan. Format 1-2 halaman bahasa formal Anda form.",
+      "best_for": "Monthly board / investor / advisor update letter"
+    },
+    {
+      "id": "strategic/monthly-review.md",
+      "kind": "strategic",
+      "description_id": "Review bulanan internal founder + exec team — tema bulan, apa yang bekerja, apa yang tidak (dengan diagnosis), apa berikutnya (dengan owner + tanggal), catatan candid. Format Notion / Google Doc 1-2 halaman.",
+      "best_for": "Internal monthly review for founder + exec team"
+    },
+    {
+      "id": "strategic/hiring-plan.md",
+      "kind": "hiring",
+      "description_id": "Plan hiring kuartalan dengan grid sortable — role, level, need-by, budget gross IDR, must-have skills, nice-to-have, owner. Detail per role untuk prioritas atas, asumsi runway impact eksplisit, review cadence bulanan.",
+      "best_for": "Quarterly hiring plan with sortable role grid"
+    },
+    {
+      "id": "operational/okr-quarterly.md",
+      "kind": "okr",
+      "description_id": "Template OKR kuartalan — 3-5 objective × 3-5 key result masing-masing, dengan baseline + target + confidence score 1-10, check-in cadence mingguan + akhir bulan + akhir kuartal scoring. Prinsip + protocol disertakan.",
+      "best_for": "Quarterly OKR template with confidence scoring"
+    }
   ],
   "self_extend": true,
   "extension_dir": "/var/lib/weuseai/customer-grown/"
