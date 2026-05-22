@@ -1,7 +1,7 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "slide-master",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description_id": "Bundle skill + template Slide Master v2. Dua mode: narrative-arc (default — story arc 12 slide) dan template-picker (8 template student/worker). Tier change v2: Pro+ → All tiers (Starter+).",
   "skills": [
     {
@@ -85,6 +85,60 @@
       "kind": "deck-template",
       "description_id": "Training / onboarding deck (12-15 slide) — welcome, learning objectives, content sections, hands-on exercise, summary, resources, Q&A.",
       "best_for": "Trainer atau team lead yang bikin onboarding deck"
+    },
+    {
+      "id": "pitch-deck/seed-round.md",
+      "kind": "pitch-deck",
+      "description_id": "Pitch deck seed round (12 slide) — vision-forward dan team-led karena pre-revenue. Cover masalah, kenapa sekarang, solusi, visi 5 tahun, pasar, sinyal traction, produk, model, tim, ask plus use of funds. Cocok untuk founder yang fundraising di ronde pertama serius ke angel atau seed VC.",
+      "best_for": "Founder pre-revenue yang pitch ke angel atau seed-stage VC"
+    },
+    {
+      "id": "pitch-deck/series-a.md",
+      "kind": "pitch-deck",
+      "description_id": "Pitch deck Series A (14 slide) — metrics-led dengan unit economics, cohort retention, dan plan ekspansi pasar. Cover ARR plus growth, CAC payback, LTV/CAC, gross margin, NRR, customer logo, pasar baru, kompetisi, tim scale-up, ask plus milestone ke Series B. Cocok untuk perusahaan revenue-stage yang siap pitch institutional VC.",
+      "best_for": "Founder revenue-stage yang fundraising Series A ke institutional VC"
+    },
+    {
+      "id": "pitch-deck/internal-review.md",
+      "kind": "pitch-deck",
+      "description_id": "Internal review deck kuartalan (10 slide) — operasional-presisi. Cover scorecard target vs hasil, wins, misses dengan root cause, pembelajaran, prioritas kuartal depan, target numerik, risiko, decisions yang dibutuhkan hari ini, plus ask resources. Cocok untuk leadership review atau cross-functional internal review.",
+      "best_for": "Tim atau divisi yang review kuartalan ke leadership atau cross-functional"
+    },
+    {
+      "id": "pitch-deck/board-update.md",
+      "kind": "pitch-deck",
+      "description_id": "Board update deck (10 slide) — direksi-presisi untuk update bulanan atau kuartalan ke board. Cover north star metric, KPI dashboard, ringkasan keuangan plus runway, wins material, risiko, sinyal pasar, tim, decisions yang butuh board vote, plus appendix index. Cocok untuk CEO yang update board atau investor existing.",
+      "best_for": "CEO yang update board of directors atau investor existing reguler"
+    },
+    {
+      "id": "pitch-deck/customer-facing.md",
+      "kind": "pitch-deck",
+      "description_id": "Sales deck customer-facing (10 slide) — outcome-first dengan tone B2B. Cover masalah spesifik prospek, cost of inaction, janji solusi, cara kerja 3 langkah, bukti customer lain, case study mirip, pricing eksplisit, dan next step konkret. Cocok untuk sales meeting first-call atau second-call ke prospek yang sedang evaluasi pembelian.",
+      "best_for": "Sales atau founder yang pitch produk ke prospek B2B yang evaluasi pembelian"
+    },
+    {
+      "id": "outlines/narrative-arc-10slide.md",
+      "kind": "outline",
+      "description_id": "Scaffolding outline 10 slide pakai story arc generik problem-why-now-solution-market-product-traction-model-competition-team-ask. Outline saja: judul kerja, arc act, visual brief, dan catatan drafting per slide. Tidak ada konten slide. Cocok dipakai sebelum draft deck penuh, supaya presenter approve struktur dulu.",
+      "best_for": "Presenter yang mau approve kerangka deck sebelum invest waktu drafting tiap slide"
+    },
+    {
+      "id": "slides/slide-problem.md",
+      "kind": "slide",
+      "description_id": "Template satu slide masalah stand-alone — fokus satu statistik bersumber, satu kutipan customer literal, dan satu cost of inaction di footer. Visual layout lengkap dengan center anchor angka, quote block, dan whitespace dominan. Cocok di-slot ke deck pitch, sales, atau internal yang butuh slide problem yang punchy.",
+      "best_for": "Drafter yang butuh slide problem stand-alone untuk slot ke deck mana pun"
+    },
+    {
+      "id": "slides/slide-solution.md",
+      "kind": "slide",
+      "description_id": "Template satu slide solusi stand-alone — janji satu kalimat outcome (bukan feature), 3 bullet how yang ringkas, visual produk dominan, dan satu kalimat diferensiasi di footer. Visual layout lengkap dengan judul outcome, screenshot center, dan side bullet. Cocok di-slot ke deck pitch atau sales yang butuh slide solusi yang fokus.",
+      "best_for": "Drafter yang butuh slide solusi stand-alone yang outcome-first"
+    },
+    {
+      "id": "slides/slide-traction.md",
+      "kind": "slide",
+      "description_id": "Template satu slide traksi stand-alone — satu chart utama dengan sumbu jujur, 3 KPI di bottom strip, dan satu milestone callout di sudut chart. Anti-pola seperti truncated axis atau cherry-picked window di-flag eksplisit. Cocok untuk slot ke pitch deck investor, board update, atau review internal yang butuh slide traction yang kredibel.",
+      "best_for": "Drafter yang butuh slide traction kredibel untuk pitch investor atau board update"
     }
   ],
   "self_extend": true,
