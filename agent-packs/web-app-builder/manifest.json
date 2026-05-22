@@ -1,7 +1,7 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "web-app-builder",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "description_id": "Bundle skill + template Web Creator. Bikin website komplit (landing, multi-page, blog), deploy ke Vercel, sarankan domain Indonesia (Niagahoster, IDwebhost, Hostinger), dan extract data dari 6 situs Indonesia populer (Tokopedia, Shopee, Glints, Kompas, OLX, Lamudi) — Phase 4-3 seed skills, DRAFT scaffolding sampai founder graduate via Autobrowse.",
   "skills": [
     {
@@ -145,7 +145,14 @@
     { "id": "blog/long-form-article/v1.md", "kind": "markdown", "description_id": "Long-form blog template (1500-2500 kata) — heading hierarchy, intro hook, body sections, FAQ, CTA penutup." },
     { "id": "blog/listicle/v1.md", "kind": "markdown", "description_id": "Listicle blog template (5/7/10 items) — intro context, item structure dengan example + actionable takeaway, summary." },
     { "id": "blog/how-to/v1.md", "kind": "markdown", "description_id": "How-to / tutorial blog — outcome statement + prerequisites + step-by-step + troubleshooting + summary." },
-    { "id": "domain-comparison/2026-q2.json", "kind": "fixture", "description_id": "Snapshot harga + fitur Niagahoster, IDwebhost, Hostinger (2026-Q2). Updated quarterly. Includes per-TLD price + customer-support summary + uptime data." }
+    { "id": "domain-comparison/2026-q2.json", "kind": "fixture", "description_id": "Snapshot harga + fitur Niagahoster, IDwebhost, Hostinger (2026-Q2). Updated quarterly. Includes per-TLD price + customer-support summary + uptime data." },
+    { "id": "landing/hero-section.md", "kind": "landing", "description_id": "Block hero satu halaman — H1 + subhead + dua CTA berbeda berat + slot visual + tiga bukti sosial. Dipakai sebagai pembuka landing apa pun (SaaS, agency, course, e-commerce) tanpa harus susun ulang struktur tiap kali.", "best_for": "Opening section for any landing page (SaaS, agency, course, e-commerce)" },
+    { "id": "landing/pricing-section.md", "kind": "landing", "description_id": "Block pricing tiga tier — 5-7 fitur per tier, slot recommended-badge, tautan FAQ, dan strip jaminan. Dipakai saat halaman harga butuh terbaca cepat di mobile tanpa pengunjung harus zoom-in.", "best_for": "Three-tier pricing block with badge slot, FAQ link, guarantee strip" },
+    { "id": "copy/value-prop-canvas.md", "kind": "copy", "description_id": "Canvas dua sisi gaya Strategyzer — customer profile (jobs / pains / gains) ditandingkan dengan value map (features / pain relievers / gain creators). Dipakai sebelum mulai nulis copy hero supaya pesan landing-mu cocok dengan apa yang pengunjung benar-benar cari.", "best_for": "Strategyzer-style value prop canvas before writing landing copy" },
+    { "id": "copy/positioning-statement.md", "kind": "copy", "description_id": "Pernyataan posisi gaya April Dunford — target customer, kategori pasar, manfaat utama, kompetitor terdekat, diferensiasi unik, plus bukti pendukung. Dipakai sebelum menulis copy beranda supaya semua section di bawahnya konsisten ke arah yang sama.", "best_for": "April Dunford-style positioning statement before homepage copy" },
+    { "id": "launch-checklist.md", "kind": "launch", "description_id": "Pre-launch checklist 24 item dengan status RAG (hijau / kuning / merah) — domain, DNS, SSL, SEO, OG image, analytics, form, legal, performance, accessibility. Dipakai di Langkah 5 playbook site-launch atau sebagai self-audit sebelum promote ke production.", "best_for": "24-item RAG-status pre-launch audit before promoting preview to production" },
+    { "id": "ab-test-setup.md", "kind": "test", "description_id": "Rencana satu A/B test — hipotesis kalau/maka/karena, primary plus guardrail metric, control vs variant, ukuran sampel, durasi, aturan berhenti, dan rencana analisis step-by-step. Dipakai sebelum eksperimen dinyalakan supaya hasilnya bisa dipertahankan.", "best_for": "Single A/B test plan with hypothesis, metrics, sample size, stop rule" },
+    { "id": "post-launch-report.md", "kind": "report", "description_id": "Laporan tujuh hari pertama setelah site live — traffic, conversion, sumber, halaman teratas, titik drop-off, dan tiga hipotesis iterasi berikutnya berurut prioritas. Dipakai untuk menutup loop launch dan memilih satu eksperimen minggu berikutnya.", "best_for": "7-day post-launch report with traffic, conversion, drop-offs, next-iteration hypotheses" }
   ],
   "self_extend": true,
   "extension_dir": "/var/lib/weuseai/customer-grown/"
