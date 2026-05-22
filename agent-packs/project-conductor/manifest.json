@@ -1,8 +1,8 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "project-conductor",
-  "version": "2.2.0",
-  "description_id": "Bundle skill + template Project Conductor v2 (renamed dari Macro Strategist). Kanban orchestrator pakai Hermes v0.13.0 native — bagi project jadi task, spawn specialist agents per task, monitor dashboard, weekly recap. Tier change v1: Studio → v2: Pro+. v2.1: tambah playbook project-orchestration. v2.2: tambah playbook pt-perorangan-registration — 7 langkah memandu customer membuka PT Perorangan dari nol sampai akun Xendit produksi aktif, dengan 6 gerbang keras yang membuka approval_requests untuk tiap langkah berbiaya.",
+  "version": "2.3.0",
+  "description_id": "Bundle skill + template Project Conductor v2 (renamed dari Macro Strategist). Kanban orchestrator pakai Hermes v0.13.0 native — bagi project jadi task, spawn specialist agents per task, monitor dashboard, weekly recap. Tier change v1: Studio → v2: Pro+. v2.1: tambah playbook project-orchestration. v2.2: tambah playbook pt-perorangan-registration — 7 langkah memandu customer membuka PT Perorangan dari nol sampai akun Xendit produksi aktif, dengan 6 gerbang keras yang membuka approval_requests untuk tiap langkah berbiaya. v2.3: tambah playbook weekly-recap-cycle — recap mingguan dengan satu gerbang kondisional berdasarkan audience.",
   "skills": [
     {
       "id": "kanban-orchestrator",
@@ -67,6 +67,16 @@
       "templates_used": [],
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:pt-perorangan-registration",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
+      "id": "weekly-recap-cycle",
+      "skill_kind": "playbook",
+      "description_id": "Playbook recap mingguan project — agregasi aktivitas tujuh hari, surface blocker, deteksi scope creep, susun recap sesuai audience, lalu kirim. Audience `self` auto-deliver. Audience `stakeholder` atau `1on1-manager` lewat satu checkpoint review dulu sebelum diteruskan. Tujuh langkah, satu gerbang kondisional.",
+      "description_en": "Weekly project recap playbook — aggregate seven-day kanban activity, surface blockers, detect scope creep, compose recap per audience, then deliver. Audience `self` auto-delivers. Audience `stakeholder` or `1on1-manager` parks at one checkpoint for customer review before forwarding. Seven steps, one conditional gate.",
+      "templates_used": [],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:weekly-recap-cycle",
       "enabled_for_tiers": ["pro", "studio"]
     }
   ],
