@@ -1,8 +1,8 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "project-conductor",
-  "version": "2.3.0",
-  "description_id": "Bundle skill + template Project Conductor v2 (renamed dari Macro Strategist). Kanban orchestrator pakai Hermes v0.13.0 native — bagi project jadi task, spawn specialist agents per task, monitor dashboard, weekly recap. Tier change v1: Studio → v2: Pro+. v2.1: tambah playbook project-orchestration. v2.2: tambah playbook pt-perorangan-registration — 7 langkah memandu customer membuka PT Perorangan dari nol sampai akun Xendit produksi aktif, dengan 6 gerbang keras yang membuka approval_requests untuk tiap langkah berbiaya. v2.3: tambah playbook weekly-recap-cycle — recap mingguan dengan satu gerbang kondisional berdasarkan audience.",
+  "version": "2.4.0",
+  "description_id": "Bundle skill + template Project Conductor v2 (renamed dari Macro Strategist). Kanban orchestrator pakai Hermes v0.13.0 native — bagi project jadi task, spawn specialist agents per task, monitor dashboard, weekly recap. Tier change v1: Studio → v2: Pro+. v2.1: tambah playbook project-orchestration. v2.2: tambah playbook pt-perorangan-registration — 7 langkah memandu customer membuka PT Perorangan dari nol sampai akun Xendit produksi aktif, dengan 6 gerbang keras yang membuka approval_requests untuk tiap langkah berbiaya. v2.3: tambah playbook weekly-recap-cycle — recap mingguan dengan satu gerbang kondisional berdasarkan audience. v2.4: tambah 7 template — sprint-plan, quarter-plan, year-plan (plans); status-report, raci-matrix, risk-register (coordination); retrospective.",
   "skills": [
     {
       "id": "kanban-orchestrator",
@@ -80,7 +80,50 @@
       "enabled_for_tiers": ["pro", "studio"]
     }
   ],
-  "templates": [],
+  "templates": [
+    {
+      "id": "plans/sprint-plan.md",
+      "kind": "plan",
+      "description_id": "Template sprint plan 1-2 minggu — goal, capacity team, task line-item dengan owner plus estimasi plus dependency, risiko, plus out of scope yang eksplisit. Dipakai team eksekusi plus stakeholder yang butuh tahu apa yang sedang dikerjakan.",
+      "best_for": "Operational 1-2 week sprint planning — line-item tasks, owners, dependencies"
+    },
+    {
+      "id": "plans/quarter-plan.md",
+      "kind": "plan",
+      "description_id": "Template quarter plan 90 hari — north star, 3-5 tema kuartal, outcome terukur per tema dengan baseline plus target, 3-5 milestone, risiko kunci, dan disiplin 'yang tidak dikerjakan kuartal ini'. Lebih strategis dari sprint, lebih taktis dari year plan.",
+      "best_for": "Strategic 90-day plan — themes, measurable outcomes, milestones"
+    },
+    {
+      "id": "plans/year-plan.md",
+      "kind": "plan",
+      "description_id": "Template year plan tahunan — konteks strategis, 3-5 tema tahun, breakdown per kuartal, bet dengan tesis plus sinyal evaluasi, ditch yang sengaja dilepas, plus envelope modal. Dokumen orientasi level founder atau exec, bukan dokumen kerja harian.",
+      "best_for": "Annual strategy plan — themes, quarterly breakdown, bets and ditches"
+    },
+    {
+      "id": "coordination/status-report.md",
+      "kind": "coordination",
+      "description_id": "Template status report project mingguan satu halaman untuk sponsor atau stakeholder eksekutif. Status RAG, highlight, completed, in-progress, blocker, decisions needed, dan fokus minggu depan. Scannable dalam 60 detik.",
+      "best_for": "Weekly executive status update — one page, scannable, sponsor-facing"
+    },
+    {
+      "id": "coordination/raci-matrix.md",
+      "kind": "coordination",
+      "description_id": "Template RACI matrix — grid task lintas peserta dengan kode R/A/C/I, definisi standar, eskalasi path, plus catatan 5 kesalahan umum (dua Accountable di satu task, semua sel Consulted, task tanpa Responsible, satu orang Accountable di seluruh baris, matrix sekali pakai). Dipasang di awal project lintas-team.",
+      "best_for": "Cross-team RACI matrix — responsibility mapping with anti-patterns guide"
+    },
+    {
+      "id": "coordination/risk-register.md",
+      "kind": "coordination",
+      "description_id": "Template risk register project — tabel risiko dengan ID, likelihood plus impact kualitatif, RAG status, mitigasi, owner, dan status. Plus konvensi scoring eksplisit (rendah/sedang/tinggi, hijau/kuning/merah) dan daftar retired risks supaya register tidak menggemuk.",
+      "best_for": "Project risk register — RAG-tracked risks with mitigation owners and scoring conventions"
+    },
+    {
+      "id": "retrospective.md",
+      "kind": "retro",
+      "description_id": "Template retrospective sprint atau project — yang berjalan baik, yang tidak, hal tak terduga, action konkret untuk siklus berikutnya, parking lot, plus tema. Disertai prompt fasilitator dan catatan psychological safety supaya retro tetap jujur dan tidak slide ke blame.",
+      "best_for": "Sprint or project retrospective — structured reflection with facilitator prompts"
+    }
+  ],
   "self_extend": true,
   "extension_dir": "/var/lib/weuseai/customer-grown/"
 }
