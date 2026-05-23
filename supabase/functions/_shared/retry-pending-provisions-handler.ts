@@ -67,6 +67,16 @@ export const MIN_RETRY_INTERVAL_MS = 3 * 60_000 // 3 min
  */
 export const MAX_ATTEMPTS = 6
 
+/**
+ * Phase A2 PR 4 (2026-05-23): how long a subscription must sit in
+ * pending_provision before we send the setup-help.md "you might be
+ * stuck" email. 24h is long enough that ordinary cap-exhaustion
+ * recovery + founder manual reconcile windows have BOTH closed.
+ * Dedup via subscriptions.setup_help_email_sent_at — fires once per
+ * subscription max.
+ */
+export const SETUP_HELP_AGE_MS = 24 * 60 * 60 * 1000 // 24h
+
 // ─── Input + output types ────────────────────────────────────────────
 
 export type PendingProvisionRow = {
@@ -76,6 +86,30 @@ export type PendingProvisionRow = {
   always_on_enabled: boolean
   /** When the customer paid + the subscription was created. */
   subscription_started_at: string  // ISO8601
+  /**
+   * Phase A2 PR 4: ISO timestamp from subscriptions.setup_help_email_sent_at,
+   * or null. NULL means "never sent" — handler may fire the setup-help
+   * email if the row is also >= SETUP_HELP_AGE_MS old. Once sent +
+   * marked, never re-fires (one customer-touch per stuck subscription).
+   */
+  setup_help_email_sent_at?: string | null
+}
+
+/**
+ * Phase A2 PR 4: payload passed to the setup-help notifier dep. The
+ * notifier renders setup-help.md via buildSetupHelpEmailBody and ships
+ * via Resend. Pure data so unit tests can compare deep-equal.
+ */
+export type SetupHelpNotification = {
+  subscription_id: string
+  customer_id: string
+  tier: Tier
+  /**
+   * How long the row has been pending, in milliseconds. Useful for
+   * tuning the email copy ("you've been stuck X hours") and for the
+   * notifier impl's logging.
+   */
+  age_ms: number
 }
 
 export type RetryAttempt = {
@@ -126,6 +160,33 @@ export type RetryHandlerDeps = {
    * source of truth; the founder DM is a nicety on top.
    */
   notifyFounder?: (text: string) => Promise<void>
+
+  /**
+   * Phase A2 PR 4 (2026-05-23): customer-facing setup-help.md email when
+   * a row has been pending >= SETUP_HELP_AGE_MS AND
+   * setup_help_email_sent_at is null. Receives a self-contained
+   * payload — notifier is responsible for loading customer email,
+   * rendering the template, and shipping via Resend.
+   *
+   * Optional: when undefined, the handler skips the setup-help check
+   * entirely (back-compat for tests + Deno deploys that lack Resend).
+   * Resolves with { ok: true } when send confirms; ok:false leaves
+   * setup_help_email_sent_at null so tomorrow's tick retries.
+   */
+  notifySetupHelp?: (
+    n: SetupHelpNotification,
+  ) => Promise<{ ok: boolean; detail?: string }>
+
+  /**
+   * Phase A2 PR 4: stamp subscriptions.setup_help_email_sent_at = now().
+   * Called ONLY after notifySetupHelp resolves ok:true. Optional —
+   * paired with notifySetupHelp. When notifySetupHelp is present but
+   * markSetupHelpSent is not, the handler still fires the notifier;
+   * the absent stamp means the next daily tick will re-fire (best-
+   * effort, no infinite loop because the customer will surface the
+   * problem manually long before then).
+   */
+  markSetupHelpSent?: (subscription_id: string) => Promise<void>
 }
 
 export type RetryHandlerResult = {
@@ -144,6 +205,10 @@ export type RetryHandlerResult = {
     subscription_id: string
     outcome: RetryAttempt['outcome'] | 'skipped_recent' | 'skipped_invalid'
   }>
+  /** Phase A2 PR 4: setup-help.md emails dispatched this tick. */
+  setup_help_emails_sent: number
+  /** Phase A2 PR 4: setup-help notifier failures this tick. */
+  setup_help_email_failures: number
 }
 
 // ─── Handler ─────────────────────────────────────────────────────────
@@ -165,10 +230,54 @@ export async function retryPendingProvisionsHandler(
     skipped_invalid: 0,
     exhausted: 0,
     outcomes: [],
+    setup_help_emails_sent: 0,
+    setup_help_email_failures: 0,
   }
 
   for (const row of stale) {
     const subId = row.subscription_id
+
+    // ── Phase A2 PR 4: setup-help.md "you might be stuck" email ──────
+    // Runs BEFORE the retry attempt logic so the email decision is
+    // independent of the per-row retry gate. Dedup via
+    // setup_help_email_sent_at on the row.
+    if (deps.notifySetupHelp && !row.setup_help_email_sent_at) {
+      const startedMs = Date.parse(row.subscription_started_at)
+      if (!Number.isNaN(startedMs)) {
+        const ageMs = now().getTime() - startedMs
+        if (ageMs >= SETUP_HELP_AGE_MS) {
+          const r = await deps.notifySetupHelp({
+            subscription_id: subId,
+            customer_id: row.customer_id,
+            tier: row.tier,
+            age_ms: ageMs,
+          }).catch((e) => ({
+            ok: false as const,
+            detail: e instanceof Error ? e.message : String(e),
+          }))
+          if (r.ok) {
+            result.setup_help_emails_sent += 1
+            if (deps.markSetupHelpSent) {
+              try {
+                await deps.markSetupHelpSent(subId)
+              } catch (e) {
+                log('[retry-pending-provisions] markSetupHelpSent threw', {
+                  subscription_id: subId,
+                  error: e instanceof Error ? e.message : String(e),
+                })
+              }
+            }
+          } else {
+            result.setup_help_email_failures += 1
+            log('[retry-pending-provisions] setup-help email failed', {
+              subscription_id: subId,
+              detail: r.detail ?? 'unknown',
+            })
+          }
+        }
+      }
+    }
+
     const latest = await deps.findLatestAttempt(subId)
 
     // If we've already exhausted this row, don't re-enter. The exhausted

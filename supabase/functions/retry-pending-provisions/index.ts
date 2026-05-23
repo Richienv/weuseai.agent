@@ -38,7 +38,10 @@ import {
   type PendingProvisionRow,
   type RetryAttempt,
   type RetryHandlerDeps,
+  type SetupHelpNotification,
 } from '../_shared/retry-pending-provisions-handler.ts'
+import { buildSetupHelpEmailBody } from '../_shared/lifecycle-email-bodies.ts'
+import { sendEmail } from '../_shared/email-delivery.ts'
 import type {
   IProvisioningClient,
   SpinUpInput,
@@ -62,6 +65,10 @@ const BOT_TOKEN_ENC_KEY = Deno.env.get('BOT_TOKEN_ENC_KEY')!
 // of truth for founder DMs. Missing tokens → notifyFounder no-ops.
 const FOUNDER_BOT_TOKEN = Deno.env.get('SUPPORT_TELEGRAM_BOT_TOKEN') ?? ''
 const FOUNDER_CHAT_ID = Deno.env.get('RICHIE_CHAT_ID') ?? ''
+
+// Phase A2 PR 4: dashboard base for the setup-help.md resume_url.
+const DASHBOARD_BASE =
+  Deno.env.get('PUBLIC_DASHBOARD_BASE') ?? 'https://weuseai-agent.vercel.app'
 
 const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
 
@@ -99,9 +106,13 @@ const provisioning: IProvisioningClient = {
 
 async function findStalePendingProvisions(): Promise<PendingProvisionRow[]> {
   const cutoff = new Date(Date.now() - PENDING_STALE_AGE_MS).toISOString()
+  // Phase A2 PR 4: also pull setup_help_email_sent_at so the handler
+  // knows whether to fire the 24h "you might be stuck" email.
   const { data, error } = await supabase
     .from('subscriptions')
-    .select('id, customer_id, tier, always_on_enabled, started_at')
+    .select(
+      'id, customer_id, tier, always_on_enabled, started_at, setup_help_email_sent_at',
+    )
     .eq('status', 'pending_provision')
     .lte('started_at', cutoff)
   if (error || !data) return []
@@ -111,12 +122,14 @@ async function findStalePendingProvisions(): Promise<PendingProvisionRow[]> {
     tier: Tier
     always_on_enabled: boolean
     started_at: string
+    setup_help_email_sent_at: string | null
   }>).map((r) => ({
     subscription_id: r.id,
     customer_id: r.customer_id,
     tier: r.tier,
     always_on_enabled: r.always_on_enabled,
     subscription_started_at: r.started_at,
+    setup_help_email_sent_at: r.setup_help_email_sent_at,
   }))
 }
 
@@ -204,6 +217,82 @@ async function notifyFounder(text: string): Promise<void> {
   })
 }
 
+// ─── Phase A2 PR 4: setup-help.md "you might be stuck" email ───────────
+
+/**
+ * Inspect a pending-provision row's most recent retry attempt outcome
+ * and produce a short BI label of where the customer is most likely
+ * stuck. Surfaced into the email body as the `stuck_step` variable.
+ * Best-effort — falls back to a generic label when no attempt rows
+ * exist yet (which can happen when started_at is old but the retry
+ * worker hasn't run yet).
+ */
+async function deriveStuckStep(subscriptionId: string): Promise<string> {
+  const latest = await findLatestAttempt(subscriptionId)
+  if (!latest) return 'menyiapkan server'
+  switch (latest.outcome) {
+    case 'capacity_exhausted':
+      return 'menyiapkan server (Vultr + DigitalOcean penuh sesaat)'
+    case 'other_error':
+      return 'menyiapkan server (ada error tak terduga di sisi kami)'
+    case 'exhausted':
+      return 'menyiapkan server (tim kami sudah dikabari, sedang dicek manual)'
+    case 'spin_up_ok':
+      // VPS spin-up requested but customer-readiness hasn't fired yet.
+      return 'pairing bot Telegram dan menyalakan agent'
+    case 'in_flight':
+    default:
+      return 'menyiapkan server'
+  }
+}
+
+async function notifySetupHelp(
+  n: SetupHelpNotification,
+): Promise<{ ok: boolean; detail?: string }> {
+  // Pull the customer's email + display_name for the template.
+  const { data: cust, error: custErr } = await supabase
+    .from('customers')
+    .select('email, display_name')
+    .eq('id', n.customer_id)
+    .maybeSingle()
+  if (custErr) return { ok: false, detail: 'customer lookup: ' + custErr.message }
+  const email = (cust as { email?: string } | null)?.email ?? ''
+  if (!email) return { ok: false, detail: 'no_customer_email' }
+  const displayName =
+    (cust as { display_name?: string | null } | null)?.display_name &&
+    (cust as { display_name?: string | null }).display_name!.trim().length > 0
+      ? (cust as { display_name: string }).display_name
+      : 'pelanggan'
+
+  const stuckStep = await deriveStuckStep(n.subscription_id)
+  const resumeUrl =
+    `${DASHBOARD_BASE}/onboarding` +
+    `?cid=${encodeURIComponent(n.customer_id)}`
+
+  const { subject, text } = buildSetupHelpEmailBody({
+    display_name: displayName,
+    stuck_step: stuckStep,
+    resume_url: resumeUrl,
+  })
+
+  const r = await sendEmail({ to: email, subject, text })
+  if (!r.ok) {
+    return {
+      ok: false,
+      detail: r.error + (r.detail ? ': ' + r.detail : ''),
+    }
+  }
+  return { ok: true }
+}
+
+async function markSetupHelpSent(subscription_id: string): Promise<void> {
+  const { error } = await supabase
+    .from('subscriptions')
+    .update({ setup_help_email_sent_at: new Date().toISOString() })
+    .eq('id', subscription_id)
+  if (error) throw error
+}
+
 const deps: RetryHandlerDeps = {
   findStalePendingProvisions,
   findLatestAttempt,
@@ -214,6 +303,8 @@ const deps: RetryHandlerDeps = {
     console.log(msg, extra ?? {})
   },
   notifyFounder,
+  notifySetupHelp,
+  markSetupHelpSent,
 }
 
 // ─── HTTP entry ──────────────────────────────────────────────────────
