@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Invoice PPN 11% {{invoice_number}} — {{client_name}}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #141413; background: #FAF9F5; padding: 48px; line-height: 1.5; }
+  .invoice { max-width: 760px; margin: 0 auto; background: #fff; padding: 48px; border: 1px solid rgba(20, 20, 19, 0.08); }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px; padding-bottom: 20px; border-bottom: 1px solid rgba(20, 20, 19, 0.1); }
+  .brand-block .seller-name { font-size: 18px; font-weight: 600; color: #141413; margin-bottom: 6px; }
+  .brand-block .seller-detail { font-size: 12px; color: rgba(20, 20, 19, 0.7); margin-top: 2px; }
+  .invoice-meta { text-align: right; font-size: 13px; color: rgba(20, 20, 19, 0.7); }
+  .invoice-meta .doc-type { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(20, 20, 19, 0.5); margin-bottom: 4px; }
+  .invoice-meta .doc-number { font-size: 16px; font-weight: 600; color: #141413; margin-bottom: 12px; }
+  .invoice-meta .meta-row { display: flex; justify-content: flex-end; gap: 12px; margin-top: 4px; }
+  .invoice-meta .meta-label { color: rgba(20, 20, 19, 0.5); }
+  .label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(20, 20, 19, 0.5); margin-bottom: 4px; }
+  .parties { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-bottom: 32px; }
+  .party-name { font-size: 14px; font-weight: 600; }
+  .party-detail { font-size: 12px; color: rgba(20, 20, 19, 0.7); margin-top: 2px; }
+  .party-detail.npwp { font-family: 'SF Mono', Menlo, monospace; font-size: 11px; margin-top: 6px; }
+  .faktur-pajak-block { background: #FFF8E7; border: 1px solid #E5C56E; padding: 14px 18px; margin-bottom: 24px; font-size: 12px; color: #5C4A0F; }
+  .faktur-pajak-block .fp-title { font-weight: 600; margin-bottom: 4px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; }
+  .faktur-pajak-block .fp-serial { font-family: 'SF Mono', Menlo, monospace; font-size: 13px; color: #141413; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+  th { text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(20, 20, 19, 0.5); padding: 10px 8px; border-bottom: 1px solid rgba(20, 20, 19, 0.12); font-weight: 500; }
+  th.right, td.right { text-align: right; }
+  td { font-size: 13px; padding: 12px 8px; border-bottom: 1px solid rgba(20, 20, 19, 0.06); }
+  td.item-desc { font-weight: 500; }
+  td.item-desc .desc-note { display: block; font-size: 11px; color: rgba(20, 20, 19, 0.55); font-weight: 400; margin-top: 2px; }
+  .totals { margin-left: auto; width: 320px; margin-top: 8px; }
+  .total-row { display: flex; justify-content: space-between; padding: 8px 8px; font-size: 13px; }
+  .total-row.subtotal { color: rgba(20, 20, 19, 0.7); }
+  .total-row.ppn { color: rgba(20, 20, 19, 0.7); }
+  .total-row.dpp { font-size: 12px; color: rgba(20, 20, 19, 0.55); font-style: italic; }
+  .total-row.grand { border-top: 2px solid #141413; margin-top: 6px; padding-top: 14px; font-weight: 600; font-size: 15px; }
+  .legal-footer { margin-top: 36px; padding-top: 20px; border-top: 1px solid rgba(20, 20, 19, 0.08); font-size: 11px; color: rgba(20, 20, 19, 0.6); line-height: 1.6; }
+  .legal-footer .legal-title { font-weight: 600; color: #141413; margin-bottom: 6px; }
+  .payment-block { margin-top: 24px; padding: 16px 20px; background: #F5F5F0; border-left: 3px solid #141413; font-size: 12px; }
+  .payment-block .pay-title { font-weight: 600; margin-bottom: 6px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: rgba(20, 20, 19, 0.7); }
+  .payment-block .pay-row { margin-top: 3px; }
+</style>
+</head>
+<body>
+<div class="invoice">
+
+  <div class="header">
+    <div class="brand-block">
+      <div class="seller-name">{{seller_name}}</div>
+      <div class="seller-detail">{{seller_address}}</div>
+      <div class="seller-detail">Telp: {{seller_phone}} &middot; Email: {{seller_email}}</div>
+      <div class="seller-detail npwp">NPWP: {{seller_npwp}}</div>
+      <div class="seller-detail">Status PKP &middot; NPPKP: {{seller_nppkp}}</div>
+    </div>
+    <div class="invoice-meta">
+      <div class="doc-type">Invoice (PPN 11%)</div>
+      <div class="doc-number">{{invoice_number}}</div>
+      <div class="meta-row"><span class="meta-label">Tanggal terbit</span><span>{{issue_date_id}}</span></div>
+      <div class="meta-row"><span class="meta-label">Jatuh tempo</span><span>{{due_date_id}}</span></div>
+      <div class="meta-row"><span class="meta-label">Masa pajak</span><span>{{tax_period_month_year}}</span></div>
+    </div>
+  </div>
+
+  <div class="parties">
+    <div>
+      <div class="label">Ditagihkan kepada (PIHAK PEMBELI)</div>
+      <div class="party-name">{{client_name}}</div>
+      <div class="party-detail">{{client_legal_form}}</div>
+      <div class="party-detail">{{client_address}}</div>
+      <div class="party-detail">Email: {{client_email}}</div>
+      <div class="party-detail npwp">NPWP: {{client_npwp_or_nik}}</div>
+      <div class="party-detail">{{client_pkp_status_note}}</div>
+    </div>
+    <div>
+      <div class="label">Untuk proyek / referensi</div>
+      <div class="party-name">{{project_name}}</div>
+      <div class="party-detail">PO / Kontrak: {{po_or_contract_ref}}</div>
+      <div class="party-detail">Periode kerja: {{work_period}}</div>
+    </div>
+  </div>
+
+  <div class="faktur-pajak-block">
+    <div class="fp-title">Faktur Pajak — slot nomor seri</div>
+    <div class="fp-serial">{{faktur_pajak_serial}}</div>
+    <div style="margin-top:6px;">
+      Nomor seri faktur pajak diterbitkan terpisah melalui e-Faktur (Coretax) sesuai PER-03/PJ/2022.
+      Invoice ini menjadi dokumen referensi penagihan; faktur pajak elektronik dikirim ke email pembeli setelah upload e-Faktur.
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Deskripsi pekerjaan / barang</th>
+        <th class="right">Kuantitas</th>
+        <th class="right">Harga satuan</th>
+        <th class="right">Jumlah</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{items_rows}}
+    </tbody>
+  </table>
+
+  <div class="totals">
+    <div class="total-row subtotal">
+      <span>Subtotal (harga jual)</span>
+      <span>{{subtotal_formatted}}</span>
+    </div>
+    <div class="total-row dpp">
+      <span>Dasar Pengenaan Pajak (DPP)</span>
+      <span>{{dpp_formatted}}</span>
+    </div>
+    <div class="total-row ppn">
+      <span>PPN 11% atas DPP</span>
+      <span>{{ppn_formatted}}</span>
+    </div>
+    <div class="total-row grand">
+      <span>Total tagihan</span>
+      <span>{{grand_total_formatted}}</span>
+    </div>
+  </div>
+
+  <div class="payment-block">
+    <div class="pay-title">Pembayaran</div>
+    <div class="pay-row">Bank: {{bank_name}}</div>
+    <div class="pay-row">Nomor rekening: {{bank_account_number}}</div>
+    <div class="pay-row">Atas nama: {{bank_account_holder}}</div>
+    <div class="pay-row" style="margin-top:8px;">Mohon transfer sesuai nominal total tagihan. Bukti transfer dapat dikirim ke {{seller_email}}.</div>
+  </div>
+
+  <div class="legal-footer">
+    <div class="legal-title">Catatan pajak</div>
+    <div>
+      Invoice ini diterbitkan oleh Pengusaha Kena Pajak (PKP) sesuai Undang-Undang Nomor 42 Tahun 2009 tentang Perubahan Ketiga atas UU PPN dan PPnBM,
+      sebagaimana diubah dengan UU Harmonisasi Peraturan Perpajakan (HPP) Nomor 7 Tahun 2021. Tarif PPN 11% berlaku sejak 1 April 2022 berdasarkan UU HPP Pasal 7 ayat (1) huruf a.
+    </div>
+    <div style="margin-top:6px;">
+      Faktur pajak elektronik (e-Faktur) diterbitkan terpisah melalui aplikasi Coretax DJP mengikuti PER-03/PJ/2022 dan PMK 18/PMK.03/2021.
+      Pertanyaan terkait penagihan: <a href="mailto:{{seller_email}}" style="color: rgba(20,20,19,0.7); text-decoration: none;">{{seller_email}}</a>.
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
