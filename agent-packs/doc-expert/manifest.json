@@ -1,8 +1,8 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "doc-expert",
-  "version": "2.1.1",
-  "description_id": "Bundle skill + template Doc Expert v2.1. Invoice (5 styles termasuk W-INVOICE profesional + minimal + recurring + PT/CV existing), proposal layanan + fixed-bid, report 3 panjang, email 4 register (formal / casual / urgent / apology), surat formal + memo internal + draft kontrak layanan, plus academic docs (skripsi BAB I-V, thesis, tugas, abstract) dengan citation styles APA / MLA / Chicago — konvensi Indonesia.",
+  "version": "2.2.0",
+  "description_id": "Bundle skill + template Doc Expert v2.2. Invoice (7 styles termasuk PPN-11% + UMKM non-PPN + W-INVOICE + minimal + recurring + PT/CV), kuitansi resmi Indonesia, kontrak freelance Bahasa + sewa-menyewa KUHPerdata + draft layanan, surat keterangan domisili usaha OSS-RBA, proposal layanan + fixed-bid, report 3 panjang, email 4 register, surat formal + memo internal, plus academic docs (skripsi BAB I-V, thesis, tugas, abstract) konvensi Indonesia.",
   "skills": [
     {
       "id": "invoice-generator",
@@ -64,6 +64,42 @@
       "kind": "invoice",
       "description_id": "Invoice untuk subscription bulanan — billing period, next-bill-date, auto-renew note, slot untuk recurring item dengan periode jelas. Pas untuk SaaS, retainer bulanan, sewa.",
       "best_for": "Subscription / retainer bulanan — explicit periodicity"
+    },
+    {
+      "id": "invoice-ppn-11pct.html",
+      "kind": "invoice",
+      "description_id": "Invoice PPN 11% B2B dengan slot NPWP penjual + pembeli, blok faktur pajak readiness (nomor seri e-Faktur Coretax), DPP eksplisit, masa pajak, dan footer dasar hukum UU PPN 42/2009 jo. UU HPP 7/2021 + PER-03/PJ/2022. Untuk seller berstatus PKP (omzet > Rp 4.8M/tahun) yang harus terbit faktur pajak elektronik.",
+      "best_for": "Penjual PKP (omzet > Rp 4.8M/tahun) yang harus terbit faktur pajak"
+    },
+    {
+      "id": "invoice-umkm-non-ppn.html",
+      "kind": "invoice",
+      "description_id": "Invoice UMKM Non-PKP — eksplisit menyatakan 'Bukan Pengusaha Kena Pajak' sesuai UU HPP 7/2021, tanpa PPN, plus footer disclosure PPh Final 0,5% sesuai PP 55/2022. Untuk UMKM dengan peredaran bruto < Rp 4.8M/tahun yang tidak memungut PPN.",
+      "best_for": "UMKM Non-PKP (omzet < Rp 4.8M/tahun) — disclosure PPh Final 0,5%"
+    },
+    {
+      "id": "kuitansi-resmi.md",
+      "kind": "receipt",
+      "description_id": "Kuitansi resmi konvensi Indonesia — 'Telah terima dari', 'Untuk pembayaran', slot Materai Rp 10.000 untuk nominal >Rp 5jt sesuai UU Bea Materai 10/2020 jo. PP 86/2021, nominal dieja + angka, tanda tangan penerima dengan NPWP/NIK. Bukan generic receipt.",
+      "best_for": "Bukti penerimaan pembayaran formal — UMKM / freelancer / sewa-menyewa / honor"
+    },
+    {
+      "id": "kontrak-freelance-bahasa.md",
+      "kind": "contract",
+      "description_id": "Draft kontrak freelance / pekerja lepas dalam register hukum Bahasa Indonesia. Referensi Pasal 1320 + 1338 KUHPerdata, klausul force majeure dengan konteks Indonesia (bencana alam + kebijakan pemerintah + pandemi), eksplisit menyatakan BUKAN hubungan kerja per UU Cipta Kerja 6/2023 (no BPJS / THR / pesangon), no minimum term, slot materai Rp 10.000, domisili Pengadilan Negeri. WAJIB direview advokat.",
+      "best_for": "Freelancer + klien untuk proyek desain / dev / konsultasi / fotografi — alternatif PKWT"
+    },
+    {
+      "id": "surat-perjanjian-sewa.md",
+      "kind": "contract",
+      "description_id": "Draft perjanjian sewa-menyewa properti (rumah / kantor / kios / ruko / gudang) sesuai Pasal 1548-1600 KUHPerdata. Klausul deposit (1-2 bulan), pembagian biaya listrik + air + IPL, ketentuan perpanjangan tertulis (bukan otomatis), peruntukan + pembatasan sub-leasing, kenaikan sewa cap BPS, slot materai Rp 10.000, domisili Pengadilan Negeri. WAJIB direview advokat / notaris.",
+      "best_for": "Sewa properti konvensi Indonesia — bukan western lease"
+    },
+    {
+      "id": "surat-keterangan-domisili-usaha-template.md",
+      "kind": "legal-form",
+      "description_id": "Template Surat Keterangan Domisili Usaha (SKDU) untuk registrasi NIB di OSS-RBA / pembukaan rekening usaha / pendaftaran NPWP Badan. Header kop kelurahan + kecamatan + kota, data pemohon lengkap (NIK + KTP), data usaha lengkap (KBLI 2020), RT/RW eksplisit, lampiran wajib (KTP + KK + pengantar RT/RW), referensi Permendagri 19/2018 + PP 5/2021 (OSS-RBA) + UU 20/2008 (UMKM). Catatan khusus DKI vs daerah lain.",
+      "best_for": "Pelaku UMKM yang ngurus NIB OSS / buka rekening usaha — pengantar ke kelurahan"
     },
     {
       "id": "proposal-services.md",
