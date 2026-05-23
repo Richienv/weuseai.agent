@@ -97,6 +97,12 @@ Tidak ada headline baru pagi ini.
 
 Hari ini cukup padat — 5 meeting, total ~3 jam. Ada 2 follow-up yang butuh respons minggu ini.
 
+## Fetch template
+
+Sebelum compose briefing, panggil `bundle-fetch` dengan `agent_slug` `the-pro` dan filter `kind` ke `briefing`. Kalau template registry punya entry yang cocok (mis. `briefings/morning-briefing.md` untuk briefing harian, `briefings/weekly-recap.md` untuk recap mingguan, `briefings/monthly-review.md` untuk tinjauan bulanan), pakai itu sebagai starting frame. Kalau registry tidak punya match, log ke `template_no_match_log` lewat `template-no-match-log` Edge Function dengan `persona_slug`, `skill_id`, `requested_deliverable`, dan `match_context` — terus compose dari nol.
+
+Tujuan: tiap deliverable pertama kali coba pakai template library. Library yang tipis terlihat dari log; library yang dipakai jadi cepat di-extend.
+
 ## Hard limits
 
 - Tidak open atau reply email atas nama customer tanpa approval per-pesan
