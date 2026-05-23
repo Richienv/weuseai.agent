@@ -1,7 +1,7 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "social-conductor",
-  "version": "2.3.0",
+  "version": "2.3.1",
   "description_id": "Bundle skill + template Social Conductor v2 (Option B scope). Content calendar, post drafting cross-platform, engagement log, voice-consistency checker. NO scraping, NO auto-post — kamu yang submit ke platform.",
   "skills": [
     {
@@ -18,6 +18,7 @@
       "description_id": "Susun content calendar lintas platform (TikTok, Reels, X, LinkedIn, blog). Slot terjadwal di local DB, bukan di platform 3rd-party. Output bisa di-export ke .ics atau Google Calendar manual.",
       "description_en": "Build cross-platform content calendar in local DB.",
       "templates_used": ["calendar-schema.md", "weekly-cadence-presets.md"],
+      "template_fetch_required": true,
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:content-calendar-builder",
       "enabled_for_tiers": ["pro", "studio"]
@@ -27,6 +28,7 @@
       "description_id": "Draft post copy per platform — caption length-adjusted (TikTok ~150, Reels ~125, X ~280, LinkedIn ~700). Voice-fit scored. Customer copy-paste ke platform manual.",
       "description_en": "Draft platform-optimal post copy in locked voice.",
       "templates_used": ["platform-length-rules.md"],
+      "template_fetch_required": true,
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:post-drafter",
       "enabled_for_tiers": ["pro", "studio"]
@@ -36,6 +38,7 @@
       "description_id": "Log comment / DM / mention yang customer input manual. Track yang belum dibalas, surface daily digest. Draft reply siap customer kirim manual.",
       "description_en": "Manual-input engagement log + reply drafting.",
       "templates_used": ["engagement-schema.md", "reply-pattern-library.md"],
+      "template_fetch_required": true,
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:engagement-log-tracker",
       "enabled_for_tiers": ["pro", "studio"]
@@ -54,6 +57,7 @@
       "description_id": "Multi-week campaign plan (produk launch, content series, seasonal push). Output: calendar entries + post drafts pre-staged + engagement triggers.",
       "description_en": "Multi-week campaign plan with calendar + drafts.",
       "templates_used": ["campaign-template.md"],
+      "template_fetch_required": true,
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:campaign-planner",
       "enabled_for_tiers": ["pro", "studio"]

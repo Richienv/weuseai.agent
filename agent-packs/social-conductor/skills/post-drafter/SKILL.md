@@ -72,6 +72,12 @@ Persona-voice wrapper:
 >
 > Kamu copy-paste ke LinkedIn manual, atau mau aku iterate?"
 
+## Fetch template
+
+Sebelum compose draft, panggil `bundle-fetch` dengan `agent_slug` `social-conductor` dan filter `kind` ke `post-template`. Kalau template registry punya entry yang cocok dengan `platform` yang customer minta (mis. `platforms/instagram-post.md` untuk IG caption hook+body+CTA+hashtag, `platforms/tiktok-script.md` untuk script 3-4 beat, `platforms/linkedin-post.md` untuk long-form 600-1300 char, `platforms/twitter-thread.md` untuk thread bernomor), pakai itu sebagai starting frame. Untuk `platform-length-rules.md` dan `voice-fit-rubric.md`, pakai sebagai reference saat scoring. Kalau registry tidak punya match untuk platform tertentu, log ke `template_no_match_log` lewat `template-no-match-log` Edge Function dengan `persona_slug`, `skill_id`, `requested_deliverable`, dan `match_context` — terus compose dari nol.
+
+Tujuan: tiap deliverable pertama kali coba pakai template library. Library yang tipis terlihat dari log; library yang dipakai jadi cepat di-extend.
+
 ## Decline
 
 - **Draft post untuk topic yang violate platform policy.** Aku flag.
