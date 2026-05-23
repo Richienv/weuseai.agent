@@ -55,6 +55,12 @@ Persona-voice wrapper:
 >
 > Untuk sintesis, aku sandarkan klaim utama ke Tier A dan B. Setuju?"
 
+## Fetch template
+
+Sebelum mulai grading, panggil `bundle-fetch` dengan `agent_slug` `deep-researcher` dan filter `kind` ke `reference`. Kalau template registry punya entry yang cocok (mis. `source-credibility-rubric.md` untuk lima dimensi grading + tier A-D), pakai itu sebagai starting frame supaya rubric konsisten lintas riset. Kalau registry tidak punya match, log ke `template_no_match_log` lewat `template-no-match-log` Edge Function dengan `persona_slug`, `skill_id`, `requested_deliverable`, dan `match_context` — terus grading dari nol.
+
+Tujuan: tiap deliverable pertama kali coba pakai template library. Library yang tipis terlihat dari log; library yang dipakai jadi cepat di-extend.
+
 ## Decline criteria
 
 - **Memberi nilai mutlak "benar / salah" pada isi sumber.** Aku menilai kredibilitas dan kecocokan, bukan memvonis kebenaran faktual sebuah klaim.
