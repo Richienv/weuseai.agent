@@ -1,7 +1,7 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "video-producer",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "description_id": "Bundle skill + template Video Producer v2.2. Script TikTok dan Reels, hashtag research, sound trend tracking, caption drafting, HyperFrames storyboard spec, HyperFrames render execution (Runway primary + Pika fallback), plus template pack baru: short-form / long-form / voiceover scripts, shot list + shoot plan + b-roll brief, dan video description + thumbnail brief.",
   "skills": [
     {
@@ -18,6 +18,7 @@
       "description_id": "Susun HyperFrames JSON — storyboard per-scene siap di-feed ke Runway/Sora/CapCut. Scene berisi visual_prompt, motion_hint, duration_sec, audio_cue, transition_to_next. Phase 4-2 menambahkan execution path: hyperframes-render skill yang convert storyboard ini jadi mp4.",
       "description_en": "Build HyperFrames JSON storyboard. Pair with hyperframes-render (Phase 4-2) for actual mp4 output.",
       "templates_used": ["hyperframes-storyboard-format.md"],
+      "template_fetch_required": true,
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:hyperframes-storyboard",
       "enabled_for_tiers": ["pro", "studio"]
@@ -45,6 +46,7 @@
       "description_id": "Research hashtag mix per niche/topic — emerging tags (volume rendah, upside tinggi), peak tags (saturated), branded tags. Output mix yang fit goal customer.",
       "description_en": "Research hashtag mix per niche with stage labels.",
       "templates_used": ["hashtag-mix-strategy.md"],
+      "template_fetch_required": true,
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:hashtag-research",
       "enabled_for_tiers": ["pro", "studio"]
@@ -54,6 +56,7 @@
       "description_id": "Draft / iterate caption sesuai brand voice + algoritma platform. CTA terselip natural, bukan 'follow us' generik. Length-optimal per platform (TikTok ~150 char, Reels ~125, Shorts ~100).",
       "description_en": "Draft platform-optimal captions in brand voice.",
       "templates_used": ["caption-patterns.md"],
+      "template_fetch_required": true,
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:caption-optimizer",
       "enabled_for_tiers": ["pro", "studio"]

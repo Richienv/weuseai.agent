@@ -68,6 +68,12 @@ Persona-voice wrapper:
 >
 > Copy-paste per scene ke Runway, atau pakai full JSON kalau workflow kamu support batch import. Mau aku tweak motion_hint, atau lanjut ke caption?"
 
+## Fetch template
+
+Sebelum susun storyboard, panggil `bundle-fetch` dengan `agent_slug` `video-producer` dan filter `kind` ke `schema-spec` atau `production`. Kalau template registry punya entry yang cocok (mis. `hyperframes-storyboard-format.md` untuk JSON schema scenes / visual_prompt / motion_hint / duration_sec / audio_cue / transition_to_next, `production/shot-list.md` untuk sortable grid scene plus shot type plus camera move plus duration, `production/shot-plan.md` untuk multi-lokasi shoot plan dengan call sheet + contingency, `production/b-roll-brief.md` untuk capture brief overlay), pakai itu sebagai starting frame. Kalau registry tidak punya match untuk target_renderer atau style tertentu, log ke `template_no_match_log` lewat `template-no-match-log` Edge Function dengan `persona_slug`, `skill_id`, `requested_deliverable`, dan `match_context` — terus compose dari nol.
+
+Tujuan: tiap deliverable pertama kali coba pakai template library. Library yang tipis terlihat dari log; library yang dipakai jadi cepat di-extend.
+
 ## Decline
 
 - **Render frame actual.** Phase 6+ work; sekarang stub spec only.

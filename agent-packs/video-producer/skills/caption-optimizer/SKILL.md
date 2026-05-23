@@ -53,6 +53,12 @@ Brand voice rules (inherits from CLAUDE.md):
 >
 > 138 char di body, fit di TikTok preview tanpa truncate. Mau aku iterate dengan CTA different (comment / share)?"
 
+## Fetch template
+
+Sebelum compose caption, panggil `bundle-fetch` dengan `agent_slug` `video-producer` dan filter `kind` ke `reference` atau `publishing`. Kalau template registry punya entry yang cocok (mis. `caption-patterns.md` untuk hook openers + CTA variants per platform + length guidelines, `publishing/video-description.md` untuk 4 varian YouTube long / Shorts / TikTok / IG Reels dengan hook + ringkasan + chapter + hashtag count per platform), pakai itu sebagai starting frame. Kalau registry tidak punya match untuk platform atau cta_type tertentu, log ke `template_no_match_log` lewat `template-no-match-log` Edge Function dengan `persona_slug`, `skill_id`, `requested_deliverable`, dan `match_context` — terus compose dari nol.
+
+Tujuan: tiap deliverable pertama kali coba pakai template library. Library yang tipis terlihat dari log; library yang dipakai jadi cepat di-extend.
+
 ## Decline
 
 - **Caption misleading** (clickbait that lies). Aku tolak.
