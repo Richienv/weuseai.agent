@@ -1,7 +1,7 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "doc-expert",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "description_id": "Bundle skill + template Doc Expert v2.1. Invoice (5 styles termasuk W-INVOICE profesional + minimal + recurring + PT/CV existing), proposal layanan + fixed-bid, report 3 panjang, email 4 register (formal / casual / urgent / apology), surat formal + memo internal + draft kontrak layanan, plus academic docs (skripsi BAB I-V, thesis, tugas, abstract) dengan citation styles APA / MLA / Chicago — konvensi Indonesia.",
   "skills": [
     {
@@ -9,6 +9,7 @@
       "description_id": "Bikin invoice profesional dari list item dan info klien. Output HTML + PDF (Phase 2E-3 pipeline) siap kirim atau cetak. Lima style template tersedia: invoice-pro (default), invoice-w-professional (W-style premium), invoice-minimal (single-page), invoice-recurring (subscription).",
       "description_en": "Generate professional invoice from itemized client info. Returns HTML + PDF (Phase 2E-3 pipeline). Five style templates available: invoice-pro (default), invoice-w-professional (W-style premium), invoice-minimal (single-page), invoice-recurring (subscription).",
       "templates_used": ["invoice-pro.html", "invoice-w-professional.html", "invoice-minimal.html", "invoice-recurring.html"],
+      "template_fetch_required": true,
       "execution": "edge-function",
       "handler_ref": "edge-fn:invoice-generator-handler",
       "enabled_for_tiers": ["starter", "pro", "studio"]
@@ -24,6 +25,7 @@
         "academic/assignment.md",
         "academic/abstract-bilingual.md"
       ],
+      "template_fetch_required": true,
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:academic-doc-builder",
       "enabled_for_tiers": ["pro", "studio"]
