@@ -52,6 +52,12 @@ Persona-voice wrapper:
 
 > "Aku tulis post-nya: [title]. Word count: ~X. Keyword utama: Y. FAQ: Z items. Markdown ada di [path] — cek dulu. Kalau cocok, aku tambahkan ke blog di Vercel deployment kamu."
 
+## Fetch template
+
+Sebelum tulis post, panggil `bundle-fetch` dengan `agent_slug` `web-app-builder` dan filter `kind` ke `markdown` (blog). Kalau template registry punya entry yang cocok dengan `format` yang customer pilih (mis. `blog/long-form-article/v1.md` untuk artikel 1500-2500 kata, `blog/listicle/v1.md` untuk listicle 5/7/10 items, `blog/how-to/v1.md` untuk tutorial step-by-step), pakai itu sebagai starting frame. Kalau registry tidak punya match untuk format yang diminta (mis. case-study atau comparison), log ke `template_no_match_log` lewat `template-no-match-log` Edge Function dengan `persona_slug`, `skill_id`, `requested_deliverable`, dan `match_context` — terus compose dari nol.
+
+Tujuan: tiap deliverable pertama kali coba pakai template library. Library yang tipis terlihat dari log; library yang dipakai jadi cepat di-extend.
+
 ## Decline criteria
 
 - Topik yang melanggar disinformation / medical-without-credential / financial-advice-tanpa-disclaimer → decline atau tambah disclaimer wajib.

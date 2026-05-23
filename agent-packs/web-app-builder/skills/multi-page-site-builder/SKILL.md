@@ -42,6 +42,12 @@ Persona-voice wrapper:
 
 > "Site lengkap kamu udah jadi: home, about, services, contact. Preview lokal di [link]. Cek dulu copy-nya — kalau ada section yang perlu di-tweak, kasih tahu. Kalau udah pas, aku deploy ke Vercel."
 
+## Fetch template
+
+Sebelum compose site bundle, panggil `bundle-fetch` dengan `agent_slug` `web-app-builder` dan filter `kind` ke `site-bundle`. Kalau template registry punya entry yang cocok dengan `bundle_kind` (mis. `multipage/umkm-default/v1` untuk warung / toko / service kecil), pakai itu sebagai starting frame. Untuk konsistensi tone lintas halaman, juga cek `copy/value-prop-canvas.md` dan `copy/positioning-statement.md` supaya pesan lock dulu sebelum 4 halaman dirakit. Kalau registry tidak punya match untuk bundle_kind yang diminta, log ke `template_no_match_log` lewat `template-no-match-log` Edge Function dengan `persona_slug`, `skill_id`, `requested_deliverable`, dan `match_context` — terus compose dari nol.
+
+Tujuan: tiap deliverable pertama kali coba pakai template library. Library yang tipis terlihat dari log; library yang dipakai jadi cepat di-extend.
+
 ## Decline criteria
 
 - Site yang butuh fitur kompleks di luar 4-page bundle (booking calendar, e-commerce checkout, login, CMS) → flag bahwa di-luar-scope skill ini, sarankan landing-page-builder + integrasi pihak ketiga atau tunggu Phase 4 expansion.
