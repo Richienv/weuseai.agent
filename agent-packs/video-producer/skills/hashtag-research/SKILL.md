@@ -57,6 +57,12 @@ Output: 8-12 hashtags total, tagged dengan stage label.
 >
 > Volume estimate based on customer's own platform check (data cepat berubah). Mau aku draft caption yang inject tags ini natural?"
 
+## Fetch template
+
+Sebelum susun mix hashtag, panggil `bundle-fetch` dengan `agent_slug` `video-producer` dan filter `kind` ke `reference`. Kalau template registry punya entry yang cocok (mis. `hashtag-mix-strategy.md` untuk default 30/50/20 rule emerging/peak/branded + context-specific variants per goal reach/engagement/brand-build), pakai itu sebagai starting frame. Kalau registry tidak punya match untuk niche atau goal tertentu, log ke `template_no_match_log` lewat `template-no-match-log` Edge Function dengan `persona_slug`, `skill_id`, `requested_deliverable`, dan `match_context` — terus compose dari nol.
+
+Tujuan: tiap deliverable pertama kali coba pakai template library. Library yang tipis terlihat dari log; library yang dipakai jadi cepat di-extend.
+
 ## Decline
 
 - **Real-time exact volume.** Aku surface order-of-magnitude estimate; customer verifikasi di platform sendiri.
