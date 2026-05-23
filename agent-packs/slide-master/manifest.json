@@ -1,7 +1,7 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "slide-master",
-  "version": "2.2.1",
+  "version": "2.3.0",
   "description_id": "Bundle skill + template Slide Master v2. Dua mode: narrative-arc (default — story arc 12 slide) dan template-picker (8 template student/worker). Tier change v2: Pro+ → All tiers (Starter+).",
   "skills": [
     {
@@ -141,6 +141,42 @@
       "kind": "slide",
       "description_id": "Template satu slide traksi stand-alone — satu chart utama dengan sumbu jujur, 3 KPI di bottom strip, dan satu milestone callout di sudut chart. Anti-pola seperti truncated axis atau cherry-picked window di-flag eksplisit. Cocok untuk slot ke pitch deck investor, board update, atau review internal yang butuh slide traction yang kredibel.",
       "best_for": "Drafter yang butuh slide traction kredibel untuk pitch investor atau board update"
+    },
+    {
+      "id": "deck/indonesia/deck-investor-indonesia-id.md",
+      "kind": "deck-template",
+      "description_id": "Pitch deck untuk audiens VC Indonesia (East Ventures, AC Ventures, Alpha JWC, Northstar, Mandiri Capital, BRI Ventures). Urutan slide disesuaikan pertanyaan khas VC lokal — market sizing dalam IDR dengan sumber BPS, unit economics dalam IDR, tim slide dengan konvensi pendidikan dan riwayat kerja Indonesia, tesis exit yang sadar IDX vs SGX vs offshore.",
+      "best_for": "Founder Indonesia yang pitch ke VC lokal (post-seed sampai Series B)"
+    },
+    {
+      "id": "deck/indonesia/deck-z-gen-id.md",
+      "kind": "deck-template",
+      "description_id": "Deck untuk audience Z-Gen Indonesia (lahir 1997-2012). Visual references konvensi meme TikTok-id, pacing slide cepat 7-10 detik per ide, copy casual BI (nggak, banget, lagi viral). Cocok untuk presentasi kampus, pitch internship, lomba mahasiswa, kampanye brand Gen-Z.",
+      "best_for": "Presenter yang pitch ke audience Z-Gen Indonesia (kampus, internship, lomba, brand campaign)"
+    },
+    {
+      "id": "deck/indonesia/deck-umkm-pengajuan-modal.md",
+      "kind": "deck-template",
+      "description_id": "Deck untuk pelaku UMKM yang pitch permodalan ke lembaga pembiayaan (KUR bank, P2P lending OJK, angel, koperasi). Membahas KBLI code, omzet bracket per PP 7/2021 (Mikro <Rp 2M, Kecil <Rp 15M, Menengah <Rp 50M), legalitas (NIB, SIUP, NPWP), cash flow dalam IDR. Tone hormat-profesional ke analis kredit.",
+      "best_for": "Pemilik UMKM yang pitch permodalan ke bank penyalur KUR, P2P lending OJK, atau angel"
+    },
+    {
+      "id": "deck/indonesia/deck-rapat-direksi-pt.md",
+      "kind": "deck-template",
+      "description_id": "Deck internal Rapat Direksi atau RUPS Perseroan Terbatas Indonesia. Format mengikuti UU PT 40/2007 (Pasal 78 jenis RUPS, Pasal 79 quorum, Pasal 86 quorum RUPS, Pasal 108 fungsi pengawasan Komisaris). Quorum check di awal, action item dengan PIC Direksi tunggal dan deadline. Register formal-direksi.",
+      "best_for": "Sekretaris Perusahaan atau Direksi PT yang siapkan Rapat Direksi atau RUPS"
+    },
+    {
+      "id": "deck/indonesia/deck-launch-produk-indonesia.md",
+      "kind": "deck-template",
+      "description_id": "Deck peluncuran produk untuk pasar Indonesia. GTM Indonesia-spesifik: channel mix marketplace (Tokopedia / Shopee / TikTok Shop / Lazada), payment mix (QRIS / GoPay / OVO / DANA / VA / COD), pricing regional (Jabodetabek vs Tier-2 vs luar Jawa), checklist regulasi (BPOM, SNI, Komdigi, MUI Halal), strategi KOL multi-tier.",
+      "best_for": "Tim pemasaran atau brand manager yang launching produk baru ke pasar Indonesia"
+    },
+    {
+      "id": "deck/indonesia/deck-csr-bahasa.md",
+      "kind": "deck-template",
+      "description_id": "Deck laporan Tanggung Jawab Sosial dan Lingkungan (TJSL/CSR) untuk PT bidang Sumber Daya Alam per Pasal 74 UU PT 40/2007 dan PP 47/2012. Pemetaan ke SDGs Indonesia (Perpres 59/2017 Roadmap SDGs Bappenas), status PROPER (PermenLHK 1/2021 — 5 peringkat Emas/Hijau/Biru/Merah/Hitam), pelaporan output kuantitatif untuk anti-greenwashing.",
+      "best_for": "Direktur HSSE atau Head of Sustainability PT bidang SDA yang laporkan CSR ke board, KLHK, atau publik"
     }
   ],
   "self_extend": true,
