@@ -45,6 +45,12 @@ Persona-voice wrapper:
 
 > "Aku susun landing page-nya. Preview lokal di [link]. Bisa kamu cek dulu copy-nya. Kalau approve, aku deploy ke Vercel — kamu dapet URL preview hidup dalam 2-3 menit."
 
+## Fetch template
+
+Sebelum compose landing, panggil `bundle-fetch` dengan `agent_slug` `web-app-builder` dan filter `kind` ke `html` atau `landing`. Kalau template registry punya entry yang cocok dengan `template_kind` yang customer pilih (mis. `landing/saas/v1.html`, `landing/agency/v1.html`, `landing/course/v1.html`, `landing/portfolio/v1.html`, `landing/ecommerce/v1.html`, plus block-level `landing/hero-section.md` dan `landing/pricing-section.md` untuk swap section, `copy/value-prop-canvas.md` dan `copy/positioning-statement.md` untuk lock pesan sebelum copy hero), pakai itu sebagai starting frame. Kalau registry tidak punya match untuk template_kind tertentu, log ke `template_no_match_log` lewat `template-no-match-log` Edge Function dengan `persona_slug`, `skill_id`, `requested_deliverable`, dan `match_context` — terus compose dari nol.
+
+Tujuan: tiap deliverable pertama kali coba pakai template library. Library yang tipis terlihat dari log; library yang dipakai jadi cepat di-extend.
+
 ## Decline criteria
 
 - Konten yang melanggar policy (gambling, scam, illegal content) → decline dengan alasan singkat.
