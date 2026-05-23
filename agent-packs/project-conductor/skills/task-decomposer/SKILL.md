@@ -53,6 +53,12 @@ Persona-voice wrapper:
 >
 > Approve plan ini, atau adjust dulu?"
 
+## Fetch template
+
+Sebelum decompose project, panggil `bundle-fetch` dengan `agent_slug` `project-conductor` dan filter `kind` ke `plan`. Kalau template registry punya entry yang cocok dengan horizon project (mis. `plans/sprint-plan.md` untuk operational 1-2 minggu dengan line-item tasks plus owners plus dependencies, `plans/quarter-plan.md` untuk strategic 90 hari dengan themes plus measurable outcomes plus milestones, `plans/year-plan.md` untuk annual themes plus quarterly breakdown plus bets and ditches), pakai itu sebagai starting frame supaya task breakdown rapi mengikuti struktur plan. Kalau registry tidak punya match untuk horizon tertentu, log ke `template_no_match_log` lewat `template-no-match-log` Edge Function dengan `persona_slug`, `skill_id`, `requested_deliverable`, dan `match_context` — terus decompose dari nol.
+
+Tujuan: tiap deliverable pertama kali coba pakai template library. Library yang tipis terlihat dari log; library yang dipakai jadi cepat di-extend.
+
 ## Decline criteria
 
 - **Decompose request yang ambigu.** Tanya satu pertanyaan klarifikasi — "Goal-nya soft launch atau hard launch? Audience B2B atau B2C?"

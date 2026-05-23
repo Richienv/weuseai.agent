@@ -1,7 +1,7 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "project-conductor",
-  "version": "2.4.0",
+  "version": "2.4.1",
   "description_id": "Bundle skill + template Project Conductor v2 (renamed dari Macro Strategist). Kanban orchestrator pakai Hermes v0.13.0 native — bagi project jadi task, spawn specialist agents per task, monitor dashboard, weekly recap. Tier change v1: Studio → v2: Pro+. v2.1: tambah playbook project-orchestration. v2.2: tambah playbook pt-perorangan-registration — 7 langkah memandu customer membuka PT Perorangan dari nol sampai akun Xendit produksi aktif, dengan 6 gerbang keras yang membuka approval_requests untuk tiap langkah berbiaya. v2.3: tambah playbook weekly-recap-cycle — recap mingguan dengan satu gerbang kondisional berdasarkan audience. v2.4: tambah 7 template — sprint-plan, quarter-plan, year-plan (plans); status-report, raci-matrix, risk-register (coordination); retrospective.",
   "skills": [
     {
@@ -9,6 +9,7 @@
       "description_id": "Susun kanban board dari project goal. Hermes v0.13.0 native kanban — column To Do / In Progress / Review / Done. Customer bisa custom column kalau workflow team beda.",
       "description_en": "Build a kanban board from a project goal. Uses Hermes v0.13.0 native kanban with standard columns (To Do / In Progress / Review / Done). Customer can customize columns to match their team workflow.",
       "templates_used": [],
+      "template_fetch_required": true,
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:kanban-orchestrator",
       "enabled_for_tiers": ["pro", "studio"]
@@ -18,6 +19,7 @@
       "description_id": "Terjemahkan project goal high-level (mis. 'plan product launch') jadi task-task konkret dengan dependencies + owner default per persona library.",
       "description_en": "Translate a high-level project goal into concrete tasks with dependencies and default owners drawn from the persona library.",
       "templates_used": [],
+      "template_fetch_required": true,
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:task-decomposer",
       "enabled_for_tiers": ["pro", "studio"]
@@ -36,6 +38,7 @@
       "description_id": "Render dashboard URL untuk view real-time project status. Telegram update saat milestone reached atau blocker baru. Weekly recap composer.",
       "description_en": "Render a dashboard URL for real-time project status. Telegram updates when milestones are reached or blockers appear. Weekly recap composer included.",
       "templates_used": [],
+      "template_fetch_required": true,
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:progress-monitor",
       "enabled_for_tiers": ["pro", "studio"]

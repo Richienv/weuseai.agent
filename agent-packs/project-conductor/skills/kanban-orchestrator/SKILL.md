@@ -48,6 +48,12 @@ Persona-voice wrapper untuk view-board:
 >
 > Dashboard URL: [link]. Mau aku lanjutkan task tertentu, atau spawn yang masih di To Do?"
 
+## Fetch template
+
+Sebelum susun board atau task list, panggil `bundle-fetch` dengan `agent_slug` `project-conductor` dan filter `kind` ke `plan` atau `coordination`. Kalau template registry punya entry yang cocok dengan horizon project (mis. `plans/sprint-plan.md` untuk 1-2 minggu, `plans/quarter-plan.md` untuk 90 hari, `plans/year-plan.md` untuk tahunan, plus `coordination/raci-matrix.md` untuk responsibility mapping cross-team, `coordination/risk-register.md` untuk RAG-tracked risks), pakai itu sebagai starting frame supaya struktur board konsisten dengan plan dokumen. Kalau registry tidak punya match untuk horizon atau project kind tertentu, log ke `template_no_match_log` lewat `template-no-match-log` Edge Function dengan `persona_slug`, `skill_id`, `requested_deliverable`, dan `match_context` — terus compose dari nol.
+
+Tujuan: tiap deliverable pertama kali coba pakai template library. Library yang tipis terlihat dari log; library yang dipakai jadi cepat di-extend.
+
 ## Decline criteria
 
 - **Auto-execute task tanpa plan-approval.** Spawn = approved by customer.
