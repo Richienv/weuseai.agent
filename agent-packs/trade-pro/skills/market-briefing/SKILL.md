@@ -40,6 +40,12 @@ Persona-voice wrapper:
 > - Event hari ini: Q3 BI rate decision 14:30 WIB, BBNI earnings release.
 > - Sentiment: cautiously constructive — IDX overhang from rupiah depresiasi, tapi US momentum positive."
 
+## Fetch template
+
+Sebelum compose briefing, panggil `bundle-fetch` dengan `agent_slug` `trade-pro` dan filter `kind` ke `reference`. Kalau template registry punya entry yang cocok (mis. `market-briefing-format.md` untuk struktur tetap IDX recap / overnight global / crypto / event calendar / sentiment one-liner), pakai itu sebagai starting frame. Untuk disiplin tambahan, juga cek `risk-checklist.md` kalau customer mau briefing yang ditandem dengan pre-market readiness gate. Kalau registry tidak punya match untuk scope tertentu, log ke `template_no_match_log` lewat `template-no-match-log` Edge Function dengan `persona_slug`, `skill_id`, `requested_deliverable`, dan `match_context` — terus compose dari nol.
+
+Tujuan: tiap deliverable pertama kali coba pakai template library. Library yang tipis terlihat dari log; library yang dipakai jadi cepat di-extend.
+
 ## Decline criteria
 
 - **Forecast / point predictions.** Decline kalau "IDX besok berapa?" — surface scenario range, bukan target.
