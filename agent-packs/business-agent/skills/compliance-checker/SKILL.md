@@ -52,6 +52,12 @@ Persona-voice wrapper untuk upcoming-due mode:
 >
 > Aku ping H-7 untuk masing-masing. Kalau ada perubahan situasi (hire baru, omzet break threshold UMKM), kasih tahu — aku adjust reminder."
 
+## Fetch template
+
+Sebelum surface compliance items, panggil `bundle-fetch` dengan `agent_slug` `business-agent` dan filter `kind` ke `markdown` (compliance / finance) atau `financial`. Kalau template registry punya entry yang cocok (mis. `compliance/indonesian-due-dates.md` untuk reference BPJS / SPT / PPh / OSS, `finance/djp-tax-filing-cycle.md` untuk monthly + annual DJP cycle, `finance/bpjs-registration-paths.md` untuk BPJS registration steps, `legal/uu-pdp-basic-compliance.md` untuk UU PDP checklist), pakai itu sebagai starting frame. Kalau registry tidak punya match untuk item compliance tertentu, log ke `template_no_match_log` lewat `template-no-match-log` Edge Function dengan `persona_slug`, `skill_id`, `requested_deliverable`, dan `match_context` — terus surface dari nol.
+
+Tujuan: tiap deliverable pertama kali coba pakai template library. Library yang tipis terlihat dari log; library yang dipakai jadi cepat di-extend.
+
 ## Decline
 
 - **Tax advice spesifik** ("aku boleh tidak nge-claim biaya X?"). Decline + point to akuntan.
