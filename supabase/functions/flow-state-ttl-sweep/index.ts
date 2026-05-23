@@ -28,6 +28,11 @@ import {
   type ExpiredRow,
   type FlowStateTtlSweepStore,
 } from '../_shared/flow-state-ttl-sweep-handler.ts'
+import {
+  makeFlowExpiredEmailNotifier,
+  type FlowExpiredEmailRow,
+} from '../_shared/flow-expired-email-notifier.ts'
+import { sendEmail } from '../_shared/email-delivery.ts'
 import { handleCors, withCors } from '../_shared/cors.ts'
 import { isServiceRoleCaller } from '../_shared/admin-auth.ts'
 
@@ -39,20 +44,55 @@ declare const Deno: {
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+const DASHBOARD_BASE =
+  Deno.env.get('PUBLIC_DASHBOARD_BASE') ?? 'https://weuseai-agent.vercel.app'
 
 // @ts-ignore — Deno-typed client
 const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
 
 const store: FlowStateTtlSweepStore = {
   async findExpired(now: Date): Promise<ExpiredRow[]> {
+    // Phase A2 PR 3: JOIN customers so the email notifier can render
+    // flow-expired.md without a per-row roundtrip. We also pull
+    // state_data so playbook_label + parked_at_label can override the
+    // slug-derived defaults when the playbook stashed them at park time.
     const { data, error } = await supabase
       .from('customer_flow_state')
-      .select('id, customer_id, playbook_id, status, expires_at')
+      .select(`
+        id,
+        customer_id,
+        playbook_id,
+        status,
+        expires_at,
+        state_data,
+        customer:customers!inner ( email, display_name )
+      `)
       .in('status', ['awaiting_customer', 'escalated'])
       .not('expires_at', 'is', null)
       .lte('expires_at', now.toISOString())
     if (error) throw error
-    return (data as ExpiredRow[]) ?? []
+    const rows = (data ?? []) as Array<{
+      id: string
+      customer_id: string
+      playbook_id: string
+      status: string
+      expires_at: string
+      state_data: Record<string, unknown> | null
+      customer: { email: string; display_name: string | null } | null
+    }>
+    return rows.map((r) => ({
+      id: r.id,
+      customer_id: r.customer_id,
+      playbook_id: r.playbook_id,
+      status: r.status as ExpiredRow['status'],
+      expires_at: r.expires_at,
+      // Extra fields the email notifier uses. Base ExpiredRow doesn't
+      // declare them but they're harmless to carry — the handler just
+      // forwards the row to the notifier opaquely.
+      customer_email: r.customer?.email ?? '',
+      customer_display_name: r.customer?.display_name ?? null,
+      state_data: r.state_data ?? {},
+    } as ExpiredRow & Partial<FlowExpiredEmailRow>))
   },
   async markAborted(id: string): Promise<void> {
     const { error } = await supabase
@@ -60,6 +100,10 @@ const store: FlowStateTtlSweepStore = {
       .update({
         status: 'aborted',
         expires_at: null,
+        // Phase A2 PR 2: clear paused_email_sent_at on abort so a
+        // future re-start gets a fresh nudge cycle (defensive — the
+        // flow-state handler also does this on abort).
+        paused_email_sent_at: null,
         updated_at: new Date().toISOString(),
       })
       .eq('id', id)
@@ -67,12 +111,14 @@ const store: FlowStateTtlSweepStore = {
   },
 }
 
-// v1: no Telegram notifier wired. The flow-state run aborts silently;
-// the customer's next message to the persona will surface a "your run
-// was paused for 14 days and has been closed — say `mulai lagi <playbook>`
-// to restart" once persona SOUL.md / SKILL.md instructs that. Wiring a
-// Telegram push-notification path is a follow-up (needs the per-customer
-// bot token snapshot + handle).
+// Phase A2 PR 3: wire the flow-expired.md email notifier. Resend stub-
+// tolerant — when RESEND_API_KEY is unset the send is a no-op and the
+// sweep records ok:true (so we don't pollute notify_failures with
+// "stub" entries in pre-Resend deployments).
+const notifier = makeFlowExpiredEmailNotifier({
+  sendEmail,
+  dashboardBase: DASHBOARD_BASE,
+})
 
 Deno.serve(async (req) => {
   const preflight = handleCors(req)
@@ -99,7 +145,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const result = await handleFlowStateTtlSweep({}, store)
+    const result = await handleFlowStateTtlSweep({}, store, notifier)
     return withCors(
       new Response(JSON.stringify(result), {
         status: 200,
