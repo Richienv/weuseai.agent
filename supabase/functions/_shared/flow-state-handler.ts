@@ -47,6 +47,13 @@ export type FlowStateRow = {
    * (2026-05-22 consult).
    */
   expires_at: string | null
+  /**
+   * When the flow-paused-nudge daily cron successfully emailed the
+   * customer about this parked run. NULL = never nudged. Cleared by
+   * this handler on resume / complete / abort, alongside expires_at.
+   * Phase A2 PR 2 (2026-05-23).
+   */
+  paused_email_sent_at?: string | null
 }
 
 /** Default TTL for a parked run, in milliseconds. 14 days. */
@@ -202,6 +209,9 @@ export async function handleFlowState(
       status: input.operation === 'complete' ? 'completed' : 'aborted',
       // Clear the TTL — terminated runs do not expire further.
       expires_at: null,
+      // Phase A2 PR 2: clear paused_email_sent_at so a future re-park
+      // (if the row is ever restarted) can re-trigger the nudge cleanly.
+      paused_email_sent_at: null,
     })
     return { ok: true, status: 200, body: updated }
   }
@@ -232,6 +242,13 @@ export async function handleFlowState(
     state_data: { ...row.state_data, ...(input.step_output ?? {}) },
     // P4G parked-run TTL: stamp expiry on a parked transition; clear on resume.
     expires_at: ttlForStatus(nextStatus, now),
+    // Phase A2 PR 2: when the run resumes (advance back to in_progress),
+    // clear paused_email_sent_at so a future re-park can re-trigger the
+    // nudge. On a re-park (awaiting_customer / escalated → same parked
+    // status), we ALSO clear so the next 7-day cycle gets a fresh nudge
+    // — the customer just acted, presumably stashed new info via
+    // state_data, then re-parked for the next gate.
+    paused_email_sent_at: null,
   })
   return { ok: true, status: 200, body: updated }
 }
