@@ -1,7 +1,7 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "business-agent",
-  "version": "3.3.0",
+  "version": "3.3.1",
   "description_id": "Master Agent Business Director v3 (Phase 5). Panduin pelanggan Indonesia dari ide ke launched company dengan first 10 paying customers. 5-tahap roadmap (Idea → Setup → Identity → Build → Sell) — state persisted di business_roadmap_state. Dispatch ke 5 department packs (Sales, Marketing, Engineering, Legal, Finance) facade-routing ke specialist persona. Approval queue untuk irreversible actions (incorporate, contract_sign, public_emission, regulatory_filing) dengan per-action expiry. Cross-session memory via bd_decisions_log. Studio-tier only (phase_5_enabled gate).",
   "skills": [
     {
@@ -9,6 +9,7 @@
       "description_id": "5-stage progression tracking — Idea → Setup → Identity → Build → Sell. Per stage: checklist, deliverables, decision points. State persisted di customer-grown.",
       "description_en": "5-stage progression tracker — Idea → Setup → Identity → Build → Sell. Per stage: checklist, deliverables, decision points. State persisted in customer-grown.",
       "templates_used": ["roadmap/5-stage-checklist.md"],
+      "template_fetch_required": true,
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:business-roadmap-tracker",
       "enabled_for_tiers": ["studio"]
@@ -18,6 +19,7 @@
       "description_id": "PT vs CV decision tree, OSS process, biaya estimates (notaris, modal, BPJS, NPWP badan). Indonesia-context.",
       "description_en": "PT vs CV decision tree, OSS process, cost estimates (notary, capital, BPJS, business NPWP). Indonesia-context.",
       "templates_used": ["incorporation/pt-vs-cv-comparison.md", "incorporation/oss-checklist.md"],
+      "template_fetch_required": true,
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:incorporation-advisor",
       "enabled_for_tiers": ["studio"]
@@ -27,6 +29,7 @@
       "description_id": "Check + remind compliance: BPJS Kesehatan + Ketenagakerjaan, NPWP badan, SPT Tahunan, PPh 21/25/Final UMKM 0.5%, OSS verifikasi 90-day. Reminder satu minggu sebelum due.",
       "description_en": "Check + remind compliance: BPJS health + employment, business NPWP, annual tax filing, PPh 21/25/UMKM Final 0.5%, OSS 90-day verification. Reminder one week before due.",
       "templates_used": ["compliance/indonesian-due-dates.md"],
+      "template_fetch_required": true,
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:compliance-checker",
       "enabled_for_tiers": ["studio"]

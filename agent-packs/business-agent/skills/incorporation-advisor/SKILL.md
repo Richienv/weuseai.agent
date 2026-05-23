@@ -63,6 +63,12 @@ Persona-voice wrapper untuk pt-vs-cv:
 >
 > Aku surface — keputusan tetap kamu. Kalau ragu, ngomong sama akuntan yang familiar dengan bisnis kamu."
 
+## Fetch template
+
+Sebelum surface comparison atau walkthrough, panggil `bundle-fetch` dengan `agent_slug` `business-agent` dan filter `kind` ke `markdown` (incorporation). Kalau template registry punya entry yang cocok dengan `mode` (mis. `incorporation/pt-vs-cv-comparison.md` untuk pt-vs-cv decision tree, `incorporation/oss-checklist.md` untuk OSS-RBA walkthrough), pakai itu sebagai starting frame. Kalau registry tidak punya match untuk mode atau business_kind tertentu, log ke `template_no_match_log` lewat `template-no-match-log` Edge Function dengan `persona_slug`, `skill_id`, `requested_deliverable`, dan `match_context` — terus compose dari nol.
+
+Tujuan: tiap deliverable pertama kali coba pakai template library. Library yang tipis terlihat dari log; library yang dipakai jadi cepat di-extend.
+
 ## Decline
 
 - File OSS / akta atas nama customer. Customer submit sendiri.
