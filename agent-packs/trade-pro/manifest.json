@@ -1,8 +1,8 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "trade-pro",
-  "version": "2.3.1",
-  "description_id": "Bundle skill + template Trade Pro v2.3. Briefing pasar pagi, alert saham + crypto, ringkas laporan keuangan emiten, plus IDR/BI rate watcher (pindahan dari Macro Strategist) + Bitget read-only (P1). v2.1 menambah template format briefing, schema alert, format earnings, dan rate-watch reference. v2.2 menambah playbook bitget-onboarding — alur 8 langkah memandu pemasangan API key Bitget dengan verifikasi scope read-only di sisi platform sebelum akses dibuka. v2.3 menambah 7 template disiplin trading: trading journal entry, position size calculator, exit plan, market analysis, sentiment analysis, weekly review, dan risk checklist — semua memperkuat risk-first DNA dan menggantikan improvisasi dengan struktur tertulis.",
+  "version": "2.4.0",
+  "description_id": "Bundle skill + template Trade Pro v2.4. Briefing pasar pagi, alert saham + crypto, ringkas laporan keuangan emiten, plus IDR/BI rate watcher (pindahan dari Macro Strategist) + Bitget read-only (P1). v2.1 menambah template format briefing, schema alert, format earnings, dan rate-watch reference. v2.2 menambah playbook bitget-onboarding. v2.3 menambah 7 template disiplin trading: trading journal entry, position size calculator, exit plan, market analysis, sentiment analysis, weekly review, dan risk checklist. v2.4 (Phase B8) menambah 5 template Indonesia-deep: risk-checklist-idx-stock, trade-journal-idx-bahasa, bappebti-checklist-futures-commodity, dividend-watchlist-idx, dan alert-bi-rate-decision — semua advisory-only dengan disclaimer NON-NEGOTIABLE di puncak template.",
   "skills": [
     {
       "id": "market-briefing",
@@ -138,6 +138,36 @@
       "kind": "risk",
       "description_id": "Checklist pre-market daily — inventory posisi open, total exposure vs cap pribadi, korelasi antar posisi, kapital available, macro flags hari ini, self-rating emosional 1-5, dan decision rule (GO / REDUCED SIZE / NO TRADE TODAY).",
       "best_for": "pre-market open daily readiness gate"
+    },
+    {
+      "id": "risk-checklist-idx-stock.md",
+      "kind": "checklist",
+      "description_id": "Pre-trade risk checklist untuk saham IDX — nama emiten + kode 4-huruf, papan listing (Utama/Pengembangan/Akselerasi/Pemantauan Khusus), suspension status, RUPS terdekat, dividend ex-date, fundamental snapshot (PER, PBV, ROE, DER) per laporan keuangan resmi di idx.co.id. Referensi POJK + rule book IDX + pajak transaksi 0.1% per PP 41/1994. Bukan saran investasi.",
+      "best_for": "Trader retail Indonesia yang masuk posisi IDX, butuh disiplin pre-trade"
+    },
+    {
+      "id": "trade-journal-idx-bahasa.md",
+      "kind": "journal",
+      "description_id": "Trade journal IDX dalam Bahasa Indonesia — per-trade entry: tanggal, kode IDX, papan, lot (1 lot = 100 saham), harga rata-rata, thesis, stop/target, hasil net IDR setelah fee broker + pajak 0.1%, plan-diikuti, pelajaran. Append-only, satu trade per entry. Bukan saran investasi.",
+      "best_for": "Post-mortem disiplin per-trade IDX dengan konvensi lot + pajak yang tepat"
+    },
+    {
+      "id": "bappebti-checklist-futures-commodity.md",
+      "kind": "checklist",
+      "description_id": "Compliance checklist BAPPEBTI untuk trader futures, komoditas, atau crypto-asset di Indonesia. Verifikasi pialang berjangka terdaftar di BAPPEBTI, produk diizinkan (PBK list / PFAK list), notional + leverage cap per regulasi, Risk Disclosure Statement, KYC, jalur sengketa via BAKTI. Referensi UU 10/2011 PBK + Peraturan BAPPEBTI 5/2019 crypto. Bukan saran investasi.",
+      "best_for": "Pre top-up dana ke pialang berjangka futures / komoditas / crypto"
+    },
+    {
+      "id": "dividend-watchlist-idx.md",
+      "kind": "watchlist",
+      "description_id": "Dividend watchlist IDX — table tracking per emiten: kode, papan, DPS, yield indikatif, cum-date, ex-date, recording date, payment date, lot dipegang, dividen bruto + net setelah pajak 10% Final per Pasal 17(2c) UU PPh. Sumber pengumuman corporate action di idx.co.id + KSEI. Bukan saran investasi.",
+      "best_for": "Income-investor IDX yang track dividen + payment timeline + pajak net"
+    },
+    {
+      "id": "alert-bi-rate-decision.md",
+      "kind": "alert",
+      "description_id": "Alert + framing template keputusan Bank Indonesia di RDG bulanan — BI 7-Day Reverse Repo Rate, Deposit + Lending Facility, rasional BI, spread vs Fed, framing implikasi (bukan rekomendasi) ke IDR / IHSG / SBN, plus pertanyaan untuk posisi yang dipegang customer. Referensi UU 23/1999 BI + rilis resmi bi.go.id. Bukan saran investasi.",
+      "best_for": "Pre dan post-RDG framing untuk customer dengan posisi IDR / equity / bond sensitif"
     }
   ],
   "self_extend": true,
