@@ -1,7 +1,7 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "the-pro",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "description_id": "Bundle skill + template The Pro. Briefing pagi, ingatan lintas sesi, pendamping kerja harian.",
   "skills": [
     {
@@ -9,6 +9,7 @@
       "description_id": "Rangkum kalender, email penting, dan headline berita pagi jadi satu briefing markdown. Default ke timezone Asia/Jakarta.",
       "description_en": "Aggregates calendar + email + news into a single morning briefing. Defaults to Asia/Jakarta timezone.",
       "templates_used": ["mocks/calendar/typical-day.json", "mocks/gmail/typical-day.json"],
+      "template_fetch_required": true,
       "execution": "edge-function",
       "handler_ref": "edge-fn:daily-briefing-handler",
       "enabled_for_tiers": ["starter", "pro", "studio"]
