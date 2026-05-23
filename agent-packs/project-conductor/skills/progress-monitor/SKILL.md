@@ -81,6 +81,12 @@ Persona-voice wrapper untuk weekly-recap (audience=stakeholder):
 >
 > Dashboard: [URL]"
 
+## Fetch template
+
+Sebelum compose recap atau dashboard summary, panggil `bundle-fetch` dengan `agent_slug` `project-conductor` dan filter `kind` ke `coordination` atau `retro`. Kalau template registry punya entry yang cocok dengan `mode` (mis. `coordination/status-report.md` untuk weekly executive update sponsor-facing satu halaman scannable, `coordination/risk-register.md` untuk blocker tracking, `retrospective.md` untuk sprint retro yang terstruktur dengan facilitator prompts), pakai itu sebagai starting frame. Kalau registry tidak punya match untuk audience atau format tertentu, log ke `template_no_match_log` lewat `template-no-match-log` Edge Function dengan `persona_slug`, `skill_id`, `requested_deliverable`, dan `match_context` — terus compose dari nol.
+
+Tujuan: tiap deliverable pertama kali coba pakai template library. Library yang tipis terlihat dari log; library yang dipakai jadi cepat di-extend.
+
 ## Decline criteria
 
 - **Recap untuk project yang ngga di-conduct.** Aku surface kalau project_id tidak ditemukan, tawarkan create-board.
