@@ -60,6 +60,12 @@ Persona-voice wrapper untuk build-new:
 >
 > Calendar persisted local. Aku kasih reminder H-2 untuk draft setiap slot. Mau aku export ke `.ics` biar import ke Google Calendar kamu?"
 
+## Fetch template
+
+Sebelum susun calendar, panggil `bundle-fetch` dengan `agent_slug` `social-conductor` dan filter `kind` ke `schema-spec`, `reference`, atau `calendar`. Kalau template registry punya entry yang cocok (mis. `calendar-schema.md` untuk DB shape, `weekly-cadence-presets.md` untuk cadence default solopreneur/brand/creator, `content-calendar.md` untuk render-out 4 minggu × 7 hari grid markdown, `content-angle-worksheet.md` untuk ideation angle per topic), pakai itu sebagai starting frame. Kalau registry tidak punya match untuk cadence atau format render yang diminta, log ke `template_no_match_log` lewat `template-no-match-log` Edge Function dengan `persona_slug`, `skill_id`, `requested_deliverable`, dan `match_context` — terus compose dari nol.
+
+Tujuan: tiap deliverable pertama kali coba pakai template library. Library yang tipis terlihat dari log; library yang dipakai jadi cepat di-extend.
+
 ## Decline
 
 - **Auto-post ke platform.** Tidak — calendar tracking + draft only. Kamu yang submit.

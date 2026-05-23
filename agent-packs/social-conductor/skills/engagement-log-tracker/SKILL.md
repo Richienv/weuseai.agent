@@ -78,6 +78,12 @@ Persona-voice wrapper untuk daily-digest:
 >
 > Mau aku surface 3 high priority drafts buat kamu approve manual? Atau batch normal dulu?"
 
+## Fetch template
+
+Sebelum draft reply, panggil `bundle-fetch` dengan `agent_slug` `social-conductor` dan filter `kind` ke `schema-spec`, `reference`, atau `response`. Kalau template registry punya entry yang cocok (mis. `engagement-schema.md` untuk DB shape log, `reply-pattern-library.md` untuk pattern appreciative / clarifying / redirect-to-DM / escalation, `engagement-response.md` untuk 5 tone variant helpful / curious / playful / firm / redirect-to-DM), pakai itu sebagai starting frame. Kalau registry tidak punya match untuk tone atau pattern tertentu, log ke `template_no_match_log` lewat `template-no-match-log` Edge Function dengan `persona_slug`, `skill_id`, `requested_deliverable`, dan `match_context` — terus draft dari nol.
+
+Tujuan: tiap deliverable pertama kali coba pakai template library. Library yang tipis terlihat dari log; library yang dipakai jadi cepat di-extend.
+
 ## Decline
 
 - **Auto-send reply.** Tidak. Kamu copy-paste manual ke platform.
