@@ -1,7 +1,7 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "deep-researcher",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "description_id": "Bundle skill + template Deep Researcher v2.2. Riset topik kompleks dari banyak sumber, evaluasi kredibilitas per sumber, citation rapi per claim, dan sintesis jadi laporan terstruktur. Template batch: research brief + question decomposition, market sizing (TAM/SAM/SOM dengan rentang sensitivitas), competitor matrix + deep dive, citation APA + Chicago konvensi Indonesia, exec summary satu halaman.",
   "skills": [
     {
@@ -9,6 +9,7 @@
       "description_id": "Riset topik dari sumber web — pecah topik jadi sub-pertanyaan, web search + scraping per sub-pertanyaan, kumpulkan source set dengan metadata. Prioritas paper akademik, laporan resmi, reporting jurnalistik.",
       "description_en": "Research a topic from web sources — decompose into sub-questions, web search + scrape per sub-question, gather a source set with metadata. Prioritizes academic papers, official reports, journalistic reporting.",
       "templates_used": [],
+      "template_fetch_required": true,
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:web-research",
       "enabled_for_tiers": ["pro", "studio"]
@@ -18,6 +19,7 @@
       "description_id": "Nilai kredibilitas tiap sumber pakai rubrik lima dimensi (authority, recency, primary/secondary, bias, corroboration). Output tier A-D per sumber sebagai pegangan untuk sintesis.",
       "description_en": "Grade each source's credibility on a five-dimension rubric (authority, recency, primary/secondary, bias, corroboration). Outputs an A-D tier per source to anchor synthesis.",
       "templates_used": ["source-credibility-rubric.md"],
+      "template_fetch_required": true,
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:source-evaluator",
       "enabled_for_tiers": ["pro", "studio"]
@@ -27,6 +29,7 @@
       "description_id": "Format citation + susun daftar pustaka dari source set — footnote-numbered (default), APA, atau author-date. Tandai metadata yang tidak lengkap, tidak menebak field yang tidak diketahui.",
       "description_en": "Format citations + build a reference list from a source set — footnote-numbered (default), APA, or author-date. Flags incomplete metadata, never guesses unknown fields.",
       "templates_used": [],
+      "template_fetch_required": true,
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:citation-builder",
       "enabled_for_tiers": ["pro", "studio"]
@@ -36,6 +39,7 @@
       "description_id": "Susun laporan riset terstruktur dari source set yang sudah dinilai dan di-citation — TL;DR, key findings dengan evidence, detail, konflik antar sumber, gaps. Brief-memo, executive-summary, atau full-report.",
       "description_en": "Compose a structured research report from a graded, cited source set — TL;DR, key findings with evidence, detail, source conflicts, gaps. Brief-memo, executive-summary, or full-report.",
       "templates_used": ["synthesis-structure.md"],
+      "template_fetch_required": true,
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:synthesis-report",
       "enabled_for_tiers": ["pro", "studio"]

@@ -49,6 +49,12 @@ Persona-voice wrapper:
 >
 > Catatan: sumber 9 metadata-nya tidak lengkap — penulis tidak tercantum di halaman aslinya. Aku tidak menebak namanya."
 
+## Fetch template
+
+Sebelum format citation, panggil `bundle-fetch` dengan `agent_slug` `deep-researcher` dan filter `kind` ke `citation`. Kalau template registry punya entry yang cocok dengan `style` yang customer minta (mis. `citation-format-apa.md` untuk APA 7 konvensi Indonesia, `citation-format-chicago.md` untuk Chicago Notes-Bibliography 17th ed), pakai itu sebagai starting frame. Kalau registry tidak punya match untuk style yang diminta, log ke `template_no_match_log` lewat `template-no-match-log` Edge Function dengan `persona_slug`, `skill_id`, `requested_deliverable`, dan `match_context` — terus format dari nol mengikuti style spec.
+
+Tujuan: tiap deliverable pertama kali coba pakai template library. Library yang tipis terlihat dari log; library yang dipakai jadi cepat di-extend.
+
 ## Decline criteria
 
 - **Mengarang field citation.** Kalau tahun, penulis, atau DOI tidak ada di sumber, aku tandai "[tidak tersedia]" — tidak mengisi tebakan.
