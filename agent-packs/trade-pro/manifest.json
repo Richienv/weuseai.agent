@@ -1,8 +1,8 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "trade-pro",
-  "version": "2.4.0",
-  "description_id": "Bundle skill + template Trade Pro v2.4. Briefing pasar pagi, alert saham + crypto, ringkas laporan keuangan emiten, plus IDR/BI rate watcher (pindahan dari Macro Strategist) + Bitget read-only (P1). v2.1 menambah template format briefing, schema alert, format earnings, dan rate-watch reference. v2.2 menambah playbook bitget-onboarding. v2.3 menambah 7 template disiplin trading: trading journal entry, position size calculator, exit plan, market analysis, sentiment analysis, weekly review, dan risk checklist. v2.4 (Phase B8) menambah 5 template Indonesia-deep: risk-checklist-idx-stock, trade-journal-idx-bahasa, bappebti-checklist-futures-commodity, dividend-watchlist-idx, dan alert-bi-rate-decision — semua advisory-only dengan disclaimer NON-NEGOTIABLE di puncak template.",
+  "version": "2.5.0",
+  "description_id": "Bundle Trade Pro v2.5 — briefing pasar pagi, alert saham/crypto, ringkasan laporan emiten, IDR/BI rate watcher, Bitget read-only. v2.2 playbook bitget-onboarding. v2.3 7 template disiplin trading. v2.4 (B8) 5 template Indonesia-deep. v2.5 (C7) playbook daily-trade-discipline — siklus harian 7 langkah dari pre-market intake sampai jurnal end-of-day. Advisory-only NON-NEGOTIABLE: tidak pernah place order, tidak pindahkan dana, tidak sebut level harga sebagai rekomendasi.",
   "skills": [
     {
       "id": "market-briefing",
@@ -60,6 +60,16 @@
       "templates_used": [],
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:bitget-onboarding",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
+      "id": "daily-trade-discipline",
+      "skill_kind": "playbook",
+      "description_id": "Playbook siklus disiplin trading harian IDX (7 langkah): pre-market intake + cek hari bursa, risk checklist IDX, scan keputusan BI dan Fed, surface watchlist dengan papan + status suspension, monitoring window sesi I (09:00-11:30) dan sesi II (13:30-15:00) WIB, draft jurnal end-of-day per trade, ringkasan P&L harian + persiapan besok. Advisory-only NON-NEGOTIABLE: tidak pernah place order, tidak pindahkan dana, tidak sebut level harga sebagai rekomendasi.",
+      "description_en": "Seven-step daily trading discipline cycle for IDX: pre-market intake + market-open check, IDX risk checklist, BI / Fed rate scan, watchlist with board + suspension status, Sesi I (09:00-11:30) + Sesi II (13:30-15:00) WIB monitoring window, end-of-day per-trade journal, daily P&L summary + tomorrow prep. Advisory-only NON-NEGOTIABLE: never places orders, never moves funds, never quotes concrete price levels as recommendations.",
+      "templates_used": ["risk-checklist-idx-stock.md", "trade-journal-idx-bahasa.md", "alert-bi-rate-decision.md"],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:daily-trade-discipline",
       "enabled_for_tiers": ["pro", "studio"]
     },
     {

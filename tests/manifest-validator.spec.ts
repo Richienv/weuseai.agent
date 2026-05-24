@@ -453,6 +453,8 @@ test('every pilot manifest skill handler_ref points to a known edge function, he
     'idr-bi-rate-watcher',
     // Trade Pro (v2.2 — playbook)
     'bitget-onboarding',
+    // Trade Pro (v2.5 — Phase C7 playbook)
+    'daily-trade-discipline',
     // Project Conductor (v2 — REPLACE+RENAME from macro-strategist)
     'kanban-orchestrator',
     'task-decomposer',
