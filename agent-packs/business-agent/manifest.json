@@ -1,7 +1,7 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "business-agent",
-  "version": "3.4.0",
+  "version": "3.5.0",
   "description_id": "Master Agent Business Director v3 (Phase 5). Panduin pelanggan Indonesia dari ide ke launched company dengan first 10 paying customers. 5-tahap roadmap (Idea → Setup → Identity → Build → Sell) — state persisted di business_roadmap_state. Dispatch ke 5 department packs (Sales, Marketing, Engineering, Legal, Finance) facade-routing ke specialist persona. Approval queue untuk irreversible actions (incorporate, contract_sign, public_emission, regulatory_filing) dengan per-action expiry. Cross-session memory via bd_decisions_log. Studio-tier only (phase_5_enabled gate).",
   "skills": [
     {
@@ -53,6 +53,26 @@
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:finance-cycle",
       "enabled_for_tiers": ["studio"]
+    },
+    {
+      "id": "monthly-review",
+      "skill_kind": "playbook",
+      "description_id": "Playbook siklus review bulanan PT/CV UMKM — intake periode dan data fiskal, tarik P&L bulan berjalan basis SAK ETAP, cek PPh Final UMKM 0,5% per PP 55/2022 plus BPJS Kesehatan dan Ketenagakerjaan, ringkasan posisi kas, dashboard KPI dengan NPWP terselubung, gerbang lunak review customer, lalu distribusi paket ke direksi dengan konvensi Bapak/Ibu plus jabatan per UU PT 40/2007 Pasal 66. Tujuh langkah dijalankan flow-state engine. Pro dan Studio tier.",
+      "description_en": "Monthly review playbook for PT/CV UMKM — period and fiscal intake, monthly P&L pull on SAK ETAP, PPh Final UMKM 0.5% per PP 55/2022 plus BPJS Health and Employment check, cash position summary, redacted KPI dashboard, soft-gate customer review, then distribution to direksi using the Bapak/Ibu + jabatan convention per UU PT 40/2007 Article 66. Seven steps run by the flow-state engine. Pro and Studio tier.",
+      "templates_used": ["finance/pph-final-umkm-bulanan.md", "finance/laporan-keuangan-bulanan-pt-umkm.md", "finance/bpjs-kesehatan-ketenagakerjaan-checklist.md", "finance/cash-runway.md", "finance/kpi-dashboard.md"],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:monthly-review",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
+      "id": "quarterly-strategy-review",
+      "skill_kind": "playbook",
+      "description_id": "Playbook review strategi kuartalan PT — intake kuartal dan OKR, ringkasan finansial Q tiga bulan basis SAK ETAP, snapshot lanskap sektor via deep-researcher, scoring capaian goal (tercapai/sebagian/tidak-tercapai), 3-5 prioritas Q+1, susun paket dengan NPWP terselubung, gerbang lunak review customer, distribusi ke direksi plus komisaris per UU PT 40/2007 Pasal 108. Delapan langkah dijalankan flow-state engine. PT-only, Pro dan Studio tier.",
+      "description_en": "Quarterly strategy review playbook for PT — quarter and OKR/target intake, three-month financial Q summary on SAK ETAP, sector competitive snapshot via deep-researcher, goal scoring (achieved/partial/not-achieved), 3-5 next-quarter priorities, package with redacted NPWP, soft-gate customer review, then distribution to direksi plus komisaris per UU PT 40/2007 Article 108. Eight steps run by the flow-state engine. PT-only, Pro and Studio tier.",
+      "templates_used": ["finance/laporan-keuangan-bulanan-pt-umkm.md", "strategic/board-update.md", "operational/okr-quarterly.md"],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:quarterly-strategy-review",
+      "enabled_for_tiers": ["pro", "studio"]
     },
     {
       "id": "extend-capabilities",
