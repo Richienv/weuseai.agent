@@ -432,6 +432,9 @@ test('every pilot manifest skill handler_ref points to a known edge function, he
     'extend-capabilities',
     // The Pro (playbook)
     'customer-reply',
+    // The Pro (Phase C3 playbooks)
+    'morning-briefing-cycle',
+    'end-of-day-summary',
     // Web Creator (v2)
     'site-launch',
     'landing-page-builder',
