@@ -438,6 +438,8 @@ test('every pilot manifest skill handler_ref points to a known edge function, he
     'multi-page-site-builder',
     'blog-post-creator',
     'domain-advisory',
+    // Web Creator (v2.5 — Phase C5 feature shipping playbook)
+    'feature-shipping',
     // Doc Expert (v2)
     'academic-doc-builder',
     // Slide Master (v2)
