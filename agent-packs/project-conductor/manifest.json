@@ -1,8 +1,8 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "project-conductor",
-  "version": "2.4.1",
-  "description_id": "Bundle skill + template Project Conductor v2 (renamed dari Macro Strategist). Kanban orchestrator pakai Hermes v0.13.0 native — bagi project jadi task, spawn specialist agents per task, monitor dashboard, weekly recap. Tier change v1: Studio → v2: Pro+. v2.1: tambah playbook project-orchestration. v2.2: tambah playbook pt-perorangan-registration — 7 langkah memandu customer membuka PT Perorangan dari nol sampai akun Xendit produksi aktif, dengan 6 gerbang keras yang membuka approval_requests untuk tiap langkah berbiaya. v2.3: tambah playbook weekly-recap-cycle — recap mingguan dengan satu gerbang kondisional berdasarkan audience. v2.4: tambah 7 template — sprint-plan, quarter-plan, year-plan (plans); status-report, raci-matrix, risk-register (coordination); retrospective.",
+  "version": "2.5.0",
+  "description_id": "Bundle skill + template Project Conductor v2 — kanban orchestrator pakai Hermes v0.13.0, bagi project jadi task, spawn specialist agents, monitor dashboard, weekly recap. Tier Pro+. Playbook: project-orchestration, pt-perorangan-registration, weekly-recap-cycle. v2.4 tambah 7 template generik (sprint, quarter, year, status, raci, risk, retro). v2.5 tambah 5 template Indonesia-deep: NIB OSS-RBA, BPJS karyawan, BPOM produk, KBLI 2020, status report direksi.",
   "skills": [
     {
       "id": "kanban-orchestrator",
@@ -125,6 +125,36 @@
       "kind": "retro",
       "description_id": "Template retrospective sprint atau project — yang berjalan baik, yang tidak, hal tak terduga, action konkret untuk siklus berikutnya, parking lot, plus tema. Disertai prompt fasilitator dan catatan psychological safety supaya retro tetap jujur dan tidak slide ke blame.",
       "best_for": "Sprint or project retrospective — structured reflection with facilitator prompts"
+    },
+    {
+      "id": "plans/plan-oss-rba-nib-issuance.md",
+      "kind": "plan",
+      "description_id": "Plan penerbitan NIB via OSS-RBA (oss.go.id). Tujuh fase: prasyarat dokumen (NPWP, KTP, akta, NPWP badan), kunci nama plus KBLI di kbli.bps.go.id, registrasi akun OSS, input data, output NIB plus izin per tingkat risiko PP 5/2021 (Rendah 1 hari, Tinggi 14-30 hari), tindak lanjut. Timeline 1-30 hari kerja per tingkat risiko KBLI.",
+      "best_for": "Pendirian PT/CV/UD/perorangan baru — registrasi NIB via OSS-RBA"
+    },
+    {
+      "id": "plans/plan-bpjs-onboarding-karyawan.md",
+      "kind": "plan",
+      "description_id": "Plan onboarding karyawan baru ke BPJS Kesehatan plus BPJS Ketenagakerjaan 4 program (JKK, JKM, JHT, JP) sesuai UU 24/2011. Lima fase: kumpul dokumen, daftar BPJS Kesehatan via SIPP, daftar BPJS Ketenagakerjaan via sipp.bpjsketenagakerjaan.go.id, integrasi payroll dengan persentase iuran, distribusi kartu. Timeline 7-14 hari kerja.",
+      "best_for": "HR PT/CV onboarding karyawan baru ke BPJS Kesehatan plus Ketenagakerjaan"
+    },
+    {
+      "id": "plans/plan-bpom-mendaftar-produk-konsumsi.md",
+      "kind": "plan",
+      "description_id": "Plan pendaftaran produk konsumsi ke BPOM. Tujuh fase: prasyarat (NIB, sertifikat halal MUI jika klaim), pilih portal per kategori (asrot.pom.go.id pangan, notifkos.pom.go.id kosmetik, obat tradisional), registrasi akun, uji lab terakreditasi, submit plus PNBP, review BPOM, izin terbit (MD/ML/NA/TR). Timeline 60-90 hari kerja typical.",
+      "best_for": "Bisnis F&B / kosmetik / herbal yang mau jual legal di Indonesia"
+    },
+    {
+      "id": "plans/plan-kbli-2020-pemilihan.md",
+      "kind": "plan",
+      "description_id": "Plan pemilihan KBLI 2020 sebelum registrasi NIB. Enam fase: identifikasi aktivitas usaha utama, lookup di kbli.bps.go.id, cek tingkat risiko per PP 5/2021, cek batasan asing per Perpres 49/2021, konfirmasi notaris jika PT/CV, input ke OSS-RBA. Disertai 10 contoh KBLI umum startup (62019 programming, 70209 konsultasi, 63121 platform digital, dst) plus strategi multi-KBLI.",
+      "best_for": "Founder atau notaris memilih KBLI 2020 sebelum pendaftaran NIB OSS-RBA"
+    },
+    {
+      "id": "coordination/status-report-mingguan-direksi.md",
+      "kind": "coordination",
+      "description_id": "Template status report mingguan formal ke direksi PT. Format laporan resmi (Bapak/Ibu, Hormat saya), struktur 7 bagian: ringkasan eksekutif, progress vs target, milestone, blocker, keputusan dibutuhkan direksi, outlook, lampiran. RAG ditulis Hijau/Kuning/Merah. Register formal korporat Indonesia, beda dari status-report executive-sponsor generik.",
+      "best_for": "Project manager melapor ke Direktur Utama atau Komisaris PT — register formal Indonesia"
     }
   ],
   "self_extend": true,
