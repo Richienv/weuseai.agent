@@ -1,7 +1,7 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "social-conductor",
-  "version": "2.3.1",
+  "version": "2.4.0",
   "description_id": "Bundle skill + template Social Conductor v2 (Option B scope). Content calendar, post drafting cross-platform, engagement log, voice-consistency checker. NO scraping, NO auto-post — kamu yang submit ke platform.",
   "skills": [
     {
@@ -188,6 +188,48 @@
       "kind": "response",
       "description_id": "Template balasan comment dan DM dengan 5 tone variant — helpful (default pertanyaan teknis), curious (POV berbeda), playful (audience reguler, pakai hemat), firm (clarify misinterpretasi), redirect-to-DM (pricing, detail sensitif). Maksimal 3 baris per variant supaya feel natural di reply chain. Tiap variant opens dengan kalimat berbeda.",
       "best_for": "engagement-log-tracker saat draft reply siap kirim manual"
+    },
+    {
+      "id": "caption-tiktok-id-viral-hook.md",
+      "kind": "caption",
+      "description_id": "Caption TikTok-id dengan hook 10-karakter pertama, register casual ('nggak', 'banget', 'lagi viral'), CTA selalu ke 'follow buat tips serupa'. Disesuaikan ritme TikTok Indonesia 7-detik attention. Hashtag mix Indonesian trending + niche + micro-local kota. Reference packet trend Indonesia: joget challenge, food review Jakarta, tutorial harian, curhat storytime.",
+      "best_for": "Creator Indonesia yang post di TikTok untuk audience domestik (bukan TikTok global)"
+    },
+    {
+      "id": "caption-instagram-id-feed.md",
+      "kind": "caption",
+      "description_id": "Caption IG feed Indonesian creator standard — first line hook ≤125 karakter (visible tanpa 'more'), 3-paragraph structure (hook + value + CTA), hashtag mix 5 trending Indonesian + 5 niche Indonesian + 5 micro-local kota-spesifik. Calm-premium register, bukan influencer-shouting. Dot-spacer sebelum hashtag block.",
+      "best_for": "post-drafter saat platform=instagram dan customer target audience Indonesia"
+    },
+    {
+      "id": "whatsapp-broadcast-campaign.md",
+      "kind": "broadcast",
+      "description_id": "Template WA broadcast campaign per Meta WhatsApp Business API conventions — header + body + footer + CTA, kategori jelas (marketing / utility / authentication), opt-in wajib (UU PDP 27/2022 + Meta policy), frekuensi max 1x/minggu marketing supaya nggak kena block, opt-out path eksplisit ('balas STOP'). IDR formatting titik thousand. Tanggal format Indonesia.",
+      "best_for": "campaign-planner saat customer kirim broadcast WA ke list pelanggan Indonesia"
+    },
+    {
+      "id": "content-calendar-id-monthly.md",
+      "kind": "calendar",
+      "description_id": "Calendar bulanan aware Indonesian calendar — mark hari libur nasional, hari besar agama (Idul Fitri, Natal, Nyepi, Waisak, Imlek), event budaya (HUT RI 17 Agustus, Sumpah Pemuda, Hari Pahlawan), event komersial (Harbolnas 12.12 / 11.11 / 9.9), seasonal shift (Ramadhan, mudik Lebaran). Calendar tag enumerated set untuk filter slot terkait event.",
+      "best_for": "content-calendar-builder saat customer butuh planning bulanan dengan awareness Indonesian calendar"
+    },
+    {
+      "id": "post-linkedin-id-thought-leadership.md",
+      "kind": "post",
+      "description_id": "Template LinkedIn-id thought leadership — register formal-tapi-tidak-kaku (BI executive standard, mixing English business term yang umum di ekosistem Jakarta), struktur pengamatan → konteks → opini → undangan diskusi. Bukan LinkedIn-US 'carousel performance hack' — audience LI Indonesia baca untuk substansi, bukan hook trick. Sweet spot 800-1500 karakter.",
+      "best_for": "post-drafter saat platform=linkedin dan audience adalah eksekutif / founder Indonesia"
+    },
+    {
+      "id": "caption-shopee-tiktok-shop.md",
+      "kind": "caption",
+      "description_id": "Caption Shopee Live / TikTok Shop conversion-optimized untuk e-commerce Indonesia. Bahasa konversi Indonesia: 'Diskon X% pakai voucher Y', 'Gratis ongkir minimal pembelian Z', 'Cashback A%', 'Garansi resmi/toko'. Permendag 31/2023 disclosure: harga akurat, stok jujur, deskripsi tidak exaggerate. IDR titik thousand, voucher code copy-paste friendly.",
+      "best_for": "post-drafter saat customer punya listing produk di Shopee Live / TikTok Shop / Shopee Listing"
+    },
+    {
+      "id": "engagement-reply-comment-bahasa.md",
+      "kind": "response",
+      "description_id": "Reply komen TikTok / IG akun Indonesia — tiga register variant: super-casual ('Makasih ya kak'), professional-friendly ('Terima kasih atas masukan kamu'), defusing-criticism ('Saya ngerti maksudmu, mari saya jelaskan'). Sapaan Indonesia per audience (kak / first name / Mbak-Mas). Platform default register: TikTok casual, LinkedIn professional.",
+      "best_for": "engagement-log-tracker saat reply komen platform Indonesia, butuh pilih register sesuai konteks"
     }
   ],
   "self_extend": true,
