@@ -1,4 +1,4 @@
-# tiktok-script — Hermes skill
+# tiktok-script-builder — Hermes skill
 
 Bundle: video-producer
 Tier: pro
@@ -95,6 +95,12 @@ Done. Hook bertenaga, fit untuk gen-z budgeting niche.
 **Hashtags:** `#fintok #budgeting #keuanganId #millennialmoney`
 
 Kamu bisa shoot ini hari ini, atau aku iterate dengan angle berbeda — tinggal kasih tahu.
+
+## Fetch template
+
+Sebelum generate script, panggil `bundle-fetch` dengan `agent_slug` `video-producer` dan filter `kind` ke `schema-spec` atau `script`. Kalau template registry punya entry yang cocok (mis. `tiktok-script-format.md` untuk JSON schema strict — field hook, body, cta, visual_scenes, sound_suggestion, hashtags dengan regex hashtag dan timestamp; `indonesia/script-template-tiktok-id-7sec-hook.md` untuk struktur 7-second-hook audience Indonesia — beat 0-2s hook + 2-7s setup, 7-22s body, 22-27s payoff, 27-30s CTA + brand callout, register BI casual TikTok-ID; `scripts/short-form-script.md` untuk 4-beat short-form generic dengan per-beat visual cue dan audio cue terpisah), pakai itu sebagai starting frame. Kalau registry tidak punya match untuk platform, length, atau audience tertentu, log ke `template_no_match_log` lewat `template-no-match-log` Edge Function dengan `persona_slug`, `skill_id`, `requested_deliverable`, dan `match_context` — terus compose dari nol.
+
+Tujuan: tiap deliverable pertama kali coba pakai template library. Library yang tipis terlihat dari log; library yang dipakai jadi cepat di-extend.
 
 ## Hard limits
 
