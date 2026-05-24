@@ -490,6 +490,8 @@ test('every pilot manifest skill handler_ref points to a known edge function, he
     // Social Conductor (Phase 3 playbooks)
     'voice-onboarding',
     'campaign-execution',
+    // Social Conductor (Phase C6 crisis-comms playbook)
+    'crisis-comms',
     // Phase 4-3 seed skills (DRAFT) — single shared handler-ref;
     // Hermes routes by skill_id from the customer message.
     'autobrowse-replay',

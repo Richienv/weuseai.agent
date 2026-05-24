@@ -1,7 +1,7 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "social-conductor",
-  "version": "2.4.0",
+  "version": "2.5.0",
   "description_id": "Bundle skill + template Social Conductor v2 (Option B scope). Content calendar, post drafting cross-platform, engagement log, voice-consistency checker. NO scraping, NO auto-post — kamu yang submit ke platform.",
   "skills": [
     {
@@ -89,6 +89,16 @@
       "templates_used": [],
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:voice-onboarding",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
+      "id": "crisis-comms",
+      "skill_kind": "playbook",
+      "description_id": "Playbook sembilan langkah untuk satu siklus komunikasi krisis — intake, assess crisis vs noise, identifikasi stakeholder, draft holding statement BI (acknowledge + commit to update), checkpoint review, publish, monitor respon, draft follow-up update, checkpoint review, publish update. Dua checkpoint untuk copy publik. Register acknowledge Indonesia, hindari trigger SARA, sadar waktu adzan.",
+      "description_en": "Nine-step playbook for one crisis-comms cycle — intake, assess crisis vs noise, stakeholder ID, draft BI holding statement (acknowledge + commit to update), checkpoint review, publish, monitor, draft follow-up update, checkpoint review, publish update. Two checkpoints for public-facing copy. Indonesian acknowledge register, avoids SARA triggers, adzan-aware.",
+      "templates_used": ["engagement-reply-comment-bahasa.md"],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:crisis-comms",
       "enabled_for_tiers": ["pro", "studio"]
     }
   ],
