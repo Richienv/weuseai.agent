@@ -1,8 +1,8 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "deep-researcher",
-  "version": "2.2.1",
-  "description_id": "Bundle skill + template Deep Researcher v2.2. Riset topik kompleks dari banyak sumber, evaluasi kredibilitas per sumber, citation rapi per claim, dan sintesis jadi laporan terstruktur. Template batch: research brief + question decomposition, market sizing (TAM/SAM/SOM dengan rentang sensitivitas), competitor matrix + deep dive, citation APA + Chicago konvensi Indonesia, exec summary satu halaman.",
+  "version": "2.3.0",
+  "description_id": "Bundle skill + template Deep Researcher v2.3. Riset topik kompleks dari banyak sumber, evaluasi kredibilitas per sumber, citation rapi per claim, dan sintesis jadi laporan terstruktur. Template batch: research brief + question decomposition, market sizing (TAM/SAM/SOM dengan rentang sensitivitas), competitor matrix + deep dive, citation APA + Chicago konvensi Indonesia, exec summary satu halaman, plus paket Indonesia-deep (source-list berita bisnis ID, source-list data pemerintah ID, research brief pasar ID, regulasi ID, konsumen ID, kompetitor ID).",
   "skills": [
     {
       "id": "web-research",
@@ -124,6 +124,42 @@
       "kind": "summary",
       "description_id": "Exec summary satu halaman — TL;DR 3-5 kalimat + 3 temuan utama dengan evidence + source ref + caveat per temuan + rekomendasi konkret + pertanyaan lanjutan + confidence level. Untuk pembaca yang hanya punya 60 detik tapi butuh inti laporan riset yang lebih panjang.",
       "best_for": "1-page exec summary of research findings"
+    },
+    {
+      "id": "source-list-id-business-news.md",
+      "kind": "source-list",
+      "description_id": "Daftar sumber berita bisnis Indonesia terkurasi — Kontan, Bisnis Indonesia, Kompas Bisnis, Tempo, Katadata, DDTC News, DealStreetAsia ID, Bareksa. Tiap sumber dengan cakupan editorial, kedalaman, status paywall, kedalaman arsip, gaya kutipan, plus cross-check matrix per tipe klaim (corporate action IDX, funding round, kebijakan fiskal, investigasi BUMN, kinerja reksa dana).",
+      "best_for": "riset bisnis pasar Indonesia — first-stop daftar sumber lokal"
+    },
+    {
+      "id": "source-list-id-government-data.md",
+      "kind": "source-list",
+      "description_id": "Daftar portal + dataset resmi pemerintah Indonesia untuk riset makro + sektoral — BPS (Sensus, Sakernas, Susenas, PDB), Bank Indonesia (SEKI, SSPI, IKK), OJK (SPI, statistik fintech, daftar penyelenggara), Kemenkeu (APBN, realisasi), DJP, BKPM (realisasi PMA + PMDN), Kemenperin, IDX. Tiap sumber dengan akses (API / portal), update cadence, format, dan cross-check matrix per indikator makro.",
+      "best_for": "grounding data resmi pemerintah Indonesia untuk market sizing + sektoral"
+    },
+    {
+      "id": "research-brief-pasar-id.md",
+      "kind": "research-brief",
+      "description_id": "Brief riset pasar Indonesia dengan grounding wajib BPS + regulasi UU/PP/Permen + sizing IDR + SES Nielsen. Empat bagian: lanskap (ukuran pasar IDR + sumber BPS + CAGR + segmentasi SES), regulasi (rantai UU → PP → Permen → SE dengan pasal eksplisit + regulator), pemain utama (incumbent + challenger + BUMN + PMA), proyeksi 3-5 tahun dengan asumsi makro BI / Kemenkeu eksplisit + skenario base/optimis/pesimis.",
+      "best_for": "riset pasar Indonesia — go/no-go dengan grounding lokal"
+    },
+    {
+      "id": "research-brief-regulasi-id.md",
+      "kind": "research-brief",
+      "description_id": "Brief riset lanskap regulasi Indonesia — memetakan rantai UU → PP → Permen/POJK/PBI → SE/juknis dengan pasal spesifik + regulator yang owns enforcement + sanksi + tren regulasi 12-24 bulan (RUU di Prolegnas + draft Permen di konsultasi publik). Anti-pola eksplisit: skip Surat Edaran, kutip pasal tanpa nomor, pakai berita Hukumonline sebagai dasar hukum primer.",
+      "best_for": "compliance + legal mapping sebelum masuk sektor regulated Indonesia"
+    },
+    {
+      "id": "research-brief-konsumen-id.md",
+      "kind": "research-brief",
+      "description_id": "Brief riset konsumen Indonesia dengan segmentasi SES Nielsen (A1, A2, B, C1, C2, D, E) + grounding BPS Susenas + source mix Nielsen Retail Audit / Kantar Worldpanel / Snapcart / Populix / Bank Indonesia IKK / APJII / OJK Literasi Keuangan. Empat bagian: profil demografi + ekonomi segmen, perilaku kategori (penetrasi, frekuensi, channel mix, spend per occasion, brand awareness), driver + barrier pembelian per SES, tabel sumber dengan sample size + akses.",
+      "best_for": "riset konsumen Indonesia — segmentasi SES + perilaku kategori"
+    },
+    {
+      "id": "research-brief-kompetitor-id.md",
+      "kind": "research-brief",
+      "description_id": "Brief riset kompetitor Indonesia berbasis jejak publik resmi — disclosure IDX (kalau listed), daftar OJK (kalau fintech), realisasi BKPM (kalau PMA), kontrak LKPP (kalau B2G), funding DealStreetAsia + portofolio VC lokal (AC Ventures, East Ventures, Alpha JWC, Intudo). Tujuh bagian: klasifikasi, trail funding, trail finansial, trail compliance, trail kontrak, positioning publik, sinyal customer. Anti-pola: SWOT generik, klaim funding tanpa sumber, skip BUMN sebagai kompetitor.",
+      "best_for": "competitor research Indonesia — jejak publik resmi per tipe pemain"
     }
   ],
   "self_extend": true,
