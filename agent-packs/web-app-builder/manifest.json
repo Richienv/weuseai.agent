@@ -1,7 +1,7 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "web-app-builder",
-  "version": "2.4.0",
+  "version": "2.5.0",
   "description_id": "Bundle skill + template Web Creator. Bikin website komplit (landing, multi-page, blog), deploy ke Vercel, sarankan domain Indonesia (Niagahoster, IDwebhost, Hostinger), dan extract data dari 6 situs Indonesia populer (Tokopedia, Shopee, Glints, Kompas, OLX, Lamudi) — Phase 4-3 seed skills, DRAFT scaffolding sampai founder graduate via Autobrowse.",
   "skills": [
     {
@@ -81,6 +81,16 @@
       ],
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:site-launch",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
+      "id": "feature-shipping",
+      "skill_kind": "playbook",
+      "description_id": "Playbook 8-langkah feature shipping cycle untuk site yang sudah live — intake fitur dan halaman target, draft spec, breakdown implementasi, testing checklist, checkpoint review, QA dry-run plus deploy preview, post-deploy verifikasi, lalu checkpoint approve dan promote ke production. Mobile-first awareness karena pengunjung Indonesia mayoritas dari ponsel; kalau fitur menyentuh pembayaran, QRIS sebagai metode default dan format harga IDR (titik thousand, tanpa desimal) dicek di checklist.",
+      "description_en": "Eight-step feature shipping cycle playbook for a live website or app — intake (feature description + target page), spec draft, implementation breakdown, testing checklist, review checkpoint, QA dry-run with preview deploy, post-deploy verification, then approval checkpoint and production promote. Mobile-first awareness for Indonesian audiences; QRIS/IDR checks baked into the checklist when the feature touches payment.",
+      "templates_used": ["launch-checklist.md"],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:feature-shipping",
       "enabled_for_tiers": ["pro", "studio"]
     },
     {
