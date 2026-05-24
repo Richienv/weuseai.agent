@@ -1,8 +1,8 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "video-producer",
-  "version": "2.3.0",
-  "description_id": "Bundle skill + template Video Producer v2.3. Script TikTok dan Reels, hashtag research, sound trend tracking, caption drafting, HyperFrames storyboard + render (Runway primary, Pika fallback), template pack: short/long/voiceover scripts, shot list + shoot plan + b-roll brief, video description + thumbnail brief. Phase B9 Indonesia-deep batch: hijab-aware framing, UGC creator brief, TikTok-ID 7s-hook script, end-card BI CTA, warung-setting shot list.",
+  "version": "2.4.0",
+  "description_id": "Bundle Video Producer v2.4. Script TikTok dan Reels, hashtag research, sound trend, caption, HyperFrames storyboard + render (Runway primary, Pika fallback). Template pack: short/long/voiceover scripts, shot list, shoot plan, b-roll, description, thumbnail brief. Phase B9 Indonesia-deep: hijab-aware framing, UGC creator brief, TikTok-ID 7s-hook, BI end-card CTA, warung setting. Phase C2 dua playbook flow: script-to-publish dan ugc-collab.",
   "skills": [
     {
       "id": "tiktok-script-builder",
@@ -68,6 +68,26 @@
       "templates_used": [],
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:extend-capabilities",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
+      "id": "script-to-publish",
+      "skill_kind": "playbook",
+      "description_id": "Playbook 8-langkah dari brief video sampai bundle siap publish — intake brief, draft script (pakai template TikTok-ID 7s-hook kalau format TikTok), checkpoint review script, assemble shot list, draft caption, research hashtag, assemble publish-ready bundle, checkpoint approval sebelum publish. Dua gerbang checkpoint, tidak ada publish otomatis.",
+      "description_en": "8-step playbook from video brief to publish-ready bundle. Two checkpoint gates — script review and final publish approval.",
+      "templates_used": ["indonesia/script-template-tiktok-id-7sec-hook.md", "indonesia/shot-list-hijab-aware-framing.md"],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:script-to-publish",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
+      "id": "ugc-collab",
+      "skill_kind": "playbook",
+      "description_id": "Playbook 8-langkah kolaborasi UGC creator Indonesia — intake brand brief, susun shortlist (kriteria Indonesia-relevant / format-fit / budget-fit), draft outreach per creator, susun contract terms pakai template creator-brief-ugc-id, checkpoint creator selection, kirim kickoff brief, review asset hasil produksi, checkpoint final usage approval. Dua gerbang checkpoint, tidak ada outreach atau usage approval otomatis.",
+      "description_en": "8-step UGC creator collaboration playbook for Indonesia market. Two checkpoint gates — creator selection and final usage approval.",
+      "templates_used": ["indonesia/creator-brief-ugc-id.md"],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:ugc-collab",
       "enabled_for_tiers": ["pro", "studio"]
     }
   ],

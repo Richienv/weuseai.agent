@@ -485,6 +485,9 @@ test('every pilot manifest skill handler_ref points to a known edge function, he
     'sound-trend-tracker',
     'hashtag-research',
     'caption-optimizer',
+    // Video Producer (Phase C2 playbooks)
+    'script-to-publish',
+    'ugc-collab',
     // Social Conductor (v2 EXPAND — Option B, no scraping)
     'voice-locker',
     'content-calendar-builder',
