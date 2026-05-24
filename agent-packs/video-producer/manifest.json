@@ -1,8 +1,8 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "video-producer",
-  "version": "2.2.1",
-  "description_id": "Bundle skill + template Video Producer v2.2. Script TikTok dan Reels, hashtag research, sound trend tracking, caption drafting, HyperFrames storyboard spec, HyperFrames render execution (Runway primary + Pika fallback), plus template pack baru: short-form / long-form / voiceover scripts, shot list + shoot plan + b-roll brief, dan video description + thumbnail brief.",
+  "version": "2.3.0",
+  "description_id": "Bundle skill + template Video Producer v2.3. Script TikTok dan Reels, hashtag research, sound trend tracking, caption drafting, HyperFrames storyboard + render (Runway primary, Pika fallback), template pack: short/long/voiceover scripts, shot list + shoot plan + b-roll brief, video description + thumbnail brief. Phase B9 Indonesia-deep batch: hijab-aware framing, UGC creator brief, TikTok-ID 7s-hook script, end-card BI CTA, warung-setting shot list.",
   "skills": [
     {
       "id": "tiktok-script-builder",
@@ -149,6 +149,36 @@
       "kind": "thumbnail",
       "description_id": "Brief desain thumbnail YouTube atau cover Reels / TikTok — main subject + posisi, emosi tunggal, teks overlay maksimal 4 kata, palet 60/30/10, reference image, mobile preview test, dan anti-pattern list (clickbait cliche yang sudah saturated).",
       "best_for": "Handoff ke designer atau self-design — thumbnail yang klik-able tanpa visual cliche"
+    },
+    {
+      "id": "indonesia/shot-list-hijab-aware-framing.md",
+      "kind": "shot-list",
+      "description_id": "Shot list dengan panduan framing untuk talent berhijab — framing kepala-dada preferred, lighting respects siluet hijab, varian fashion shot untuk segi empat / pashmina / instan / bergo / khimar. Modesty sebagai parameter kreatif, bukan story-line.",
+      "best_for": "Produksi video dengan talent Muslim Indonesia berhijab — fashion, lifestyle, brand campaign"
+    },
+    {
+      "id": "indonesia/creator-brief-ugc-id.md",
+      "kind": "brief",
+      "description_id": "Brief UGC creator Indonesia — tone peer-to-peer (bukan talent-for-hire), payment IDR dengan breakdown (script / production / usage rights fee, format titik thousand), usage rights time-bounded (default 6 bulan in-platform + 3 bulan out-of-platform), do's & don'ts kalibrasi Indonesia (agama / politik / disclosure / attribution convention).",
+      "best_for": "Engage creator UGC Indonesia untuk kolaborasi brand — contract-ready brief sebelum production"
+    },
+    {
+      "id": "indonesia/script-template-tiktok-id-7sec-hook.md",
+      "kind": "script",
+      "description_id": "Script TikTok-ID dengan struktur 7-second-hook (kompromi antara 3-detik US convention dan attention pacing Indonesia). Beat: 0-2s hook + 2-7s setup, 7-22s body, 22-27s payoff, 27-30s CTA + brand callout. Register BI casual TikTok-ID, library pilihan kata yang fit / hindari, dan reference creator Indonesia.",
+      "best_for": "Script TikTok 30-60s untuk audience Indonesia — edukasi-ringan, lifestyle, niche storytelling, promo non-hard-sell"
+    },
+    {
+      "id": "indonesia/end-card-bahasa-cta.md",
+      "kind": "end-card",
+      "description_id": "End card CTA Bahasa Indonesia untuk TikTok / Reels / Shorts — library CTA per intent (Save / Share / Comment / Follow / Link / DM), engagement signal per platform, brand callout convention, dan anti-pattern (no 'Subscribe + Like + Notification Bell' US YouTube convention).",
+      "best_for": "Penutup 3-5 detik video vertical Indonesia — CTA yang fit ke platform feed-based dan register Indonesia"
+    },
+    {
+      "id": "indonesia/shot-list-warung-makan-product.md",
+      "kind": "shot-list",
+      "description_id": "Shot list product video di setting otentik warung makan / kafe Indonesia — pilihan jenis warung (warteg / warkop / kafe indie / PKL / warmindo), prop drink cultural-fit (kopi tubruk vs latte), lighting compensation tropical bright + dim indoor, sound strategy (keep-ambient / clean-VO-redub / partial-mix), respect adzan + pemilik warung.",
+      "best_for": "Product video setting warung Indonesia otentik — bukan studio bertema, lokasi real dengan operasi hidup"
     }
   ],
   "self_extend": true,
