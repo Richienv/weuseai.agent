@@ -1,7 +1,7 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "video-producer",
-  "version": "2.4.0",
+  "version": "2.4.1",
   "description_id": "Bundle Video Producer v2.4. Script TikTok dan Reels, hashtag research, sound trend, caption, HyperFrames storyboard + render (Runway primary, Pika fallback). Template pack: short/long/voiceover scripts, shot list, shoot plan, b-roll, description, thumbnail brief. Phase B9 Indonesia-deep: hijab-aware framing, UGC creator brief, TikTok-ID 7s-hook, BI end-card CTA, warung setting. Phase C2 dua playbook flow: script-to-publish dan ugc-collab.",
   "skills": [
     {
@@ -9,6 +9,7 @@
       "description_id": "Hermes generate JSON script (hook + body + CTA + visual scenes + sound + hashtags) pakai LLM customer, lalu validate di edge function untuk pastiin format match schema.",
       "description_en": "Hermes generates JSON script using customer's LLM, then validates against locked schema via edge function.",
       "templates_used": ["tiktok-script-format.md"],
+      "template_fetch_required": true,
       "execution": "edge-function",
       "handler_ref": "edge-fn:tiktok-script-handler",
       "enabled_for_tiers": ["pro", "studio"]
