@@ -1,7 +1,7 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "the-pro",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description_id": "Bundle skill + template The Pro. Briefing pagi, ingatan lintas sesi, pendamping kerja harian.",
   "skills": [
     {
@@ -31,6 +31,26 @@
       "templates_used": [],
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:customer-reply",
+      "enabled_for_tiers": ["starter", "pro", "studio"]
+    },
+    {
+      "id": "morning-briefing-cycle",
+      "skill_kind": "playbook",
+      "description_id": "Playbook lima langkah siklus briefing pagi harian. Intake tanggal dan klasifikasi konteks hari (libur nasional, cuti bersama, Ramadhan, hari kerja), pull outstanding dari kemarin, pull konteks pagi (berita, cuaca, meeting), assemble pakai template morning-briefing varian yang tepat, lalu auto-deliver ke Telegram customer. Cron 07:00 WIB default, customer juga bisa minta on-demand.",
+      "description_en": "Five-step playbook for the daily morning briefing cycle. Intake date and classify day context (national holiday, joint leave, Ramadan, working day), pull yesterday's outstanding, fetch morning context (news, weather, meetings), assemble using the right morning-briefing template variant, then auto-deliver to the customer's Telegram. Cron 07:00 WIB default, on-demand also supported.",
+      "templates_used": ["briefings/morning-briefing.md", "briefings/morning-briefing-hari-libur.md", "briefings/morning-briefing-puasa.md"],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:morning-briefing-cycle",
+      "enabled_for_tiers": ["starter", "pro", "studio"]
+    },
+    {
+      "id": "end-of-day-summary",
+      "skill_kind": "playbook",
+      "description_id": "Playbook enam langkah siklus ringkasan akhir hari operasional. Intake tanggal dan jadwal meeting selesai, pull task tuntas hari ini, identifikasi outstanding untuk besok, flag item perlu-konfirmasi (nama pihak, ping terakhir, follow-up recommendation), assemble pakai template end-of-day-summary-bahasa, lalu auto-deliver ke Telegram. Cron 18:00 WIB default, on-demand juga bisa.",
+      "description_en": "Six-step playbook for the operational end-of-day summary cycle. Intake date and completed meetings, pull today's done items, identify outstanding for tomorrow, flag perlu-konfirmasi items (counterparty name, last ping, follow-up recommendation), assemble using end-of-day-summary-bahasa template, then auto-deliver to Telegram. Cron 18:00 WIB default, on-demand also supported.",
+      "templates_used": ["end-of-day-summary-bahasa.md"],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:end-of-day-summary",
       "enabled_for_tiers": ["starter", "pro", "studio"]
     }
   ],
