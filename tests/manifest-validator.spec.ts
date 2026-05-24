@@ -445,6 +445,10 @@ test('every pilot manifest skill handler_ref points to a known edge function, he
     'feature-shipping',
     // Doc Expert (v2)
     'academic-doc-builder',
+    // Doc Expert (v2.3 — Phase C1 playbooks)
+    'invoice-cycle',
+    'proposal-cycle',
+    'contract-review-cycle',
     // Slide Master (v2)
     'narrative-arc-deck-builder',
     'template-deck-builder',

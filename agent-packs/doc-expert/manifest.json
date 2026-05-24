@@ -1,7 +1,7 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "doc-expert",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "description_id": "Bundle skill + template Doc Expert v2.2. Invoice (7 styles termasuk PPN-11% + UMKM non-PPN + W-INVOICE + minimal + recurring + PT/CV), kuitansi resmi Indonesia, kontrak freelance Bahasa + sewa-menyewa KUHPerdata + draft layanan, surat keterangan domisili usaha OSS-RBA, proposal layanan + fixed-bid, report 3 panjang, email 4 register, surat formal + memo internal, plus academic docs (skripsi BAB I-V, thesis, tugas, abstract) konvensi Indonesia.",
   "skills": [
     {
@@ -38,6 +38,36 @@
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:extend-capabilities",
       "enabled_for_tiers": ["starter", "pro", "studio"]
+    },
+    {
+      "id": "invoice-cycle",
+      "skill_kind": "playbook",
+      "description_id": "Playbook siklus invoicing bulanan — agregasi project Done, match ke klien, draft invoice pakai template PPN/UMKM default, checkpoint review untuk batch besar, kirim, log ke receivables tracker, follow-up aging invoice. Cron tanggal 1 setiap bulan atau on-demand.",
+      "description_en": "Monthly invoicing cycle — aggregate done projects, match clients, draft invoices using default PPN/UMKM template, review checkpoint for large batches, send, log to receivables, follow up on aging invoices. Cron 1st of each month or on-demand.",
+      "templates_used": ["invoice-ppn-11pct.html", "invoice-umkm-non-ppn.html"],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:invoice-cycle",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
+      "id": "proposal-cycle",
+      "skill_kind": "playbook",
+      "description_id": "Playbook 7-langkah siklus proposal layanan — intake brief klien, riset cepat profil, draft lima seksi (cover letter, scope, timeline, pricing IDR, terms) pakai template default, checkpoint review customer, final polish dan render, kirim ke klien, lalu pasang tracker open dan respon. Pricing IDR pakai format titik thousand tanpa desimal. Template default proposal-services atau proposal-fixed-bid.",
+      "description_en": "Seven-step service proposal cycle — intake client brief, quick profile research, draft five sections (cover letter, scope, timeline, pricing IDR, terms) using default template, customer review checkpoint, final polish and render, send to client, then attach open and response tracker. Pricing IDR uses dot-thousand format without decimals. Default template proposal-services or proposal-fixed-bid.",
+      "templates_used": ["proposal-services.md", "proposal-fixed-bid.md", "email-formal.md"],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:proposal-cycle",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
+      "id": "contract-review-cycle",
+      "skill_kind": "playbook",
+      "description_id": "Playbook 6-langkah review kontrak yang customer terima dari pihak lain — parse dokumen ke struktur klausul, identifikasi red-flag pakai lens KUHPerdata (Pasal 1320 syarat sah, Pasal 1338 asas kebebasan, Pasal 1266/1267 waiver), susun counter-language, render mark-up dengan highlight per severity, checkpoint review customer, lalu kembalikan artefak final atau kirim mark-up ke pihak lawan. Output WAJIB diverifikasi advokat sebelum tanda tangan — playbook ini draft awal, bukan opini hukum.",
+      "description_en": "Six-step contract review cycle for contracts received from third parties — parse into clause structure, identify red flags using Indonesian KUHPerdata lens (Art. 1320 validity, 1338 freedom-of-contract, 1266/1267 waiver), draft counter-language, render markup with severity highlights, customer review checkpoint, then deliver artifacts or send markup. Output MUST be lawyer-verified before signing — starting draft, not legal opinion.",
+      "templates_used": ["email-formal.md"],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:contract-review-cycle",
+      "enabled_for_tiers": ["pro", "studio"]
     }
   ],
   "templates": [
