@@ -475,6 +475,9 @@ test('every pilot manifest skill handler_ref points to a known edge function, he
     'compliance-cycle',
     // Business Director (v3.2 — Phase 3 playbook)
     'finance-cycle',
+    // Business Director (Phase C4 — review playbooks)
+    'monthly-review',
+    'quarterly-strategy-review',
     'sales-dispatch',
     'marketing-dispatch',
     'engineering-dispatch',
