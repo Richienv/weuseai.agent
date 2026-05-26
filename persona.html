@@ -1,0 +1,2658 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>weuseai.agent — Detail persona</title>
+  <meta name="description" content="Detail persona weuseai.agent — apa yang dia bisa, bagaimana dia kerja, contoh output, dan template yang sudah ada di inventory." />
+  <meta name="robots" content="index, follow" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="weuseai.agent — Detail persona" />
+  <meta property="og:description" content="Detail persona weuseai.agent — apa yang dia bisa, bagaimana dia kerja, contoh output." />
+  <meta property="og:image" content="/assets/og-image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
+  <link rel="icon" type="image/x-icon" href="/assets/favicon.ico" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin></script>
+
+  <!-- Persona detail content (shared with /index.html) -->
+  <script src="/assets/persona-details.js"></script>
+
+  <style>
+    :root {
+      --void: #0a0a0a;
+      --void-2: #0d0d0d;
+      --void-3: #111;
+      --bone: #f5f5f5;
+      --bone-d: rgba(245, 245, 245, 0.82);
+      --bone-m: rgba(245, 245, 245, 0.62);
+      --bone-l: rgba(245, 245, 245, 0.42);
+      --signal: #E5322D;
+      --signal-d: #c92823;
+      --line: rgba(255, 255, 255, 0.06);
+      --line-strong: rgba(255, 255, 255, 0.12);
+      --glass: rgba(255, 255, 255, 0.028);
+      --glass-strong: rgba(255, 255, 255, 0.05);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      background: var(--void);
+      color: var(--bone);
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-size: 15px;
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      min-height: 100vh;
+    }
+    a { color: inherit; text-decoration: none; }
+
+    /* Atmospheric backdrop — large halftone in the upper-left, fades out */
+    body::before {
+      content: '';
+      position: fixed;
+      top: -120px;
+      left: -160px;
+      width: 720px;
+      height: 720px;
+      background-image: radial-gradient(circle, rgba(229, 50, 45, 0.32) 1.5px, transparent 2.2px);
+      background-size: 18px 18px;
+      mask-image: radial-gradient(circle at 30% 30%, #000 0%, transparent 60%);
+      -webkit-mask-image: radial-gradient(circle at 30% 30%, #000 0%, transparent 60%);
+      opacity: 0.35;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Page wrapper — generous max-width + breathing padding */
+    .page {
+      position: relative;
+      z-index: 1;
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 28px 24px 96px;
+    }
+    @media (min-width: 720px) { .page { padding: 40px 48px 120px; } }
+    @media (min-width: 1100px) { .page { padding: 48px 72px 160px; } }
+
+    /* Top bar — small, restrained, just back + logo */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 64px;
+    }
+    @media (min-width: 720px) { .topbar { margin-bottom: 96px; } }
+    .topbar-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 14px 9px 12px;
+      border-radius: 999px;
+      background: var(--glass);
+      border: 1px solid var(--line);
+      color: var(--bone-d);
+      font-size: 12.5px;
+      letter-spacing: 0.01em;
+      transition: background 200ms ease, border-color 200ms ease;
+    }
+    .topbar-back:hover {
+      background: rgba(229, 50, 45, 0.08);
+      border-color: rgba(229, 50, 45, 0.32);
+      color: var(--bone);
+    }
+    .topbar-back svg { width: 14px; height: 14px; }
+    .topbar-logo {
+      font-family: 'Instrument Serif', serif;
+      font-size: 17px;
+      color: var(--bone-m);
+      letter-spacing: -0.01em;
+    }
+    .topbar-logo strong { color: var(--bone); font-weight: 400; }
+
+    /* Hero — persona identity. Big, calm, asymmetric. */
+    .hero {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 28px;
+      align-items: end;
+      padding-bottom: 56px;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 88px;
+    }
+    @media (min-width: 760px) {
+      .hero { grid-template-columns: auto 1fr auto; gap: 36px; padding-bottom: 72px; margin-bottom: 112px; }
+    }
+    .hero-glyph {
+      flex-shrink: 0;
+      width: 96px; height: 96px;
+      border-radius: 22px;
+      background: linear-gradient(135deg, rgba(229, 50, 45, 0.22), rgba(229, 50, 45, 0.04));
+      border: 1px solid rgba(229, 50, 45, 0.36);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Instrument Serif', serif;
+      font-size: 56px;
+      color: var(--signal);
+      box-shadow: 0 12px 40px rgba(229, 50, 45, 0.15);
+    }
+    @media (min-width: 760px) {
+      .hero-glyph { width: 120px; height: 120px; border-radius: 28px; font-size: 70px; }
+    }
+    .hero-eyebrow {
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(229, 50, 45, 0.85);
+      margin-bottom: 12px;
+    }
+    .hero-name {
+      font-family: 'Instrument Serif', serif;
+      font-size: clamp(44px, 7vw, 80px);
+      line-height: 0.96;
+      letter-spacing: -0.03em;
+      color: var(--bone);
+      margin: 0 0 18px;
+    }
+    .hero-tagline {
+      font-size: clamp(15px, 1.6vw, 18px);
+      line-height: 1.55;
+      color: var(--bone-m);
+      max-width: 640px;
+      margin: 0;
+    }
+    .hero-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 13px 22px;
+      background: var(--signal);
+      color: var(--bone);
+      border-radius: 999px;
+      font-size: 13.5px;
+      font-weight: 500;
+      letter-spacing: -0.005em;
+      transition: background 200ms ease, transform 160ms ease;
+      white-space: nowrap;
+    }
+    .hero-cta:hover { background: var(--signal-d); transform: translateY(-1px); }
+    .hero-cta svg { width: 13px; height: 13px; }
+
+    /* Section — generous vertical rhythm */
+    .section {
+      margin-bottom: 96px;
+    }
+    @media (min-width: 760px) { .section { margin-bottom: 128px; } }
+    .section-head {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+      max-width: 720px;
+      margin-bottom: 40px;
+    }
+    @media (min-width: 720px) { .section-head { margin-bottom: 56px; } }
+    .section-eyebrow {
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(229, 50, 45, 0.85);
+    }
+    .section-title {
+      font-family: 'Instrument Serif', serif;
+      font-size: clamp(28px, 3.5vw, 42px);
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+      color: var(--bone);
+      margin: 0;
+    }
+    .section-sub {
+      font-size: 14.5px;
+      line-height: 1.6;
+      color: var(--bone-m);
+      max-width: 580px;
+      margin: 6px 0 0;
+    }
+
+    /* ── Capability cards — SYMMETRIC uniform grid (3-col desktop) ──
+       Reference: skincare-magic style — equal-size cards, one clean visual
+       per card centered in generous whitespace, calm caption below.
+       NO span-2 or row-2 — every card has the same shape so the grid feels
+       tidy and scannable. */
+    .cards {
+      display: grid;
+      gap: 18px;
+      grid-template-columns: 1fr;
+    }
+    @media (min-width: 680px) { .cards { grid-template-columns: repeat(2, 1fr); gap: 20px; } }
+    @media (min-width: 980px) { .cards { grid-template-columns: repeat(3, 1fr); gap: 24px; } }
+    .card {
+      position: relative;
+      border-radius: 22px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.038), rgba(255,255,255,0.012));
+      border: 1px solid var(--line);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-height: 360px;
+      transition: border-color 260ms ease, transform 220ms ease, box-shadow 260ms ease;
+    }
+    .card:hover {
+      border-color: rgba(229, 50, 45, 0.32);
+      transform: translateY(-2px);
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.28);
+    }
+    /* Visual zone — centered, takes the top ~55-60% of card */
+    .card-visual {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 44px 32px;
+      background: rgba(255, 255, 255, 0.015);
+      border-bottom: 1px solid var(--line);
+      min-height: 200px;
+      position: relative;
+      overflow: hidden;
+    }
+    .card-visual::after {
+      /* Subtle halftone accent in the upper-right of the visual zone */
+      content: '';
+      position: absolute;
+      top: -32px; right: -32px;
+      width: 90px; height: 90px;
+      background-image: radial-gradient(circle, rgba(229, 50, 45, 0.3) 1px, transparent 1.6px);
+      background-size: 9px 9px;
+      mask-image: radial-gradient(circle at top right, #000 0%, transparent 65%);
+      -webkit-mask-image: radial-gradient(circle at top right, #000 0%, transparent 65%);
+      pointer-events: none;
+      opacity: 0.4;
+    }
+    /* Caption zone — bottom block, clean + compact */
+    .card-cap {
+      padding: 22px 24px 26px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .card-cap-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 4px;
+    }
+    .card-cap-idx {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border: 1px solid rgba(229, 50, 45, 0.32);
+      border-radius: 999px;
+      color: var(--signal);
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .card-cap-idx .dot {
+      width: 5px; height: 5px; border-radius: 50%;
+      background: var(--signal);
+    }
+    .card-cap-badge {
+      padding: 3px 8px;
+      border-radius: 5px;
+      background: rgba(229, 50, 45, 0.16);
+      color: var(--signal);
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 9.5px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+    .card-cap-title {
+      font-family: 'Instrument Serif', serif;
+      font-size: 22px;
+      line-height: 1.18;
+      color: var(--bone);
+      letter-spacing: -0.015em;
+      margin: 4px 0 0;
+    }
+    .card-cap-sub {
+      font-size: 13px;
+      line-height: 1.6;
+      color: var(--bone-m);
+      margin: 0;
+    }
+
+    /* ── Visual primitives — one large clean element per card ── */
+
+    /* 1. Citation badge cluster — large [1] [2] [3] floating with a source line */
+    .vis-citation {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 18px;
+      width: 100%;
+    }
+    .vis-citation-refs {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      justify-content: center;
+    }
+    .vis-citation-ref {
+      width: 52px; height: 52px;
+      border-radius: 14px;
+      background: rgba(229, 50, 45, 0.14);
+      border: 1px solid rgba(229, 50, 45, 0.36);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Instrument Serif', serif;
+      font-size: 22px;
+      color: var(--signal);
+      letter-spacing: -0.01em;
+      position: relative;
+    }
+    .vis-citation-ref.tilt-l { transform: rotate(-6deg); }
+    .vis-citation-ref.tilt-r { transform: rotate(6deg); }
+    .vis-citation-source {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      max-width: 220px;
+      width: 100%;
+    }
+    .vis-citation-source .ln {
+      height: 6px;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 3px;
+    }
+    .vis-citation-source .ln.short { width: 65%; }
+
+    /* 2. Five source icons — stacked fan, centered */
+    .vis-sources {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+    }
+    .vis-sources-row {
+      display: flex;
+      gap: 9px;
+      align-items: flex-end;
+    }
+    .vis-source-card {
+      width: 32px; height: 42px;
+      border-radius: 6px;
+      background: linear-gradient(180deg, rgba(229, 50, 45, 0.18), rgba(229, 50, 45, 0.06));
+      border: 1px solid rgba(229, 50, 45, 0.34);
+      position: relative;
+    }
+    .vis-source-card::before, .vis-source-card::after {
+      content: '';
+      position: absolute;
+      left: 6px; right: 6px;
+      height: 3px;
+      background: rgba(229, 50, 45, 0.55);
+      border-radius: 1.5px;
+    }
+    .vis-source-card::before { top: 8px; }
+    .vis-source-card::after { top: 16px; right: 14px; }
+    .vis-sources-counter {
+      font-family: 'Instrument Serif', serif;
+      font-size: 32px;
+      color: var(--signal);
+      line-height: 1;
+      letter-spacing: -0.02em;
+    }
+    .vis-sources-counter-lbl {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--bone-l);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-top: -8px;
+    }
+
+    /* 3. Verified / unverified — two large pills side by side */
+    .vis-tags {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+    }
+    .vis-tag-pill {
+      flex: 1;
+      max-width: 120px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 14px;
+      border-radius: 999px;
+      border: 1px solid currentColor;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      justify-content: center;
+    }
+    .vis-tag-pill.ok {
+      color: rgba(120, 220, 150, 0.95);
+      background: rgba(120, 220, 150, 0.08);
+    }
+    .vis-tag-pill.warn {
+      color: rgba(229, 180, 60, 0.95);
+      background: rgba(229, 180, 60, 0.08);
+    }
+    .vis-tag-pill .glyph {
+      font-family: 'Instrument Serif', serif;
+      font-size: 16px;
+      line-height: 1;
+    }
+
+    /* 4. Conflict — two arrows converging at a center dot */
+    .vis-conflict {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      position: relative;
+    }
+    .vis-conflict-side {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-items: flex-end;
+      width: 90px;
+    }
+    .vis-conflict-side.right { align-items: flex-start; }
+    .vis-conflict-side .ln {
+      height: 5px;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 2.5px;
+    }
+    .vis-conflict-side .ln.short { width: 60%; }
+    .vis-conflict-center {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: rgba(229, 50, 45, 0.14);
+      border: 1px solid rgba(229, 50, 45, 0.36);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Instrument Serif', serif;
+      font-style: italic;
+      font-size: 16px;
+      color: var(--signal);
+      flex-shrink: 0;
+    }
+
+    /* ── shared primitives used across the other 9 personas ── */
+
+    /* Mini grid for slides / kanban / calendar */
+    .vis-grid {
+      display: grid;
+      gap: 5px;
+    }
+    .vis-grid.cols-4 { grid-template-columns: repeat(4, 1fr); }
+    .vis-grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+    .vis-grid.cols-6 { grid-template-columns: repeat(6, 1fr); }
+    .vis-grid .gcell {
+      aspect-ratio: 4 / 3;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+    }
+    .vis-grid .gcell.accent {
+      background: rgba(229, 50, 45, 0.18);
+      border-color: rgba(229, 50, 45, 0.4);
+    }
+
+    /* Pill-pair — two larger pills */
+    .vis-pills {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .vis-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 9px 14px;
+      border-radius: 999px;
+      background: rgba(229, 50, 45, 0.1);
+      border: 1px solid rgba(229, 50, 45, 0.32);
+      color: var(--signal);
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 11px;
+      letter-spacing: 0.04em;
+    }
+    .vis-pill.muted {
+      background: rgba(255, 255, 255, 0.04);
+      border-color: var(--line);
+      color: var(--bone-d);
+    }
+
+    /* Bar chart */
+    .vis-bars {
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      gap: 8px;
+      height: 110px;
+    }
+    .vis-bars .bar {
+      width: 22px;
+      background: linear-gradient(180deg, rgba(229, 50, 45, 0.45), rgba(229, 50, 45, 0.18));
+      border-top: 1px solid rgba(229, 50, 45, 0.6);
+      border-radius: 3px 3px 1px 1px;
+    }
+
+    /* Checklist with bullet checks */
+    .vis-checklist {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      width: 100%;
+      max-width: 220px;
+    }
+    .vis-checklist-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .vis-checklist-item .chk {
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      background: rgba(229, 50, 45, 0.18);
+      border: 1px solid rgba(229, 50, 45, 0.42);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--signal);
+      flex-shrink: 0;
+      font-size: 10px;
+      line-height: 1;
+    }
+    .vis-checklist-item .chk.empty {
+      background: rgba(255, 255, 255, 0.04);
+      border-color: rgba(255, 255, 255, 0.18);
+      color: transparent;
+    }
+    .vis-checklist-item .ln {
+      flex: 1;
+      height: 5px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 2.5px;
+    }
+    .vis-checklist-item .ln.short { max-width: 60%; }
+
+    /* Hub + spokes — central node with branches */
+    .vis-hub {
+      position: relative;
+      width: 200px;
+      height: 110px;
+    }
+    .vis-hub-center {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      background: rgba(229, 50, 45, 0.18);
+      border: 1.5px solid rgba(229, 50, 45, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Instrument Serif', serif;
+      font-size: 18px;
+      color: var(--signal);
+      z-index: 2;
+    }
+    .vis-hub-spoke {
+      position: absolute;
+      width: 32px; height: 32px;
+      border-radius: 7px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+    }
+    .vis-hub-spoke::before {
+      content: '';
+      position: absolute;
+      top: 50%; left: 50%;
+      width: 50px; height: 1px;
+      background: linear-gradient(90deg, rgba(229, 50, 45, 0.5), transparent);
+      transform-origin: 0 0;
+      z-index: -1;
+    }
+    .vis-hub-spoke.tl { top: 0; left: 0; }
+    .vis-hub-spoke.tr { top: 0; right: 0; }
+    .vis-hub-spoke.bl { bottom: 0; left: 0; }
+    .vis-hub-spoke.br { bottom: 0; right: 0; }
+
+    /* Window frame — browser/terminal chrome */
+    .vis-window {
+      width: 100%;
+      max-width: 240px;
+      border-radius: 8px;
+      background: var(--void-2);
+      border: 1px solid var(--line);
+      overflow: hidden;
+    }
+    .vis-window-bar {
+      padding: 7px 10px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      gap: 5px;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.02);
+    }
+    .vis-window-bar .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+    }
+    .vis-window-bar .dot.red { background: rgba(229, 50, 45, 0.55); }
+    .vis-window-bar .dot.grey { background: rgba(255, 255, 255, 0.16); }
+    .vis-window-bar .url {
+      flex: 1;
+      margin-left: 8px;
+      height: 5px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 2.5px;
+    }
+    .vis-window-body {
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .vis-window-body .ln {
+      height: 5px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 2.5px;
+    }
+    .vis-window-body .ln.short { width: 55%; }
+    .vis-window-body .ln.med   { width: 80%; }
+    .vis-window-body .ln.accent { background: rgba(229, 50, 45, 0.5); }
+
+    /* Doc mock — single document with lines */
+    .vis-doc {
+      width: 130px;
+      padding: 14px 12px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .vis-doc.accent {
+      background: rgba(229, 50, 45, 0.08);
+      border-color: rgba(229, 50, 45, 0.36);
+    }
+    .vis-doc .title {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      color: var(--signal);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .vis-doc .ln {
+      height: 5px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 2.5px;
+    }
+    .vis-doc.accent .ln { background: rgba(229, 50, 45, 0.35); }
+    .vis-doc .ln.short { width: 55%; }
+
+    /* Phone frame — for TikTok-style */
+    .vis-phone {
+      width: 100px;
+      height: 160px;
+      border-radius: 14px;
+      background: var(--void-2);
+      border: 2px solid var(--line-strong);
+      padding: 14px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      position: relative;
+    }
+    .vis-phone::before {
+      content: '';
+      position: absolute;
+      top: 5px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 22px;
+      height: 3px;
+      background: rgba(255, 255, 255, 0.18);
+      border-radius: 1.5px;
+    }
+    .vis-phone .pln {
+      height: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 2px;
+    }
+    .vis-phone .pln.accent { background: rgba(229, 50, 45, 0.55); }
+    .vis-phone .pln.short { width: 50%; }
+    .vis-phone .pln.long { width: 100%; }
+
+    /* Timeline — horizontal with marker dots */
+    .vis-timeline {
+      width: 100%;
+      max-width: 220px;
+      position: relative;
+      padding: 18px 0 8px;
+    }
+    .vis-timeline-line {
+      height: 2px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 1px;
+      position: relative;
+    }
+    .vis-timeline-mark {
+      position: absolute;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      background: rgba(229, 50, 45, 0.2);
+      border: 1.5px solid rgba(229, 50, 45, 0.55);
+    }
+    .vis-timeline-mark.solid {
+      background: var(--signal);
+    }
+    .vis-timeline-lbl {
+      position: absolute;
+      transform: translateX(-50%);
+      top: 100%;
+      margin-top: 6px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      color: var(--bone-l);
+      letter-spacing: 0.06em;
+    }
+
+    /* Chat bubbles — for The Pro */
+    .vis-chat {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      width: 100%;
+      max-width: 220px;
+    }
+    .vis-bubble {
+      padding: 8px 12px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      max-width: 80%;
+    }
+    .vis-bubble.right {
+      align-self: flex-end;
+      background: rgba(229, 50, 45, 0.1);
+      border-color: rgba(229, 50, 45, 0.32);
+    }
+    .vis-bubble .ln {
+      height: 4px;
+      background: rgba(255, 255, 255, 0.16);
+      border-radius: 2px;
+      margin: 2px 0;
+    }
+    .vis-bubble.right .ln { background: rgba(229, 50, 45, 0.55); }
+    .vis-bubble .ln.short { width: 60%; }
+
+    /* Voice waveform — for The Pro voice match */
+    .vis-waveform {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      height: 60px;
+    }
+    .vis-waveform .wb {
+      width: 4px;
+      background: rgba(229, 50, 45, 0.5);
+      border-radius: 1.5px;
+    }
+
+    /* Counter — big serif number, reusable */
+    .vis-big-num {
+      font-family: 'Instrument Serif', serif;
+      font-size: 56px;
+      color: var(--signal);
+      line-height: 1;
+      letter-spacing: -0.02em;
+    }
+    .vis-big-num-lbl {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--bone-l);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-top: 4px;
+      text-align: center;
+    }
+
+    /* Receipt / invoice calc — for Doc Expert PPN */
+    .vis-calc {
+      width: 100%;
+      max-width: 220px;
+      padding: 14px 14px;
+      background: rgba(255, 255, 255, 0.025);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+    }
+    .vis-calc-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      color: var(--bone-m);
+    }
+    .vis-calc-row.total {
+      border-top: 1px solid var(--line);
+      margin-top: 6px;
+      padding-top: 8px;
+      color: var(--bone);
+    }
+    .vis-calc-row .num { color: var(--signal); }
+
+    /* 5. Funnel — 3 docs → arrow → summary doc */
+    .vis-funnel {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+    }
+    .vis-funnel-stack {
+      position: relative;
+      width: 48px; height: 60px;
+    }
+    .vis-funnel-stack .pg {
+      position: absolute;
+      width: 36px; height: 46px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 4px;
+    }
+    .vis-funnel-stack .pg:nth-child(1) { top: 0; left: 0; }
+    .vis-funnel-stack .pg:nth-child(2) { top: 6px; left: 8px; }
+    .vis-funnel-stack .pg:nth-child(3) {
+      top: 12px; left: 16px;
+      background: rgba(229, 50, 45, 0.14);
+      border-color: rgba(229, 50, 45, 0.36);
+    }
+    .vis-funnel-arrow {
+      color: var(--signal);
+      font-size: 22px;
+      line-height: 1;
+    }
+    .vis-funnel-summary {
+      width: 56px; height: 64px;
+      border-radius: 6px;
+      background: rgba(229, 50, 45, 0.1);
+      border: 1.5px solid rgba(229, 50, 45, 0.45);
+      padding: 9px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .vis-funnel-summary .ln {
+      height: 3px;
+      background: rgba(229, 50, 45, 0.5);
+      border-radius: 1.5px;
+    }
+    .vis-funnel-summary .ln.short { width: 60%; }
+
+    /* Citation paragraph + footnotes */
+    .mock-paragraph {
+      font-size: 11px;
+      line-height: 1.7;
+      color: var(--bone-d);
+    }
+    .mock-paragraph .ref {
+      display: inline-block;
+      background: rgba(229, 50, 45, 0.18);
+      color: var(--signal);
+      border-radius: 3px;
+      padding: 0 5px;
+      font-size: 9.5px;
+      margin: 0 2px;
+      vertical-align: 1px;
+      letter-spacing: 0.04em;
+    }
+    .mock-footnotes {
+      margin-top: 14px;
+      padding-top: 10px;
+      border-top: 1px dashed rgba(255, 255, 255, 0.07);
+    }
+    .mock-footnote {
+      font-size: 9.5px;
+      color: var(--bone-l);
+      line-height: 1.8;
+      display: flex;
+      gap: 8px;
+    }
+    .mock-footnote .num { color: var(--signal); flex-shrink: 0; }
+
+    /* Verified / unverified split */
+    .mock-split { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .mock-split-col {
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: 6px;
+      padding: 9px 10px;
+      border: 1px solid rgba(255, 255, 255, 0.04);
+    }
+    .mock-split-col .lbl {
+      font-size: 9px;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .mock-split-col.verified .lbl { color: rgba(120, 220, 150, 0.95); }
+    .mock-split-col.unverified .lbl { color: rgba(229, 180, 60, 0.95); }
+    .mock-split-col .ln {
+      height: 4px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 2px;
+      margin: 3px 0;
+    }
+    .mock-split-col.verified .ln { background: rgba(120, 220, 150, 0.34); }
+    .mock-split-col.unverified .ln { background: rgba(229, 180, 60, 0.34); }
+
+    /* Conflict — opposing quotes side by side */
+    .mock-conflict {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      position: relative;
+    }
+    .mock-conflict::before {
+      content: 'vs';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-family: 'Instrument Serif', serif;
+      font-style: italic;
+      font-size: 18px;
+      color: rgba(229, 50, 45, 0.7);
+      background: var(--void-2);
+      padding: 2px 8px;
+      border-radius: 50%;
+      z-index: 2;
+      line-height: 1;
+    }
+    .mock-quote {
+      background: rgba(255, 255, 255, 0.025);
+      border-left: 2px solid rgba(229, 50, 45, 0.4);
+      padding: 9px 11px;
+      border-radius: 5px;
+      font-size: 10.5px;
+      line-height: 1.6;
+      color: var(--bone-d);
+      font-style: italic;
+    }
+    .mock-quote .src {
+      display: block;
+      margin-top: 6px;
+      font-style: normal;
+      font-size: 9px;
+      color: var(--bone-l);
+      letter-spacing: 0.04em;
+    }
+
+    /* Source-count visual */
+    .mock-sources {
+      display: flex;
+      gap: 6px;
+      align-items: flex-end;
+      justify-content: center;
+      padding: 10px 0 4px;
+    }
+    .mock-source-icon {
+      width: 22px;
+      height: 28px;
+      background: rgba(229, 50, 45, 0.18);
+      border: 1px solid rgba(229, 50, 45, 0.32);
+      border-radius: 3px;
+      position: relative;
+    }
+    .mock-source-icon::before {
+      content: '';
+      position: absolute;
+      top: 5px; left: 4px; right: 4px;
+      height: 2px;
+      background: rgba(229, 50, 45, 0.55);
+      box-shadow: 0 4px 0 rgba(229, 50, 45, 0.55), 0 8px 0 rgba(229, 50, 45, 0.55);
+    }
+    .mock-counter {
+      text-align: center;
+      font-family: 'Instrument Serif', serif;
+      font-size: 36px;
+      color: var(--signal);
+      line-height: 1;
+      margin-top: 10px;
+      letter-spacing: -0.02em;
+    }
+    .mock-counter-lbl {
+      text-align: center;
+      font-size: 9.5px;
+      letter-spacing: 0.12em;
+      color: var(--bone-l);
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+
+    /* Sintesis funnel */
+    .mock-funnel {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 6px 0;
+    }
+    .mock-paper-stack {
+      position: relative;
+      width: 40px;
+      height: 44px;
+      flex-shrink: 0;
+    }
+    .mock-paper-stack .pg {
+      position: absolute;
+      width: 26px;
+      height: 34px;
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 3px;
+    }
+    .mock-paper-stack .pg:nth-child(1) { top: 0; left: 0; }
+    .mock-paper-stack .pg:nth-child(2) { top: 5px; left: 7px; }
+    .mock-paper-stack .pg:nth-child(3) {
+      top: 10px; left: 14px;
+      background: rgba(229, 50, 45, 0.16);
+      border-color: rgba(229, 50, 45, 0.32);
+    }
+    .mock-arrow {
+      color: var(--signal);
+      font-size: 20px;
+      line-height: 1;
+    }
+    .mock-summary-card {
+      flex: 1;
+      background: rgba(229, 50, 45, 0.06);
+      border: 1px solid rgba(229, 50, 45, 0.22);
+      border-radius: 5px;
+      padding: 8px 9px;
+    }
+    .mock-summary-card .ttl {
+      font-size: 9.5px;
+      color: var(--signal);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 5px;
+    }
+    .mock-summary-card .ln {
+      height: 3.5px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 1.5px;
+      margin: 3px 0;
+    }
+    .mock-summary-card .ln.short { width: 60%; }
+
+    /* ── Flow bento — 3x2 on desktop with generous gaps ── */
+    .flow-bento {
+      display: grid;
+      gap: 16px;
+      grid-template-columns: 1fr;
+    }
+    @media (min-width: 600px) { .flow-bento { grid-template-columns: repeat(2, 1fr); gap: 18px; } }
+    @media (min-width: 960px) { .flow-bento { grid-template-columns: repeat(3, 1fr); gap: 22px; } }
+    .flow-card {
+      position: relative;
+      padding: 24px 22px 26px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.025);
+      border: 1px solid var(--line);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-height: 170px;
+    }
+    .flow-card-head {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .flow-card-num {
+      font-family: 'Instrument Serif', serif;
+      font-size: 38px;
+      color: rgba(229, 50, 45, 0.9);
+      line-height: 0.85;
+      letter-spacing: -0.02em;
+    }
+    .flow-card-icon {
+      width: 30px; height: 30px;
+      border-radius: 8px;
+      background: rgba(229, 50, 45, 0.1);
+      border: 1px solid rgba(229, 50, 45, 0.28);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--signal);
+      flex-shrink: 0;
+    }
+    .flow-card-icon svg { width: 14px; height: 14px; }
+    .flow-card-title {
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--bone);
+      line-height: 1.3;
+      margin: 0;
+    }
+    .flow-card-desc {
+      font-size: 13px;
+      line-height: 1.6;
+      color: var(--bone-m);
+      margin: 0;
+    }
+
+    /* ── Deliverable frames — symmetric, equal-width on desktop ── */
+    .deliv-bento {
+      display: grid;
+      gap: 24px;
+      grid-template-columns: 1fr;
+    }
+    @media (min-width: 760px) {
+      .deliv-bento { grid-template-columns: repeat(2, 1fr); gap: 28px; }
+    }
+    .deliv-frame {
+      position: relative;
+      background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.012));
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 28px;
+      overflow: hidden;
+    }
+    .deliv-frame::before {
+      content: '';
+      position: absolute;
+      top: 14px;
+      left: 18px;
+      width: 48px;
+      height: 10px;
+      background:
+        radial-gradient(circle at 5px 5px, rgba(229, 50, 45, 0.5) 4px, transparent 4.6px),
+        radial-gradient(circle at 21px 5px, rgba(255, 255, 255, 0.2) 4px, transparent 4.6px),
+        radial-gradient(circle at 37px 5px, rgba(255, 255, 255, 0.13) 4px, transparent 4.6px);
+    }
+    .deliv-frame-inner {
+      margin-top: 22px;
+      background: var(--void-2);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 18px;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 11px;
+      line-height: 1.65;
+      color: var(--bone-m);
+      min-height: 200px;
+    }
+    .deliv-frame-inner .mini-title {
+      font-family: 'Instrument Serif', serif;
+      font-size: 17px;
+      color: var(--bone);
+      margin-bottom: 12px;
+      letter-spacing: -0.01em;
+    }
+    .deliv-frame-inner .mini-eyebrow {
+      font-size: 10px;
+      color: rgba(229, 50, 45, 0.85);
+      letter-spacing: 0.13em;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+    }
+    .deliv-frame-inner .mini-line {
+      height: 5px;
+      background: rgba(255, 255, 255, 0.09);
+      border-radius: 2.5px;
+      margin: 6px 0;
+    }
+    .deliv-frame-inner .mini-line.short { width: 50%; }
+    .deliv-frame-inner .mini-line.med   { width: 75%; }
+    .deliv-frame-inner .mini-line.long  { width: 100%; }
+    .deliv-frame-inner .mini-line.accent { background: rgba(229, 50, 45, 0.55); }
+    .deliv-frame-inner .mini-citation {
+      font-size: 10px;
+      color: var(--bone-l);
+      line-height: 1.8;
+    }
+    .deliv-frame-inner .mini-chip {
+      display: inline-block;
+      padding: 3px 9px;
+      border-radius: 12px;
+      background: rgba(229, 50, 45, 0.14);
+      color: var(--signal);
+      font-size: 10px;
+      letter-spacing: 0.04em;
+      margin-right: 5px;
+      margin-bottom: 5px;
+    }
+    .deliv-frame-inner .mini-slide {
+      display: inline-block;
+      width: 26px; height: 16px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 2px;
+      margin-right: 5px;
+    }
+    .deliv-frame-inner .mini-slide.active {
+      background: rgba(229, 50, 45, 0.28);
+      border-color: rgba(229, 50, 45, 0.42);
+    }
+    .deliv-frame-inner .mini-kanban {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .deliv-frame-inner .mini-kanban .col {
+      background: rgba(255,255,255,0.03);
+      border-radius: 4px;
+      padding: 6px 5px;
+      font-size: 9px;
+      color: var(--bone-l);
+    }
+    .deliv-frame-inner .mini-kanban .col .card {
+      background: rgba(255,255,255,0.07);
+      height: 7px;
+      border-radius: 2px;
+      margin: 3px 0;
+    }
+    .deliv-frame-inner .mini-kanban .col .card.accent { background: rgba(229, 50, 45, 0.5); }
+    .deliv-frame-inner .mini-chart {
+      display: flex;
+      align-items: flex-end;
+      gap: 5px;
+      height: 50px;
+      margin-top: 8px;
+    }
+    .deliv-frame-inner .mini-chart .bar {
+      flex: 1;
+      background: rgba(229, 50, 45, 0.42);
+      border-radius: 2px;
+    }
+    .deliv-frame-inner .mini-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      font-size: 10px;
+      color: var(--bone-l);
+      margin-top: 5px;
+    }
+    .deliv-frame-inner .mini-row .mini-tag {
+      background: rgba(229, 50, 45, 0.14);
+      color: var(--signal);
+      padding: 1px 7px;
+      border-radius: 4px;
+      font-size: 10px;
+      letter-spacing: 0.05em;
+    }
+
+    .deliv-caption {
+      margin-top: 18px;
+      font-size: 13.5px;
+      line-height: 1.6;
+      color: var(--bone-m);
+    }
+    .deliv-caption strong { color: var(--bone); font-weight: 500; }
+
+    /* ── Templates bento — compact cards in 3-col grid ── */
+    .tpl-bento {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: 1fr;
+    }
+    @media (min-width: 600px) { .tpl-bento { grid-template-columns: repeat(2, 1fr); } }
+    @media (min-width: 960px) { .tpl-bento { grid-template-columns: repeat(3, 1fr); gap: 14px; } }
+    .tpl-card {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      padding: 16px 18px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.022);
+      border: 1px solid var(--line);
+      transition: border-color 200ms ease, transform 200ms ease;
+    }
+    .tpl-card:hover {
+      border-color: rgba(229, 50, 45, 0.28);
+      transform: translateY(-1px);
+    }
+    .tpl-icon {
+      flex-shrink: 0;
+      width: 32px; height: 32px;
+      border-radius: 7px;
+      background: rgba(229, 50, 45, 0.1);
+      border: 1px solid rgba(229, 50, 45, 0.28);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--signal);
+      letter-spacing: 0.04em;
+    }
+    .tpl-body { min-width: 0; flex: 1; }
+    .tpl-name {
+      font-size: 13px;
+      color: var(--bone);
+      font-weight: 500;
+      line-height: 1.35;
+      word-break: break-word;
+    }
+    .tpl-kind {
+      font-size: 11px;
+      color: var(--bone-l);
+      margin-top: 3px;
+      letter-spacing: 0.02em;
+    }
+
+    /* ── Footer CTA — full-width strip with generous padding ── */
+    .footer-cta {
+      margin-top: 96px;
+      padding: 48px 40px;
+      border-radius: 22px;
+      background: linear-gradient(180deg, rgba(229, 50, 45, 0.06), rgba(229, 50, 45, 0.01));
+      border: 1px solid rgba(229, 50, 45, 0.18);
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 24px;
+      align-items: center;
+      position: relative;
+      overflow: hidden;
+    }
+    @media (min-width: 720px) {
+      .footer-cta { grid-template-columns: 1fr auto; gap: 36px; padding: 56px 48px; }
+    }
+    .footer-cta::after {
+      content: '';
+      position: absolute;
+      top: -40px; right: -40px;
+      width: 200px; height: 200px;
+      background-image: radial-gradient(circle, rgba(229, 50, 45, 0.42) 1.2px, transparent 1.8px);
+      background-size: 11px 11px;
+      mask-image: radial-gradient(circle at top right, #000 0%, transparent 70%);
+      -webkit-mask-image: radial-gradient(circle at top right, #000 0%, transparent 70%);
+      pointer-events: none;
+      opacity: 0.4;
+    }
+    .footer-cta-title {
+      font-family: 'Instrument Serif', serif;
+      font-size: clamp(24px, 3vw, 32px);
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+      color: var(--bone);
+      margin: 0 0 8px;
+      position: relative;
+      z-index: 1;
+    }
+    .footer-cta-hint {
+      font-size: 13.5px;
+      color: var(--bone-m);
+      max-width: 420px;
+      margin: 0;
+      position: relative;
+      z-index: 1;
+    }
+    .footer-cta-primary {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 15px 26px;
+      background: var(--signal);
+      color: var(--bone);
+      border-radius: 999px;
+      font-size: 14px;
+      font-weight: 500;
+      letter-spacing: -0.005em;
+      transition: background 200ms ease, transform 160ms ease;
+      white-space: nowrap;
+      position: relative;
+      z-index: 1;
+    }
+    .footer-cta-primary:hover { background: var(--signal-d); transform: translateY(-1px); }
+    .footer-cta-primary svg { width: 14px; height: 14px; }
+
+    /* ── Not-found state ── */
+    .nf {
+      text-align: center;
+      padding: 80px 24px;
+    }
+    .nf h1 { font-family: 'Instrument Serif', serif; font-size: 40px; color: var(--bone); margin-bottom: 12px; }
+    .nf p { color: var(--bone-m); margin-bottom: 28px; }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+
+  <script type="text/babel" data-presets="env,react">
+    const { useEffect, useMemo } = React;
+
+    // ─────────────── helpers ───────────────
+    function getSlugFromURL() {
+      try {
+        const u = new URL(window.location.href);
+        const q = u.searchParams.get('slug');
+        if (q) return q;
+        // Allow /persona/<slug> if Vercel rewrites are configured
+        const m = u.pathname.match(/^\/persona\/([\w-]+)/);
+        if (m) return m[1];
+      } catch (e) { /* ignore */ }
+      return null;
+    }
+
+    // Small renaming helper used for the bold-bracket caption in deliverable
+    function renderBoldMd(s) {
+      return s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    }
+
+    // ─────────────── icons (small step icons per slug position) ───────────────
+    function StepIcon({ kind }) {
+      const c = { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' };
+      switch (kind) {
+        case 'intake':     return (<svg {...c}><circle cx="12" cy="12" r="9" /><polyline points="12 7 12 12 15 14" /></svg>);
+        case 'gather':     return (<svg {...c}><circle cx="11" cy="11" r="7" /><line x1="20" y1="20" x2="16.5" y2="16.5" /></svg>);
+        case 'grade':      return (<svg {...c}><polyline points="20 6 9 17 4 12" /></svg>);
+        case 'checkpoint': return (<svg {...c}><rect x="5" y="5" width="14" height="14" rx="2" /><polyline points="9 12 11 14 15 10" /></svg>);
+        case 'cite':       return (<svg {...c}><line x1="6" y1="7" x2="18" y2="7" /><line x1="6" y1="12" x2="18" y2="12" /><line x1="6" y1="17" x2="14" y2="17" /></svg>);
+        case 'synth':      return (<svg {...c}><path d="M12 2v6M5 12h14M12 16v6" /><circle cx="12" cy="12" r="3" /></svg>);
+        default:           return (<svg {...c}><circle cx="12" cy="12" r="9" /></svg>);
+      }
+    }
+
+    const FLOW_ICONS = {
+      'deep-researcher': ['intake', 'gather', 'grade', 'checkpoint', 'cite', 'synth'],
+    };
+
+    // ─────────────── deliverable inner mocks (shared between personas) ───────────────
+    function DeliverableInner({ kind }) {
+      switch (kind) {
+        case 'briefing':
+          return (
+            <>
+              <div className="mini-title">Briefing pagi — Jumat</div>
+              <div className="mini-eyebrow">Kalender · 5 event</div>
+              <div className="mini-line long" /><div className="mini-line med" /><div className="mini-line med" />
+              <div className="mini-eyebrow" style={{ marginTop: 12 }}>Email · 3 penting</div>
+              <div className="mini-line short accent" /><div className="mini-line short" />
+            </>
+          );
+        case 'research':
+          return (
+            <>
+              <div className="mini-title">Market sintesis — fintech UMKM</div>
+              <div className="mini-eyebrow">TL;DR</div>
+              <div className="mini-line long" /><div className="mini-line med" />
+              <div style={{ marginTop: 14, borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 10 }}>
+                <div className="mini-citation">[1] BPS, 2025. UMKM landscape Indonesia.</div>
+                <div className="mini-citation">[2] OJK, 2024. Fintech regulation update.</div>
+                <div className="mini-citation">[3] McKinsey, 2025. SEA digital payments.</div>
+              </div>
+            </>
+          );
+        case 'slides':
+          return (
+            <>
+              <div className="mini-title">Pitch deck — seed round</div>
+              <div style={{ marginTop: 10 }}>
+                <span className="mini-slide active" /><span className="mini-slide" /><span className="mini-slide" />
+                <span className="mini-slide" /><span className="mini-slide" /><span className="mini-slide" />
+                <br />
+                <span className="mini-slide" /><span className="mini-slide" /><span className="mini-slide" />
+                <span className="mini-slide" /><span className="mini-slide" /><span className="mini-slide" />
+              </div>
+              <div className="mini-eyebrow" style={{ marginTop: 12 }}>Slide 1 — judul</div>
+              <div className="mini-line long" /><div className="mini-line short" />
+            </>
+          );
+        case 'invoice':
+          return (
+            <>
+              <div className="mini-title">INV-2025-0042 · PT Sumber Cerah</div>
+              <div className="mini-eyebrow">Line item · 3</div>
+              <div className="mini-line long" /><div className="mini-line med" /><div className="mini-line med" />
+              <div className="mini-row" style={{ marginTop: 12 }}>
+                <span>Subtotal</span><span className="mini-tag">Rp 12.500.000</span>
+              </div>
+              <div className="mini-row"><span>PPN 11%</span><span className="mini-tag">Rp 1.375.000</span></div>
+            </>
+          );
+        case 'business':
+          return (
+            <>
+              <div className="mini-title">Roadmap — Tahap 3: Identity</div>
+              <div className="mini-line long" /><div className="mini-line med" />
+              <div className="mini-eyebrow" style={{ marginTop: 12 }}>Checklist tahap ini</div>
+              <div className="mini-line short accent" />
+              <div className="mini-line short" />
+              <div className="mini-line short" />
+            </>
+          );
+        case 'kanban':
+          return (
+            <>
+              <div className="mini-title">Project — Launch Q3</div>
+              <div className="mini-kanban">
+                <div className="col">To Do<div className="card" /><div className="card" /></div>
+                <div className="col">Doing<div className="card accent" /><div className="card" /></div>
+                <div className="col">Done<div className="card" /><div className="card" /><div className="card" /></div>
+              </div>
+            </>
+          );
+        case 'web':
+          return (
+            <>
+              <div className="mini-title">landing/saas/v1.html</div>
+              <div className="mini-eyebrow">Sections</div>
+              <div className="mini-line long" /><div className="mini-line med" /><div className="mini-line short" /><div className="mini-line short" />
+              <div className="mini-row" style={{ marginTop: 12 }}>
+                <span className="mini-tag">vercel</span><span>build · 2m 14s</span>
+              </div>
+            </>
+          );
+        case 'social':
+          return (
+            <>
+              <div className="mini-title">Content calendar — Minggu ini</div>
+              <div className="mini-eyebrow">4 platform · 12 slot</div>
+              <div className="mini-kanban">
+                <div className="col">Sen<div className="card" /></div>
+                <div className="col">Sel<div className="card accent" /></div>
+                <div className="col">Rab<div className="card" /></div>
+              </div>
+              <div className="mini-kanban" style={{ marginTop: 6 }}>
+                <div className="col">Kam<div className="card" /></div>
+                <div className="col">Jum<div className="card accent" /></div>
+                <div className="col">Sab<div className="card" /></div>
+              </div>
+            </>
+          );
+        case 'trade':
+          return (
+            <>
+              <div className="mini-title">Market briefing — pagi</div>
+              <div className="mini-eyebrow">IDX open</div>
+              <div className="mini-chart">
+                <div className="bar" style={{ height: '40%' }} />
+                <div className="bar" style={{ height: '60%' }} />
+                <div className="bar" style={{ height: '52%' }} />
+                <div className="bar" style={{ height: '75%' }} />
+                <div className="bar" style={{ height: '68%' }} />
+                <div className="bar" style={{ height: '82%' }} />
+              </div>
+              <div className="mini-row" style={{ marginTop: 12 }}>
+                <span className="mini-tag">IHSG +0.4%</span>
+                <span>BTC 67k konsolidasi</span>
+              </div>
+            </>
+          );
+        case 'video':
+          return (
+            <>
+              <div className="mini-title">Script TikTok 60s</div>
+              <div className="mini-eyebrow">Hook 0:03</div>
+              <div className="mini-line long" /><div className="mini-line med" />
+              <div className="mini-eyebrow" style={{ marginTop: 12 }}>Body · 0:48</div>
+              <div className="mini-line long" /><div className="mini-line med" /><div className="mini-line short" />
+              <div className="mini-row" style={{ marginTop: 12 }}>
+                <span className="mini-tag">#viralfyp</span><span className="mini-tag">#bisnisid</span>
+              </div>
+            </>
+          );
+        default:
+          return (<div className="mini-title">Output</div>);
+      }
+    }
+
+    // ─────────────── per-persona capability bento ───────────────
+    // For now, deep-researcher has bespoke mockup cards. Other personas
+    // fall back to a generic 5-card grid (title + desc, no inline mockup)
+    // until each persona gets its own bespoke set.
+
+    function CapabilityCardsDeepResearcher() {
+      // 5 capabilities → 3-column grid (3 + 2 layout on desktop). All cards
+      // share the same shape: visual zone at top, caption zone at bottom.
+      const cards = [
+        {
+          idx: '01',
+          badge: null,
+          title: 'Citation per claim',
+          sub: 'Tiap angka dan klaim faktual ditandai dengan footnote. Tidak ada generalisasi tanpa source.',
+          visual: (
+            <div className="vis-citation">
+              <div className="vis-citation-refs">
+                <div className="vis-citation-ref tilt-l">[1]</div>
+                <div className="vis-citation-ref">[2]</div>
+                <div className="vis-citation-ref tilt-r">[3]</div>
+              </div>
+              <div className="vis-citation-source">
+                <div className="ln" /><div className="ln short" />
+              </div>
+            </div>
+          ),
+        },
+        {
+          idx: '02',
+          badge: null,
+          title: '5 sumber minimum',
+          sub: 'Tiap topik di-decompose sampai punya minimal lima sumber primer berjarak.',
+          visual: (
+            <div className="vis-sources">
+              <div className="vis-sources-row">
+                <span className="vis-source-card" /><span className="vis-source-card" />
+                <span className="vis-source-card" /><span className="vis-source-card" />
+                <span className="vis-source-card" />
+              </div>
+              <div>
+                <div className="vis-sources-counter">5+</div>
+                <div className="vis-sources-counter-lbl">sumber primer</div>
+              </div>
+            </div>
+          ),
+        },
+        {
+          idx: '03',
+          badge: null,
+          title: '[unverified] flag',
+          sub: 'Klaim yang tidak bisa diverifikasi di-tag eksplisit. Ketidakpastian tidak disembunyikan.',
+          visual: (
+            <div className="vis-tags">
+              <div className="vis-tag-pill ok"><span className="glyph">✓</span><span>Verified</span></div>
+              <div className="vis-tag-pill warn"><span className="glyph">?</span><span>Unverified</span></div>
+            </div>
+          ),
+        },
+        {
+          idx: '04',
+          badge: 'New',
+          title: 'Conflict attribution',
+          sub: 'Klaim yang bertentangan ditampilkan dengan attribution masing-masing — bukan pilih satu side.',
+          visual: (
+            <div className="vis-conflict">
+              <div className="vis-conflict-side">
+                <div className="ln" /><div className="ln" /><div className="ln short" />
+              </div>
+              <div className="vis-conflict-center">vs</div>
+              <div className="vis-conflict-side right">
+                <div className="ln" /><div className="ln short" /><div className="ln" />
+              </div>
+            </div>
+          ),
+        },
+        {
+          idx: '05',
+          badge: null,
+          title: 'Sintesis 10+ paper',
+          sub: 'Decompose, baca, distill jadi exec summary dua halaman dengan methodology note.',
+          visual: (
+            <div className="vis-funnel">
+              <div className="vis-funnel-stack">
+                <span className="pg" /><span className="pg" /><span className="pg" />
+              </div>
+              <span className="vis-funnel-arrow">→</span>
+              <div className="vis-funnel-summary">
+                <div className="ln" /><div className="ln" /><div className="ln short" />
+              </div>
+            </div>
+          ),
+        },
+      ];
+      return (
+        <div className="cards">
+          {cards.map((c, i) => (
+            <div key={i} className="card">
+              <div className="card-visual">{c.visual}</div>
+              <div className="card-cap">
+                {c.badge && (
+                  <div className="card-cap-row">
+                    <span className="card-cap-badge">{c.badge}</span>
+                  </div>
+                )}
+                <h3 className="card-cap-title">{c.title}</h3>
+                <p className="card-cap-sub">{c.sub}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    // Generic fallback — same uniform card shape, simple text-only visual zone
+    // (until each persona gets bespoke visuals authored).
+    function CapabilityCardsGeneric({ persona }) {
+      return (
+        <div className="cards">
+          {persona.capabilities.map((c, i) => {
+            const parts = c.split('—');
+            const title = parts[0].trim();
+            const sub = parts.length > 1 ? parts.slice(1).join('—').trim() : '';
+            return (
+              <div key={i} className="card">
+                <div className="card-visual">
+                  <div style={{ width: 56, height: 56, borderRadius: 14, background: 'rgba(229,50,45,0.1)', border: '1px solid rgba(229,50,45,0.28)' }} />
+                </div>
+                <div className="card-cap">
+                  <h3 className="card-cap-title">{title}</h3>
+                  {sub && <p className="card-cap-sub">{sub}</p>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+
+    // ─────────────── helper for rendering a uniform card ───────────────
+    function UniformCards({ cards }) {
+      return (
+        <div className="cards">
+          {cards.map((c, i) => (
+            <div key={i} className="card">
+              <div className="card-visual">{c.visual}</div>
+              <div className="card-cap">
+                {c.badge && (
+                  <div className="card-cap-row">
+                    <span className="card-cap-badge">{c.badge}</span>
+                  </div>
+                )}
+                <h3 className="card-cap-title">{c.title}</h3>
+                <p className="card-cap-sub">{c.sub}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    // ─────────────── The Pro ───────────────
+    function CapabilityCardsThePro() {
+      return <UniformCards cards={[
+        {
+          title: 'Briefing pagi 07:00 WIB',
+          sub: 'Fokus pada yang berubah hari ini, bukan ulang headline kemarin.',
+          visual: (
+            <div className="vis-window">
+              <div className="vis-window-bar"><div className="dot red" /><div className="dot grey" /><div className="dot grey" /><div className="url" /></div>
+              <div className="vis-window-body">
+                <div className="ln accent" /><div className="ln med" /><div className="ln short" /><div className="ln" />
+              </div>
+            </div>
+          ),
+        },
+        {
+          title: 'Ingat lintas sesi',
+          sub: 'Kamu cerita training Senin, Rabu aku tanya hasilnya — tanpa kamu ulang konteks.',
+          visual: (
+            <div className="vis-chat">
+              <div className="vis-bubble"><div className="ln" /><div className="ln short" /></div>
+              <div className="vis-bubble right"><div className="ln" /></div>
+              <div className="vis-bubble"><div className="ln" /><div className="ln short" /></div>
+            </div>
+          ),
+        },
+        {
+          title: 'Voice match dari sample',
+          sub: 'Aku belajar gaya nulis kamu — register, length, BI vs campur English — saat draft balasan.',
+          visual: (
+            <div className="vis-waveform">
+              {[28, 42, 35, 56, 48, 36, 52, 40, 24, 46, 38, 50, 32, 44, 30].map((h, i) => (
+                <span key={i} className="wb" style={{ height: h }} />
+              ))}
+            </div>
+          ),
+        },
+        {
+          title: 'Commitment tracker',
+          sub: 'Deadline, follow-up, janji ke orang — aku ingatkan sebelum lewat.',
+          visual: (
+            <div className="vis-checklist">
+              <div className="vis-checklist-item"><span className="chk">✓</span><span className="ln" /></div>
+              <div className="vis-checklist-item"><span className="chk">✓</span><span className="ln short" /></div>
+              <div className="vis-checklist-item"><span className="chk empty">·</span><span className="ln" /></div>
+              <div className="vis-checklist-item"><span className="chk empty">·</span><span className="ln short" /></div>
+            </div>
+          ),
+        },
+        {
+          title: 'Action items dari percakapan',
+          sub: 'Rangkum thread jadi action items — biar kamu lebih jernih, bukan lebih sibuk.',
+          visual: (
+            <div className="vis-funnel">
+              <div style={{ width: 56, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <span className="pln" style={{ height: 4, background: 'rgba(255,255,255,0.1)', borderRadius: 2 }} />
+                <span className="pln" style={{ height: 4, background: 'rgba(255,255,255,0.1)', borderRadius: 2, width: '70%' }} />
+                <span className="pln" style={{ height: 4, background: 'rgba(255,255,255,0.1)', borderRadius: 2 }} />
+                <span className="pln" style={{ height: 4, background: 'rgba(255,255,255,0.1)', borderRadius: 2, width: '50%' }} />
+              </div>
+              <span className="vis-funnel-arrow">→</span>
+              <div className="vis-checklist" style={{ maxWidth: 80 }}>
+                <div className="vis-checklist-item"><span className="chk">✓</span><span className="ln" /></div>
+                <div className="vis-checklist-item"><span className="chk">✓</span><span className="ln short" /></div>
+              </div>
+            </div>
+          ),
+        },
+      ]} />;
+    }
+
+    // ─────────────── Slide Master ───────────────
+    function CapabilityCardsSlideMaster() {
+      return <UniformCards cards={[
+        {
+          title: 'Outline jadi 12 slide',
+          sub: 'Story arc default: problem, solution, market, traction, ask.',
+          visual: (
+            <div className="vis-grid cols-4" style={{ width: 180 }}>
+              <span className="gcell accent" /><span className="gcell" /><span className="gcell" /><span className="gcell" />
+              <span className="gcell" /><span className="gcell" /><span className="gcell" /><span className="gcell" />
+              <span className="gcell" /><span className="gcell" /><span className="gcell" /><span className="gcell" />
+            </div>
+          ),
+        },
+        {
+          title: 'Template library',
+          sub: 'Pitch deck, defense skripsi, weekly report, project update, training onboarding.',
+          visual: (
+            <div style={{ position: 'relative', width: 120, height: 100 }}>
+              <div style={{ position: 'absolute', top: 0, left: 0, width: 80, height: 60, borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)', transform: 'rotate(-6deg)' }} />
+              <div style={{ position: 'absolute', top: 12, left: 22, width: 80, height: 60, borderRadius: 8, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.2)' }} />
+              <div style={{ position: 'absolute', top: 24, left: 40, width: 80, height: 60, borderRadius: 8, background: 'rgba(229,50,45,0.14)', border: '1px solid rgba(229,50,45,0.42)', transform: 'rotate(6deg)' }} />
+            </div>
+          ),
+        },
+        {
+          title: 'Visual hierarchy per slide',
+          sub: 'Title clear, key visual atau chart, support text minimal.',
+          visual: (
+            <div style={{ width: 180, padding: 14, borderRadius: 8, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.14)' }}>
+              <div style={{ height: 8, width: '70%', background: 'rgba(229,50,45,0.5)', borderRadius: 2, marginBottom: 8 }} />
+              <div style={{ height: 48, background: 'rgba(255,255,255,0.06)', borderRadius: 4, marginBottom: 8 }} />
+              <div style={{ height: 4, width: '60%', background: 'rgba(255,255,255,0.1)', borderRadius: 2 }} />
+            </div>
+          ),
+        },
+        {
+          title: 'Generate chart',
+          sub: 'Bar, line, pie, scatter. Source data tetap dari kamu.',
+          visual: (
+            <div className="vis-bars">
+              <div className="bar" style={{ height: '45%' }} />
+              <div className="bar" style={{ height: '70%' }} />
+              <div className="bar" style={{ height: '55%' }} />
+              <div className="bar" style={{ height: '85%' }} />
+              <div className="bar" style={{ height: '65%' }} />
+            </div>
+          ),
+        },
+        {
+          title: 'Speaker notes per slide',
+          sub: 'Poin yang harus disampaikan, transisi ke slide berikut, timing estimasi.',
+          visual: (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: 180 }}>
+              <div style={{ height: 50, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)', borderRadius: 6 }} />
+              <div className="vis-window" style={{ maxWidth: '100%' }}>
+                <div className="vis-window-body" style={{ padding: 8 }}>
+                  <div className="ln short" /><div className="ln" />
+                </div>
+              </div>
+            </div>
+          ),
+        },
+      ]} />;
+    }
+
+    // ─────────────── Doc Expert ───────────────
+    function CapabilityCardsDocExpert() {
+      return <UniformCards cards={[
+        {
+          title: 'Email reply voice-matched',
+          sub: 'Formal vs casual, concise vs detailed, BI vs campur English — match gaya kamu.',
+          visual: (
+            <div className="vis-window">
+              <div className="vis-window-bar"><div className="dot red" /><div className="dot grey" /><div className="dot grey" /><div className="url" /></div>
+              <div className="vis-window-body">
+                <div className="ln short accent" />
+                <div className="ln" /><div className="ln med" /><div className="ln" /><div className="ln short" />
+              </div>
+            </div>
+          ),
+        },
+        {
+          title: 'Laporan dari outline',
+          sub: 'Executive summary, key sections, appendix kalau perlu.',
+          visual: (
+            <div className="vis-doc" style={{ width: 150 }}>
+              <div className="title">Laporan</div>
+              <div className="ln" /><div className="ln" /><div className="ln short" />
+              <div style={{ borderTop: '1px dashed rgba(255,255,255,0.08)', marginTop: 6, paddingTop: 8, display: 'flex', flexDirection: 'column', gap: 5 }}>
+                <div className="ln" /><div className="ln" /><div className="ln short" />
+              </div>
+            </div>
+          ),
+        },
+        {
+          title: 'Proposal end-to-end',
+          sub: 'Problem statement, solution, deliverable, timeline, ask yang clear.',
+          visual: (
+            <div style={{ display: 'flex', gap: 8 }}>
+              <div className="vis-doc accent" style={{ width: 70, padding: 10 }}>
+                <div className="title" style={{ fontSize: 8 }}>Brief</div>
+                <div className="ln" /><div className="ln short" />
+              </div>
+              <span className="vis-funnel-arrow">→</span>
+              <div className="vis-doc" style={{ width: 80, padding: 10 }}>
+                <div className="title" style={{ fontSize: 8 }}>Proposal</div>
+                <div className="ln" /><div className="ln" /><div className="ln short" />
+              </div>
+            </div>
+          ),
+        },
+        {
+          title: 'Invoice PPN 11%',
+          sub: 'Empat varian, dari minimal sampai B2B korporat dengan PPN otomatis.',
+          badge: 'Indonesia',
+          visual: (
+            <div className="vis-calc">
+              <div className="vis-calc-row"><span>Subtotal</span><span className="num">Rp 3.000.000</span></div>
+              <div className="vis-calc-row"><span>PPN 11%</span><span className="num">Rp 330.000</span></div>
+              <div className="vis-calc-row total"><span>Total</span><span className="num">Rp 3.330.000</span></div>
+            </div>
+          ),
+        },
+        {
+          title: 'Voice match dari sample',
+          sub: 'Kasih 2-3 contoh writing kamu, aku adaptasi tone untuk draft baru.',
+          visual: (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+              <div className="vis-doc" style={{ width: 70, padding: 10 }}>
+                <div className="ln" /><div className="ln" /><div className="ln short" />
+              </div>
+              <span className="vis-funnel-arrow">→</span>
+              <div className="vis-doc accent" style={{ width: 70, padding: 10 }}>
+                <div className="ln" /><div className="ln" /><div className="ln short" />
+              </div>
+            </div>
+          ),
+        },
+      ]} />;
+    }
+
+    // ─────────────── Business Director ───────────────
+    function CapabilityCardsBusinessAgent() {
+      return <UniformCards cards={[
+        {
+          title: 'Roadmap 5-tahap',
+          sub: 'Idea, Setup, Identity, Build, Sell — state persisted lintas sesi.',
+          visual: (
+            <div style={{ width: 220, position: 'relative' }}>
+              <div style={{ height: 3, background: 'rgba(255,255,255,0.1)', borderRadius: 2, position: 'relative' }}>
+                <div style={{ position: 'absolute', top: 0, left: 0, height: 3, width: '55%', background: 'var(--signal)', borderRadius: 2 }} />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 14 }}>
+                {[true, true, true, false, false].map((done, i) => (
+                  <div key={i} style={{ width: 18, height: 18, borderRadius: '50%', background: done ? 'rgba(229,50,45,0.2)' : 'rgba(255,255,255,0.04)', border: `1.5px solid ${done ? 'rgba(229,50,45,0.55)' : 'rgba(255,255,255,0.18)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--signal)', fontSize: 10 }}>{done ? '✓' : ''}</div>
+                ))}
+              </div>
+            </div>
+          ),
+        },
+        {
+          title: 'Compliance Indonesia',
+          sub: 'PT/CV setup, OSS, NPWP, BPJS, payment gateway lokal — surface sesuai tahap kamu.',
+          badge: 'Indonesia',
+          visual: (
+            <div className="vis-checklist">
+              <div className="vis-checklist-item"><span className="chk">✓</span><span className="ln" /></div>
+              <div className="vis-checklist-item"><span className="chk">✓</span><span className="ln short" /></div>
+              <div className="vis-checklist-item"><span className="chk">✓</span><span className="ln" /></div>
+              <div className="vis-checklist-item"><span className="chk empty">·</span><span className="ln short" /></div>
+              <div className="vis-checklist-item"><span className="chk empty">·</span><span className="ln" /></div>
+            </div>
+          ),
+        },
+        {
+          title: 'Gateway recommendation',
+          sub: 'Xendit untuk UMKM/QRIS, Midtrans untuk e-commerce, DOKU untuk B2B.',
+          visual: (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div className="vis-pill">Xendit · QRIS</div>
+              <div className="vis-pill muted">Midtrans</div>
+              <div className="vis-pill muted">DOKU</div>
+            </div>
+          ),
+        },
+        {
+          title: 'Dispatch ke specialist',
+          sub: 'Sales, Marketing, Engineering, Legal, Finance — route ke persona yang relevan.',
+          visual: (
+            <div className="vis-hub">
+              <div className="vis-hub-spoke tl" />
+              <div className="vis-hub-spoke tr" />
+              <div className="vis-hub-spoke bl" />
+              <div className="vis-hub-spoke br" />
+              <div className="vis-hub-center">B</div>
+            </div>
+          ),
+        },
+        {
+          title: 'Approval queue',
+          sub: 'Action yang tidak bisa di-undo menunggu approve eksplisit lewat Telegram.',
+          visual: (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: 200 }}>
+              <div style={{ padding: '10px 12px', borderRadius: 8, background: 'rgba(229,50,45,0.08)', border: '1px solid rgba(229,50,45,0.32)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ height: 4, width: 80, background: 'rgba(229,50,45,0.5)', borderRadius: 2 }} />
+                <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 9, color: 'var(--signal)', letterSpacing: '0.1em' }}>PENDING</span>
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <span style={{ flex: 1, height: 28, borderRadius: 14, background: 'rgba(120,220,150,0.12)', border: '1px solid rgba(120,220,150,0.4)' }} />
+                <span style={{ flex: 1, height: 28, borderRadius: 14, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)' }} />
+              </div>
+            </div>
+          ),
+        },
+      ]} />;
+    }
+
+    // ─────────────── Project Conductor ───────────────
+    function CapabilityCardsProjectConductor() {
+      return <UniformCards cards={[
+        {
+          title: 'Goal jadi kanban',
+          sub: '"Plan product launch" jadi 12 task terstruktur dengan dependency dan owner.',
+          visual: (
+            <div className="vis-grid cols-3" style={{ width: 180 }}>
+              <span className="gcell accent" /><span className="gcell" /><span className="gcell" />
+              <span className="gcell" /><span className="gcell accent" /><span className="gcell" />
+              <span className="gcell" /><span className="gcell" /><span className="gcell accent" />
+              <span className="gcell" /><span className="gcell" /><span className="gcell" />
+            </div>
+          ),
+        },
+        {
+          title: 'Spawn specialist agent',
+          sub: 'Riset ke Deep Researcher, draft ke Doc Expert, landing ke Web Creator.',
+          visual: (
+            <div className="vis-hub">
+              <div className="vis-hub-spoke tl" /><div className="vis-hub-spoke tr" />
+              <div className="vis-hub-spoke bl" /><div className="vis-hub-spoke br" />
+              <div className="vis-hub-center">C</div>
+            </div>
+          ),
+        },
+        {
+          title: 'Kanban native Hermes',
+          sub: 'Column standar To Do, In Progress, Review, Done. Custom column tersedia.',
+          visual: (
+            <div style={{ display: 'flex', gap: 6, width: 220 }}>
+              {['', '', '', ''].map((_, c) => (
+                <div key={c} style={{ flex: 1, padding: 6, borderRadius: 4, background: 'rgba(255,255,255,0.025)', border: '1px solid var(--line)', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <div style={{ height: 3, width: '60%', background: 'rgba(229,50,45,0.5)', borderRadius: 1 }} />
+                  {Array.from({ length: c === 1 ? 3 : c === 2 ? 1 : 2 }).map((_, i) => (
+                    <div key={i} style={{ height: 12, background: c === 1 && i === 0 ? 'rgba(229,50,45,0.35)' : 'rgba(255,255,255,0.06)', borderRadius: 2 }} />
+                  ))}
+                </div>
+              ))}
+            </div>
+          ),
+        },
+        {
+          title: 'Dashboard URL',
+          sub: 'Real-time status semua task, owner, ETA, blocker yang muncul.',
+          visual: (
+            <div className="vis-window">
+              <div className="vis-window-bar"><div className="dot red" /><div className="dot grey" /><div className="dot grey" /><div className="url" /></div>
+              <div className="vis-window-body">
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <div style={{ flex: 1, height: 18, background: 'rgba(229,50,45,0.18)', borderRadius: 3 }} />
+                  <div style={{ flex: 1, height: 18, background: 'rgba(255,255,255,0.06)', borderRadius: 3 }} />
+                  <div style={{ flex: 1, height: 18, background: 'rgba(255,255,255,0.06)', borderRadius: 3 }} />
+                </div>
+                <div className="ln" /><div className="ln short" />
+              </div>
+            </div>
+          ),
+        },
+        {
+          title: 'Weekly recap',
+          sub: 'Yang selesai, blocker, fokus minggu depan. Siap kirim ke stakeholder.',
+          visual: (
+            <div className="vis-doc accent" style={{ width: 160 }}>
+              <div className="title">Weekly recap</div>
+              <div className="ln" /><div className="ln" /><div className="ln short" />
+              <div style={{ borderTop: '1px dashed rgba(229,50,45,0.32)', marginTop: 6, paddingTop: 6, display: 'flex', flexDirection: 'column', gap: 5 }}>
+                <div className="ln short" /><div className="ln" />
+              </div>
+            </div>
+          ),
+        },
+      ]} />;
+    }
+
+    // ─────────────── Web Creator ───────────────
+    function CapabilityCardsWebAppBuilder() {
+      return <UniformCards cards={[
+        {
+          title: 'Landing dari template',
+          sub: 'SaaS, agency, course, portfolio, e-commerce — pilih register yang cocok.',
+          visual: (
+            <div className="vis-window">
+              <div className="vis-window-bar"><div className="dot red" /><div className="dot grey" /><div className="dot grey" /><div className="url" /></div>
+              <div className="vis-window-body">
+                <div style={{ height: 28, background: 'linear-gradient(180deg, rgba(229,50,45,0.18), rgba(229,50,45,0.04))', borderRadius: 4 }} />
+                <div className="ln" /><div className="ln short" />
+                <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+                  <div style={{ flex: 1, height: 16, background: 'rgba(255,255,255,0.06)', borderRadius: 3 }} />
+                  <div style={{ flex: 1, height: 16, background: 'rgba(255,255,255,0.06)', borderRadius: 3 }} />
+                </div>
+              </div>
+            </div>
+          ),
+        },
+        {
+          title: 'Multi-page site',
+          sub: 'About, services, contact — dengan navigation dan typography yang konsisten.',
+          visual: (
+            <div style={{ position: 'relative', width: 140, height: 110 }}>
+              {[0, 1, 2].map((i) => (
+                <div key={i} style={{ position: 'absolute', top: i * 14, left: i * 14, width: 90, height: 70, borderRadius: 6, background: i === 2 ? 'rgba(229,50,45,0.12)' : 'rgba(255,255,255,0.05)', border: `1px solid ${i === 2 ? 'rgba(229,50,45,0.4)' : 'rgba(255,255,255,0.14)'}` }} />
+              ))}
+            </div>
+          ),
+        },
+        {
+          title: 'Blog SEO Indonesia',
+          sub: 'Heading hierarchy, hreflang id-ID, CTA yang jelas untuk pasar Indonesia.',
+          badge: 'Indonesia',
+          visual: (
+            <div className="vis-doc" style={{ width: 170 }}>
+              <div style={{ fontFamily: 'Instrument Serif, serif', fontSize: 14, color: 'var(--bone)', marginBottom: 6 }}>H1 Judul utama</div>
+              <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 9, color: 'var(--bone-l)', letterSpacing: '0.06em', marginBottom: 8 }}>HREFLANG · ID-ID</div>
+              <div className="ln" /><div className="ln" /><div className="ln short" />
+            </div>
+          ),
+        },
+        {
+          title: 'Deploy ke Vercel',
+          sub: 'Dari kode ke URL hidup dalam 2-3 menit, custom domain hookup tersedia.',
+          visual: (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div className="vis-window" style={{ maxWidth: 100 }}>
+                <div className="vis-window-bar"><div className="dot grey" /><div className="dot grey" /><div className="dot grey" /></div>
+                <div className="vis-window-body" style={{ padding: 8 }}><div className="ln" /><div className="ln short" /></div>
+              </div>
+              <span className="vis-funnel-arrow">→</span>
+              <div className="vis-pill"><span style={{ width: 6, height: 6, borderRadius: '50%', background: 'rgba(120,220,150,0.95)' }} />Live</div>
+            </div>
+          ),
+        },
+        {
+          title: 'Marketplace listing',
+          sub: 'Tokopedia, Shopee, OLX, Lamudi, Glints, Kompas — copy sesuai platform.',
+          badge: 'Indonesia',
+          visual: (
+            <div className="vis-grid cols-3" style={{ width: 150 }}>
+              {['T', 'S', 'O', 'L', 'G', 'K'].map((c, i) => (
+                <span key={i} className="gcell" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Instrument Serif, serif', fontSize: 14, color: i % 2 ? 'var(--signal)' : 'var(--bone-m)' }}>{c}</span>
+              ))}
+            </div>
+          ),
+        },
+      ]} />;
+    }
+
+    // ─────────────── Social Conductor ───────────────
+    function CapabilityCardsSocialConductor() {
+      return <UniformCards cards={[
+        {
+          title: 'Content calendar',
+          sub: 'Lintas platform — TikTok, Reels, X, LinkedIn, blog. Tema mingguan + jenis konten.',
+          visual: (
+            <div className="vis-grid cols-6" style={{ width: 210 }}>
+              {[0,1,2,3,4,5,6,7,8,9,10,11].map((i) => (
+                <span key={i} className={`gcell${[0,3,7,10].includes(i) ? ' accent' : ''}`} />
+              ))}
+            </div>
+          ),
+        },
+        {
+          title: 'Draft per platform',
+          sub: 'TikTok singkat, LinkedIn lebih panjang. Length-adjustment otomatis per platform.',
+          visual: (
+            <div style={{ display: 'flex', gap: 10 }}>
+              <div className="vis-doc" style={{ width: 60, padding: 8 }}>
+                <div className="ln" /><div className="ln short" />
+              </div>
+              <div className="vis-doc" style={{ width: 60, padding: 8 }}>
+                <div className="ln" /><div className="ln" /><div className="ln short" />
+              </div>
+              <div className="vis-doc accent" style={{ width: 60, padding: 8 }}>
+                <div className="ln" /><div className="ln" /><div className="ln" /><div className="ln short" />
+              </div>
+            </div>
+          ),
+        },
+        {
+          title: 'Engagement log',
+          sub: 'Comment penting, DM perlu balas, mention yang harus diapresiasi.',
+          visual: (
+            <div className="vis-chat">
+              <div className="vis-bubble"><div className="ln" /><div className="ln short" /></div>
+              <div className="vis-bubble"><div className="ln short" /></div>
+              <div className="vis-bubble right"><div className="ln" /></div>
+            </div>
+          ),
+        },
+        {
+          title: 'Voice consistency check',
+          sub: 'Skor draft baru terhadap locked voice — flag drift kalau ada pola yang bergeser.',
+          visual: (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+              <div className="vis-big-num">92<span style={{ fontSize: 22, opacity: 0.65 }}>%</span></div>
+              <div style={{ width: 140, height: 4, background: 'rgba(255,255,255,0.08)', borderRadius: 2, position: 'relative' }}>
+                <div style={{ position: 'absolute', top: 0, left: 0, width: '92%', height: 4, background: 'var(--signal)', borderRadius: 2 }} />
+              </div>
+              <div className="vis-big-num-lbl">voice fit</div>
+            </div>
+          ),
+        },
+        {
+          title: 'Campaign plan multi-week',
+          sub: 'Produk launch atau content series — calendar entries siap eksekusi.',
+          visual: (
+            <div className="vis-timeline">
+              <div className="vis-timeline-line" />
+              <div className="vis-timeline-mark solid" style={{ left: '0%' }} />
+              <div className="vis-timeline-mark" style={{ left: '33%' }} />
+              <div className="vis-timeline-mark" style={{ left: '66%' }} />
+              <div className="vis-timeline-mark" style={{ left: '100%' }} />
+              <div className="vis-timeline-lbl" style={{ left: '0%' }}>W1</div>
+              <div className="vis-timeline-lbl" style={{ left: '50%' }}>W2-3</div>
+              <div className="vis-timeline-lbl" style={{ left: '100%' }}>W4</div>
+            </div>
+          ),
+        },
+      ]} />;
+    }
+
+    // ─────────────── Trade Pro ───────────────
+    function CapabilityCardsTradePro() {
+      return <UniformCards cards={[
+        {
+          title: 'Briefing pasar 08:00 WIB',
+          sub: 'IDX open, overnight US/EU, crypto top 10, event hari ini.',
+          badge: 'Indonesia',
+          visual: (
+            <div className="vis-bars">
+              <div className="bar" style={{ height: '38%' }} />
+              <div className="bar" style={{ height: '62%' }} />
+              <div className="bar" style={{ height: '48%' }} />
+              <div className="bar" style={{ height: '78%' }} />
+              <div className="bar" style={{ height: '70%' }} />
+              <div className="bar" style={{ height: '85%' }} />
+            </div>
+          ),
+        },
+        {
+          title: 'Alert threshold',
+          sub: 'Break support, volume spike, news trigger — kirim ke Telegram dengan satu-baris konteks.',
+          visual: (
+            <div style={{ width: 200, position: 'relative', height: 80 }}>
+              <svg viewBox="0 0 200 80" style={{ width: '100%', height: '100%' }}>
+                <line x1="0" y1="40" x2="200" y2="40" stroke="rgba(229,50,45,0.5)" strokeWidth="1" strokeDasharray="3,3" />
+                <polyline points="0,60 30,50 60,55 90,42 120,48 150,35 180,30 200,20" stroke="rgba(229,50,45,0.85)" strokeWidth="1.5" fill="none" />
+                <circle cx="150" cy="35" r="5" fill="var(--signal)" />
+              </svg>
+              <span style={{ position: 'absolute', top: 28, right: 8, fontFamily: 'JetBrains Mono, monospace', fontSize: 9, color: 'var(--signal)', letterSpacing: '0.06em' }}>BREAK</span>
+            </div>
+          ),
+        },
+        {
+          title: 'Earnings summary',
+          sub: 'Revenue, EBITDA, net income, surprises vs konsensus, catatan auditor.',
+          visual: (
+            <div className="vis-calc">
+              <div className="vis-calc-row"><span>Revenue</span><span className="num">+18%</span></div>
+              <div className="vis-calc-row"><span>EBITDA</span><span className="num">+22%</span></div>
+              <div className="vis-calc-row total"><span>EPS</span><span className="num">Beat</span></div>
+            </div>
+          ),
+        },
+        {
+          title: 'IDR/USD + BI rate',
+          sub: 'Update kalau IDR break level psikologis atau BI signal rate change.',
+          badge: 'Indonesia',
+          visual: (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+              <div className="vis-big-num">15.6<span style={{ fontSize: 22, opacity: 0.65 }}>K</span></div>
+              <div className="vis-big-num-lbl">IDR / USD</div>
+              <div className="vis-pill" style={{ marginTop: 4 }}>BI 7DRR · 6.00%</div>
+            </div>
+          ),
+        },
+        {
+          title: 'Bitget read-only',
+          sub: 'Portfolio snapshot, P&L, funding rate signal. Tidak execute trade.',
+          visual: (
+            <div className="vis-window">
+              <div className="vis-window-bar"><div className="dot red" /><div className="dot grey" /><div className="dot grey" /><div className="url" /></div>
+              <div className="vis-window-body">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ height: 4, width: 60, background: 'rgba(255,255,255,0.12)', borderRadius: 2 }} />
+                  <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 9, color: 'rgba(120,220,150,0.95)' }}>+4.2%</span>
+                </div>
+                <div className="ln short" /><div className="ln" />
+                <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 9, color: 'var(--bone-l)', letterSpacing: '0.1em' }}>READ-ONLY</span>
+              </div>
+            </div>
+          ),
+        },
+      ]} />;
+    }
+
+    // ─────────────── Video Producer ───────────────
+    function CapabilityCardsVideoProducer() {
+      return <UniformCards cards={[
+        {
+          title: 'Script TikTok 15-90s',
+          sub: 'Hook-body-CTA, hook 3 detik pertama jadi prioritas.',
+          visual: (
+            <div className="vis-phone">
+              <div className="pln accent short" />
+              <div className="pln long" /><div className="pln" />
+              <div className="pln short" /><div className="pln" />
+              <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <div className="pln accent" /><div className="pln short" />
+              </div>
+            </div>
+          ),
+        },
+        {
+          title: 'Hashtag research per niche',
+          sub: 'Emerging, peak, atau decay. Tag mix sesuai target audience.',
+          visual: (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center' }}>
+              <div className="vis-pills">
+                <span className="vis-pill">#emerging</span>
+                <span className="vis-pill muted">#peak</span>
+              </div>
+              <div className="vis-pills">
+                <span className="vis-pill muted">#decay</span>
+                <span className="vis-pill">#niche</span>
+              </div>
+            </div>
+          ),
+        },
+        {
+          title: 'Sound trend tracking',
+          sub: 'Early ride atau saturated — kamu tahu sebelum putuskan adopt.',
+          visual: (
+            <div className="vis-waveform" style={{ height: 70 }}>
+              {[18, 38, 28, 52, 42, 60, 48, 70, 58, 44, 30, 22].map((h, i) => (
+                <span key={i} className="wb" style={{ height: h }} />
+              ))}
+            </div>
+          ),
+        },
+        {
+          title: 'Edit suggestion',
+          sub: 'Cut points, transition style, B-roll prompts, timing per beat.',
+          visual: (
+            <div className="vis-timeline">
+              <div className="vis-timeline-line" />
+              {[10, 28, 52, 76, 94].map((pct, i) => (
+                <div key={i} className={`vis-timeline-mark${[1, 3].includes(i) ? ' solid' : ''}`} style={{ left: `${pct}%` }} />
+              ))}
+              <div className="vis-timeline-lbl" style={{ left: '0%' }}>0:00</div>
+              <div className="vis-timeline-lbl" style={{ left: '100%' }}>0:30</div>
+            </div>
+          ),
+        },
+        {
+          title: 'HyperFrames storyboard',
+          sub: 'JSON spec per-scene siap render di RunwayML atau Sora.',
+          visual: (
+            <div className="vis-grid cols-4" style={{ width: 180 }}>
+              <span className="gcell accent" /><span className="gcell" />
+              <span className="gcell" /><span className="gcell accent" />
+            </div>
+          ),
+        },
+      ]} />;
+    }
+
+    function CapabilityCards({ persona }) {
+      switch (persona.slug) {
+        case 'deep-researcher':   return <CapabilityCardsDeepResearcher />;
+        case 'the-pro':           return <CapabilityCardsThePro />;
+        case 'slide-master':      return <CapabilityCardsSlideMaster />;
+        case 'doc-expert':        return <CapabilityCardsDocExpert />;
+        case 'business-agent':    return <CapabilityCardsBusinessAgent />;
+        case 'project-conductor': return <CapabilityCardsProjectConductor />;
+        case 'web-app-builder':   return <CapabilityCardsWebAppBuilder />;
+        case 'social-conductor':  return <CapabilityCardsSocialConductor />;
+        case 'trade-pro':         return <CapabilityCardsTradePro />;
+        case 'video-producer':    return <CapabilityCardsVideoProducer />;
+        default:                  return <CapabilityCardsGeneric persona={persona} />;
+      }
+    }
+
+    // ─────────────── flow bento ───────────────
+    function FlowCards({ persona }) {
+      const icons = FLOW_ICONS[persona.slug] || [];
+      return (
+        <div className="flow-bento">
+          {persona.flow.map((step, i) => (
+            <div key={i} className="flow-card">
+              <div className="flow-card-head">
+                <span className="flow-card-num">{String(i + 1).padStart(2, '0')}</span>
+                <span className="flow-card-icon"><StepIcon kind={icons[i]} /></span>
+              </div>
+              <h4 className="flow-card-title">{step.title}</h4>
+              <p className="flow-card-desc">{step.desc}</p>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    // ─────────────── deliverable bento ───────────────
+    function DeliverableCards({ persona }) {
+      return (
+        <div className="deliv-bento">
+          <div className="deliv-frame">
+            <div className="deliv-frame-inner">
+              <DeliverableInner kind={persona.deliverable.kind} />
+            </div>
+            <p className="deliv-caption" dangerouslySetInnerHTML={{ __html: renderBoldMd(persona.deliverable.caption) }} />
+          </div>
+          <div className="deliv-frame">
+            <div className="deliv-frame-inner">
+              <div className="mini-title">Output yang kamu pegang</div>
+              <div style={{ fontSize: 11, color: 'var(--bone-m)', marginTop: 10, lineHeight: 1.65 }}>
+                Setiap deliverable di-versi dan tersimpan di VPS kamu sendiri. Aku tidak push ke cloud pihak ketiga tanpa kamu approve.
+              </div>
+              <div style={{ marginTop: 14, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {persona.templates.slice(0, 3).map((t, i) => (
+                  <span key={i} className="mini-chip">{t.kind}</span>
+                ))}
+              </div>
+            </div>
+            <p className="deliv-caption">
+              Output disimpan <strong>di VPS kamu</strong>. Versi history, audit log, dan export ke format apapun yang kamu mau.
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    // ─────────────── templates bento ───────────────
+    function TemplateCards({ persona }) {
+      return (
+        <div className="tpl-bento">
+          {persona.templates.map((t, i) => (
+            <div key={i} className="tpl-card">
+              <div className="tpl-icon">{(t.kind || 'tpl').slice(0, 3).toUpperCase()}</div>
+              <div className="tpl-body">
+                <div className="tpl-name">{t.name}</div>
+                <div className="tpl-kind">{t.kind}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    // ─────────────── page ───────────────
+    function PersonaPage() {
+      const slug = useMemo(getSlugFromURL, []);
+      const persona = useMemo(() => {
+        if (!slug || !Array.isArray(window.PERSONA_DETAILS)) return null;
+        return window.PERSONA_DETAILS.find((p) => p.slug === slug) || null;
+      }, [slug]);
+
+      // Update document title once persona loads
+      useEffect(() => {
+        if (persona) {
+          document.title = `${persona.name} — weuseai.agent`;
+        } else {
+          document.title = 'Persona tidak ditemukan — weuseai.agent';
+        }
+      }, [persona]);
+
+      if (!persona) {
+        return (
+          <div className="page">
+            <div className="topbar">
+              <a className="topbar-back" href="/#persona-details">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="15 18 9 12 15 6" />
+                </svg>
+                <span>Kembali ke landing</span>
+              </a>
+              <div className="topbar-logo"><strong>weuseai</strong>.agent</div>
+            </div>
+            <div className="nf">
+              <h1>Persona tidak ditemukan</h1>
+              <p>Slug yang kamu buka tidak cocok dengan persona yang ada. Cek ejaan, atau kembali ke landing untuk lihat semua persona.</p>
+              <a className="footer-cta-primary" href="/#persona-details" style={{ display: 'inline-flex' }}>
+                <span>Lihat semua persona</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
+                </svg>
+              </a>
+            </div>
+          </div>
+        );
+      }
+
+      return (
+        <div className="page">
+          {/* Top bar */}
+          <div className="topbar">
+            <a className="topbar-back" href="/#persona-details">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="15 18 9 12 15 6" />
+              </svg>
+              <span>Semua persona</span>
+            </a>
+            <div className="topbar-logo"><strong>weuseai</strong>.agent</div>
+          </div>
+
+          {/* Hero */}
+          <header className="hero">
+            <div className="hero-glyph">{persona.glyph}</div>
+            <div>
+              <div className="hero-eyebrow">Persona spesialis</div>
+              <h1 className="hero-name">{persona.name}</h1>
+              <p className="hero-tagline">{persona.tagline}</p>
+            </div>
+            <a className="hero-cta" href={`/checkout?persona=${persona.slug}`}>
+              <span>Pilih {persona.name}</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
+              </svg>
+            </a>
+          </header>
+
+          {/* Section: Apa yang aku bisa */}
+          <section className="section">
+            <div className="section-head">
+              <div className="section-eyebrow">Apa yang aku bisa</div>
+              <h2 className="section-title">Kapabilitas inti</h2>
+              <p className="section-sub">Bukan deskripsi umum — tiap kapabilitas dirancang untuk satu jenis kerja konkret.</p>
+            </div>
+            <CapabilityCards persona={persona} />
+          </section>
+
+          {/* Section: Contoh deliverable */}
+          <section className="section">
+            <div className="section-head">
+              <div className="section-eyebrow">Contoh deliverable</div>
+              <h2 className="section-title">Seperti apa output-nya</h2>
+              <p className="section-sub">Preview shape — content actual selalu disesuaikan dengan input kamu.</p>
+            </div>
+            <DeliverableCards persona={persona} />
+          </section>
+
+          {/* Section: Templates */}
+          <section className="section">
+            <div className="section-head">
+              <div className="section-eyebrow">Templates aku punya</div>
+              <h2 className="section-title">Sudah ada di inventory</h2>
+              <p className="section-sub">Template ini dipakai sebagai starting frame. Kamu tetap pegang final draft.</p>
+            </div>
+            <TemplateCards persona={persona} />
+          </section>
+
+          {/* Footer CTA */}
+          <div className="footer-cta">
+            <div>
+              <h2 className="footer-cta-title">Siap pakai {persona.name}?</h2>
+              <p className="footer-cta-hint">Checkout 5 menit, Telegram bot kamu siap hari ini. Kamu bisa pause kapan saja.</p>
+            </div>
+            <a className="footer-cta-primary" href={`/checkout?persona=${persona.slug}`}>
+              <span>Pilih {persona.name} sebagai agent kamu</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
+              </svg>
+            </a>
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('app')).render(<PersonaPage />);
+  </script>
+</body>
+</html>

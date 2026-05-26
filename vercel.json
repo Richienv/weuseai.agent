@@ -1,6 +1,9 @@
 {
   "cleanUrls": true,
   "trailingSlash": false,
+  "rewrites": [
+    { "source": "/persona/:slug", "destination": "/persona.html?slug=:slug" }
+  ],
   "redirects": [
     { "source": "/liren-v3", "destination": "/", "permanent": true },
     { "source": "/liren-v3.html", "destination": "/", "permanent": true },
