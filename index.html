@@ -2415,6 +2415,29 @@
       color: rgba(245, 242, 234, 0.62);
     }
     @media (min-width: 768px) { .agent-card .agent-desc { font-size: 13.5px; line-height: 1.5; } }
+    .agent-card .agent-cta {
+      margin-top: auto;
+      padding-top: 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      align-self: flex-start;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 10.5px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: rgba(229, 50, 45, 0.95);
+      text-decoration: none;
+      transition: color 200ms ease, transform 200ms ease;
+    }
+    .agent-card .agent-cta:hover, .agent-card.is-active .agent-cta:hover {
+      color: #E5322D;
+      transform: translateX(2px);
+    }
+    .agent-card .agent-cta svg { width: 12px; height: 12px; }
+    @media (min-width: 768px) {
+      .agent-card .agent-cta { font-size: 11px; padding-top: 14px; }
+    }
 
     /* Dot indicators */
     .agent-dots { display: flex; justify-content: center; gap: 6px; margin-top: 18px; }
@@ -5942,18 +5965,16 @@
                   const isSentinel = i === 0 || i === AGENTS.length + 1;
                   const isActive = i === displayIndex;
                   // The canonical slug lives on `a.file` (e.g. 'the-pro',
-                  // 'deep-researcher'). If a matching persona detail entry
-                  // exists, hand off to the detail grid via hash routing —
-                  // PersonaDetailGrid's hashchange listener opens the modal.
+                  // 'deep-researcher'). For the carousel-to-detail mapping,
+                  // 'app-builder' aliases to 'web-app-builder' in PERSONA_DETAILS;
+                  // 'email-manager' and 'calendar-agent' have no detail page.
+                  const detailSlugMap = { 'app-builder': 'web-app-builder' };
+                  const candidate = detailSlugMap[a.file] || a.file;
                   const detailSlug = (typeof PERSONA_DETAILS !== 'undefined' &&
-                    PERSONA_DETAILS.some((p) => p.slug === a.file)) ? a.file : null;
-                  const onCardClick = detailSlug && !isSentinel
-                    ? () => {
-                        const target = document.getElementById('persona-details');
-                        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                        // Slight defer so scroll begins before modal opens
-                        setTimeout(() => { window.location.hash = `#persona-${detailSlug}`; }, 80);
-                      }
+                    PERSONA_DETAILS.some((p) => p.slug === candidate)) ? candidate : null;
+                  const detailHref = detailSlug ? `/persona?slug=${encodeURIComponent(detailSlug)}` : null;
+                  const onCardClick = detailHref && !isSentinel
+                    ? () => { window.location.href = detailHref; }
                     : undefined;
                   return (
                     <article
@@ -5974,6 +5995,20 @@
                       <div className="agent-body">
                         <div className="agent-name">{a.name}</div>
                         <div className="agent-desc">{a.desc}</div>
+                        {detailHref && !isSentinel && (
+                          <a
+                            className="agent-cta"
+                            href={detailHref}
+                            onClick={(e) => e.stopPropagation()}
+                            aria-label={`Lihat detail ${a.name}`}
+                          >
+                            <span>Lihat detail</span>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                              <line x1="5" y1="12" x2="19" y2="12" />
+                              <polyline points="12 5 19 12 12 19" />
+                            </svg>
+                          </a>
+                        )}
                       </div>
                     </article>
                   );
@@ -6601,7 +6636,6 @@
               Setiap agent dibangun dengan US$5.000 token untuk craft persona pre-trained. Kamu gak perlu bakar token sendiri — ready to use.
             </p>
             <AgentCarousel />
-            <PersonaDetailGrid />
           </div>
         </section>
       );
@@ -7876,19 +7910,19 @@
       // grid restores the natural left/center/right read order.
       const cards = [
         {
-          name: 'ChatGPT Plus',
+          name: 'AI agent biasa',
           subtitle: 'Chat AI',
-          subtitleAside: 'satu bot, satu giliran',
+          subtitleAside: 'generic, tanpa konteks bisnis',
           orderMobile: 'order-2',
           orderDesktop: 'md:order-1',
           rows: [
             { have: true,  text: 'Cepat menjawab pertanyaan dengan teks' },
-            { have: false, text: 'Satu agent, satu giliran — tidak ada planner, builder, atau reviewer yang kerja paralel' },
+            { have: false, text: 'Satu agent generik — tidak ada planner, builder, atau reviewer yang kerja paralel' },
             { have: false, text: 'Tidak bisa scrape web, kontrol browser, atau jalankan cron' },
             { have: false, text: 'Berhenti kerja saat kamu tutup tab' },
             { have: false, text: 'Tiap percakapan mulai dari nol — tidak ingat workflow kamu' },
           ],
-          ariaLabel: 'Perbandingan ChatGPT Plus',
+          ariaLabel: 'Perbandingan AI agent biasa',
         },
         {
           name: 'weuseai.agent Pro',
@@ -8039,9 +8073,10 @@
 
     // ─────────────────────── COST COMPARISON (A1) ───────────────────────
     // Frames weuseai.agent against the realistic SMB owner alternative:
-    // ChatGPT Plus subscription + asisten manusia part-time. Six rows lock
-    // in: Bahasa native, 10 agents, 24/7, persistent memory, setup time,
-    // cost. weuseai column hits ✓ across all + Rp 99rb/bulan at the foot.
+    // AI agent biasa (generic chat AI subscription) + asisten manusia
+    // part-time. Six rows lock in: Bahasa native, 10 agents, 24/7,
+    // persistent memory, setup time, cost. weuseai column hits ✓ across
+    // all + Rp 99rb/bulan at the foot.
     function CostComparisonSection() {
       const rows = [
         {
@@ -8053,7 +8088,7 @@
         {
           label: '10 agent spesialis',
           us:    { mark: '✓', aside: 'Pro, Doc, Slide, Trade, Researcher, …' },
-          gpt:   { mark: '✗', aside: 'satu bot, satu giliran' },
+          gpt:   { mark: '✗', aside: 'satu agent generik' },
           human: { mark: '✗', aside: 'satu orang, satu fokus' },
         },
         {
@@ -8077,7 +8112,7 @@
         {
           label: 'Biaya',
           us:    { mark: 'Rp 99rb/bulan',      plain: true, accent: true, aside: 'hosting flat, BYOK LLM' },
-          gpt:   { mark: '$20/bulan',          plain: true, aside: '≈ Rp 320rb' },
+          gpt:   { mark: '$20-30/bulan',       plain: true, aside: '≈ Rp 320-480rb' },
           human: { mark: 'Rp 5–8jt/bulan',     plain: true, aside: 'gaji asisten part-time Jakarta' },
         },
       ];
@@ -8132,7 +8167,7 @@
 
       const cols = [
         { key: 'us',    label: 'weuseai.agent', tagline: 'agent kamu, di server kamu', isUs: true },
-        { key: 'gpt',   label: 'ChatGPT Plus',  tagline: 'chat saja, satu bot' },
+        { key: 'gpt',   label: 'AI agent biasa', tagline: 'generic, tanpa konteks bisnis' },
         { key: 'human', label: 'Asisten manusia', tagline: 'part-time, jam kerja' },
       ];
 
@@ -8155,7 +8190,7 @@
                 delay={70}
               />
               <p className="mt-5 md:mt-6 max-w-xl text-white/55 font-body font-light text-sm md:text-base leading-relaxed">
-                Mayoritas pemilik usaha sekarang gabungkan ChatGPT Plus dan asisten manusia part-time. Total bisa Rp 5–8jt per bulan dan tetap berhenti jam 5 sore.
+                Mayoritas pemilik usaha sekarang gabungkan AI agent biasa dan asisten manusia part-time. Total bisa Rp 5–8jt per bulan dan tetap berhenti jam 5 sore.
               </p>
             </div>
 
