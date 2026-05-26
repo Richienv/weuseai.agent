@@ -225,92 +225,93 @@
       margin: 6px 0 0;
     }
 
-    /* ── Capability bento — mixed-size cards, generous gaps ── */
-    .bento {
+    /* ── Capability cards — SYMMETRIC uniform grid (3-col desktop) ──
+       Reference: skincare-magic style — equal-size cards, one clean visual
+       per card centered in generous whitespace, calm caption below.
+       NO span-2 or row-2 — every card has the same shape so the grid feels
+       tidy and scannable. */
+    .cards {
       display: grid;
       gap: 18px;
       grid-template-columns: 1fr;
-      grid-auto-rows: minmax(180px, auto);
     }
-    @media (min-width: 720px) {
-      .bento { grid-template-columns: repeat(4, 1fr); gap: 22px; }
-    }
-    @media (min-width: 1100px) {
-      .bento { gap: 26px; }
-    }
-    .bento-card {
+    @media (min-width: 680px) { .cards { grid-template-columns: repeat(2, 1fr); gap: 20px; } }
+    @media (min-width: 980px) { .cards { grid-template-columns: repeat(3, 1fr); gap: 24px; } }
+    .card {
       position: relative;
-      padding: 26px 26px 28px;
-      border-radius: 20px;
-      background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.012));
+      border-radius: 22px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.038), rgba(255,255,255,0.012));
       border: 1px solid var(--line);
       overflow: hidden;
       display: flex;
       flex-direction: column;
-      gap: 16px;
-      transition: border-color 240ms ease, transform 220ms ease;
+      min-height: 360px;
+      transition: border-color 260ms ease, transform 220ms ease, box-shadow 260ms ease;
     }
-    .bento-card:hover {
+    .card:hover {
       border-color: rgba(229, 50, 45, 0.32);
       transform: translateY(-2px);
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.28);
     }
-    @media (min-width: 720px) {
-      .bento-card.span-2 { grid-column: span 2; }
-      .bento-card.span-row-2 { grid-row: span 2; }
+    /* Visual zone — centered, takes the top ~55-60% of card */
+    .card-visual {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 44px 32px;
+      background: rgba(255, 255, 255, 0.015);
+      border-bottom: 1px solid var(--line);
+      min-height: 200px;
+      position: relative;
+      overflow: hidden;
     }
-    /* Halftone corner accent on hover */
-    .bento-card::after {
+    .card-visual::after {
+      /* Subtle halftone accent in the upper-right of the visual zone */
       content: '';
       position: absolute;
-      bottom: -40px;
-      right: -40px;
-      width: 110px;
-      height: 110px;
-      background-image: radial-gradient(circle, rgba(229, 50, 45, 0.32) 1px, transparent 1.6px);
+      top: -32px; right: -32px;
+      width: 90px; height: 90px;
+      background-image: radial-gradient(circle, rgba(229, 50, 45, 0.3) 1px, transparent 1.6px);
       background-size: 9px 9px;
-      mask-image: radial-gradient(circle at bottom right, #000 0%, transparent 65%);
-      -webkit-mask-image: radial-gradient(circle at bottom right, #000 0%, transparent 65%);
+      mask-image: radial-gradient(circle at top right, #000 0%, transparent 65%);
+      -webkit-mask-image: radial-gradient(circle at top right, #000 0%, transparent 65%);
       pointer-events: none;
-      opacity: 0;
-      transition: opacity 260ms ease;
+      opacity: 0.4;
     }
-    .bento-card:hover::after { opacity: 1; }
-    .bento-card .card-eyebrow {
+    /* Caption zone — bottom block, clean + compact */
+    .card-cap {
+      padding: 22px 24px 26px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .card-cap-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 4px;
+    }
+    .card-cap-idx {
       display: inline-flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
+      padding: 4px 10px;
+      border: 1px solid rgba(229, 50, 45, 0.32);
+      border-radius: 999px;
+      color: var(--signal);
       font-family: 'JetBrains Mono', ui-monospace, monospace;
       font-size: 10px;
-      letter-spacing: 0.12em;
+      letter-spacing: 0.08em;
       text-transform: uppercase;
-      color: rgba(229, 50, 45, 0.85);
     }
-    .bento-card .card-eyebrow .dot {
+    .card-cap-idx .dot {
       width: 5px; height: 5px; border-radius: 50%;
       background: var(--signal);
     }
-    .bento-card .card-title {
-      font-family: 'Instrument Serif', serif;
-      font-size: 22px;
-      line-height: 1.15;
-      color: var(--bone);
-      letter-spacing: -0.015em;
-      margin: 0;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-    .bento-card .card-desc {
-      font-size: 13.5px;
-      line-height: 1.6;
-      color: var(--bone-m);
-      margin: 0;
-      max-width: 380px;
-    }
-    .badge {
-      display: inline-block;
-      padding: 2px 8px;
+    .card-cap-badge {
+      padding: 3px 8px;
       border-radius: 5px;
       background: rgba(229, 50, 45, 0.16);
       color: var(--signal);
@@ -318,22 +319,235 @@
       font-size: 9.5px;
       letter-spacing: 0.12em;
       text-transform: uppercase;
-      vertical-align: middle;
     }
-
-    /* Inner mockup chrome — feels like a tiny terminal/window */
-    .mock {
-      margin-top: auto;
-      background: var(--void-2);
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      padding: 14px;
-      font-family: 'JetBrains Mono', ui-monospace, monospace;
-      font-size: 10.5px;
+    .card-cap-title {
+      font-family: 'Instrument Serif', serif;
+      font-size: 22px;
+      line-height: 1.18;
+      color: var(--bone);
+      letter-spacing: -0.015em;
+      margin: 4px 0 0;
+    }
+    .card-cap-sub {
+      font-size: 13px;
       line-height: 1.6;
       color: var(--bone-m);
+      margin: 0;
+    }
+
+    /* ── Visual primitives — one large clean element per card ── */
+
+    /* 1. Citation badge cluster — large [1] [2] [3] floating with a source line */
+    .vis-citation {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 18px;
+      width: 100%;
+    }
+    .vis-citation-refs {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      justify-content: center;
+    }
+    .vis-citation-ref {
+      width: 52px; height: 52px;
+      border-radius: 14px;
+      background: rgba(229, 50, 45, 0.14);
+      border: 1px solid rgba(229, 50, 45, 0.36);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Instrument Serif', serif;
+      font-size: 22px;
+      color: var(--signal);
+      letter-spacing: -0.01em;
       position: relative;
     }
+    .vis-citation-ref.tilt-l { transform: rotate(-6deg); }
+    .vis-citation-ref.tilt-r { transform: rotate(6deg); }
+    .vis-citation-source {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      max-width: 220px;
+      width: 100%;
+    }
+    .vis-citation-source .ln {
+      height: 6px;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 3px;
+    }
+    .vis-citation-source .ln.short { width: 65%; }
+
+    /* 2. Five source icons — stacked fan, centered */
+    .vis-sources {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+    }
+    .vis-sources-row {
+      display: flex;
+      gap: 9px;
+      align-items: flex-end;
+    }
+    .vis-source-card {
+      width: 32px; height: 42px;
+      border-radius: 6px;
+      background: linear-gradient(180deg, rgba(229, 50, 45, 0.18), rgba(229, 50, 45, 0.06));
+      border: 1px solid rgba(229, 50, 45, 0.34);
+      position: relative;
+    }
+    .vis-source-card::before, .vis-source-card::after {
+      content: '';
+      position: absolute;
+      left: 6px; right: 6px;
+      height: 3px;
+      background: rgba(229, 50, 45, 0.55);
+      border-radius: 1.5px;
+    }
+    .vis-source-card::before { top: 8px; }
+    .vis-source-card::after { top: 16px; right: 14px; }
+    .vis-sources-counter {
+      font-family: 'Instrument Serif', serif;
+      font-size: 32px;
+      color: var(--signal);
+      line-height: 1;
+      letter-spacing: -0.02em;
+    }
+    .vis-sources-counter-lbl {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--bone-l);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-top: -8px;
+    }
+
+    /* 3. Verified / unverified — two large pills side by side */
+    .vis-tags {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+    }
+    .vis-tag-pill {
+      flex: 1;
+      max-width: 120px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 14px;
+      border-radius: 999px;
+      border: 1px solid currentColor;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      justify-content: center;
+    }
+    .vis-tag-pill.ok {
+      color: rgba(120, 220, 150, 0.95);
+      background: rgba(120, 220, 150, 0.08);
+    }
+    .vis-tag-pill.warn {
+      color: rgba(229, 180, 60, 0.95);
+      background: rgba(229, 180, 60, 0.08);
+    }
+    .vis-tag-pill .glyph {
+      font-family: 'Instrument Serif', serif;
+      font-size: 16px;
+      line-height: 1;
+    }
+
+    /* 4. Conflict — two arrows converging at a center dot */
+    .vis-conflict {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      position: relative;
+    }
+    .vis-conflict-side {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-items: flex-end;
+      width: 90px;
+    }
+    .vis-conflict-side.right { align-items: flex-start; }
+    .vis-conflict-side .ln {
+      height: 5px;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 2.5px;
+    }
+    .vis-conflict-side .ln.short { width: 60%; }
+    .vis-conflict-center {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: rgba(229, 50, 45, 0.14);
+      border: 1px solid rgba(229, 50, 45, 0.36);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Instrument Serif', serif;
+      font-style: italic;
+      font-size: 16px;
+      color: var(--signal);
+      flex-shrink: 0;
+    }
+
+    /* 5. Funnel — 3 docs → arrow → summary doc */
+    .vis-funnel {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+    }
+    .vis-funnel-stack {
+      position: relative;
+      width: 48px; height: 60px;
+    }
+    .vis-funnel-stack .pg {
+      position: absolute;
+      width: 36px; height: 46px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 4px;
+    }
+    .vis-funnel-stack .pg:nth-child(1) { top: 0; left: 0; }
+    .vis-funnel-stack .pg:nth-child(2) { top: 6px; left: 8px; }
+    .vis-funnel-stack .pg:nth-child(3) {
+      top: 12px; left: 16px;
+      background: rgba(229, 50, 45, 0.14);
+      border-color: rgba(229, 50, 45, 0.36);
+    }
+    .vis-funnel-arrow {
+      color: var(--signal);
+      font-size: 22px;
+      line-height: 1;
+    }
+    .vis-funnel-summary {
+      width: 56px; height: 64px;
+      border-radius: 6px;
+      background: rgba(229, 50, 45, 0.1);
+      border: 1.5px solid rgba(229, 50, 45, 0.45);
+      padding: 9px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .vis-funnel-summary .ln {
+      height: 3px;
+      background: rgba(229, 50, 45, 0.5);
+      border-radius: 1.5px;
+    }
+    .vis-funnel-summary .ln.short { width: 60%; }
 
     /* Citation paragraph + footnotes */
     .mock-paragraph {
@@ -588,14 +802,14 @@
       margin: 0;
     }
 
-    /* ── Deliverable frames — enlarged document-preview chrome ── */
+    /* ── Deliverable frames — symmetric, equal-width on desktop ── */
     .deliv-bento {
       display: grid;
       gap: 24px;
       grid-template-columns: 1fr;
     }
     @media (min-width: 760px) {
-      .deliv-bento { grid-template-columns: 1.5fr 1fr; gap: 28px; }
+      .deliv-bento { grid-template-columns: repeat(2, 1fr); gap: 28px; }
     }
     .deliv-frame {
       position: relative;
@@ -1053,105 +1267,138 @@
     // until each persona gets its own bespoke set.
 
     function CapabilityCardsDeepResearcher() {
+      // 5 capabilities → 3-column grid (3 + 2 layout on desktop). All cards
+      // share the same shape: visual zone at top, caption zone at bottom.
+      const cards = [
+        {
+          idx: '01',
+          badge: null,
+          title: 'Citation per claim',
+          sub: 'Tiap angka dan klaim faktual ditandai dengan footnote. Tidak ada generalisasi tanpa source.',
+          visual: (
+            <div className="vis-citation">
+              <div className="vis-citation-refs">
+                <div className="vis-citation-ref tilt-l">[1]</div>
+                <div className="vis-citation-ref">[2]</div>
+                <div className="vis-citation-ref tilt-r">[3]</div>
+              </div>
+              <div className="vis-citation-source">
+                <div className="ln" /><div className="ln short" />
+              </div>
+            </div>
+          ),
+        },
+        {
+          idx: '02',
+          badge: null,
+          title: '5 sumber minimum',
+          sub: 'Tiap topik di-decompose sampai punya minimal lima sumber primer berjarak.',
+          visual: (
+            <div className="vis-sources">
+              <div className="vis-sources-row">
+                <span className="vis-source-card" /><span className="vis-source-card" />
+                <span className="vis-source-card" /><span className="vis-source-card" />
+                <span className="vis-source-card" />
+              </div>
+              <div>
+                <div className="vis-sources-counter">5+</div>
+                <div className="vis-sources-counter-lbl">sumber primer</div>
+              </div>
+            </div>
+          ),
+        },
+        {
+          idx: '03',
+          badge: null,
+          title: '[unverified] flag',
+          sub: 'Klaim yang tidak bisa diverifikasi di-tag eksplisit. Ketidakpastian tidak disembunyikan.',
+          visual: (
+            <div className="vis-tags">
+              <div className="vis-tag-pill ok"><span className="glyph">✓</span><span>Verified</span></div>
+              <div className="vis-tag-pill warn"><span className="glyph">?</span><span>Unverified</span></div>
+            </div>
+          ),
+        },
+        {
+          idx: '04',
+          badge: 'New',
+          title: 'Conflict attribution',
+          sub: 'Klaim yang bertentangan ditampilkan dengan attribution masing-masing — bukan pilih satu side.',
+          visual: (
+            <div className="vis-conflict">
+              <div className="vis-conflict-side">
+                <div className="ln" /><div className="ln" /><div className="ln short" />
+              </div>
+              <div className="vis-conflict-center">vs</div>
+              <div className="vis-conflict-side right">
+                <div className="ln" /><div className="ln short" /><div className="ln" />
+              </div>
+            </div>
+          ),
+        },
+        {
+          idx: '05',
+          badge: null,
+          title: 'Sintesis 10+ paper',
+          sub: 'Decompose, baca, distill jadi exec summary dua halaman dengan methodology note.',
+          visual: (
+            <div className="vis-funnel">
+              <div className="vis-funnel-stack">
+                <span className="pg" /><span className="pg" /><span className="pg" />
+              </div>
+              <span className="vis-funnel-arrow">→</span>
+              <div className="vis-funnel-summary">
+                <div className="ln" /><div className="ln" /><div className="ln short" />
+              </div>
+            </div>
+          ),
+        },
+      ];
       return (
-        <div className="bento">
-          <div className="bento-card span-2">
-            <span className="card-eyebrow"><span className="dot" />Trace setiap claim</span>
-            <h3 className="card-title">Citation per claim <span className="badge">Headline</span></h3>
-            <p className="card-desc">Tiap angka, tanggal, dan klaim faktual ditandai dengan footnote. Tidak ada generalisasi mengambang tanpa source.</p>
-            <div className="mock">
-              <div className="mock-paragraph">
-                Pasar fintech Indonesia tumbuh 23% YoY <span className="ref">[1]</span> dengan dominasi e-wallet 67% transaksi digital <span className="ref">[2]</span>. UMKM lending naik 41% sepanjang 2024 <span className="ref">[3]</span>.
-              </div>
-              <div className="mock-footnotes">
-                <div className="mock-footnote"><span className="num">[1]</span><span>BPS, 2025. UMKM landscape Indonesia.</span></div>
-                <div className="mock-footnote"><span className="num">[2]</span><span>OJK, 2024. Statistik sistem pembayaran.</span></div>
-                <div className="mock-footnote"><span className="num">[3]</span><span>DDTC News, 2025. P2P lending review.</span></div>
+        <div className="cards">
+          {cards.map((c) => (
+            <div key={c.idx} className="card">
+              <div className="card-visual">{c.visual}</div>
+              <div className="card-cap">
+                <div className="card-cap-row">
+                  <span className="card-cap-idx"><span className="dot" />{c.idx}</span>
+                  {c.badge && <span className="card-cap-badge">{c.badge}</span>}
+                </div>
+                <h3 className="card-cap-title">{c.title}</h3>
+                <p className="card-cap-sub">{c.sub}</p>
               </div>
             </div>
-          </div>
-
-          <div className="bento-card">
-            <span className="card-eyebrow"><span className="dot" />Source floor</span>
-            <h3 className="card-title">5 sumber primer minimum</h3>
-            <p className="card-desc">Tiap topik di-decompose sampai punya minimal lima sumber primer berjarak.</p>
-            <div className="mock" style={{ padding: '14px 12px' }}>
-              <div className="mock-sources">
-                <span className="mock-source-icon" /><span className="mock-source-icon" />
-                <span className="mock-source-icon" /><span className="mock-source-icon" />
-                <span className="mock-source-icon" />
-              </div>
-              <div className="mock-counter">5+</div>
-              <div className="mock-counter-lbl">sumber primer</div>
-            </div>
-          </div>
-
-          <div className="bento-card">
-            <span className="card-eyebrow"><span className="dot" />Honesty tag</span>
-            <h3 className="card-title">[unverified] flag</h3>
-            <p className="card-desc">Klaim yang tidak bisa diverifikasi di-tag eksplisit. Ketidakpastian tidak disembunyikan.</p>
-            <div className="mock">
-              <div className="mock-split">
-                <div className="mock-split-col verified">
-                  <div className="lbl">✓ Verified</div>
-                  <div className="ln" /><div className="ln" /><div className="ln" style={{ width: '60%' }} />
-                </div>
-                <div className="mock-split-col unverified">
-                  <div className="lbl">[unverified]</div>
-                  <div className="ln" /><div className="ln" style={{ width: '70%' }} />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bento-card span-2">
-            <span className="card-eyebrow"><span className="dot" />Multi-side honest</span>
-            <h3 className="card-title">Conflict attribution <span className="badge">New</span></h3>
-            <p className="card-desc">Klaim yang bertentangan ditampilkan dengan attribution masing-masing — bukan pilih satu side diam-diam.</p>
-            <div className="mock">
-              <div className="mock-conflict">
-                <div className="mock-quote">
-                  Pertumbuhan fintech UMKM akan stabil di 20-25% sampai 2027.
-                  <span className="src">— OJK, Outlook 2025</span>
-                </div>
-                <div className="mock-quote">
-                  Saturasi pasar akan menekan growth ke single-digit pasca 2026.
-                  <span className="src">— Kontan, Analisis Q1 2025</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bento-card">
-            <span className="card-eyebrow"><span className="dot" />Distill</span>
-            <h3 className="card-title">Sintesis 10+ paper</h3>
-            <p className="card-desc">Decompose, baca, distill jadi exec summary dua halaman dengan methodology note.</p>
-            <div className="mock">
-              <div className="mock-funnel">
-                <div className="mock-paper-stack"><span className="pg" /><span className="pg" /><span className="pg" /></div>
-                <span className="mock-arrow">→</span>
-                <div className="mock-summary-card">
-                  <div className="ttl">Exec Summary</div>
-                  <div className="ln" /><div className="ln" /><div className="ln short" />
-                </div>
-              </div>
-            </div>
-          </div>
+          ))}
         </div>
       );
     }
 
-    // Generic fallback for personas that don't yet have bespoke bento cards.
+    // Generic fallback — same uniform card shape, simple text-only visual zone
+    // (until each persona gets bespoke visuals authored).
     function CapabilityCardsGeneric({ persona }) {
       return (
-        <div className="bento">
-          {persona.capabilities.map((c, i) => (
-            <div key={i} className={`bento-card${i === 0 ? ' span-2' : ''}`}>
-              <span className="card-eyebrow"><span className="dot" />Kapabilitas {i + 1}</span>
-              <h3 className="card-title">{c.split('—')[0].trim() || `Kapabilitas ${i + 1}`}</h3>
-              <p className="card-desc">{c.includes('—') ? c.split('—').slice(1).join('—').trim() : c}</p>
-            </div>
-          ))}
+        <div className="cards">
+          {persona.capabilities.map((c, i) => {
+            const parts = c.split('—');
+            const title = parts[0].trim();
+            const sub = parts.length > 1 ? parts.slice(1).join('—').trim() : '';
+            return (
+              <div key={i} className="card">
+                <div className="card-visual">
+                  <div style={{ fontFamily: 'Instrument Serif, serif', fontSize: 56, color: 'rgba(229,50,45,0.45)', letterSpacing: '-0.03em' }}>
+                    {String(i + 1).padStart(2, '0')}
+                  </div>
+                </div>
+                <div className="card-cap">
+                  <div className="card-cap-row">
+                    <span className="card-cap-idx"><span className="dot" />{String(i + 1).padStart(2, '0')}</span>
+                  </div>
+                  <h3 className="card-cap-title">{title}</h3>
+                  {sub && <p className="card-cap-sub">{sub}</p>}
+                </div>
+              </div>
+            );
+          })}
         </div>
       );
     }
