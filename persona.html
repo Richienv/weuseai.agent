@@ -1356,14 +1356,15 @@
       ];
       return (
         <div className="cards">
-          {cards.map((c) => (
-            <div key={c.idx} className="card">
+          {cards.map((c, i) => (
+            <div key={i} className="card">
               <div className="card-visual">{c.visual}</div>
               <div className="card-cap">
-                <div className="card-cap-row">
-                  <span className="card-cap-idx"><span className="dot" />{c.idx}</span>
-                  {c.badge && <span className="card-cap-badge">{c.badge}</span>}
-                </div>
+                {c.badge && (
+                  <div className="card-cap-row">
+                    <span className="card-cap-badge">{c.badge}</span>
+                  </div>
+                )}
                 <h3 className="card-cap-title">{c.title}</h3>
                 <p className="card-cap-sub">{c.sub}</p>
               </div>
@@ -1385,14 +1386,9 @@
             return (
               <div key={i} className="card">
                 <div className="card-visual">
-                  <div style={{ fontFamily: 'Instrument Serif, serif', fontSize: 56, color: 'rgba(229,50,45,0.45)', letterSpacing: '-0.03em' }}>
-                    {String(i + 1).padStart(2, '0')}
-                  </div>
+                  <div style={{ width: 56, height: 56, borderRadius: 14, background: 'rgba(229,50,45,0.1)', border: '1px solid rgba(229,50,45,0.28)' }} />
                 </div>
                 <div className="card-cap">
-                  <div className="card-cap-row">
-                    <span className="card-cap-idx"><span className="dot" />{String(i + 1).padStart(2, '0')}</span>
-                  </div>
                   <h3 className="card-cap-title">{title}</h3>
                   {sub && <p className="card-cap-sub">{sub}</p>}
                 </div>
@@ -1554,16 +1550,6 @@
               <p className="section-sub">Bukan deskripsi umum — tiap kapabilitas dirancang untuk satu jenis kerja konkret.</p>
             </div>
             <CapabilityCards persona={persona} />
-          </section>
-
-          {/* Section: Bagaimana aku kerja */}
-          <section className="section">
-            <div className="section-head">
-              <div className="section-eyebrow">Bagaimana aku kerja</div>
-              <h2 className="section-title">Alur kerja, langkah per langkah</h2>
-              <p className="section-sub">Setiap langkah punya input, output, dan titik keputusan yang jelas.</p>
-            </div>
-            <FlowCards persona={persona} />
           </section>
 
           {/* Section: Contoh deliverable */}
