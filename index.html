@@ -3507,6 +3507,403 @@
 
     /* Lock body scroll when modal is open */
     body.pd-modal-open { overflow: hidden; }
+
+    /* ─────────────────────────────────────────────────────────────────────
+       BENTO REDESIGN (per 2026-05-19 cowork consult)
+       Mixed-size grid cards with CSS-rendered visual mockups inside each.
+       Currently scoped to Deep Researcher as the style proof — extend
+       to remaining 9 personas after founder approval.
+       ───────────────────────────────────────────────────────────────────── */
+
+    /* Bento grid for "Apa yang aku bisa" — 4-col on desktop, 1-col mobile */
+    .pd-bento {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: 1fr;
+      grid-auto-rows: minmax(140px, auto);
+    }
+    @media (min-width: 720px) {
+      .pd-bento { grid-template-columns: repeat(4, 1fr); }
+    }
+    .pd-bento-card {
+      position: relative;
+      padding: 16px;
+      border-radius: 14px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.015));
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      transition: border-color 200ms ease, transform 200ms ease;
+    }
+    .pd-bento-card:hover {
+      border-color: rgba(229, 50, 45, 0.32);
+      transform: translateY(-1px);
+    }
+    .pd-bento-card.span-2 { grid-column: span 1; }
+    @media (min-width: 720px) {
+      .pd-bento-card.span-2 { grid-column: span 2; }
+      .pd-bento-card.span-row-2 { grid-row: span 2; }
+    }
+    .pd-bento-card .pd-bento-title {
+      font-family: 'Instrument Serif', serif;
+      font-size: 17px;
+      line-height: 1.15;
+      color: #f5f5f5;
+      letter-spacing: -0.015em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .pd-bento-card .pd-bento-desc {
+      font-size: 12px;
+      line-height: 1.5;
+      color: rgba(245, 245, 245, 0.6);
+    }
+    .pd-bento-card .pd-bento-badge {
+      display: inline-block;
+      padding: 1px 7px;
+      border-radius: 4px;
+      background: rgba(229, 50, 45, 0.16);
+      color: #E5322D;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 9px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      vertical-align: middle;
+    }
+
+    /* Halftone accent in card corner — repeats brand motif */
+    .pd-bento-card::after {
+      content: '';
+      position: absolute;
+      bottom: -30px;
+      right: -30px;
+      width: 90px;
+      height: 90px;
+      background-image: radial-gradient(circle, rgba(229, 50, 45, 0.32) 1px, transparent 1.6px);
+      background-size: 8px 8px;
+      mask-image: radial-gradient(circle at bottom right, #000 0%, transparent 65%);
+      -webkit-mask-image: radial-gradient(circle at bottom right, #000 0%, transparent 65%);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 240ms ease;
+    }
+    .pd-bento-card:hover::after { opacity: 1; }
+
+    /* The mockup area inside each bento card */
+    .pd-bento-mock {
+      margin-top: auto;
+      background: #0d0d0d;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      padding: 10px;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 10px;
+      line-height: 1.55;
+      color: rgba(245, 245, 245, 0.7);
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Mockup primitives — chunks of fake UI */
+    .pd-mock-paragraph {
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 10.5px;
+      line-height: 1.65;
+      color: rgba(245, 245, 245, 0.78);
+    }
+    .pd-mock-paragraph .ref {
+      display: inline-block;
+      background: rgba(229, 50, 45, 0.18);
+      color: #E5322D;
+      border-radius: 3px;
+      padding: 0 4px;
+      font-size: 9px;
+      margin: 0 1px;
+      vertical-align: 1px;
+      letter-spacing: 0.04em;
+    }
+    .pd-mock-footnotes {
+      margin-top: 10px;
+      padding-top: 8px;
+      border-top: 1px dashed rgba(255, 255, 255, 0.07);
+    }
+    .pd-mock-footnote {
+      font-size: 9px;
+      color: rgba(245, 245, 245, 0.5);
+      line-height: 1.7;
+      display: flex;
+      gap: 6px;
+    }
+    .pd-mock-footnote .num {
+      color: #E5322D;
+      flex-shrink: 0;
+    }
+
+    /* Two-column split for verified vs unverified */
+    .pd-mock-split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+    .pd-mock-split-col {
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: 5px;
+      padding: 6px 7px;
+      border: 1px solid rgba(255, 255, 255, 0.04);
+    }
+    .pd-mock-split-col .lbl {
+      font-size: 8.5px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .pd-mock-split-col.verified .lbl { color: rgba(120, 220, 150, 0.9); }
+    .pd-mock-split-col.unverified .lbl { color: rgba(229, 180, 60, 0.9); }
+    .pd-mock-split-col .ln {
+      height: 3px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 1.5px;
+      margin: 2px 0;
+    }
+    .pd-mock-split-col.verified .ln { background: rgba(120, 220, 150, 0.32); }
+    .pd-mock-split-col.unverified .ln { background: rgba(229, 180, 60, 0.32); }
+
+    /* Conflict attribution — two opposing quotes side by side */
+    .pd-mock-conflict {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      position: relative;
+    }
+    .pd-mock-conflict::before {
+      content: 'vs';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-family: 'Instrument Serif', serif;
+      font-size: 16px;
+      color: rgba(229, 50, 45, 0.6);
+      background: #0d0d0d;
+      padding: 1px 5px;
+      border-radius: 50%;
+      z-index: 2;
+    }
+    .pd-mock-quote {
+      background: rgba(255, 255, 255, 0.025);
+      border-left: 2px solid rgba(229, 50, 45, 0.4);
+      padding: 7px 8px;
+      border-radius: 4px;
+      font-size: 9.5px;
+      line-height: 1.55;
+      color: rgba(245, 245, 245, 0.75);
+      font-style: italic;
+    }
+    .pd-mock-quote .src {
+      display: block;
+      margin-top: 4px;
+      font-style: normal;
+      font-size: 8.5px;
+      color: rgba(245, 245, 245, 0.45);
+      letter-spacing: 0.04em;
+    }
+
+    /* Source-count visualization */
+    .pd-mock-sources {
+      display: flex;
+      gap: 5px;
+      align-items: flex-end;
+      justify-content: center;
+      padding: 8px 0 4px;
+    }
+    .pd-mock-source-icon {
+      width: 18px;
+      height: 22px;
+      background: rgba(229, 50, 45, 0.18);
+      border: 1px solid rgba(229, 50, 45, 0.32);
+      border-radius: 2px;
+      position: relative;
+    }
+    .pd-mock-source-icon::before {
+      content: '';
+      position: absolute;
+      top: 4px; left: 3px; right: 3px;
+      height: 2px;
+      background: rgba(229, 50, 45, 0.5);
+      box-shadow: 0 3px 0 rgba(229, 50, 45, 0.5), 0 6px 0 rgba(229, 50, 45, 0.5);
+    }
+    .pd-mock-counter {
+      text-align: center;
+      font-family: 'Instrument Serif', serif;
+      font-size: 26px;
+      color: #E5322D;
+      line-height: 1;
+      margin-top: 6px;
+    }
+    .pd-mock-counter-lbl {
+      text-align: center;
+      font-size: 9px;
+      letter-spacing: 0.1em;
+      color: rgba(245, 245, 245, 0.5);
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    /* Sintesis: stack of paper icons → arrow → summary */
+    .pd-mock-funnel {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 0;
+    }
+    .pd-mock-paper-stack {
+      position: relative;
+      width: 32px;
+      height: 36px;
+      flex-shrink: 0;
+    }
+    .pd-mock-paper-stack .pg {
+      position: absolute;
+      width: 22px;
+      height: 28px;
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 2px;
+    }
+    .pd-mock-paper-stack .pg:nth-child(1) { top: 0; left: 0; }
+    .pd-mock-paper-stack .pg:nth-child(2) { top: 4px; left: 5px; }
+    .pd-mock-paper-stack .pg:nth-child(3) { top: 8px; left: 10px; background: rgba(229, 50, 45, 0.16); border-color: rgba(229, 50, 45, 0.32); }
+    .pd-mock-arrow {
+      color: #E5322D;
+      font-size: 16px;
+      line-height: 1;
+    }
+    .pd-mock-summary-card {
+      flex: 1;
+      background: rgba(229, 50, 45, 0.06);
+      border: 1px solid rgba(229, 50, 45, 0.2);
+      border-radius: 4px;
+      padding: 6px 7px;
+    }
+    .pd-mock-summary-card .ttl {
+      font-size: 9px;
+      color: #E5322D;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 3px;
+    }
+    .pd-mock-summary-card .ln {
+      height: 3px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 1.5px;
+      margin: 2px 0;
+    }
+    .pd-mock-summary-card .ln.short { width: 60%; }
+
+    /* Bento for flow steps — 3x2 on desktop */
+    .pd-bento-flow {
+      display: grid;
+      gap: 10px;
+      grid-template-columns: 1fr;
+    }
+    @media (min-width: 540px) {
+      .pd-bento-flow { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (min-width: 880px) {
+      .pd-bento-flow { grid-template-columns: repeat(3, 1fr); }
+    }
+    .pd-bento-step {
+      position: relative;
+      padding: 14px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.025);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-height: 110px;
+    }
+    .pd-bento-step-head {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .pd-bento-step-num {
+      font-family: 'Instrument Serif', serif;
+      font-size: 24px;
+      color: rgba(229, 50, 45, 0.85);
+      line-height: 1;
+      letter-spacing: -0.02em;
+    }
+    .pd-bento-step-icon {
+      width: 24px; height: 24px;
+      border-radius: 6px;
+      background: rgba(229, 50, 45, 0.1);
+      border: 1px solid rgba(229, 50, 45, 0.25);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #E5322D;
+      flex-shrink: 0;
+    }
+    .pd-bento-step-icon svg { width: 12px; height: 12px; }
+    .pd-bento-step-title {
+      font-size: 13px;
+      font-weight: 500;
+      color: #f5f5f5;
+      line-height: 1.3;
+    }
+    .pd-bento-step-desc {
+      font-size: 11.5px;
+      line-height: 1.5;
+      color: rgba(245, 245, 245, 0.6);
+    }
+
+    /* Enlarged deliverable frames — document-preview styling */
+    .pd-bento-deliv {
+      display: grid;
+      gap: 16px;
+      grid-template-columns: 1fr;
+    }
+    @media (min-width: 720px) {
+      .pd-bento-deliv { grid-template-columns: 1.4fr 1fr; }
+    }
+    .pd-bento-deliv-frame {
+      position: relative;
+      background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      padding: 18px;
+      overflow: hidden;
+    }
+    .pd-bento-deliv-frame::before {
+      /* Window-chrome dots, top left — feels like a document preview */
+      content: '';
+      position: absolute;
+      top: 10px;
+      left: 14px;
+      width: 36px;
+      height: 8px;
+      background:
+        radial-gradient(circle at 4px 4px, rgba(229, 50, 45, 0.45) 3px, transparent 3.5px),
+        radial-gradient(circle at 16px 4px, rgba(255, 255, 255, 0.18) 3px, transparent 3.5px),
+        radial-gradient(circle at 28px 4px, rgba(255, 255, 255, 0.12) 3px, transparent 3.5px);
+    }
+    .pd-bento-deliv-frame .pd-deliv-mini {
+      margin-top: 14px;
+      min-height: 150px;
+    }
+    .pd-bento-deliv-caption {
+      font-size: 12px;
+      color: rgba(245, 245, 245, 0.7);
+      line-height: 1.55;
+      margin-top: 12px;
+    }
+    .pd-bento-deliv-caption strong { color: #f5f5f5; font-weight: 500; }
   </style>
 </head>
 <body class="bg-black text-white">
@@ -6125,6 +6522,203 @@
       }
     }
 
+    // ─────────────────────── PERSONA BENTO BLOCKS ───────────────────────
+    // 2026-05-19 cowork: bento redesign for persona modals. Scoped to
+    // deep-researcher initially as the style proof; rolls out to the other
+    // 9 personas after founder approval.
+
+    // Reusable tiny step-icon — keeps the flow bento compact + on-brand.
+    function StepIcon({ kind }) {
+      const common = { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' };
+      switch (kind) {
+        case 'intake':
+          return (<svg {...common}><circle cx="12" cy="12" r="9" /><polyline points="12 7 12 12 15 14" /></svg>);
+        case 'gather':
+          return (<svg {...common}><circle cx="11" cy="11" r="7" /><line x1="20" y1="20" x2="16.5" y2="16.5" /></svg>);
+        case 'grade':
+          return (<svg {...common}><polyline points="20 6 9 17 4 12" /></svg>);
+        case 'checkpoint':
+          return (<svg {...common}><rect x="5" y="5" width="14" height="14" rx="2" /><polyline points="9 12 11 14 15 10" /></svg>);
+        case 'cite':
+          return (<svg {...common}><line x1="6" y1="7" x2="18" y2="7" /><line x1="6" y1="12" x2="18" y2="12" /><line x1="6" y1="17" x2="14" y2="17" /></svg>);
+        case 'synth':
+          return (<svg {...common}><path d="M12 2v6M5 12h14M12 16v6" /><circle cx="12" cy="12" r="3" /></svg>);
+        default:
+          return (<svg {...common}><circle cx="12" cy="12" r="9" /></svg>);
+      }
+    }
+
+    // Deep-researcher specific capability cards. Each capability gets its
+    // own mockup that SHOWS the capability inline, per the Windsurf-style
+    // brief — no list-of-prose.
+    function DeepResearcherBento() {
+      return (
+        <div className="pd-bento">
+          {/* Card 1 — span 2 cols: citation per claim */}
+          <div className="pd-bento-card span-2">
+            <div className="pd-bento-title">
+              Citation per claim
+              <span className="pd-bento-badge">Headline</span>
+            </div>
+            <div className="pd-bento-desc">
+              Tiap klaim numerik atau faktual ditandai dengan footnote. Tidak ada generalisasi mengambang.
+            </div>
+            <div className="pd-bento-mock">
+              <div className="pd-mock-paragraph">
+                Pasar fintech Indonesia tumbuh 23% YoY <span className="ref">[1]</span> dengan dominasi e-wallet 67% transaksi digital <span className="ref">[2]</span>. UMKM lending naik 41% sepanjang 2024 <span className="ref">[3]</span>.
+              </div>
+              <div className="pd-mock-footnotes">
+                <div className="pd-mock-footnote"><span className="num">[1]</span><span>BPS, 2025. UMKM landscape Indonesia.</span></div>
+                <div className="pd-mock-footnote"><span className="num">[2]</span><span>OJK, 2024. Statistik sistem pembayaran.</span></div>
+                <div className="pd-mock-footnote"><span className="num">[3]</span><span>DDTC News, 2025. P2P lending review.</span></div>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 2 — span 1: minimum 5 sumber primer */}
+          <div className="pd-bento-card">
+            <div className="pd-bento-title">5 sumber minimum</div>
+            <div className="pd-bento-desc">
+              Setiap topik di-decompose sampai punya minimal lima sumber primer berjarak.
+            </div>
+            <div className="pd-bento-mock" style={{ padding: '8px 10px' }}>
+              <div className="pd-mock-sources">
+                <span className="pd-mock-source-icon" />
+                <span className="pd-mock-source-icon" />
+                <span className="pd-mock-source-icon" />
+                <span className="pd-mock-source-icon" />
+                <span className="pd-mock-source-icon" />
+              </div>
+              <div className="pd-mock-counter">5+</div>
+              <div className="pd-mock-counter-lbl">sumber primer</div>
+            </div>
+          </div>
+
+          {/* Card 3 — span 1: verified vs unverified tagging */}
+          <div className="pd-bento-card">
+            <div className="pd-bento-title">[unverified] tag</div>
+            <div className="pd-bento-desc">
+              Klaim yang tidak bisa diverifikasi di-tag eksplisit. Ketidakpastian tidak disembunyikan.
+            </div>
+            <div className="pd-bento-mock">
+              <div className="pd-mock-split">
+                <div className="pd-mock-split-col verified">
+                  <div className="lbl">✓ Verified</div>
+                  <div className="ln" />
+                  <div className="ln" />
+                  <div className="ln" style={{ width: '60%' }} />
+                </div>
+                <div className="pd-mock-split-col unverified">
+                  <div className="lbl">[unverified]</div>
+                  <div className="ln" />
+                  <div className="ln" style={{ width: '70%' }} />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 4 — span 2 cols: conflict attribution */}
+          <div className="pd-bento-card span-2">
+            <div className="pd-bento-title">
+              Conflict attribution
+              <span className="pd-bento-badge">New</span>
+            </div>
+            <div className="pd-bento-desc">
+              Klaim yang bertentangan ditampilkan dengan attribution masing-masing — bukan pilih satu side diam-diam.
+            </div>
+            <div className="pd-bento-mock">
+              <div className="pd-mock-conflict">
+                <div className="pd-mock-quote">
+                  Pertumbuhan fintech UMKM akan stabil di 20-25% sampai 2027.
+                  <span className="src">— OJK, Outlook 2025</span>
+                </div>
+                <div className="pd-mock-quote">
+                  Saturasi pasar akan menekan growth ke single-digit pasca 2026.
+                  <span className="src">— Kontan, Analisis Q1 2025</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 5 — span 1: sintesis 10+ paper */}
+          <div className="pd-bento-card">
+            <div className="pd-bento-title">Sintesis 10+ paper</div>
+            <div className="pd-bento-desc">
+              Decompose, baca, distill jadi exec summary dua halaman dengan methodology note.
+            </div>
+            <div className="pd-bento-mock">
+              <div className="pd-mock-funnel">
+                <div className="pd-mock-paper-stack">
+                  <span className="pg" />
+                  <span className="pg" />
+                  <span className="pg" />
+                </div>
+                <span className="pd-mock-arrow">→</span>
+                <div className="pd-mock-summary-card">
+                  <div className="ttl">Exec Summary</div>
+                  <div className="ln" />
+                  <div className="ln" />
+                  <div className="ln short" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Bento-mode flow steps — used for deep-researcher (and after approval,
+    // generalised across all personas). Numbered prominently, with a tiny
+    // icon-led visual hint per step.
+    const FLOW_ICON_MAP = {
+      'deep-researcher': ['intake', 'gather', 'grade', 'checkpoint', 'cite', 'synth'],
+    };
+    function PersonaFlowBento({ persona }) {
+      const icons = FLOW_ICON_MAP[persona.slug] || [];
+      return (
+        <div className="pd-bento-flow">
+          {persona.flow.map((step, i) => (
+            <div key={i} className="pd-bento-step">
+              <div className="pd-bento-step-head">
+                <span className="pd-bento-step-num">{String(i + 1).padStart(2, '0')}</span>
+                <span className="pd-bento-step-icon"><StepIcon kind={icons[i]} /></span>
+              </div>
+              <div className="pd-bento-step-title">{step.title}</div>
+              <div className="pd-bento-step-desc">{step.desc}</div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    // Enlarged deliverable frames with document-preview chrome.
+    function PersonaDeliverableBento({ persona }) {
+      return (
+        <div className="pd-bento-deliv">
+          <div className="pd-bento-deliv-frame">
+            <DeliverableMock kind={persona.deliverable.kind} />
+            <div className="pd-bento-deliv-caption" dangerouslySetInnerHTML={{ __html: persona.deliverable.caption.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') }} />
+          </div>
+          <div className="pd-bento-deliv-frame">
+            <div className="pd-deliv-mini">
+              <div className="pd-mini-title">Output yang kamu pegang</div>
+              <div style={{ fontSize: 10, color: 'rgba(245,245,245,0.6)', marginTop: 8, lineHeight: 1.6 }}>
+                Setiap deliverable di-versi dan tersimpan di VPS kamu sendiri. Aku tidak push ke cloud pihak ketiga tanpa kamu approve.
+              </div>
+              <div style={{ marginTop: 10, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                {persona.templates.slice(0, 3).map((t, i) => (
+                  <span key={i} className="pd-mini-chip">{t.kind}</span>
+                ))}
+              </div>
+            </div>
+            <div className="pd-bento-deliv-caption">
+              Output disimpan <strong>di VPS kamu</strong>. Versi history, audit log, dan export ke format apapun yang kamu mau.
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     // ─────────────────────── PERSONA DETAIL MODAL ───────────────────────
     function PersonaDetailModal({ persona, onClose }) {
       // Esc to close
@@ -6139,6 +6733,11 @@
       }, [onClose]);
 
       if (!persona) return null;
+
+      // Bento mode — per 2026-05-19 cowork consult. Currently scoped to
+      // deep-researcher as the style proof. After founder approval, we
+      // remove this branch and apply bento to all 10 personas.
+      const useBento = persona.slug === 'deep-researcher';
 
       // Build a "secondary" deliverable variant to satisfy the 1-2 examples
       // requirement. We render the primary mock plus a stylised template-list
@@ -6162,50 +6761,62 @@
 
             <div className="pd-block">
               <div className="pd-block-label">Apa yang aku bisa</div>
-              <ul className="pd-list">
-                {persona.capabilities.map((c, i) => <li key={i}>{c}</li>)}
-              </ul>
+              {useBento ? (
+                <DeepResearcherBento />
+              ) : (
+                <ul className="pd-list">
+                  {persona.capabilities.map((c, i) => <li key={i}>{c}</li>)}
+                </ul>
+              )}
             </div>
 
             <div className="pd-block">
               <div className="pd-block-label">Bagaimana aku kerja</div>
-              <div className="pd-flow">
-                {persona.flow.map((step, i) => (
-                  <div key={i} className="pd-step">
-                    <div className="pd-step-num">{String(i + 1).padStart(2, '0')}</div>
-                    <div className="pd-step-body">
-                      <div className="pd-step-title">{step.title}</div>
-                      <div className="pd-step-desc">{step.desc}</div>
+              {useBento ? (
+                <PersonaFlowBento persona={persona} />
+              ) : (
+                <div className="pd-flow">
+                  {persona.flow.map((step, i) => (
+                    <div key={i} className="pd-step">
+                      <div className="pd-step-num">{String(i + 1).padStart(2, '0')}</div>
+                      <div className="pd-step-body">
+                        <div className="pd-step-title">{step.title}</div>
+                        <div className="pd-step-desc">{step.desc}</div>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="pd-block">
               <div className="pd-block-label">Contoh deliverable</div>
-              <div className="pd-deliverable-grid">
-                <div className="pd-deliverable">
-                  <DeliverableMock kind={persona.deliverable.kind} />
-                  <div className="pd-deliv-caption" dangerouslySetInnerHTML={{ __html: persona.deliverable.caption.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') }} />
-                </div>
-                <div className="pd-deliverable">
-                  <div className="pd-deliv-mini">
-                    <div className="pd-mini-title">Output yang kamu pegang</div>
-                    <div style={{ fontSize: 10, color: 'rgba(245,245,245,0.6)', marginTop: 8, lineHeight: 1.6 }}>
-                      Setiap deliverable di-versi dan tersimpan di VPS kamu sendiri. Aku tidak push ke cloud pihak ketiga tanpa kamu approve.
+              {useBento ? (
+                <PersonaDeliverableBento persona={persona} />
+              ) : (
+                <div className="pd-deliverable-grid">
+                  <div className="pd-deliverable">
+                    <DeliverableMock kind={persona.deliverable.kind} />
+                    <div className="pd-deliv-caption" dangerouslySetInnerHTML={{ __html: persona.deliverable.caption.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') }} />
+                  </div>
+                  <div className="pd-deliverable">
+                    <div className="pd-deliv-mini">
+                      <div className="pd-mini-title">Output yang kamu pegang</div>
+                      <div style={{ fontSize: 10, color: 'rgba(245,245,245,0.6)', marginTop: 8, lineHeight: 1.6 }}>
+                        Setiap deliverable di-versi dan tersimpan di VPS kamu sendiri. Aku tidak push ke cloud pihak ketiga tanpa kamu approve.
+                      </div>
+                      <div style={{ marginTop: 10, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                        {persona.templates.slice(0, 3).map((t, i) => (
+                          <span key={i} className="pd-mini-chip">{t.kind}</span>
+                        ))}
+                      </div>
                     </div>
-                    <div style={{ marginTop: 10, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                      {persona.templates.slice(0, 3).map((t, i) => (
-                        <span key={i} className="pd-mini-chip">{t.kind}</span>
-                      ))}
+                    <div className="pd-deliv-caption">
+                      Output disimpan **di VPS kamu**. Versi history, audit log, dan export ke format apapun yang kamu mau.
                     </div>
                   </div>
-                  <div className="pd-deliv-caption">
-                    Output disimpan **di VPS kamu**. Versi history, audit log, dan export ke format apapun yang kamu mau.
-                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             <div className="pd-block">
