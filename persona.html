@@ -1,0 +1,1362 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>weuseai.agent — Detail persona</title>
+  <meta name="description" content="Detail persona weuseai.agent — apa yang dia bisa, bagaimana dia kerja, contoh output, dan template yang sudah ada di inventory." />
+  <meta name="robots" content="index, follow" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="weuseai.agent — Detail persona" />
+  <meta property="og:description" content="Detail persona weuseai.agent — apa yang dia bisa, bagaimana dia kerja, contoh output." />
+  <meta property="og:image" content="/assets/og-image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
+  <link rel="icon" type="image/x-icon" href="/assets/favicon.ico" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin></script>
+
+  <!-- Persona detail content (shared with /index.html) -->
+  <script src="/assets/persona-details.js"></script>
+
+  <style>
+    :root {
+      --void: #0a0a0a;
+      --void-2: #0d0d0d;
+      --void-3: #111;
+      --bone: #f5f5f5;
+      --bone-d: rgba(245, 245, 245, 0.82);
+      --bone-m: rgba(245, 245, 245, 0.62);
+      --bone-l: rgba(245, 245, 245, 0.42);
+      --signal: #E5322D;
+      --signal-d: #c92823;
+      --line: rgba(255, 255, 255, 0.06);
+      --line-strong: rgba(255, 255, 255, 0.12);
+      --glass: rgba(255, 255, 255, 0.028);
+      --glass-strong: rgba(255, 255, 255, 0.05);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      background: var(--void);
+      color: var(--bone);
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-size: 15px;
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      min-height: 100vh;
+    }
+    a { color: inherit; text-decoration: none; }
+
+    /* Atmospheric backdrop — large halftone in the upper-left, fades out */
+    body::before {
+      content: '';
+      position: fixed;
+      top: -120px;
+      left: -160px;
+      width: 720px;
+      height: 720px;
+      background-image: radial-gradient(circle, rgba(229, 50, 45, 0.32) 1.5px, transparent 2.2px);
+      background-size: 18px 18px;
+      mask-image: radial-gradient(circle at 30% 30%, #000 0%, transparent 60%);
+      -webkit-mask-image: radial-gradient(circle at 30% 30%, #000 0%, transparent 60%);
+      opacity: 0.35;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Page wrapper — generous max-width + breathing padding */
+    .page {
+      position: relative;
+      z-index: 1;
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 28px 24px 96px;
+    }
+    @media (min-width: 720px) { .page { padding: 40px 48px 120px; } }
+    @media (min-width: 1100px) { .page { padding: 48px 72px 160px; } }
+
+    /* Top bar — small, restrained, just back + logo */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 64px;
+    }
+    @media (min-width: 720px) { .topbar { margin-bottom: 96px; } }
+    .topbar-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 14px 9px 12px;
+      border-radius: 999px;
+      background: var(--glass);
+      border: 1px solid var(--line);
+      color: var(--bone-d);
+      font-size: 12.5px;
+      letter-spacing: 0.01em;
+      transition: background 200ms ease, border-color 200ms ease;
+    }
+    .topbar-back:hover {
+      background: rgba(229, 50, 45, 0.08);
+      border-color: rgba(229, 50, 45, 0.32);
+      color: var(--bone);
+    }
+    .topbar-back svg { width: 14px; height: 14px; }
+    .topbar-logo {
+      font-family: 'Instrument Serif', serif;
+      font-size: 17px;
+      color: var(--bone-m);
+      letter-spacing: -0.01em;
+    }
+    .topbar-logo strong { color: var(--bone); font-weight: 400; }
+
+    /* Hero — persona identity. Big, calm, asymmetric. */
+    .hero {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 28px;
+      align-items: end;
+      padding-bottom: 56px;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 88px;
+    }
+    @media (min-width: 760px) {
+      .hero { grid-template-columns: auto 1fr auto; gap: 36px; padding-bottom: 72px; margin-bottom: 112px; }
+    }
+    .hero-glyph {
+      flex-shrink: 0;
+      width: 96px; height: 96px;
+      border-radius: 22px;
+      background: linear-gradient(135deg, rgba(229, 50, 45, 0.22), rgba(229, 50, 45, 0.04));
+      border: 1px solid rgba(229, 50, 45, 0.36);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Instrument Serif', serif;
+      font-size: 56px;
+      color: var(--signal);
+      box-shadow: 0 12px 40px rgba(229, 50, 45, 0.15);
+    }
+    @media (min-width: 760px) {
+      .hero-glyph { width: 120px; height: 120px; border-radius: 28px; font-size: 70px; }
+    }
+    .hero-eyebrow {
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(229, 50, 45, 0.85);
+      margin-bottom: 12px;
+    }
+    .hero-name {
+      font-family: 'Instrument Serif', serif;
+      font-size: clamp(44px, 7vw, 80px);
+      line-height: 0.96;
+      letter-spacing: -0.03em;
+      color: var(--bone);
+      margin: 0 0 18px;
+    }
+    .hero-tagline {
+      font-size: clamp(15px, 1.6vw, 18px);
+      line-height: 1.55;
+      color: var(--bone-m);
+      max-width: 640px;
+      margin: 0;
+    }
+    .hero-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 13px 22px;
+      background: var(--signal);
+      color: var(--bone);
+      border-radius: 999px;
+      font-size: 13.5px;
+      font-weight: 500;
+      letter-spacing: -0.005em;
+      transition: background 200ms ease, transform 160ms ease;
+      white-space: nowrap;
+    }
+    .hero-cta:hover { background: var(--signal-d); transform: translateY(-1px); }
+    .hero-cta svg { width: 13px; height: 13px; }
+
+    /* Section — generous vertical rhythm */
+    .section {
+      margin-bottom: 96px;
+    }
+    @media (min-width: 760px) { .section { margin-bottom: 128px; } }
+    .section-head {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+      max-width: 720px;
+      margin-bottom: 40px;
+    }
+    @media (min-width: 720px) { .section-head { margin-bottom: 56px; } }
+    .section-eyebrow {
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(229, 50, 45, 0.85);
+    }
+    .section-title {
+      font-family: 'Instrument Serif', serif;
+      font-size: clamp(28px, 3.5vw, 42px);
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+      color: var(--bone);
+      margin: 0;
+    }
+    .section-sub {
+      font-size: 14.5px;
+      line-height: 1.6;
+      color: var(--bone-m);
+      max-width: 580px;
+      margin: 6px 0 0;
+    }
+
+    /* ── Capability bento — mixed-size cards, generous gaps ── */
+    .bento {
+      display: grid;
+      gap: 18px;
+      grid-template-columns: 1fr;
+      grid-auto-rows: minmax(180px, auto);
+    }
+    @media (min-width: 720px) {
+      .bento { grid-template-columns: repeat(4, 1fr); gap: 22px; }
+    }
+    @media (min-width: 1100px) {
+      .bento { gap: 26px; }
+    }
+    .bento-card {
+      position: relative;
+      padding: 26px 26px 28px;
+      border-radius: 20px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.012));
+      border: 1px solid var(--line);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      transition: border-color 240ms ease, transform 220ms ease;
+    }
+    .bento-card:hover {
+      border-color: rgba(229, 50, 45, 0.32);
+      transform: translateY(-2px);
+    }
+    @media (min-width: 720px) {
+      .bento-card.span-2 { grid-column: span 2; }
+      .bento-card.span-row-2 { grid-row: span 2; }
+    }
+    /* Halftone corner accent on hover */
+    .bento-card::after {
+      content: '';
+      position: absolute;
+      bottom: -40px;
+      right: -40px;
+      width: 110px;
+      height: 110px;
+      background-image: radial-gradient(circle, rgba(229, 50, 45, 0.32) 1px, transparent 1.6px);
+      background-size: 9px 9px;
+      mask-image: radial-gradient(circle at bottom right, #000 0%, transparent 65%);
+      -webkit-mask-image: radial-gradient(circle at bottom right, #000 0%, transparent 65%);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 260ms ease;
+    }
+    .bento-card:hover::after { opacity: 1; }
+    .bento-card .card-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: rgba(229, 50, 45, 0.85);
+    }
+    .bento-card .card-eyebrow .dot {
+      width: 5px; height: 5px; border-radius: 50%;
+      background: var(--signal);
+    }
+    .bento-card .card-title {
+      font-family: 'Instrument Serif', serif;
+      font-size: 22px;
+      line-height: 1.15;
+      color: var(--bone);
+      letter-spacing: -0.015em;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .bento-card .card-desc {
+      font-size: 13.5px;
+      line-height: 1.6;
+      color: var(--bone-m);
+      margin: 0;
+      max-width: 380px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 5px;
+      background: rgba(229, 50, 45, 0.16);
+      color: var(--signal);
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 9.5px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      vertical-align: middle;
+    }
+
+    /* Inner mockup chrome — feels like a tiny terminal/window */
+    .mock {
+      margin-top: auto;
+      background: var(--void-2);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 14px;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 10.5px;
+      line-height: 1.6;
+      color: var(--bone-m);
+      position: relative;
+    }
+
+    /* Citation paragraph + footnotes */
+    .mock-paragraph {
+      font-size: 11px;
+      line-height: 1.7;
+      color: var(--bone-d);
+    }
+    .mock-paragraph .ref {
+      display: inline-block;
+      background: rgba(229, 50, 45, 0.18);
+      color: var(--signal);
+      border-radius: 3px;
+      padding: 0 5px;
+      font-size: 9.5px;
+      margin: 0 2px;
+      vertical-align: 1px;
+      letter-spacing: 0.04em;
+    }
+    .mock-footnotes {
+      margin-top: 14px;
+      padding-top: 10px;
+      border-top: 1px dashed rgba(255, 255, 255, 0.07);
+    }
+    .mock-footnote {
+      font-size: 9.5px;
+      color: var(--bone-l);
+      line-height: 1.8;
+      display: flex;
+      gap: 8px;
+    }
+    .mock-footnote .num { color: var(--signal); flex-shrink: 0; }
+
+    /* Verified / unverified split */
+    .mock-split { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .mock-split-col {
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: 6px;
+      padding: 9px 10px;
+      border: 1px solid rgba(255, 255, 255, 0.04);
+    }
+    .mock-split-col .lbl {
+      font-size: 9px;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .mock-split-col.verified .lbl { color: rgba(120, 220, 150, 0.95); }
+    .mock-split-col.unverified .lbl { color: rgba(229, 180, 60, 0.95); }
+    .mock-split-col .ln {
+      height: 4px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 2px;
+      margin: 3px 0;
+    }
+    .mock-split-col.verified .ln { background: rgba(120, 220, 150, 0.34); }
+    .mock-split-col.unverified .ln { background: rgba(229, 180, 60, 0.34); }
+
+    /* Conflict — opposing quotes side by side */
+    .mock-conflict {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      position: relative;
+    }
+    .mock-conflict::before {
+      content: 'vs';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-family: 'Instrument Serif', serif;
+      font-style: italic;
+      font-size: 18px;
+      color: rgba(229, 50, 45, 0.7);
+      background: var(--void-2);
+      padding: 2px 8px;
+      border-radius: 50%;
+      z-index: 2;
+      line-height: 1;
+    }
+    .mock-quote {
+      background: rgba(255, 255, 255, 0.025);
+      border-left: 2px solid rgba(229, 50, 45, 0.4);
+      padding: 9px 11px;
+      border-radius: 5px;
+      font-size: 10.5px;
+      line-height: 1.6;
+      color: var(--bone-d);
+      font-style: italic;
+    }
+    .mock-quote .src {
+      display: block;
+      margin-top: 6px;
+      font-style: normal;
+      font-size: 9px;
+      color: var(--bone-l);
+      letter-spacing: 0.04em;
+    }
+
+    /* Source-count visual */
+    .mock-sources {
+      display: flex;
+      gap: 6px;
+      align-items: flex-end;
+      justify-content: center;
+      padding: 10px 0 4px;
+    }
+    .mock-source-icon {
+      width: 22px;
+      height: 28px;
+      background: rgba(229, 50, 45, 0.18);
+      border: 1px solid rgba(229, 50, 45, 0.32);
+      border-radius: 3px;
+      position: relative;
+    }
+    .mock-source-icon::before {
+      content: '';
+      position: absolute;
+      top: 5px; left: 4px; right: 4px;
+      height: 2px;
+      background: rgba(229, 50, 45, 0.55);
+      box-shadow: 0 4px 0 rgba(229, 50, 45, 0.55), 0 8px 0 rgba(229, 50, 45, 0.55);
+    }
+    .mock-counter {
+      text-align: center;
+      font-family: 'Instrument Serif', serif;
+      font-size: 36px;
+      color: var(--signal);
+      line-height: 1;
+      margin-top: 10px;
+      letter-spacing: -0.02em;
+    }
+    .mock-counter-lbl {
+      text-align: center;
+      font-size: 9.5px;
+      letter-spacing: 0.12em;
+      color: var(--bone-l);
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+
+    /* Sintesis funnel */
+    .mock-funnel {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 6px 0;
+    }
+    .mock-paper-stack {
+      position: relative;
+      width: 40px;
+      height: 44px;
+      flex-shrink: 0;
+    }
+    .mock-paper-stack .pg {
+      position: absolute;
+      width: 26px;
+      height: 34px;
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 3px;
+    }
+    .mock-paper-stack .pg:nth-child(1) { top: 0; left: 0; }
+    .mock-paper-stack .pg:nth-child(2) { top: 5px; left: 7px; }
+    .mock-paper-stack .pg:nth-child(3) {
+      top: 10px; left: 14px;
+      background: rgba(229, 50, 45, 0.16);
+      border-color: rgba(229, 50, 45, 0.32);
+    }
+    .mock-arrow {
+      color: var(--signal);
+      font-size: 20px;
+      line-height: 1;
+    }
+    .mock-summary-card {
+      flex: 1;
+      background: rgba(229, 50, 45, 0.06);
+      border: 1px solid rgba(229, 50, 45, 0.22);
+      border-radius: 5px;
+      padding: 8px 9px;
+    }
+    .mock-summary-card .ttl {
+      font-size: 9.5px;
+      color: var(--signal);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 5px;
+    }
+    .mock-summary-card .ln {
+      height: 3.5px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 1.5px;
+      margin: 3px 0;
+    }
+    .mock-summary-card .ln.short { width: 60%; }
+
+    /* ── Flow bento — 3x2 on desktop with generous gaps ── */
+    .flow-bento {
+      display: grid;
+      gap: 16px;
+      grid-template-columns: 1fr;
+    }
+    @media (min-width: 600px) { .flow-bento { grid-template-columns: repeat(2, 1fr); gap: 18px; } }
+    @media (min-width: 960px) { .flow-bento { grid-template-columns: repeat(3, 1fr); gap: 22px; } }
+    .flow-card {
+      position: relative;
+      padding: 24px 22px 26px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.025);
+      border: 1px solid var(--line);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-height: 170px;
+    }
+    .flow-card-head {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .flow-card-num {
+      font-family: 'Instrument Serif', serif;
+      font-size: 38px;
+      color: rgba(229, 50, 45, 0.9);
+      line-height: 0.85;
+      letter-spacing: -0.02em;
+    }
+    .flow-card-icon {
+      width: 30px; height: 30px;
+      border-radius: 8px;
+      background: rgba(229, 50, 45, 0.1);
+      border: 1px solid rgba(229, 50, 45, 0.28);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--signal);
+      flex-shrink: 0;
+    }
+    .flow-card-icon svg { width: 14px; height: 14px; }
+    .flow-card-title {
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--bone);
+      line-height: 1.3;
+      margin: 0;
+    }
+    .flow-card-desc {
+      font-size: 13px;
+      line-height: 1.6;
+      color: var(--bone-m);
+      margin: 0;
+    }
+
+    /* ── Deliverable frames — enlarged document-preview chrome ── */
+    .deliv-bento {
+      display: grid;
+      gap: 24px;
+      grid-template-columns: 1fr;
+    }
+    @media (min-width: 760px) {
+      .deliv-bento { grid-template-columns: 1.5fr 1fr; gap: 28px; }
+    }
+    .deliv-frame {
+      position: relative;
+      background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.012));
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 28px;
+      overflow: hidden;
+    }
+    .deliv-frame::before {
+      content: '';
+      position: absolute;
+      top: 14px;
+      left: 18px;
+      width: 48px;
+      height: 10px;
+      background:
+        radial-gradient(circle at 5px 5px, rgba(229, 50, 45, 0.5) 4px, transparent 4.6px),
+        radial-gradient(circle at 21px 5px, rgba(255, 255, 255, 0.2) 4px, transparent 4.6px),
+        radial-gradient(circle at 37px 5px, rgba(255, 255, 255, 0.13) 4px, transparent 4.6px);
+    }
+    .deliv-frame-inner {
+      margin-top: 22px;
+      background: var(--void-2);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 18px;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 11px;
+      line-height: 1.65;
+      color: var(--bone-m);
+      min-height: 200px;
+    }
+    .deliv-frame-inner .mini-title {
+      font-family: 'Instrument Serif', serif;
+      font-size: 17px;
+      color: var(--bone);
+      margin-bottom: 12px;
+      letter-spacing: -0.01em;
+    }
+    .deliv-frame-inner .mini-eyebrow {
+      font-size: 10px;
+      color: rgba(229, 50, 45, 0.85);
+      letter-spacing: 0.13em;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+    }
+    .deliv-frame-inner .mini-line {
+      height: 5px;
+      background: rgba(255, 255, 255, 0.09);
+      border-radius: 2.5px;
+      margin: 6px 0;
+    }
+    .deliv-frame-inner .mini-line.short { width: 50%; }
+    .deliv-frame-inner .mini-line.med   { width: 75%; }
+    .deliv-frame-inner .mini-line.long  { width: 100%; }
+    .deliv-frame-inner .mini-line.accent { background: rgba(229, 50, 45, 0.55); }
+    .deliv-frame-inner .mini-citation {
+      font-size: 10px;
+      color: var(--bone-l);
+      line-height: 1.8;
+    }
+    .deliv-frame-inner .mini-chip {
+      display: inline-block;
+      padding: 3px 9px;
+      border-radius: 12px;
+      background: rgba(229, 50, 45, 0.14);
+      color: var(--signal);
+      font-size: 10px;
+      letter-spacing: 0.04em;
+      margin-right: 5px;
+      margin-bottom: 5px;
+    }
+    .deliv-frame-inner .mini-slide {
+      display: inline-block;
+      width: 26px; height: 16px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 2px;
+      margin-right: 5px;
+    }
+    .deliv-frame-inner .mini-slide.active {
+      background: rgba(229, 50, 45, 0.28);
+      border-color: rgba(229, 50, 45, 0.42);
+    }
+    .deliv-frame-inner .mini-kanban {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .deliv-frame-inner .mini-kanban .col {
+      background: rgba(255,255,255,0.03);
+      border-radius: 4px;
+      padding: 6px 5px;
+      font-size: 9px;
+      color: var(--bone-l);
+    }
+    .deliv-frame-inner .mini-kanban .col .card {
+      background: rgba(255,255,255,0.07);
+      height: 7px;
+      border-radius: 2px;
+      margin: 3px 0;
+    }
+    .deliv-frame-inner .mini-kanban .col .card.accent { background: rgba(229, 50, 45, 0.5); }
+    .deliv-frame-inner .mini-chart {
+      display: flex;
+      align-items: flex-end;
+      gap: 5px;
+      height: 50px;
+      margin-top: 8px;
+    }
+    .deliv-frame-inner .mini-chart .bar {
+      flex: 1;
+      background: rgba(229, 50, 45, 0.42);
+      border-radius: 2px;
+    }
+    .deliv-frame-inner .mini-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      font-size: 10px;
+      color: var(--bone-l);
+      margin-top: 5px;
+    }
+    .deliv-frame-inner .mini-row .mini-tag {
+      background: rgba(229, 50, 45, 0.14);
+      color: var(--signal);
+      padding: 1px 7px;
+      border-radius: 4px;
+      font-size: 10px;
+      letter-spacing: 0.05em;
+    }
+
+    .deliv-caption {
+      margin-top: 18px;
+      font-size: 13.5px;
+      line-height: 1.6;
+      color: var(--bone-m);
+    }
+    .deliv-caption strong { color: var(--bone); font-weight: 500; }
+
+    /* ── Templates bento — compact cards in 3-col grid ── */
+    .tpl-bento {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: 1fr;
+    }
+    @media (min-width: 600px) { .tpl-bento { grid-template-columns: repeat(2, 1fr); } }
+    @media (min-width: 960px) { .tpl-bento { grid-template-columns: repeat(3, 1fr); gap: 14px; } }
+    .tpl-card {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      padding: 16px 18px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.022);
+      border: 1px solid var(--line);
+      transition: border-color 200ms ease, transform 200ms ease;
+    }
+    .tpl-card:hover {
+      border-color: rgba(229, 50, 45, 0.28);
+      transform: translateY(-1px);
+    }
+    .tpl-icon {
+      flex-shrink: 0;
+      width: 32px; height: 32px;
+      border-radius: 7px;
+      background: rgba(229, 50, 45, 0.1);
+      border: 1px solid rgba(229, 50, 45, 0.28);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--signal);
+      letter-spacing: 0.04em;
+    }
+    .tpl-body { min-width: 0; flex: 1; }
+    .tpl-name {
+      font-size: 13px;
+      color: var(--bone);
+      font-weight: 500;
+      line-height: 1.35;
+      word-break: break-word;
+    }
+    .tpl-kind {
+      font-size: 11px;
+      color: var(--bone-l);
+      margin-top: 3px;
+      letter-spacing: 0.02em;
+    }
+
+    /* ── Footer CTA — full-width strip with generous padding ── */
+    .footer-cta {
+      margin-top: 96px;
+      padding: 48px 40px;
+      border-radius: 22px;
+      background: linear-gradient(180deg, rgba(229, 50, 45, 0.06), rgba(229, 50, 45, 0.01));
+      border: 1px solid rgba(229, 50, 45, 0.18);
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 24px;
+      align-items: center;
+      position: relative;
+      overflow: hidden;
+    }
+    @media (min-width: 720px) {
+      .footer-cta { grid-template-columns: 1fr auto; gap: 36px; padding: 56px 48px; }
+    }
+    .footer-cta::after {
+      content: '';
+      position: absolute;
+      top: -40px; right: -40px;
+      width: 200px; height: 200px;
+      background-image: radial-gradient(circle, rgba(229, 50, 45, 0.42) 1.2px, transparent 1.8px);
+      background-size: 11px 11px;
+      mask-image: radial-gradient(circle at top right, #000 0%, transparent 70%);
+      -webkit-mask-image: radial-gradient(circle at top right, #000 0%, transparent 70%);
+      pointer-events: none;
+      opacity: 0.4;
+    }
+    .footer-cta-title {
+      font-family: 'Instrument Serif', serif;
+      font-size: clamp(24px, 3vw, 32px);
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+      color: var(--bone);
+      margin: 0 0 8px;
+      position: relative;
+      z-index: 1;
+    }
+    .footer-cta-hint {
+      font-size: 13.5px;
+      color: var(--bone-m);
+      max-width: 420px;
+      margin: 0;
+      position: relative;
+      z-index: 1;
+    }
+    .footer-cta-primary {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 15px 26px;
+      background: var(--signal);
+      color: var(--bone);
+      border-radius: 999px;
+      font-size: 14px;
+      font-weight: 500;
+      letter-spacing: -0.005em;
+      transition: background 200ms ease, transform 160ms ease;
+      white-space: nowrap;
+      position: relative;
+      z-index: 1;
+    }
+    .footer-cta-primary:hover { background: var(--signal-d); transform: translateY(-1px); }
+    .footer-cta-primary svg { width: 14px; height: 14px; }
+
+    /* ── Not-found state ── */
+    .nf {
+      text-align: center;
+      padding: 80px 24px;
+    }
+    .nf h1 { font-family: 'Instrument Serif', serif; font-size: 40px; color: var(--bone); margin-bottom: 12px; }
+    .nf p { color: var(--bone-m); margin-bottom: 28px; }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+
+  <script type="text/babel" data-presets="env,react">
+    const { useEffect, useMemo } = React;
+
+    // ─────────────── helpers ───────────────
+    function getSlugFromURL() {
+      try {
+        const u = new URL(window.location.href);
+        const q = u.searchParams.get('slug');
+        if (q) return q;
+        // Allow /persona/<slug> if Vercel rewrites are configured
+        const m = u.pathname.match(/^\/persona\/([\w-]+)/);
+        if (m) return m[1];
+      } catch (e) { /* ignore */ }
+      return null;
+    }
+
+    // Small renaming helper used for the bold-bracket caption in deliverable
+    function renderBoldMd(s) {
+      return s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    }
+
+    // ─────────────── icons (small step icons per slug position) ───────────────
+    function StepIcon({ kind }) {
+      const c = { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' };
+      switch (kind) {
+        case 'intake':     return (<svg {...c}><circle cx="12" cy="12" r="9" /><polyline points="12 7 12 12 15 14" /></svg>);
+        case 'gather':     return (<svg {...c}><circle cx="11" cy="11" r="7" /><line x1="20" y1="20" x2="16.5" y2="16.5" /></svg>);
+        case 'grade':      return (<svg {...c}><polyline points="20 6 9 17 4 12" /></svg>);
+        case 'checkpoint': return (<svg {...c}><rect x="5" y="5" width="14" height="14" rx="2" /><polyline points="9 12 11 14 15 10" /></svg>);
+        case 'cite':       return (<svg {...c}><line x1="6" y1="7" x2="18" y2="7" /><line x1="6" y1="12" x2="18" y2="12" /><line x1="6" y1="17" x2="14" y2="17" /></svg>);
+        case 'synth':      return (<svg {...c}><path d="M12 2v6M5 12h14M12 16v6" /><circle cx="12" cy="12" r="3" /></svg>);
+        default:           return (<svg {...c}><circle cx="12" cy="12" r="9" /></svg>);
+      }
+    }
+
+    const FLOW_ICONS = {
+      'deep-researcher': ['intake', 'gather', 'grade', 'checkpoint', 'cite', 'synth'],
+    };
+
+    // ─────────────── deliverable inner mocks (shared between personas) ───────────────
+    function DeliverableInner({ kind }) {
+      switch (kind) {
+        case 'briefing':
+          return (
+            <>
+              <div className="mini-title">Briefing pagi — Jumat</div>
+              <div className="mini-eyebrow">Kalender · 5 event</div>
+              <div className="mini-line long" /><div className="mini-line med" /><div className="mini-line med" />
+              <div className="mini-eyebrow" style={{ marginTop: 12 }}>Email · 3 penting</div>
+              <div className="mini-line short accent" /><div className="mini-line short" />
+            </>
+          );
+        case 'research':
+          return (
+            <>
+              <div className="mini-title">Market sintesis — fintech UMKM</div>
+              <div className="mini-eyebrow">TL;DR</div>
+              <div className="mini-line long" /><div className="mini-line med" />
+              <div style={{ marginTop: 14, borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 10 }}>
+                <div className="mini-citation">[1] BPS, 2025. UMKM landscape Indonesia.</div>
+                <div className="mini-citation">[2] OJK, 2024. Fintech regulation update.</div>
+                <div className="mini-citation">[3] McKinsey, 2025. SEA digital payments.</div>
+              </div>
+            </>
+          );
+        case 'slides':
+          return (
+            <>
+              <div className="mini-title">Pitch deck — seed round</div>
+              <div style={{ marginTop: 10 }}>
+                <span className="mini-slide active" /><span className="mini-slide" /><span className="mini-slide" />
+                <span className="mini-slide" /><span className="mini-slide" /><span className="mini-slide" />
+                <br />
+                <span className="mini-slide" /><span className="mini-slide" /><span className="mini-slide" />
+                <span className="mini-slide" /><span className="mini-slide" /><span className="mini-slide" />
+              </div>
+              <div className="mini-eyebrow" style={{ marginTop: 12 }}>Slide 1 — judul</div>
+              <div className="mini-line long" /><div className="mini-line short" />
+            </>
+          );
+        case 'invoice':
+          return (
+            <>
+              <div className="mini-title">INV-2025-0042 · PT Sumber Cerah</div>
+              <div className="mini-eyebrow">Line item · 3</div>
+              <div className="mini-line long" /><div className="mini-line med" /><div className="mini-line med" />
+              <div className="mini-row" style={{ marginTop: 12 }}>
+                <span>Subtotal</span><span className="mini-tag">Rp 12.500.000</span>
+              </div>
+              <div className="mini-row"><span>PPN 11%</span><span className="mini-tag">Rp 1.375.000</span></div>
+            </>
+          );
+        case 'business':
+          return (
+            <>
+              <div className="mini-title">Roadmap — Tahap 3: Identity</div>
+              <div className="mini-line long" /><div className="mini-line med" />
+              <div className="mini-eyebrow" style={{ marginTop: 12 }}>Checklist tahap ini</div>
+              <div className="mini-line short accent" />
+              <div className="mini-line short" />
+              <div className="mini-line short" />
+            </>
+          );
+        case 'kanban':
+          return (
+            <>
+              <div className="mini-title">Project — Launch Q3</div>
+              <div className="mini-kanban">
+                <div className="col">To Do<div className="card" /><div className="card" /></div>
+                <div className="col">Doing<div className="card accent" /><div className="card" /></div>
+                <div className="col">Done<div className="card" /><div className="card" /><div className="card" /></div>
+              </div>
+            </>
+          );
+        case 'web':
+          return (
+            <>
+              <div className="mini-title">landing/saas/v1.html</div>
+              <div className="mini-eyebrow">Sections</div>
+              <div className="mini-line long" /><div className="mini-line med" /><div className="mini-line short" /><div className="mini-line short" />
+              <div className="mini-row" style={{ marginTop: 12 }}>
+                <span className="mini-tag">vercel</span><span>build · 2m 14s</span>
+              </div>
+            </>
+          );
+        case 'social':
+          return (
+            <>
+              <div className="mini-title">Content calendar — Minggu ini</div>
+              <div className="mini-eyebrow">4 platform · 12 slot</div>
+              <div className="mini-kanban">
+                <div className="col">Sen<div className="card" /></div>
+                <div className="col">Sel<div className="card accent" /></div>
+                <div className="col">Rab<div className="card" /></div>
+              </div>
+              <div className="mini-kanban" style={{ marginTop: 6 }}>
+                <div className="col">Kam<div className="card" /></div>
+                <div className="col">Jum<div className="card accent" /></div>
+                <div className="col">Sab<div className="card" /></div>
+              </div>
+            </>
+          );
+        case 'trade':
+          return (
+            <>
+              <div className="mini-title">Market briefing — pagi</div>
+              <div className="mini-eyebrow">IDX open</div>
+              <div className="mini-chart">
+                <div className="bar" style={{ height: '40%' }} />
+                <div className="bar" style={{ height: '60%' }} />
+                <div className="bar" style={{ height: '52%' }} />
+                <div className="bar" style={{ height: '75%' }} />
+                <div className="bar" style={{ height: '68%' }} />
+                <div className="bar" style={{ height: '82%' }} />
+              </div>
+              <div className="mini-row" style={{ marginTop: 12 }}>
+                <span className="mini-tag">IHSG +0.4%</span>
+                <span>BTC 67k konsolidasi</span>
+              </div>
+            </>
+          );
+        case 'video':
+          return (
+            <>
+              <div className="mini-title">Script TikTok 60s</div>
+              <div className="mini-eyebrow">Hook 0:03</div>
+              <div className="mini-line long" /><div className="mini-line med" />
+              <div className="mini-eyebrow" style={{ marginTop: 12 }}>Body · 0:48</div>
+              <div className="mini-line long" /><div className="mini-line med" /><div className="mini-line short" />
+              <div className="mini-row" style={{ marginTop: 12 }}>
+                <span className="mini-tag">#viralfyp</span><span className="mini-tag">#bisnisid</span>
+              </div>
+            </>
+          );
+        default:
+          return (<div className="mini-title">Output</div>);
+      }
+    }
+
+    // ─────────────── per-persona capability bento ───────────────
+    // For now, deep-researcher has bespoke mockup cards. Other personas
+    // fall back to a generic 5-card grid (title + desc, no inline mockup)
+    // until each persona gets its own bespoke set.
+
+    function CapabilityCardsDeepResearcher() {
+      return (
+        <div className="bento">
+          <div className="bento-card span-2">
+            <span className="card-eyebrow"><span className="dot" />Trace setiap claim</span>
+            <h3 className="card-title">Citation per claim <span className="badge">Headline</span></h3>
+            <p className="card-desc">Tiap angka, tanggal, dan klaim faktual ditandai dengan footnote. Tidak ada generalisasi mengambang tanpa source.</p>
+            <div className="mock">
+              <div className="mock-paragraph">
+                Pasar fintech Indonesia tumbuh 23% YoY <span className="ref">[1]</span> dengan dominasi e-wallet 67% transaksi digital <span className="ref">[2]</span>. UMKM lending naik 41% sepanjang 2024 <span className="ref">[3]</span>.
+              </div>
+              <div className="mock-footnotes">
+                <div className="mock-footnote"><span className="num">[1]</span><span>BPS, 2025. UMKM landscape Indonesia.</span></div>
+                <div className="mock-footnote"><span className="num">[2]</span><span>OJK, 2024. Statistik sistem pembayaran.</span></div>
+                <div className="mock-footnote"><span className="num">[3]</span><span>DDTC News, 2025. P2P lending review.</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bento-card">
+            <span className="card-eyebrow"><span className="dot" />Source floor</span>
+            <h3 className="card-title">5 sumber primer minimum</h3>
+            <p className="card-desc">Tiap topik di-decompose sampai punya minimal lima sumber primer berjarak.</p>
+            <div className="mock" style={{ padding: '14px 12px' }}>
+              <div className="mock-sources">
+                <span className="mock-source-icon" /><span className="mock-source-icon" />
+                <span className="mock-source-icon" /><span className="mock-source-icon" />
+                <span className="mock-source-icon" />
+              </div>
+              <div className="mock-counter">5+</div>
+              <div className="mock-counter-lbl">sumber primer</div>
+            </div>
+          </div>
+
+          <div className="bento-card">
+            <span className="card-eyebrow"><span className="dot" />Honesty tag</span>
+            <h3 className="card-title">[unverified] flag</h3>
+            <p className="card-desc">Klaim yang tidak bisa diverifikasi di-tag eksplisit. Ketidakpastian tidak disembunyikan.</p>
+            <div className="mock">
+              <div className="mock-split">
+                <div className="mock-split-col verified">
+                  <div className="lbl">✓ Verified</div>
+                  <div className="ln" /><div className="ln" /><div className="ln" style={{ width: '60%' }} />
+                </div>
+                <div className="mock-split-col unverified">
+                  <div className="lbl">[unverified]</div>
+                  <div className="ln" /><div className="ln" style={{ width: '70%' }} />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bento-card span-2">
+            <span className="card-eyebrow"><span className="dot" />Multi-side honest</span>
+            <h3 className="card-title">Conflict attribution <span className="badge">New</span></h3>
+            <p className="card-desc">Klaim yang bertentangan ditampilkan dengan attribution masing-masing — bukan pilih satu side diam-diam.</p>
+            <div className="mock">
+              <div className="mock-conflict">
+                <div className="mock-quote">
+                  Pertumbuhan fintech UMKM akan stabil di 20-25% sampai 2027.
+                  <span className="src">— OJK, Outlook 2025</span>
+                </div>
+                <div className="mock-quote">
+                  Saturasi pasar akan menekan growth ke single-digit pasca 2026.
+                  <span className="src">— Kontan, Analisis Q1 2025</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bento-card">
+            <span className="card-eyebrow"><span className="dot" />Distill</span>
+            <h3 className="card-title">Sintesis 10+ paper</h3>
+            <p className="card-desc">Decompose, baca, distill jadi exec summary dua halaman dengan methodology note.</p>
+            <div className="mock">
+              <div className="mock-funnel">
+                <div className="mock-paper-stack"><span className="pg" /><span className="pg" /><span className="pg" /></div>
+                <span className="mock-arrow">→</span>
+                <div className="mock-summary-card">
+                  <div className="ttl">Exec Summary</div>
+                  <div className="ln" /><div className="ln" /><div className="ln short" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Generic fallback for personas that don't yet have bespoke bento cards.
+    function CapabilityCardsGeneric({ persona }) {
+      return (
+        <div className="bento">
+          {persona.capabilities.map((c, i) => (
+            <div key={i} className={`bento-card${i === 0 ? ' span-2' : ''}`}>
+              <span className="card-eyebrow"><span className="dot" />Kapabilitas {i + 1}</span>
+              <h3 className="card-title">{c.split('—')[0].trim() || `Kapabilitas ${i + 1}`}</h3>
+              <p className="card-desc">{c.includes('—') ? c.split('—').slice(1).join('—').trim() : c}</p>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    function CapabilityCards({ persona }) {
+      if (persona.slug === 'deep-researcher') return <CapabilityCardsDeepResearcher />;
+      return <CapabilityCardsGeneric persona={persona} />;
+    }
+
+    // ─────────────── flow bento ───────────────
+    function FlowCards({ persona }) {
+      const icons = FLOW_ICONS[persona.slug] || [];
+      return (
+        <div className="flow-bento">
+          {persona.flow.map((step, i) => (
+            <div key={i} className="flow-card">
+              <div className="flow-card-head">
+                <span className="flow-card-num">{String(i + 1).padStart(2, '0')}</span>
+                <span className="flow-card-icon"><StepIcon kind={icons[i]} /></span>
+              </div>
+              <h4 className="flow-card-title">{step.title}</h4>
+              <p className="flow-card-desc">{step.desc}</p>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    // ─────────────── deliverable bento ───────────────
+    function DeliverableCards({ persona }) {
+      return (
+        <div className="deliv-bento">
+          <div className="deliv-frame">
+            <div className="deliv-frame-inner">
+              <DeliverableInner kind={persona.deliverable.kind} />
+            </div>
+            <p className="deliv-caption" dangerouslySetInnerHTML={{ __html: renderBoldMd(persona.deliverable.caption) }} />
+          </div>
+          <div className="deliv-frame">
+            <div className="deliv-frame-inner">
+              <div className="mini-title">Output yang kamu pegang</div>
+              <div style={{ fontSize: 11, color: 'var(--bone-m)', marginTop: 10, lineHeight: 1.65 }}>
+                Setiap deliverable di-versi dan tersimpan di VPS kamu sendiri. Aku tidak push ke cloud pihak ketiga tanpa kamu approve.
+              </div>
+              <div style={{ marginTop: 14, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {persona.templates.slice(0, 3).map((t, i) => (
+                  <span key={i} className="mini-chip">{t.kind}</span>
+                ))}
+              </div>
+            </div>
+            <p className="deliv-caption">
+              Output disimpan <strong>di VPS kamu</strong>. Versi history, audit log, dan export ke format apapun yang kamu mau.
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    // ─────────────── templates bento ───────────────
+    function TemplateCards({ persona }) {
+      return (
+        <div className="tpl-bento">
+          {persona.templates.map((t, i) => (
+            <div key={i} className="tpl-card">
+              <div className="tpl-icon">{(t.kind || 'tpl').slice(0, 3).toUpperCase()}</div>
+              <div className="tpl-body">
+                <div className="tpl-name">{t.name}</div>
+                <div className="tpl-kind">{t.kind}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    // ─────────────── page ───────────────
+    function PersonaPage() {
+      const slug = useMemo(getSlugFromURL, []);
+      const persona = useMemo(() => {
+        if (!slug || !Array.isArray(window.PERSONA_DETAILS)) return null;
+        return window.PERSONA_DETAILS.find((p) => p.slug === slug) || null;
+      }, [slug]);
+
+      // Update document title once persona loads
+      useEffect(() => {
+        if (persona) {
+          document.title = `${persona.name} — weuseai.agent`;
+        } else {
+          document.title = 'Persona tidak ditemukan — weuseai.agent';
+        }
+      }, [persona]);
+
+      if (!persona) {
+        return (
+          <div className="page">
+            <div className="topbar">
+              <a className="topbar-back" href="/#persona-details">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="15 18 9 12 15 6" />
+                </svg>
+                <span>Kembali ke landing</span>
+              </a>
+              <div className="topbar-logo"><strong>weuseai</strong>.agent</div>
+            </div>
+            <div className="nf">
+              <h1>Persona tidak ditemukan</h1>
+              <p>Slug yang kamu buka tidak cocok dengan persona yang ada. Cek ejaan, atau kembali ke landing untuk lihat semua persona.</p>
+              <a className="footer-cta-primary" href="/#persona-details" style={{ display: 'inline-flex' }}>
+                <span>Lihat semua persona</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
+                </svg>
+              </a>
+            </div>
+          </div>
+        );
+      }
+
+      return (
+        <div className="page">
+          {/* Top bar */}
+          <div className="topbar">
+            <a className="topbar-back" href="/#persona-details">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="15 18 9 12 15 6" />
+              </svg>
+              <span>Semua persona</span>
+            </a>
+            <div className="topbar-logo"><strong>weuseai</strong>.agent</div>
+          </div>
+
+          {/* Hero */}
+          <header className="hero">
+            <div className="hero-glyph">{persona.glyph}</div>
+            <div>
+              <div className="hero-eyebrow">Persona spesialis</div>
+              <h1 className="hero-name">{persona.name}</h1>
+              <p className="hero-tagline">{persona.tagline}</p>
+            </div>
+            <a className="hero-cta" href={`/checkout?persona=${persona.slug}`}>
+              <span>Pilih {persona.name}</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
+              </svg>
+            </a>
+          </header>
+
+          {/* Section: Apa yang aku bisa */}
+          <section className="section">
+            <div className="section-head">
+              <div className="section-eyebrow">Apa yang aku bisa</div>
+              <h2 className="section-title">Kapabilitas inti</h2>
+              <p className="section-sub">Bukan deskripsi umum — tiap kapabilitas dirancang untuk satu jenis kerja konkret.</p>
+            </div>
+            <CapabilityCards persona={persona} />
+          </section>
+
+          {/* Section: Bagaimana aku kerja */}
+          <section className="section">
+            <div className="section-head">
+              <div className="section-eyebrow">Bagaimana aku kerja</div>
+              <h2 className="section-title">Alur kerja, langkah per langkah</h2>
+              <p className="section-sub">Setiap langkah punya input, output, dan titik keputusan yang jelas.</p>
+            </div>
+            <FlowCards persona={persona} />
+          </section>
+
+          {/* Section: Contoh deliverable */}
+          <section className="section">
+            <div className="section-head">
+              <div className="section-eyebrow">Contoh deliverable</div>
+              <h2 className="section-title">Seperti apa output-nya</h2>
+              <p className="section-sub">Preview shape — content actual selalu disesuaikan dengan input kamu.</p>
+            </div>
+            <DeliverableCards persona={persona} />
+          </section>
+
+          {/* Section: Templates */}
+          <section className="section">
+            <div className="section-head">
+              <div className="section-eyebrow">Templates aku punya</div>
+              <h2 className="section-title">Sudah ada di inventory</h2>
+              <p className="section-sub">Template ini dipakai sebagai starting frame. Kamu tetap pegang final draft.</p>
+            </div>
+            <TemplateCards persona={persona} />
+          </section>
+
+          {/* Footer CTA */}
+          <div className="footer-cta">
+            <div>
+              <h2 className="footer-cta-title">Siap pakai {persona.name}?</h2>
+              <p className="footer-cta-hint">Checkout 5 menit, Telegram bot kamu siap hari ini. Kamu bisa pause kapan saja.</p>
+            </div>
+            <a className="footer-cta-primary" href={`/checkout?persona=${persona.slug}`}>
+              <span>Pilih {persona.name} sebagai agent kamu</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
+              </svg>
+            </a>
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('app')).render(<PersonaPage />);
+  </script>
+</body>
+</html>
