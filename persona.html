@@ -73,6 +73,40 @@
       z-index: 0;
     }
 
+    /* Cinematic warm glow — fixed at bottom-center of viewport, follows the
+       reader as they scroll. Inspired by the Claude Summon ambient halo
+       (2026-05-27 cowork). Signal-Red palette with a peach-ish core so the
+       whole page feels lit from below — calm, premium, never gaudy. */
+    body::after {
+      content: '';
+      position: fixed;
+      left: 50%;
+      bottom: -360px;
+      transform: translateX(-50%);
+      width: min(1400px, 140vw);
+      height: 720px;
+      background:
+        radial-gradient(
+          ellipse at center,
+          rgba(255, 130, 80, 0.34) 0%,
+          rgba(229, 80, 50, 0.24) 22%,
+          rgba(229, 50, 45, 0.10) 46%,
+          rgba(229, 50, 45, 0.02) 68%,
+          transparent 80%
+        );
+      filter: blur(36px);
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.92;
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      body::after { animation: glowBreathe 8s ease-in-out infinite; }
+    }
+    @keyframes glowBreathe {
+      0%, 100% { opacity: 0.85; }
+      50%      { opacity: 1.0; }
+    }
+
     /* Page wrapper — generous max-width + breathing padding */
     .page {
       position: relative;
@@ -119,35 +153,38 @@
     }
     .topbar-logo strong { color: var(--bone); font-weight: 400; }
 
-    /* Hero — persona identity. Big, calm, asymmetric. */
+    /* Hero — persona identity. Smaller, more cinematic, stacked vertically.
+       Glyph + (eyebrow + name + tagline + CTA) → CTA sits below tagline so
+       the hero block reads top-to-bottom symmetric instead of being split
+       three-ways across a row. */
     .hero {
       display: grid;
       grid-template-columns: 1fr;
-      gap: 28px;
-      align-items: end;
+      gap: 24px;
+      align-items: start;
       padding-bottom: 56px;
       border-bottom: 1px solid var(--line);
       margin-bottom: 88px;
     }
     @media (min-width: 760px) {
-      .hero { grid-template-columns: auto 1fr auto; gap: 36px; padding-bottom: 72px; margin-bottom: 112px; }
+      .hero { grid-template-columns: auto 1fr; gap: 36px; padding-bottom: 72px; margin-bottom: 112px; }
     }
     .hero-glyph {
       flex-shrink: 0;
-      width: 96px; height: 96px;
-      border-radius: 22px;
+      width: 88px; height: 88px;
+      border-radius: 20px;
       background: linear-gradient(135deg, rgba(229, 50, 45, 0.22), rgba(229, 50, 45, 0.04));
       border: 1px solid rgba(229, 50, 45, 0.36);
       display: flex;
       align-items: center;
       justify-content: center;
       font-family: 'Instrument Serif', serif;
-      font-size: 56px;
+      font-size: 50px;
       color: var(--signal);
       box-shadow: 0 12px 40px rgba(229, 50, 45, 0.15);
     }
     @media (min-width: 760px) {
-      .hero-glyph { width: 120px; height: 120px; border-radius: 28px; font-size: 70px; }
+      .hero-glyph { width: 104px; height: 104px; border-radius: 24px; font-size: 60px; }
     }
     .hero-eyebrow {
       font-family: 'JetBrains Mono', ui-monospace, monospace;
@@ -155,39 +192,49 @@
       letter-spacing: 0.18em;
       text-transform: uppercase;
       color: rgba(229, 50, 45, 0.85);
-      margin-bottom: 12px;
+      margin-bottom: 10px;
     }
     .hero-name {
       font-family: 'Instrument Serif', serif;
-      font-size: clamp(44px, 7vw, 80px);
-      line-height: 0.96;
-      letter-spacing: -0.03em;
+      font-size: clamp(34px, 4.6vw, 56px);
+      line-height: 1.0;
+      letter-spacing: -0.025em;
       color: var(--bone);
-      margin: 0 0 18px;
+      margin: 0 0 16px;
     }
     .hero-tagline {
-      font-size: clamp(15px, 1.6vw, 18px);
-      line-height: 1.55;
+      font-size: clamp(14px, 1.4vw, 17px);
+      line-height: 1.6;
       color: var(--bone-m);
-      max-width: 640px;
-      margin: 0;
+      max-width: 560px;
+      margin: 0 0 24px;
     }
+    /* CTA matches pricing section button style — solid Signal Red pill,
+       white text, northeast arrow, white border equal to fill for the
+       featured look. Identical hover spec as the pricing "Ambil Pro". */
     .hero-cta {
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      padding: 13px 22px;
-      background: var(--signal);
-      color: var(--bone);
+      padding: 12px 20px;
+      background: #E5322D;
+      color: #ffffff;
+      border: 1px solid #E5322D;
       border-radius: 999px;
-      font-size: 13.5px;
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
       font-weight: 500;
       letter-spacing: -0.005em;
-      transition: background 200ms ease, transform 160ms ease;
+      transition: background 200ms ease, transform 160ms ease, box-shadow 200ms ease;
       white-space: nowrap;
+      box-shadow: 0 10px 28px rgba(229, 50, 45, 0.28);
     }
-    .hero-cta:hover { background: var(--signal-d); transform: translateY(-1px); }
-    .hero-cta svg { width: 13px; height: 13px; }
+    .hero-cta:hover {
+      background: var(--signal-d);
+      transform: translateY(-1px);
+      box-shadow: 0 14px 32px rgba(229, 50, 45, 0.38);
+    }
+    .hero-cta svg { width: 14px; height: 14px; }
 
     /* Section — generous vertical rhythm */
     .section {
@@ -2589,20 +2636,22 @@
             <div className="topbar-logo"><strong>weuseai</strong>.agent</div>
           </div>
 
-          {/* Hero */}
+          {/* Hero — glyph + (eyebrow / name / tagline / CTA stacked) */}
           <header className="hero">
             <div className="hero-glyph">{persona.glyph}</div>
             <div>
               <div className="hero-eyebrow">Persona spesialis</div>
               <h1 className="hero-name">{persona.name}</h1>
               <p className="hero-tagline">{persona.tagline}</p>
+              <a className="hero-cta" href={`/checkout?persona=${persona.slug}`}>
+                <span>Pilih {persona.name}</span>
+                {/* Northeast arrow — matches pricing-section CTA glyph for continuity */}
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M7 17 17 7" />
+                  <path d="M7 7h10v10" />
+                </svg>
+              </a>
             </div>
-            <a className="hero-cta" href={`/checkout?persona=${persona.slug}`}>
-              <span>Pilih {persona.name}</span>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
-              </svg>
-            </a>
           </header>
 
           {/* Section: Apa yang aku bisa */}
@@ -2643,8 +2692,10 @@
             </div>
             <a className="footer-cta-primary" href={`/checkout?persona=${persona.slug}`}>
               <span>Pilih {persona.name} sebagai agent kamu</span>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
+              {/* Northeast arrow — matches pricing-section CTA glyph for continuity */}
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M7 17 17 7" />
+                <path d="M7 7h10v10" />
               </svg>
             </a>
           </div>
