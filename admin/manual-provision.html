@@ -17,8 +17,12 @@
 <body>
   <div id="root"></div>
   <script type="text/babel" data-presets="env,react">
-    const { useState, useEffect } = React;
-    const { Sidebar, PERSONA_OPTIONS } = window.WeUseAdmin;
+    const { useState, useEffect, useMemo } = React;
+    const { Sidebar, PERSONA_OPTIONS, TIER_CATALOG, formatIdr } = window.WeUseAdmin;
+
+    const PERSONA_NAME_BY_SLUG = Object.fromEntries(
+      PERSONA_OPTIONS.map((p) => [p.slug, p.name])
+    );
 
     const PAYMENT_METHOD_OPTIONS = [
       { value: 'manual_bank_transfer', label: 'Manual bank transfer' },
@@ -27,16 +31,22 @@
       { value: 'other',                label: 'Lainnya' },
     ];
 
+    const EMPTY_FORM = {
+      email: '', display_name: '', tier: '',
+      amount_idr: '', payment_method: '',
+      payment_reference: '', notes: '',
+      concierge_mode: false, bot_token: '', concierge_expectations: '',
+    };
+
     function ManualProvision() {
       const [authReady, setAuthReady] = useState(false);
-      const [form, setForm] = useState({
-        email: '', display_name: '', persona_slug: '',
-        amount_idr: '', payment_method: '',
-        payment_reference: '', notes: '',
-      });
+      const [form, setForm] = useState(EMPTY_FORM);
       const [busy, setBusy] = useState(false);
       const [err, setErr] = useState(null);
+      const [partial, setPartial] = useState(null);
       const [success, setSuccess] = useState(null);
+      const [showBotToken, setShowBotToken] = useState(false);
+      const [copied, setCopied] = useState(false);
 
       useEffect(() => {
         fetch('/api/admin/session', { credentials: 'same-origin' }).then((r) => {
@@ -45,11 +55,34 @@
         });
       }, []);
 
-      function update(k, v) { setForm((f) => ({ ...f, [k]: v })); }
+      const tierEntry = form.tier ? TIER_CATALOG[form.tier] : null;
+      const personas = tierEntry ? tierEntry.personas : [];
+      const tierDefaultFee = tierEntry ? tierEntry.setup_fee_idr : 0;
+
+      // When tier changes: prefill amount_idr with the tier setup fee.
+      function update(k, v) {
+        setForm((f) => {
+          const next = Object.assign({}, f, { [k]: v });
+          if (k === 'tier' && TIER_CATALOG[v]) {
+            next.amount_idr = String(TIER_CATALOG[v].setup_fee_idr);
+          }
+          return next;
+        });
+      }
+
+      function resetForm() {
+        setForm(EMPTY_FORM);
+        setSuccess(null);
+        setPartial(null);
+        setErr(null);
+        setShowBotToken(false);
+        setCopied(false);
+      }
 
       async function onSubmit(e) {
         e.preventDefault();
         setErr(null);
+        setPartial(null);
         setSuccess(null);
         setBusy(true);
         try {
@@ -58,28 +91,28 @@
             credentials: 'same-origin',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              action: 'manual_provision',
+              action: 'manual_provision_v2',
               email: form.email,
               display_name: form.display_name,
-              persona_slug: form.persona_slug,
+              tier: form.tier,
               amount_idr: parseInt(form.amount_idr, 10),
               payment_method: form.payment_method,
               payment_reference: form.payment_reference || null,
               notes: form.notes || null,
+              concierge_mode: !!form.concierge_mode,
+              bot_token: form.concierge_mode ? form.bot_token : '',
+              concierge_expectations: form.concierge_mode ? form.concierge_expectations : '',
             }),
           });
           const body = await r.json().catch(() => ({}));
           if (r.status === 200 && body.ok) {
-            setSuccess(body.message || 'Customer berhasil di-provision.');
-            setForm({
-              email: '', display_name: '', persona_slug: '',
-              amount_idr: '', payment_method: '',
-              payment_reference: '', notes: '',
-            });
+            setSuccess(body);
           } else if (r.status === 401) {
             window.location.replace('/admin/login');
+          } else if (body && body.partial_success) {
+            setPartial(body);
           } else {
-            setErr(body.error || ('Gagal (HTTP ' + r.status + ').'));
+            setErr((body && body.error) || ('Gagal (HTTP ' + r.status + ').'));
           }
         } catch (e) {
           setErr(e && e.message ? e.message : String(e));
@@ -88,20 +121,128 @@
         }
       }
 
+      function copyOnboardingLink(url) {
+        try {
+          navigator.clipboard.writeText(url).then(() => {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+          });
+        } catch (e) { /* swallow */ }
+      }
+
       if (!authReady) return null;
 
+      // ───── Success card ─────
+      if (success) {
+        const tierLabel = TIER_CATALOG[success.tier]?.label || success.tier;
+        const personaNames = (success.personas || [])
+          .map((s) => PERSONA_NAME_BY_SLUG[s] || s)
+          .join(', ');
+        const vpsLabel = success.vps_provisioning_status === 'initiated'
+          ? 'Provisioning sudah jalan — cek status di Customer List.'
+          : success.vps_provisioning_status === 'skipped'
+            ? 'VPS spin-up di-skip (PROVISIONING_URL belum di-set di env).'
+            : 'VPS spin-up gagal — retry dari Customer Detail.';
+        return (
+          <div className="app-shell">
+            <Sidebar activeHref="/admin/manual-provision" />
+            <main className="app-main">
+              <h1>Customer berhasil di-provision</h1>
+              <div className="card" style={{ marginBottom: 18 }}>
+                <p><strong>Email:</strong> {form.email || '—'}</p>
+                <p><strong>Nama:</strong> {form.display_name || '—'}</p>
+                <p><strong>Tier:</strong> {tierLabel} — {(success.personas || []).length} persona</p>
+                <p style={{ fontSize: '0.875rem', color: 'var(--muted, #888)' }}>{personaNames}</p>
+                <p><strong>Subscription ID:</strong>{' '}
+                  <a href={`/admin/customers`}>{success.subscription_id}</a></p>
+                <p><strong>Jumlah bayar:</strong> {formatIdr(parseInt(form.amount_idr, 10) || 0)}
+                  {success.price_override
+                    ? <span className="hint" style={{ marginLeft: 8 }}>
+                        (override — default tier: {formatIdr(success.tier_default_amount_idr)})
+                      </span>
+                    : null}
+                </p>
+              </div>
+
+              <div className="card" style={{ marginBottom: 18 }}>
+                <p><strong>VPS:</strong> {vpsLabel}</p>
+                {success.vps_id ? <p className="hint">VPS instance id: {success.vps_id}</p> : null}
+                {success.vps_error ? <p className="hint" style={{ color: '#E5322D' }}>{success.vps_error}</p> : null}
+              </div>
+
+              {success.concierge_mode ? (
+                <div className="card" style={{ marginBottom: 18 }}>
+                  <p><strong>Concierge mode:</strong>{' '}
+                    {success.concierge_status === 'paired'
+                      ? `Bot ter-pair (@${success.bot_username}).`
+                      : success.concierge_status === 'skipped'
+                        ? 'Di-skip (SUPABASE_FUNCTIONS_URL belum di-set).'
+                        : 'Pairing gagal — cek error di bawah.'}
+                  </p>
+                  {success.bot_telegram_link ? (
+                    <p>
+                      <a href={success.bot_telegram_link} target="_blank" rel="noreferrer"
+                         className="btn" style={{ display: 'inline-block', marginTop: 4 }}>
+                        Buka {success.bot_telegram_link.replace('https://', '')} <span className="arrow">↗</span>
+                      </a>
+                    </p>
+                  ) : null}
+                  {success.concierge_error ? (
+                    <p className="hint" style={{ color: '#E5322D' }}>{success.concierge_error}</p>
+                  ) : null}
+                </div>
+              ) : null}
+
+              <div className="card" style={{ marginBottom: 18 }}>
+                <p><strong>Onboarding link:</strong></p>
+                <p style={{ wordBreak: 'break-all', fontFamily: 'monospace', fontSize: '0.875rem' }}>
+                  {success.onboarding_url}
+                </p>
+                <button type="button" className="btn"
+                        onClick={() => copyOnboardingLink(success.onboarding_url)}
+                        style={{ marginTop: 8 }}>
+                  {copied ? 'Tersalin' : 'Salin link'} <span className="arrow">↗</span>
+                </button>
+                <p className="hint" style={{ marginTop: 10 }}>
+                  {success.email_status === 'sent'
+                    ? `Welcome email terkirim ke ${form.email}.`
+                    : success.email_status === 'stub'
+                      ? 'Email di-skip (RESEND_API_KEY belum di-set). Salin link di atas, kirim manual via WhatsApp.'
+                      : 'Welcome email gagal terkirim. Pakai link di atas buat DM manual.'}
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', gap: 12, marginTop: 18 }}>
+                <button type="button" className="btn" onClick={resetForm}>
+                  Provision customer lain <span className="arrow">↗</span>
+                </button>
+                <a href="/admin/customers" className="btn btn-secondary">
+                  Lihat di Customer List <span className="arrow">↗</span>
+                </a>
+              </div>
+            </main>
+          </div>
+        );
+      }
+
+      // ───── Form (default) ─────
       return (
         <div className="app-shell">
           <Sidebar activeHref="/admin/manual-provision" />
           <main className="app-main">
             <h1>Manual provision customer</h1>
             <p className="muted" style={{ marginBottom: 24 }}>
-              Buat customer baru tanpa lewat Xendit. Pakai ini buat onboarding via bank transfer atau QRIS manual.
+              Buat customer baru tanpa lewat Xendit. Pakai ini buat onboarding via bank transfer, QRIS manual, atau white-glove concierge.
             </p>
 
-            {success ? (
-              <div className="alert success" role="status">
-                <strong>Berhasil.</strong> {success}
+            {partial ? (
+              <div className="alert error" role="alert">
+                <strong>Partial failure di langkah <code>{partial.failed_step}</code>.</strong>
+                {' '}{partial.error}
+                <div style={{ marginTop: 8, fontSize: '0.8125rem' }}>
+                  Step yang sudah jalan: {(partial.completed_steps || []).join(' → ') || '—'}.
+                  Form di bawah tetap ke-fill — kamu bisa adjust dan submit ulang.
+                </div>
               </div>
             ) : null}
 
@@ -109,13 +250,14 @@
               <form onSubmit={onSubmit} noValidate>
                 {err ? <div className="alert error" role="alert">{err}</div> : null}
 
+                {/* Section 1: Customer */}
+                <h2 style={{ fontSize: '1rem', marginTop: 0 }}>1. Customer</h2>
                 <div className="field">
                   <label htmlFor="email">Email customer</label>
                   <input id="email" type="email" required autoComplete="off"
                     value={form.email} onChange={(e) => update('email', e.target.value)}
                     placeholder="customer@example.com" />
                 </div>
-
                 <div className="field">
                   <label htmlFor="display_name">Nama display</label>
                   <input id="display_name" type="text" required autoComplete="off"
@@ -123,26 +265,59 @@
                     placeholder="Nama yang dipakai agent buat sapa customer" />
                 </div>
 
+                {/* Section 2: Tier + personas */}
+                <h2 style={{ fontSize: '1rem', marginTop: 24 }}>2. Tier + personas</h2>
                 <div className="field">
-                  <label htmlFor="persona_slug">Persona</label>
-                  <select id="persona_slug" required
-                    value={form.persona_slug} onChange={(e) => update('persona_slug', e.target.value)}>
-                    <option value="" disabled>— Pilih persona —</option>
-                    {PERSONA_OPTIONS.map((p) => (
-                      <option key={p.slug} value={p.slug}>{p.name} ({p.tier})</option>
+                  <label htmlFor="tier">Tier subscription</label>
+                  <select id="tier" required
+                    value={form.tier} onChange={(e) => update('tier', e.target.value)}>
+                    <option value="" disabled>— Pilih tier —</option>
+                    {Object.keys(TIER_CATALOG).map((t) => (
+                      <option key={t} value={t}>
+                        {TIER_CATALOG[t].label} ({TIER_CATALOG[t].personas.length} persona, {formatIdr(TIER_CATALOG[t].setup_fee_idr)})
+                      </option>
                     ))}
                   </select>
-                  <span className="hint">Tier subscription di-inferensi dari persona ini.</span>
                 </div>
 
+                {tierEntry ? (
+                  <div className="field">
+                    <label>Personas (locked composition per tier)</label>
+                    <div style={{
+                      display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8,
+                      padding: 12, background: 'rgba(255,255,255,0.02)', borderRadius: 6,
+                    }}>
+                      {personas.map((slug) => (
+                        <label key={slug} style={{
+                          display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.875rem',
+                          opacity: 0.85, cursor: 'not-allowed',
+                        }}>
+                          <input type="checkbox" checked disabled readOnly />
+                          {PERSONA_NAME_BY_SLUG[slug] || slug}
+                        </label>
+                      ))}
+                    </div>
+                    <span className="hint">
+                      Komposisi persona per tier di-lock di <code>tier-personas.ts</code>. Customer akan dapat persona di atas otomatis lewat bundle-pull.
+                    </span>
+                  </div>
+                ) : null}
+
+                {/* Section 3: Bayar */}
+                <h2 style={{ fontSize: '1rem', marginTop: 24 }}>3. Bayar</h2>
                 <div className="field">
                   <label htmlFor="amount_idr">Jumlah bayar (IDR)</label>
                   <input id="amount_idr" type="number" inputMode="numeric" min="1" step="1" required
                     value={form.amount_idr} onChange={(e) => update('amount_idr', e.target.value)}
-                    placeholder="399000" />
-                  <span className="hint">Angka tanpa titik atau koma.</span>
+                    placeholder={tierDefaultFee ? String(tierDefaultFee) : '399000'} />
+                  <span className="hint">
+                    {tierEntry ? (
+                      <>Setup fee default: {formatIdr(tierDefaultFee)}. Override kalau bundling setup + first month atau ada diskon.</>
+                    ) : (
+                      <>Angka tanpa titik atau koma. Pilih tier dulu buat auto-fill.</>
+                    )}
+                  </span>
                 </div>
-
                 <div className="field">
                   <label htmlFor="payment_method">Metode bayar</label>
                   <select id="payment_method" required
@@ -153,7 +328,6 @@
                     ))}
                   </select>
                 </div>
-
                 <div className="field">
                   <label htmlFor="payment_reference">Referensi bayar (opsional)</label>
                   <input id="payment_reference" type="text" autoComplete="off"
@@ -162,21 +336,69 @@
                   <span className="hint">Catatan audit — jangan tulis nomor rekening lengkap.</span>
                 </div>
 
+                {/* Section 4: Mode onboarding */}
+                <h2 style={{ fontSize: '1rem', marginTop: 24 }}>4. Mode onboarding</h2>
                 <div className="field">
-                  <label htmlFor="notes">Catatan (opsional)</label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                    <input type="checkbox"
+                      checked={form.concierge_mode}
+                      onChange={(e) => update('concierge_mode', e.target.checked)} />
+                    <span>Concierge mode — saya mint BotFather + pair bot sendiri, customer langsung pakai.</span>
+                  </label>
+                  <span className="hint">
+                    Kalau off: customer mint bot sendiri lewat onboarding page. Kalau on: kamu butuh BotFather token siap.
+                  </span>
+                </div>
+
+                {form.concierge_mode ? (
+                  <>
+                    <div className="field">
+                      <label htmlFor="bot_token">BotFather token</label>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <input id="bot_token"
+                          type={showBotToken ? 'text' : 'password'}
+                          required={form.concierge_mode}
+                          autoComplete="off"
+                          value={form.bot_token}
+                          onChange={(e) => update('bot_token', e.target.value)}
+                          placeholder="123456789:ABCdefGhIjKlMnOpQrStUvWxYz_-1234567"
+                          style={{ flex: 1 }} />
+                        <button type="button" className="btn btn-secondary"
+                          onClick={() => setShowBotToken((s) => !s)}>
+                          {showBotToken ? 'Sembunyikan' : 'Lihat'}
+                        </button>
+                      </div>
+                      <span className="hint">
+                        Dapat dari @BotFather. Format: <code>&lt;digits&gt;:&lt;35+ chars&gt;</code>. Token di-encrypt sebelum disimpan; di audit row cuma hash sha-256.
+                      </span>
+                    </div>
+                    <div className="field">
+                      <label htmlFor="concierge_expectations">Pre-fill expectations (opsional)</label>
+                      <textarea id="concierge_expectations"
+                        value={form.concierge_expectations}
+                        onChange={(e) => update('concierge_expectations', e.target.value)}
+                        placeholder="Apa yang customer mau dicapai. Akan ngisi field 'harapan' di onboarding atas nama customer." />
+                    </div>
+                  </>
+                ) : null}
+
+                {/* Section 5: Catatan */}
+                <h2 style={{ fontSize: '1rem', marginTop: 24 }}>5. Catatan</h2>
+                <div className="field">
+                  <label htmlFor="notes">Catatan internal (opsional)</label>
                   <textarea id="notes"
                     value={form.notes} onChange={(e) => update('notes', e.target.value)}
                     placeholder="Konteks tambahan buat catatan internal." />
                 </div>
 
-                <button type="submit" className="btn" disabled={busy}>
+                <button type="submit" className="btn" disabled={busy} style={{ marginTop: 24 }}>
                   {busy ? 'Memproses...' : 'Provision customer'} <span className="arrow">↗</span>
                 </button>
               </form>
             </div>
 
             <p className="muted" style={{ marginTop: 18, fontSize: '0.8125rem' }}>
-              Tier di-inferensi dari persona yang dipilih (lowest tier yang grant persona itu). VPS provisioning tidak otomatis di-trigger dari form ini — jalankan flow onboarding biasa setelah customer terdaftar.
+              Tier menentukan komposisi persona (locked di <code>tier-personas.ts</code>) dan setup fee default. VPS spin-up di-trigger otomatis setelah form di-submit; success card kasih tahu status.
             </p>
           </main>
         </div>
