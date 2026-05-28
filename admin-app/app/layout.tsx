@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { Sidebar } from './sidebar';
 
 export const metadata: Metadata = {
   title: 'weuseai.agent admin',
@@ -23,17 +24,9 @@ export default function RootLayout({
         />
       </head>
       <body>
-        <div className="shell">
-          <header className="topbar">
-            <div className="brand">
-              weuseai<span className="dot">.</span>agent admin
-            </div>
-            <nav>
-              <a href="/manual-provision">Manual provision</a>
-              <a href="/logout">Keluar</a>
-            </nav>
-          </header>
-          <main className="main">{children}</main>
+        <div className="app-shell">
+          <Sidebar />
+          <main className="app-main">{children}</main>
         </div>
       </body>
     </html>
