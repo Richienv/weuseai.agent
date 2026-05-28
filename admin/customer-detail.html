@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow, noarchive" />
+  <title>Customer Detail — weuseai.agent admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Instrument+Serif&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/admin/assets/admin.css" />
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js"></script>
+  <script src="/admin/assets/admin-shared.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel" data-presets="env,react">
+    const { useState } = React;
+    const { Sidebar, useFetch, statusDot, statusLabel, formatDate } = window.WeUseAdmin;
+
+    const customerId = new URLSearchParams(window.location.search).get('id') || '';
+
+    function ActionPanel({ customerId, email }) {
+      const [busyKey, setBusyKey] = useState(null);
+      const [result, setResult] = useState(null);
+
+      async function run(key, action, confirmMsg) {
+        if (confirmMsg && !confirm(confirmMsg)) return;
+        setBusyKey(key);
+        setResult(null);
+        try {
+          const r = await fetch('/api/admin/customer-action', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action, customerId }),
+          });
+          if (r.status === 401) { window.location.replace('/admin/login'); return; }
+          const body = await r.json().catch(() => ({}));
+          setResult({ ok: body.ok === true, message: body.message || body.error || ('HTTP ' + r.status) });
+        } catch (e) {
+          setResult({ ok: false, message: e && e.message ? e.message : String(e) });
+        } finally {
+          setBusyKey(null);
+        }
+      }
+
+      return (
+        <div className="card" style={{ padding: 20 }}>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button type="button" className="action-btn primary" disabled={busyKey !== null}
+              onClick={() => run('resend', 'resend_onboarding')}>
+              {busyKey === 'resend' ? 'Mengirim...' : 'Resend onboarding email'}
+            </button>
+            <button type="button" className="action-btn" disabled={busyKey !== null}
+              onClick={() => run('restart', 'restart_gateway')}>
+              Force gateway restart
+            </button>
+            <button type="button" className="action-btn" disabled={busyKey !== null}
+              onClick={() => run('refund', 'mark_refunded',
+                'Tandai customer ' + email + ' sebagai refunded? Aksi ini akan men-trigger update subscription + email + deprovision VPS (saat ini stub).')}>
+              Mark refunded
+            </button>
+            <button type="button" className="action-btn" disabled={busyKey !== null}
+              onClick={() => run('escalate', 'escalate')}>
+              Escalate ke support
+            </button>
+          </div>
+          {result ? (
+            <div className={'alert ' + (result.ok ? 'success' : 'error')} style={{ marginTop: 14, marginBottom: 0 }} role="status">
+              {result.message}
+            </div>
+          ) : (
+            <p className="muted" style={{ marginTop: 14, marginBottom: 0, fontSize: '0.8125rem' }}>
+              Hanya "Resend onboarding email" yang fully wired. Tiga tombol lain stub — message mereka menjelaskan endpoint mana yang dipanggil saat di-wire nanti.
+            </p>
+          )}
+        </div>
+      );
+    }
+
+    function formatIdrLocal(n) {
+      return 'Rp ' + new Intl.NumberFormat('id-ID').format(n || 0);
+    }
+
+    function CustomerDetailPage() {
+      const { data, err, loading } = useFetch('/api/admin/customer-data?id=' + encodeURIComponent(customerId));
+
+      if (!customerId) {
+        return (
+          <div className="app-shell">
+            <Sidebar activeHref="/admin/customers" />
+            <main className="app-main">
+              <div className="alert error">Customer ID tidak ada di URL.</div>
+              <p><a href="/admin/customers">← Customer List</a></p>
+            </main>
+          </div>
+        );
+      }
+
+      if (loading) {
+        return (
+          <div className="app-shell">
+            <Sidebar activeHref="/admin/customers" />
+            <main className="app-main"><div className="alert info">Memuat...</div></main>
+          </div>
+        );
+      }
+      if (err) {
+        return (
+          <div className="app-shell">
+            <Sidebar activeHref="/admin/customers" />
+            <main className="app-main">
+              <header className="page-head"><div><h1>Customer detail</h1><p><a href="/admin/customers">← Customer List</a></p></div></header>
+              <div className="alert error">Gagal load: {err}</div>
+            </main>
+          </div>
+        );
+      }
+
+      const customer = data.customer || {};
+      const subs = data.subscriptions || [];
+      const vps = data.vps_instances || [];
+      const audits = data.manual_provisions || [];
+      const email = customer.email || '';
+      const displayName = customer.display_name || '—';
+
+      return (
+        <div className="app-shell">
+          <Sidebar activeHref="/admin/customers" />
+          <main className="app-main">
+            <header className="page-head">
+              <div>
+                <h1>{displayName === '—' ? email : displayName}</h1>
+                <p><a href="/admin/customers">← Customer List</a></p>
+              </div>
+            </header>
+
+            <section className="section">
+              <h2>Profile</h2>
+              <div className="card">
+                <dl className="kv-grid">
+                  <dt>Email</dt><dd>{email}</dd>
+                  <dt>Display name</dt><dd>{displayName}</dd>
+                  <dt>Customer ID</dt><dd><code style={{ fontSize: '0.75rem' }}>{customer.id}</code></dd>
+                  <dt>Telegram chat ID</dt><dd>{customer.telegram_chat_id || '—'}</dd>
+                  <dt>Bot username</dt>
+                  <dd>
+                    {customer.telegram_bot_username ? (
+                      <a href={'https://t.me/' + customer.telegram_bot_username} target="_blank" rel="noreferrer">
+                        @{customer.telegram_bot_username}
+                      </a>
+                    ) : '—'}
+                  </dd>
+                  <dt>WhatsApp</dt><dd>{customer.whatsapp_number || '—'}</dd>
+                  <dt>Created</dt><dd>{formatDate(customer.created_at)}</dd>
+                </dl>
+              </div>
+            </section>
+
+            <section className="section">
+              <h2>Subscriptions ({subs.length})</h2>
+              {subs.length === 0 ? <div className="alert info">Customer belum punya subscription.</div> : (
+                <table className="data-table">
+                  <thead>
+                    <tr><th>Tier</th><th>Status</th><th>Hosting</th><th>Always-on</th><th>Started</th><th>Next billing</th></tr>
+                  </thead>
+                  <tbody>
+                    {subs.map((s) => (
+                      <tr key={s.id}>
+                        <td><span className={'tag tier-' + s.tier}>{s.tier}</span></td>
+                        <td>{statusDot(s.status)}{statusLabel(s.status)}</td>
+                        <td>{s.hosting_active ? 'on' : 'off'}</td>
+                        <td>{s.always_on_enabled ? 'on' : 'off'}</td>
+                        <td>{formatDate(s.started_at)}</td>
+                        <td>{formatDate(s.next_billing_at)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </section>
+
+            <section className="section">
+              <h2>VPS instances ({vps.length})</h2>
+              {vps.length === 0 ? <div className="alert info">Belum ada VPS untuk customer ini.</div> : (
+                <table className="data-table">
+                  <thead><tr><th>Status</th><th>IP</th><th>Region</th><th>Created</th></tr></thead>
+                  <tbody>
+                    {vps.map((v) => (
+                      <tr key={v.id}>
+                        <td>{statusDot(v.status)}{v.status || '—'}</td>
+                        <td><code style={{ fontSize: '0.8125rem' }}>{v.ip_address || '—'}</code></td>
+                        <td>{v.region || '—'}</td>
+                        <td>{formatDate(v.created_at)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </section>
+
+            {audits.length > 0 ? (
+              <section className="section">
+                <h2>Manual provisions ({audits.length})</h2>
+                <table className="data-table">
+                  <thead><tr><th>Payment method</th><th>Reference</th><th className="num">Amount</th><th>Persona</th><th>Created</th></tr></thead>
+                  <tbody>
+                    {audits.map((m) => (
+                      <tr key={m.id}>
+                        <td>{m.payment_method}</td>
+                        <td style={{ color: 'var(--ink-3)' }}>{m.payment_reference || '—'}</td>
+                        <td className="num">{formatIdrLocal(m.amount_idr)}</td>
+                        <td>{m.persona_slug}</td>
+                        <td>{formatDate(m.created_at)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </section>
+            ) : null}
+
+            <section className="section">
+              <h2>Actions</h2>
+              <ActionPanel customerId={customer.id} email={email} />
+            </section>
+          </main>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<CustomerDetailPage />);
+  </script>
+</body>
+</html>

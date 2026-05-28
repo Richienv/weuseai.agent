@@ -2,7 +2,15 @@
   "cleanUrls": true,
   "trailingSlash": false,
   "rewrites": [
-    { "source": "/persona/:slug", "destination": "/persona.html?slug=:slug" }
+    { "source": "/persona/:slug", "destination": "/persona.html?slug=:slug" },
+    { "source": "/admin", "destination": "/admin/index.html" },
+    { "source": "/admin/login", "destination": "/admin/login.html" },
+    { "source": "/admin/manual-provision", "destination": "/admin/manual-provision.html" },
+    { "source": "/admin/customers", "destination": "/admin/customers.html" },
+    { "source": "/admin/customers/:id", "destination": "/admin/customer-detail.html?id=:id" },
+    { "source": "/admin/fleet", "destination": "/admin/fleet.html" },
+    { "source": "/admin/cost", "destination": "/admin/cost.html" },
+    { "source": "/admin/templates", "destination": "/admin/templates.html" }
   ],
   "redirects": [
     { "source": "/liren-v3", "destination": "/", "permanent": true },
