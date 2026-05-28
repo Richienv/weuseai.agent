@@ -1,116 +1,30 @@
 <!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="robots" content="noindex,nofollow,noarchive" />
-    <title>Admin · weuseai.agent</title>
-    <style>
-      :root {
-        --canvas: #faf9f5;
-        --ink: #141413;
-        --ink-soft: #5d5c58;
-        --ink-faint: #8a8983;
-        --rule: #e3e1da;
-        --accent: #0047ff;
-        --bg-card: #ffffff;
-      }
-      * { box-sizing: border-box; }
-      html, body {
-        margin: 0;
-        padding: 0;
-        background: var(--canvas);
-        color: var(--ink);
-        font: 15px/1.5 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        -webkit-font-smoothing: antialiased;
-      }
-      .wrap {
-        max-width: 720px;
-        margin: 0 auto;
-        padding: 64px 24px 96px;
-      }
-      h1 {
-        font-size: 22px;
-        font-weight: 600;
-        letter-spacing: -0.01em;
-        margin: 0 0 6px;
-      }
-      .lede {
-        color: var(--ink-soft);
-        margin: 0 0 40px;
-      }
-      h2 {
-        font-size: 12px;
-        font-weight: 600;
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
-        color: var(--ink-faint);
-        margin: 0 0 12px;
-      }
-      .grid {
-        display: grid;
-        gap: 12px;
-        margin-bottom: 40px;
-      }
-      a.card {
-        display: block;
-        background: var(--bg-card);
-        border: 1px solid var(--rule);
-        border-radius: 10px;
-        padding: 20px 24px;
-        text-decoration: none;
-        color: inherit;
-        transition: border-color 0.12s ease;
-      }
-      a.card:hover {
-        border-color: var(--accent);
-      }
-      .card-title {
-        font-weight: 600;
-        margin-bottom: 4px;
-      }
-      .card-desc {
-        font-size: 13px;
-        color: var(--ink-soft);
-      }
-      .footnote {
-        font-size: 12px;
-        color: var(--ink-faint);
-        border-top: 1px solid var(--rule);
-        padding-top: 16px;
-      }
-    </style>
-  </head>
-  <body>
-    <div class="wrap">
-      <h1>Admin · weuseai.agent</h1>
-      <p class="lede">Internal-only. Auth via OBSERVABILITY_ADMIN_SECRET on each page.</p>
-
-      <h2>Customer-side</h2>
-      <div class="grid">
-        <a class="card" href="/admin/customers">
-          <div class="card-title">Customers</div>
-          <div class="card-desc">List + filter customers. Manual tier flip, phase 5 / 6 enable, monthly LLM budget edit.</div>
-        </a>
-        <a class="card" href="/admin/observability/customer">
-          <div class="card-title">Customer onboarding observability</div>
-          <div class="card-desc">Per-customer 6-stage onboarding status. Drop in a customer id to see where they are in the pipeline.</div>
-        </a>
-      </div>
-
-      <h2>Operations</h2>
-      <div class="grid">
-        <a class="card" href="/admin/support-tickets">
-          <div class="card-title">Support tickets</div>
-          <div class="card-desc">Customer-reported issues. Filter by kind, status, severity. Inline edit + create.</div>
-        </a>
-      </div>
-
-      <p class="footnote">
-        Health check runs from CLI:
-        <code>npm run health-check</code>
-        — exits 0 (green) / 1 (yellow) / 2 (red).
-      </p>
-    </div>
-  </body>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow, noarchive" />
+  <title>Admin — weuseai.agent</title>
+  <link rel="stylesheet" href="/admin/assets/admin.css" />
+</head>
+<body>
+  <div style="display: flex; align-items: center; justify-content: center; min-height: 100vh; color: var(--ink-2); font-size: 0.875rem;">
+    Memuat admin...
+  </div>
+  <script>
+    // Probe auth and bounce. /api/admin/me returns 200 if cookie is valid,
+    // 401 otherwise. Redirect target on success = the first tab.
+    fetch('/api/admin/me', { credentials: 'same-origin' })
+      .then(function (r) {
+        if (r.status === 200) {
+          window.location.replace('/admin/manual-provision');
+        } else {
+          window.location.replace('/admin/login');
+        }
+      })
+      .catch(function () {
+        window.location.replace('/admin/login');
+      });
+  </script>
+</body>
 </html>

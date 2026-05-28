@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow, noarchive" />
+  <title>Manual Provision — weuseai.agent admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Instrument+Serif&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/admin/assets/admin.css" />
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js"></script>
+  <script src="/admin/assets/admin-shared.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel" data-presets="env,react">
+    const { useState, useEffect } = React;
+    const { Sidebar, PERSONA_OPTIONS } = window.WeUseAdmin;
+
+    const PAYMENT_METHOD_OPTIONS = [
+      { value: 'manual_bank_transfer', label: 'Manual bank transfer' },
+      { value: 'manual_qris',          label: 'Manual QRIS' },
+      { value: 'manual_wise',          label: 'Manual Wise' },
+      { value: 'other',                label: 'Lainnya' },
+    ];
+
+    function ManualProvision() {
+      const [authReady, setAuthReady] = useState(false);
+      const [form, setForm] = useState({
+        email: '', display_name: '', persona_slug: '',
+        amount_idr: '', payment_method: '',
+        payment_reference: '', notes: '',
+      });
+      const [busy, setBusy] = useState(false);
+      const [err, setErr] = useState(null);
+      const [success, setSuccess] = useState(null);
+
+      useEffect(() => {
+        fetch('/api/admin/me', { credentials: 'same-origin' }).then((r) => {
+          if (r.status !== 200) { window.location.replace('/admin/login'); return; }
+          setAuthReady(true);
+        });
+      }, []);
+
+      function update(k, v) { setForm((f) => ({ ...f, [k]: v })); }
+
+      async function onSubmit(e) {
+        e.preventDefault();
+        setErr(null);
+        setSuccess(null);
+        setBusy(true);
+        try {
+          const r = await fetch('/api/admin/manual-provision', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email: form.email,
+              display_name: form.display_name,
+              persona_slug: form.persona_slug,
+              amount_idr: parseInt(form.amount_idr, 10),
+              payment_method: form.payment_method,
+              payment_reference: form.payment_reference || null,
+              notes: form.notes || null,
+            }),
+          });
+          const body = await r.json().catch(() => ({}));
+          if (r.status === 200 && body.ok) {
+            setSuccess(body.message || 'Customer berhasil di-provision.');
+            setForm({
+              email: '', display_name: '', persona_slug: '',
+              amount_idr: '', payment_method: '',
+              payment_reference: '', notes: '',
+            });
+          } else if (r.status === 401) {
+            window.location.replace('/admin/login');
+          } else {
+            setErr(body.error || ('Gagal (HTTP ' + r.status + ').'));
+          }
+        } catch (e) {
+          setErr(e && e.message ? e.message : String(e));
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      if (!authReady) return null;
+
+      return (
+        <div className="app-shell">
+          <Sidebar activeHref="/admin/manual-provision" />
+          <main className="app-main">
+            <h1>Manual provision customer</h1>
+            <p className="muted" style={{ marginBottom: 24 }}>
+              Buat customer baru tanpa lewat Xendit. Pakai ini buat onboarding via bank transfer atau QRIS manual.
+            </p>
+
+            {success ? (
+              <div className="alert success" role="status">
+                <strong>Berhasil.</strong> {success}
+              </div>
+            ) : null}
+
+            <div className="card">
+              <form onSubmit={onSubmit} noValidate>
+                {err ? <div className="alert error" role="alert">{err}</div> : null}
+
+                <div className="field">
+                  <label htmlFor="email">Email customer</label>
+                  <input id="email" type="email" required autoComplete="off"
+                    value={form.email} onChange={(e) => update('email', e.target.value)}
+                    placeholder="customer@example.com" />
+                </div>
+
+                <div className="field">
+                  <label htmlFor="display_name">Nama display</label>
+                  <input id="display_name" type="text" required autoComplete="off"
+                    value={form.display_name} onChange={(e) => update('display_name', e.target.value)}
+                    placeholder="Nama yang dipakai agent buat sapa customer" />
+                </div>
+
+                <div className="field">
+                  <label htmlFor="persona_slug">Persona</label>
+                  <select id="persona_slug" required
+                    value={form.persona_slug} onChange={(e) => update('persona_slug', e.target.value)}>
+                    <option value="" disabled>— Pilih persona —</option>
+                    {PERSONA_OPTIONS.map((p) => (
+                      <option key={p.slug} value={p.slug}>{p.name} ({p.tier})</option>
+                    ))}
+                  </select>
+                  <span className="hint">Tier subscription di-inferensi dari persona ini.</span>
+                </div>
+
+                <div className="field">
+                  <label htmlFor="amount_idr">Jumlah bayar (IDR)</label>
+                  <input id="amount_idr" type="number" inputMode="numeric" min="1" step="1" required
+                    value={form.amount_idr} onChange={(e) => update('amount_idr', e.target.value)}
+                    placeholder="399000" />
+                  <span className="hint">Angka tanpa titik atau koma.</span>
+                </div>
+
+                <div className="field">
+                  <label htmlFor="payment_method">Metode bayar</label>
+                  <select id="payment_method" required
+                    value={form.payment_method} onChange={(e) => update('payment_method', e.target.value)}>
+                    <option value="" disabled>— Pilih metode —</option>
+                    {PAYMENT_METHOD_OPTIONS.map((p) => (
+                      <option key={p.value} value={p.value}>{p.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="field">
+                  <label htmlFor="payment_reference">Referensi bayar (opsional)</label>
+                  <input id="payment_reference" type="text" autoComplete="off"
+                    value={form.payment_reference} onChange={(e) => update('payment_reference', e.target.value)}
+                    placeholder="Contoh: BCA mutasi line 23/05 jam 14:32" />
+                  <span className="hint">Catatan audit — jangan tulis nomor rekening lengkap.</span>
+                </div>
+
+                <div className="field">
+                  <label htmlFor="notes">Catatan (opsional)</label>
+                  <textarea id="notes"
+                    value={form.notes} onChange={(e) => update('notes', e.target.value)}
+                    placeholder="Konteks tambahan buat catatan internal." />
+                </div>
+
+                <button type="submit" className="btn" disabled={busy}>
+                  {busy ? 'Memproses...' : 'Provision customer'} <span className="arrow">↗</span>
+                </button>
+              </form>
+            </div>
+
+            <p className="muted" style={{ marginTop: 18, fontSize: '0.8125rem' }}>
+              Tier di-inferensi dari persona yang dipilih (lowest tier yang grant persona itu). VPS provisioning tidak otomatis di-trigger dari form ini — jalankan flow onboarding biasa setelah customer terdaftar.
+            </p>
+          </main>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<ManualProvision />);
+  </script>
+</body>
+</html>

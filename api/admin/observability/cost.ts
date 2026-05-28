@@ -45,6 +45,7 @@ import {
   fetchLlmCostRows,
 } from '../../../packages/observability/src/index.js'
 import { isValidBearer } from '../../_shared/timing-safe-bearer.js'
+import { isValidAdminCookie } from '../../_shared/admin-cookie-auth.js'
 
 const ADMIN_SECRET = process.env.OBSERVABILITY_ADMIN_SECRET ?? ''
 const SUPABASE_URL = process.env.SUPABASE_URL ?? ''
@@ -82,7 +83,10 @@ export default async function handler(
     return
   }
   // Timing-safe bearer comparison (same as the sibling customer.ts).
-  if (!isValidBearer(auth, ADMIN_SECRET)) {
+  // Cookie auth (weuseai_admin_session) accepted as a fallback so the
+  // /admin/cost.html browser page can call this without manually pasting
+  // the bearer — see api/_shared/admin-cookie-auth.ts.
+  if (!isValidBearer(auth, ADMIN_SECRET) && !isValidAdminCookie(req)) {
     res.status(401).json({ error: 'unauthorized' })
     return
   }

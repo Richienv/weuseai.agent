@@ -30,6 +30,7 @@
  */
 
 import { isValidBearer } from '../../_shared/timing-safe-bearer.js'
+import { isValidAdminCookie } from '../../_shared/admin-cookie-auth.js'
 
 const ADMIN_SECRET = process.env.OBSERVABILITY_ADMIN_SECRET ?? ''
 const SUPABASE_URL = process.env.SUPABASE_URL ?? ''
@@ -84,7 +85,8 @@ export default async function handler(
       .json({ error: 'misconfigured', detail: 'OBSERVABILITY_ADMIN_SECRET unset' })
     return
   }
-  if (!isValidBearer(auth, ADMIN_SECRET)) {
+  // Bearer (legacy) OR weuseai_admin_session cookie (admin browser pages).
+  if (!isValidBearer(auth, ADMIN_SECRET) && !isValidAdminCookie(req)) {
     res.status(401).json({ error: 'unauthorized' })
     return
   }
