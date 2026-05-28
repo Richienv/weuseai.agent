@@ -1,0 +1,15 @@
+# next / node
+node_modules/
+.next/
+out/
+build/
+dist/
+
+# typescript
+*.tsbuildinfo
+
+# vercel
+.vercel
+
+# env
+.env*.local
