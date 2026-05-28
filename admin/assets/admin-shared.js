@@ -35,6 +35,39 @@
     { slug: 'business-agent',    name: 'Business Director', tier: 'studio'  },
   ];
 
+  // Tier catalog mirrors supabase/functions/_shared/tier-personas.ts (D1 lock
+  // 2026-05-12) + CLAUDE.md "Business model" setup-fee values (v1.2 lock
+  // 2026-05-13). Locked composition per tier — operator cannot change the
+  // persona set, only the tier. The bundle-fetch security gate (PR #92)
+  // enforces the same set server-side. Drift gate:
+  // tests/admin-tier-catalog-drift.spec.ts.
+  const TIER_CATALOG = {
+    starter: {
+      label: 'Starter',
+      setup_fee_idr: 399000,
+      personas: ['the-pro', 'doc-expert', 'slide-master'],
+    },
+    pro: {
+      label: 'Pro',
+      setup_fee_idr: 1290000,
+      personas: [
+        'the-pro', 'doc-expert', 'slide-master',
+        'deep-researcher', 'trade-pro', 'project-conductor',
+        'video-producer', 'social-conductor',
+      ],
+    },
+    studio: {
+      label: 'Studio',
+      setup_fee_idr: 5900000,
+      personas: [
+        'the-pro', 'doc-expert', 'slide-master',
+        'deep-researcher', 'trade-pro', 'project-conductor',
+        'video-producer', 'social-conductor',
+        'web-app-builder', 'business-agent',
+      ],
+    },
+  };
+
   function Sidebar(props) {
     const activeHref = props.activeHref || '';
     async function onLogout(e) {
@@ -141,6 +174,7 @@
     formatDate: formatDate,
     formatIdr: formatIdr,
     PERSONA_OPTIONS: PERSONA_OPTIONS,
+    TIER_CATALOG: TIER_CATALOG,
     NAV: NAV,
   };
 })();
