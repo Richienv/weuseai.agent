@@ -26,16 +26,16 @@
       const [busyKey, setBusyKey] = useState(null);
       const [result, setResult] = useState(null);
 
-      async function run(key, path, confirmMsg) {
+      async function run(key, action, confirmMsg) {
         if (confirmMsg && !confirm(confirmMsg)) return;
         setBusyKey(key);
         setResult(null);
         try {
-          const r = await fetch(path, {
+          const r = await fetch('/api/admin/customer-action', {
             method: 'POST',
             credentials: 'same-origin',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ customerId }),
+            body: JSON.stringify({ action, customerId }),
           });
           if (r.status === 401) { window.location.replace('/admin/login'); return; }
           const body = await r.json().catch(() => ({}));
@@ -51,20 +51,20 @@
         <div className="card" style={{ padding: 20 }}>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <button type="button" className="action-btn primary" disabled={busyKey !== null}
-              onClick={() => run('resend', '/api/admin/customer-resend-onboarding')}>
+              onClick={() => run('resend', 'resend_onboarding')}>
               {busyKey === 'resend' ? 'Mengirim...' : 'Resend onboarding email'}
             </button>
             <button type="button" className="action-btn" disabled={busyKey !== null}
-              onClick={() => run('restart', '/api/admin/customer-restart-gateway')}>
+              onClick={() => run('restart', 'restart_gateway')}>
               Force gateway restart
             </button>
             <button type="button" className="action-btn" disabled={busyKey !== null}
-              onClick={() => run('refund', '/api/admin/customer-mark-refunded',
+              onClick={() => run('refund', 'mark_refunded',
                 'Tandai customer ' + email + ' sebagai refunded? Aksi ini akan men-trigger update subscription + email + deprovision VPS (saat ini stub).')}>
               Mark refunded
             </button>
             <button type="button" className="action-btn" disabled={busyKey !== null}
-              onClick={() => run('escalate', '/api/admin/customer-escalate')}>
+              onClick={() => run('escalate', 'escalate')}>
               Escalate ke support
             </button>
           </div>
@@ -86,7 +86,7 @@
     }
 
     function CustomerDetailPage() {
-      const { data, err, loading } = useFetch('/api/admin/customer-detail?id=' + encodeURIComponent(customerId));
+      const { data, err, loading } = useFetch('/api/admin/customer-data?id=' + encodeURIComponent(customerId));
 
       if (!customerId) {
         return (

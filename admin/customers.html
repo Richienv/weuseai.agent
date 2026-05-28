@@ -53,7 +53,7 @@
     function CustomersPage() {
       const initialStatus = new URLSearchParams(window.location.search).get('status') || 'all';
       const [statusFilter, setStatusFilter] = useState(initialStatus);
-      const { data, err, loading } = useFetch('/api/admin/customer-list');
+      const { data, err, loading } = useFetch('/api/admin/customer-data');
 
       const rows = (data && data.customers) || [];
       const filtered = statusFilter === 'all'

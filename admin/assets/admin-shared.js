@@ -40,7 +40,7 @@
     async function onLogout(e) {
       e.preventDefault();
       try {
-        await fetch('/api/admin/logout', { method: 'POST', credentials: 'same-origin' });
+        await fetch('/api/admin/session', { method: 'DELETE', credentials: 'same-origin' });
       } catch (err) { /* swallow */ }
       window.location.href = '/admin/login';
     }

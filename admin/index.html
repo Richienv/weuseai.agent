@@ -14,7 +14,7 @@
   <script>
     // Probe auth and bounce. /api/admin/me returns 200 if cookie is valid,
     // 401 otherwise. Redirect target on success = the first tab.
-    fetch('/api/admin/me', { credentials: 'same-origin' })
+    fetch('/api/admin/session', { credentials: 'same-origin' })
       .then(function (r) {
         if (r.status === 200) {
           window.location.replace('/admin/manual-provision');

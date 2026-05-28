@@ -39,7 +39,7 @@
       const [success, setSuccess] = useState(null);
 
       useEffect(() => {
-        fetch('/api/admin/me', { credentials: 'same-origin' }).then((r) => {
+        fetch('/api/admin/session', { credentials: 'same-origin' }).then((r) => {
           if (r.status !== 200) { window.location.replace('/admin/login'); return; }
           setAuthReady(true);
         });
@@ -53,11 +53,12 @@
         setSuccess(null);
         setBusy(true);
         try {
-          const r = await fetch('/api/admin/manual-provision', {
+          const r = await fetch('/api/admin/customer-action', {
             method: 'POST',
             credentials: 'same-origin',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
+              action: 'manual_provision',
               email: form.email,
               display_name: form.display_name,
               persona_slug: form.persona_slug,
