@@ -392,8 +392,14 @@ async function triggerVpsSpinUp(args: {
 }
 
 type ConciergeOutcome = {
-  status: 'paired' | 'failed' | 'skipped'
+  // 'ready' = token validated + pairing code minted; the customer's one
+  // remaining step is to send `/pair <code>` to the bot. We deliberately
+  // do NOT call this 'paired' — chat_id binds only after the customer
+  // sends the code (see VERIFIED FACTS in the v2.1 PR).
+  status: 'ready' | 'failed' | 'skipped'
   bot_username: string | null
+  pairing_code: string | null
+  pairing_code_expires_at: string | null
   error: string | null
 }
 
@@ -401,38 +407,44 @@ async function runConciergePair(args: {
   customerId: string
   botToken: string
 }): Promise<ConciergeOutcome> {
-  // Concierge mode composes 3 Edge Functions in sequence:
+  // Concierge mode (v2.1) composes 2 Edge Functions in sequence:
   //   1. validate-bot-token  → encrypts + persists the bot token on the
-  //                            customers row, sets webhook URL on the bot
-  //   2. rotate-pairing-code → mints a one-time pairing code
-  //   3. pair-customer-bot-webhook → consumes the pairing code (simulated
-  //                            via a synthetic /pair POST). When the VPS
-  //                            comes up, complete-onboarding step 8c sends
-  //                            the proactive greeting automatically.
+  //                            customers row, registers the Telegram
+  //                            webhook, returns the bot username.
+  //   2. rotate-pairing-code → mints a one-time 6-digit pairing code +
+  //                            expiry the founder relays to the customer.
   //
-  // STUB (v2.0): only step 1 (validate-bot-token) is wired here. Steps
-  // 2-3 require a synthetic Telegram update body that mirrors the
-  // pair-customer-bot-webhook handler's expected shape; ship the form
-  // and wire steps 2-3 in v2.1 once founder confirms the v2.0 founder-
-  // touch flow works. validate-bot-token alone already (a) confirms the
-  // token is valid and (b) registers the customer's bot with the Telegram
-  // webhook — the customer can then complete pairing themselves via the
-  // standard welcome.html flow if step 2-3 wiring slips.
+  // The customer's ONE remaining step is to open the bot and send
+  // `/pair <code>`. chat_id binds only on that command (deliberate
+  // security control in pair-customer-bot-webhook-handler.ts — any other
+  // message is a silent no-op). complete-onboarding gates on chat_id, so
+  // it is NOT called here — it fires automatically through the existing
+  // post-pair flow once the customer sends the code, which then sends the
+  // proactive greeting. The concierge value: customer skips minting the
+  // BotFather token (founder did it) AND skips the welcome-page visit
+  // (founder relays the bot link + code directly).
   if (!SUPABASE_FUNCTIONS_URL) {
     return {
       status: 'skipped',
       bot_username: null,
+      pairing_code: null,
+      pairing_code_expires_at: null,
       error: 'SUPABASE_FUNCTIONS_URL not set — concierge skipped.',
     }
   }
+  const fnBase = SUPABASE_FUNCTIONS_URL.replace(/\/$/, '')
+  const fnHeaders = {
+    'content-type': 'application/json',
+    // anon-with-cid auth model — same as the customer-facing welcome flow
+    ...(SUPABASE_SERVICE_KEY ? { authorization: `Bearer ${SUPABASE_SERVICE_KEY}` } : {}),
+  }
+
+  // Step 1: validate-bot-token (validates + registers webhook + returns username).
+  let bot_username: string | null
   try {
-    const r = await fetch(`${SUPABASE_FUNCTIONS_URL.replace(/\/$/, '')}/validate-bot-token`, {
+    const r = await fetch(`${fnBase}/validate-bot-token`, {
       method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        // anon-with-cid auth model — same as the customer-facing welcome flow
-        ...(SUPABASE_SERVICE_KEY ? { authorization: `Bearer ${SUPABASE_SERVICE_KEY}` } : {}),
-      },
+      headers: fnHeaders,
       body: JSON.stringify({
         customer_id: args.customerId,
         bot_token: args.botToken,
@@ -440,15 +452,64 @@ async function runConciergePair(args: {
     })
     if (!r.ok) {
       const detail = (await r.text().catch(() => '')).slice(0, 300)
-      return { status: 'failed', bot_username: null, error: `validate HTTP ${r.status}: ${detail}` }
+      return {
+        status: 'failed',
+        bot_username: null,
+        pairing_code: null,
+        pairing_code_expires_at: null,
+        error: `validate HTTP ${r.status}: ${detail}`,
+      }
     }
     const json = (await r.json().catch(() => ({}))) as { bot_username?: string }
-    return { status: 'paired', bot_username: json.bot_username ?? null, error: null }
+    bot_username = json.bot_username ?? null
   } catch (e) {
     return {
       status: 'failed',
       bot_username: null,
-      error: `concierge threw: ${e instanceof Error ? e.message : String(e)}`,
+      pairing_code: null,
+      pairing_code_expires_at: null,
+      error: `concierge validate threw: ${e instanceof Error ? e.message : String(e)}`,
+    }
+  }
+
+  // Step 2: rotate-pairing-code (mints the 6-digit code the founder relays).
+  try {
+    const r = await fetch(`${fnBase}/rotate-pairing-code`, {
+      method: 'POST',
+      headers: fnHeaders,
+      body: JSON.stringify({ customer_id: args.customerId }),
+    })
+    if (!r.ok) {
+      const detail = (await r.text().catch(() => '')).slice(0, 300)
+      // Token already validated + webhook set; only the code mint failed.
+      // Surface bot_username so the founder still has the bot link, and
+      // report the failure so the card shows it.
+      return {
+        status: 'failed',
+        bot_username,
+        pairing_code: null,
+        pairing_code_expires_at: null,
+        error: `rotate-pairing-code HTTP ${r.status}: ${detail}`,
+      }
+    }
+    const json = (await r.json().catch(() => ({}))) as {
+      code?: string
+      expires_at?: string
+    }
+    return {
+      status: 'ready',
+      bot_username,
+      pairing_code: json.code ?? null,
+      pairing_code_expires_at: json.expires_at ?? null,
+      error: null,
+    }
+  } catch (e) {
+    return {
+      status: 'failed',
+      bot_username,
+      pairing_code: null,
+      pairing_code_expires_at: null,
+      error: `concierge rotate threw: ${e instanceof Error ? e.message : String(e)}`,
     }
   }
 }
@@ -626,7 +687,10 @@ export async function handleManualProvisionV2(
   let concierge: ConciergeOutcome | null = null
   if (concierge_mode) {
     concierge = await runConciergePair({ customerId: customer_id, botToken: bot_token_raw })
-    if (concierge.status === 'paired') completed_steps.push('concierge_validate')
+    if (concierge.status === 'ready') {
+      completed_steps.push('concierge_validate')
+      if (concierge.pairing_code) completed_steps.push('pairing-code-generated')
+    }
     // Pre-fill expectations: save-onboarding-profile would normally
     // collect the "harapan" field from the customer-facing onboarding
     // form. Persisted here as a best-effort PATCH on customers; if the
@@ -724,6 +788,8 @@ export async function handleManualProvisionV2(
     concierge_error: concierge?.error ?? null,
     bot_username: concierge?.bot_username ?? null,
     bot_telegram_link,
+    pairing_code: concierge?.pairing_code ?? null,
+    pairing_code_expires_at: concierge?.pairing_code_expires_at ?? null,
     onboarding_url,
     email_status,
     audit_ok: auditOk,

@@ -16,6 +16,7 @@ import assert from 'node:assert/strict'
 // Set env BEFORE import (module captures SUPABASE_URL at load time).
 process.env.SUPABASE_URL = 'http://stub.test'
 process.env.SUPABASE_SECRET_KEY = 'stub-key'
+process.env.SUPABASE_FUNCTIONS_URL = 'http://fn.test'
 
 const mod = await import('../api/admin/customer-action.ts')
 const { handleManualProvisionV2 } = mod as {
@@ -130,6 +131,80 @@ describe('manual_provision_v2 — input validation', () => {
     if (res._status === 400) {
       const errMsg = (res._body as { error: string }).error
       assert.ok(!/Format/.test(errMsg), 'should not be a format-validation error')
+    }
+  })
+})
+
+describe('manual_provision_v2 — concierge response shape', () => {
+  // Mock the full fetch chain so the concierge branch runs end-to-end:
+  // customer lookup (empty) → insert → subscription insert → VPS skip
+  // (no PROVISIONING_URL) → validate-bot-token → rotate-pairing-code →
+  // audit insert → email skip → audit patch. Assert the response carries
+  // pairing_code + bot_telegram_link + concierge_status='ready'.
+  const realFetch = globalThis.fetch
+
+  function mockFetch(): typeof globalThis.fetch {
+    return (async (input: unknown) => {
+      const url = String(typeof input === 'string' ? input : (input as { url?: string }).url ?? input)
+      const ok = (body: unknown, status = 200) =>
+        new Response(JSON.stringify(body), {
+          status,
+          headers: { 'content-type': 'application/json' },
+        })
+      // customers lookup (GET) → empty array
+      if (url.includes('/rest/v1/customers') && url.includes('select=id,display_name')) {
+        return ok([])
+      }
+      // customers insert → returns id
+      if (url.includes('/rest/v1/customers')) {
+        return ok([{ id: 'cust-1' }])
+      }
+      // subscription insert → returns id
+      if (url.includes('/rest/v1/subscriptions')) {
+        return ok([{ id: 'sub-1' }])
+      }
+      // validate-bot-token → bot username
+      if (url.includes('/validate-bot-token')) {
+        return ok({ bot_username: 'renita_test_bot' })
+      }
+      // rotate-pairing-code → code + expiry
+      if (url.includes('/rotate-pairing-code')) {
+        return ok({ code: '482913', expires_at: '2026-05-29T12:00:00.000Z' })
+      }
+      // audit insert / patch
+      if (url.includes('/rest/v1/manual_provisions')) {
+        return ok({})
+      }
+      return ok({})
+    }) as typeof globalThis.fetch
+  }
+
+  test('concierge + valid token returns pairing_code + bot link + status ready', async () => {
+    globalThis.fetch = mockFetch()
+    try {
+      const res = makeRes()
+      await handleManualProvisionV2(
+        {
+          ...VALID_BODY,
+          concierge_mode: true,
+          bot_token: '1234567890:ABCdefGhIjKlMnOpQrStUvWxYz_-1234567',
+        },
+        res,
+      )
+      const body = res._body as Record<string, unknown>
+      assert.equal(res._status, 200)
+      assert.equal(body.ok, true)
+      assert.equal(body.concierge_mode, true)
+      assert.equal(body.concierge_status, 'ready')
+      assert.equal(body.pairing_code, '482913')
+      assert.equal(body.pairing_code_expires_at, '2026-05-29T12:00:00.000Z')
+      assert.equal(body.bot_telegram_link, 'https://t.me/renita_test_bot')
+      assert.ok(
+        (body.completed_steps as string[]).includes('pairing-code-generated'),
+        'completed_steps should record pairing-code-generated',
+      )
+    } finally {
+      globalThis.fetch = realFetch
     }
   })
 })
