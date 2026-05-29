@@ -170,14 +170,51 @@
                 {success.vps_error ? <p className="hint" style={{ color: '#E5322D' }}>{success.vps_error}</p> : null}
               </div>
 
-              {success.concierge_mode ? (
+              {success.concierge_mode && success.concierge_status === 'ready' && success.pairing_code ? (
+                <div className="card" style={{ marginBottom: 18 }}>
+                  <p><strong>Concierge — serahkan ke customer</strong></p>
+                  {success.bot_telegram_link ? (
+                    <p>
+                      <a href={success.bot_telegram_link} target="_blank" rel="noreferrer"
+                         className="btn" style={{ display: 'inline-block', marginTop: 4 }}>
+                        Buka bot: {success.bot_telegram_link.replace('https://', '')} <span className="arrow">↗</span>
+                      </a>
+                    </p>
+                  ) : null}
+                  <p style={{ marginTop: 12 }}><strong>Kode pairing:</strong></p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 4 }}>
+                    <span style={{ fontFamily: 'monospace', fontSize: '2rem', letterSpacing: '0.25rem' }}>
+                      {success.pairing_code}
+                    </span>
+                    <button type="button" className="btn"
+                            onClick={() => copyOnboardingLink(success.pairing_code)}>
+                      {copied ? 'Tersalin' : 'Salin kode'} <span className="arrow">↗</span>
+                    </button>
+                  </div>
+                  {success.bot_telegram_link ? (
+                    <p className="hint" style={{ marginTop: 12 }}>
+                      Kirim ke customer via WhatsApp: link bot di atas, plus minta dia buka bot dan
+                      kirim <code>/pair {success.pairing_code}</code>. Setelah itu agent otomatis
+                      kenalan dalam 5-7 menit.
+                    </p>
+                  ) : (
+                    <p className="hint" style={{ marginTop: 12 }}>
+                      Cari bot kamu di Telegram, lalu kirim <code>/pair {success.pairing_code}</code>.
+                      Setelah itu agent otomatis kenalan dalam 5-7 menit.
+                    </p>
+                  )}
+                  {success.pairing_code_expires_at ? (
+                    <p className="hint" style={{ marginTop: 8 }}>
+                      Kode berlaku sampai {new Date(success.pairing_code_expires_at).toLocaleString('id-ID')}.
+                    </p>
+                  ) : null}
+                </div>
+              ) : success.concierge_mode ? (
                 <div className="card" style={{ marginBottom: 18 }}>
                   <p><strong>Concierge mode:</strong>{' '}
-                    {success.concierge_status === 'paired'
-                      ? `Bot ter-pair (@${success.bot_username}).`
-                      : success.concierge_status === 'skipped'
-                        ? 'Di-skip (SUPABASE_FUNCTIONS_URL belum di-set).'
-                        : 'Pairing gagal — cek error di bawah.'}
+                    {success.concierge_status === 'skipped'
+                      ? 'Di-skip (SUPABASE_FUNCTIONS_URL belum di-set).'
+                      : 'Setup concierge gagal — cek error di bawah.'}
                   </p>
                   {success.bot_telegram_link ? (
                     <p>
