@@ -6045,7 +6045,7 @@
           </div>
 
           <p className="agent-tier-line">
-            Starter: 1 agent · Pro: 5 agent · Studio: full set — pilih yang cocok di <a href="#pricing">harga →</a>
+            Voice Starter: 3 persona · Siap Pakai: 8 persona · Library Lengkap: full set — pilih yang cocok di <a href="#pricing">harga →</a>
           </p>
         </div>
       );
@@ -7891,9 +7891,17 @@
 
           <div className="flex-1" />
 
-          {/* 6. CTA + 7. breakdown link */}
+          {/* 6. CTA + 7. breakdown link.
+              Phase A: pricing CTAs route to the manual-onboarding path
+              (WhatsApp, tier prefilled) — founder provisions via the admin
+              form after contact. Self-serve checkout for the new tier slugs
+              is a deferred follow-up bundled with the Xendit prod-mode
+              rotation (checkout.html + create-invoice still speak the old
+              slugs only). External wa.me / mailto links open in a new tab. */}
           <a
             href={tier.ctaHref}
+            target={/^https?:|^mailto:/.test(tier.ctaHref) ? '_blank' : undefined}
+            rel={/^https?:/.test(tier.ctaHref) ? 'noopener' : undefined}
             className="mt-7 md:mt-8 rounded-full px-5 py-3 text-sm font-medium flex items-center justify-center gap-2 no-underline"
             style={
               isFeatured
@@ -8325,83 +8333,81 @@
     function Pricing() {
       const [breakdownTier, setBreakdownTier] = React.useState(null);
 
+      // Phase A feature-bundle tiers (2026-05-28). Mirrors TIERS in
+      // supabase/functions/_shared/tier-personas.ts. voice-starter /
+      // library-full / done-for-you are self-serve; enterprise is a
+      // contact-only card rendered separately below.
       const tiers = [
         {
-          name: 'Starter',
-          tagline: 'Pendamping pertama kamu.',
-          priceLabel: 'Rp 399rb',
-          priceStrike: 'Rp 699rb',
-          setupIdr: 399_000,
-          setupAside: 'biaya setup sekali bayar · diskon launch',
+          name: 'Voice Starter',
+          slug: 'voice-starter',
+          tagline: 'Pendamping pertama kamu, lengkap dengan suara.',
+          priceLabel: 'Rp 699rb',
+          setupIdr: 699_000,
+          setupAside: 'biaya setup sekali bayar',
           hostingMonth: 'Rp 99rb',
-          month1Total: 'Rp 498rb',
+          month1Total: 'Rp 798rb',
           recurringLabel: 'Rp 99rb/bulan',
           persona: 'Buat kamu yang mau coba rasanya didampingi agent.',
           outcomes: [
-            '1 agent: Pro Agent',
+            'Voice — ngobrol pakai suara di Telegram',
+            '3 persona: The Pro, Doc Expert, Slide Master',
             'VPS dedicated, bukan shared',
-            '10.000 training iteration',
-            '200–400 interaction/bulan',
             'LLM cost masuk subscription (DeepSeek default, bisa upgrade)',
             'Community support',
           ],
           apps: ['Telegram', 'Discord', 'Web'],
           appsTotal: 41,
-          cta: 'Mulai Starter',
-          ctaHref: '/checkout.html?plan=starter',
+          cta: 'Mulai Voice Starter',
+          ctaHref: 'https://wa.me/6282154902561?text=Halo%2C%20saya%20mau%20mulai%20paket%20Voice%20Starter%20di%20weuseai.agent',
           featured: false,
         },
         {
-          name: 'Pro',
-          tagline: 'Agent yang berpikir seperti kamu.',
-          priceLabel: 'Rp 1,29jt',
-          priceStrike: 'Rp 2,5jt',
-          setupIdr: 1_290_000,
-          setupAside: 'biaya setup sekali bayar · diskon launch',
+          name: 'Library Lengkap',
+          slug: 'library-full',
+          tagline: 'Seluruh pustaka agent dalam satu paket.',
+          priceLabel: 'Rp 899rb',
+          setupIdr: 899_000,
+          setupAside: 'biaya setup sekali bayar',
           hostingMonth: 'Rp 99rb',
-          month1Total: 'Rp 1,389jt',
+          month1Total: 'Rp 998rb',
           recurringLabel: 'Rp 99rb/bulan',
-          persona: 'Buat freelancer, founder, creator yang butuh agent kerja 24/7.',
-          inheritFrom: 'Starter',
+          persona: 'Buat kamu yang mau semua persona tanpa kompromi.',
           outcomes: [
-            '5 agent: Researcher, Web Auto, Doc, Slide, Pro',
-            '4 web app: Workout, Finance, Task, Project',
+            'Voice — ngobrol pakai suara di Telegram',
+            'Semua 10 persona, dari The Pro sampai Business Director',
             'VPS dedicated 24/7',
-            '500–800 interaction/bulan',
             'LLM cost masuk subscription (DeepSeek default, bisa upgrade)',
             '24/7 support — antrean paling depan',
-            'Voice tuning ke gaya kamu',
           ],
           apps: ['Notion', 'Gmail', 'Drive', 'Kalender', 'Slack'],
           appsTotal: 40,
-          cta: 'Ambil Pro',
-          ctaHref: '/checkout.html?plan=pro',
+          cta: 'Ambil Library Lengkap',
+          ctaHref: 'https://wa.me/6282154902561?text=Halo%2C%20saya%20mau%20ambil%20paket%20Library%20Lengkap%20di%20weuseai.agent',
           featured: true,
         },
         {
-          name: 'Studio',
-          tagline: 'Komando hidup digital kamu.',
-          priceLabel: 'Rp 5,9jt',
-          priceStrike: 'Rp 10,9jt',
-          setupIdr: 5_900_000,
-          setupAside: 'biaya setup sekali bayar · diskon launch',
+          name: 'Siap Pakai',
+          slug: 'done-for-you',
+          tagline: 'Persona kerja inti, plus web app kamu sendiri.',
+          priceLabel: 'Rp 1,299jt',
+          setupIdr: 1_299_000,
+          setupAside: 'biaya setup sekali bayar',
           hostingMonth: 'Rp 99rb',
-          month1Total: 'Rp 5,999jt',
+          month1Total: 'Rp 1,398jt',
           recurringLabel: 'Rp 99rb/bulan',
-          persona: 'Buat eksekutif yang ngatur hidup di banyak platform.',
-          inheritFrom: 'Pro',
+          persona: 'Buat freelancer, founder, creator yang butuh agent kerja 24/7.',
           outcomes: [
-            '10 agent: Pro 5 + Trade, Project Conductor, Business, Video, Social',
-            '8 web app: 4 Pro + Agent Monitoring Dashboard, Business Eagle View, Market Trend Update, Web Creator',
-            '1.000–1.500 interaction/bulan',
-            'LLM cost masuk subscription (DeepSeek default, bisa upgrade ke Claude/GPT)',
-            'Custom integration sesuai kebutuhan',
+            'Voice — ngobrol pakai suara di Telegram',
+            'Web app — dashboard kamu sendiri di subdomain',
+            '8 persona set kerja: Pro, Doc, Slide, Researcher, Trade, Project, Video, Social',
+            'VPS dedicated 24/7',
             '24/7 dedicated support + onboarding privat',
           ],
           apps: ['Apple Health', 'Stripe', 'GitHub', 'Notion', 'Linear'],
           appsTotal: 55,
-          cta: 'Hubungi tim',
-          ctaHref: '/checkout.html?plan=studio',
+          cta: 'Ambil Siap Pakai',
+          ctaHref: 'https://wa.me/6282154902561?text=Halo%2C%20saya%20mau%20ambil%20paket%20Siap%20Pakai%20di%20weuseai.agent',
           featured: false,
         },
       ];
@@ -8446,6 +8452,45 @@
                 />
               ))}
             </div>
+
+            {/* Enterprise — contact-only, no self-serve checkout */}
+            <Mot.div
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.25 }}
+              transition={{ duration: 0.6, ease: EASE, delay: 0.1 }}
+              className="liquid-glass rounded-2xl mt-5 md:mt-6 p-6 md:p-8 flex flex-col md:flex-row md:items-center md:justify-between gap-6"
+            >
+              <div className="md:max-w-xl">
+                <h3 className="text-lg md:text-xl font-heading text-white" style={{ letterSpacing: '-0.02em' }}>
+                  Enterprise
+                </h3>
+                <p className="mt-1 text-sm italic text-white/65 font-body font-light leading-snug">
+                  Persona custom, integrasi khusus, dan build sesuai kebutuhan tim kamu.
+                </p>
+                <p className="mt-3 text-sm text-white/75 font-body font-light leading-relaxed">
+                  Voice, web app, dan custom build penuh. Kami susun setup-nya bareng kamu, bukan dari paket jadi.
+                </p>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-3 md:flex-shrink-0">
+                <a
+                  href="mailto:kidnovell.richie@gmail.com?subject=Enterprise%20weuseai.agent"
+                  className="rounded-full px-5 py-3 text-sm font-medium flex items-center justify-center gap-2 no-underline text-white"
+                  style={{ background: '#E5322D', border: '1px solid #E5322D' }}
+                >
+                  Hubungi Sales <ArrowUpRight size={14} stroke={2.2} />
+                </a>
+                <a
+                  href="https://wa.me/6282154902561?text=Halo%2C%20saya%20tertarik%20paket%20Enterprise"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-full px-5 py-3 text-sm font-medium flex items-center justify-center gap-2 no-underline text-white"
+                  style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.28)' }}
+                >
+                  WhatsApp <ArrowUpRight size={14} stroke={2.2} />
+                </a>
+              </div>
+            </Mot.div>
 
             <div className="mt-16 md:mt-24">
               <LimitedSeats />

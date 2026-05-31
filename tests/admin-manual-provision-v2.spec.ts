@@ -51,8 +51,8 @@ function makeRes(): FakeRes {
 const VALID_BODY = {
   email: 'a@b.test',
   display_name: 'Test User',
-  tier: 'starter',
-  amount_idr: 399000,
+  tier: 'voice-starter',
+  amount_idr: 699000,
   payment_method: 'manual_bank_transfer',
 }
 
@@ -70,9 +70,28 @@ describe('manual_provision_v2 — input validation', () => {
     assert.equal(res._status, 400)
   })
 
-  test('rejects invalid tier', async () => {
+  test('rejects unknown tier slug', async () => {
+    const res = makeRes()
+    await handleManualProvisionV2({ ...VALID_BODY, tier: 'platinum-deluxe' }, res)
+    assert.equal(res._status, 400)
+    assert.match((res._body as { error: string }).error, /Tier/)
+  })
+
+  test('rejects enterprise tier (must use sales flow, not manual provision)', async () => {
     const res = makeRes()
     await handleManualProvisionV2({ ...VALID_BODY, tier: 'enterprise' }, res)
+    assert.equal(res._status, 400)
+    assert.match((res._body as { error: string }).error, /enterprise/i)
+    assert.match((res._body as { error: string }).error, /sales flow/i)
+  })
+
+  test('accepts deprecated tier slugs via alias (back-compat)', async () => {
+    // Old slugs are still emitted by leftover rows / the legacy chain.
+    // isTier() rejects them at the form boundary, but the form only ever
+    // emits new slugs — so deprecated slugs are a 400 here. This asserts
+    // the new producer contract: the v2 form must emit canonical slugs.
+    const res = makeRes()
+    await handleManualProvisionV2({ ...VALID_BODY, tier: 'starter' }, res)
     assert.equal(res._status, 400)
     assert.match((res._body as { error: string }).error, /Tier/)
   })

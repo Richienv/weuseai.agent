@@ -56,18 +56,47 @@
       }, []);
 
       const tierEntry = form.tier ? TIER_CATALOG[form.tier] : null;
-      const personas = tierEntry ? tierEntry.personas : [];
-      const tierDefaultFee = tierEntry ? tierEntry.setup_fee_idr : 0;
+      const personas = (tierEntry && tierEntry.personas) ? tierEntry.personas : [];
+      const tierDefaultFee = (tierEntry && tierEntry.setup_fee_idr) ? tierEntry.setup_fee_idr : 0;
+      // Enterprise is contact-only — block submit + show sales-flow notice.
+      const isEnterprise = form.tier === 'enterprise';
 
-      // When tier changes: prefill amount_idr with the tier setup fee.
+      // When tier changes: prefill amount_idr with the tier setup fee
+      // (enterprise has no fixed fee — clear the field).
       function update(k, v) {
         setForm((f) => {
           const next = Object.assign({}, f, { [k]: v });
           if (k === 'tier' && TIER_CATALOG[v]) {
-            next.amount_idr = String(TIER_CATALOG[v].setup_fee_idr);
+            next.amount_idr = TIER_CATALOG[v].setup_fee_idr
+              ? String(TIER_CATALOG[v].setup_fee_idr)
+              : '';
           }
           return next;
         });
+      }
+
+      // Feature badges — purely visual, no functional gating.
+      function featureBadges(entry) {
+        if (!entry || !entry.features) return null;
+        const f = entry.features;
+        const badges = [];
+        if (f.voice) badges.push({ key: 'voice', icon: '🎙', label: 'Voice' });
+        if (f.web_app) badges.push({ key: 'web_app', icon: '🌐', label: 'Web app' });
+        if (f.custom_build) badges.push({ key: 'custom', icon: '🛠', label: 'Custom build' });
+        if (!badges.length) return null;
+        return (
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
+            {badges.map((b) => (
+              <span key={b.key} style={{
+                display: 'inline-flex', alignItems: 'center', gap: 4,
+                fontSize: '0.75rem', padding: '2px 8px', borderRadius: 999,
+                background: 'rgba(229,50,45,0.10)', border: '1px solid rgba(229,50,45,0.25)',
+              }}>
+                <span aria-hidden="true">{b.icon}</span>{b.label}
+              </span>
+            ))}
+          </div>
+        );
       }
 
       function resetForm() {
@@ -309,15 +338,27 @@
                   <select id="tier" required
                     value={form.tier} onChange={(e) => update('tier', e.target.value)}>
                     <option value="" disabled>— Pilih tier —</option>
-                    {Object.keys(TIER_CATALOG).map((t) => (
-                      <option key={t} value={t}>
-                        {TIER_CATALOG[t].label} ({TIER_CATALOG[t].personas.length} persona, {formatIdr(TIER_CATALOG[t].setup_fee_idr)})
-                      </option>
-                    ))}
+                    {Object.keys(TIER_CATALOG).map((t) => {
+                      const e = TIER_CATALOG[t];
+                      const personaPart = e.personas ? `${e.personas.length} persona` : 'custom';
+                      const feePart = e.setup_fee_idr ? formatIdr(e.setup_fee_idr) : 'hubungi sales';
+                      return (
+                        <option key={t} value={t}>
+                          {e.label} ({personaPart}, {feePart})
+                        </option>
+                      );
+                    })}
                   </select>
+                  {tierEntry ? featureBadges(tierEntry) : null}
                 </div>
 
-                {tierEntry ? (
+                {isEnterprise ? (
+                  <div className="alert error" role="alert" style={{ marginBottom: 16 }}>
+                    Customer ini perlu Enterprise — hubungi via sales flow, bukan provisioning manual.
+                  </div>
+                ) : null}
+
+                {tierEntry && !isEnterprise ? (
                   <div className="field">
                     <label>Personas (locked composition per tier)</label>
                     <div style={{
@@ -428,8 +469,8 @@
                     placeholder="Konteks tambahan buat catatan internal." />
                 </div>
 
-                <button type="submit" className="btn" disabled={busy} style={{ marginTop: 24 }}>
-                  {busy ? 'Memproses...' : 'Provision customer'} <span className="arrow">↗</span>
+                <button type="submit" className="btn" disabled={busy || isEnterprise} style={{ marginTop: 24 }}>
+                  {busy ? 'Memproses...' : isEnterprise ? 'Enterprise — pakai sales flow' : 'Provision customer'} <span className="arrow">↗</span>
                 </button>
               </form>
             </div>

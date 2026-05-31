@@ -326,3 +326,87 @@ test('error message names the slug + tier (audit-friendly)', async () => {
     assert.match(r.detail ?? '', /starter/)
   }
 })
+
+// ─── Phase A: new canonical tier slugs + enterprise skip ────────────────
+
+test('voice-starter + slide-master → 200 (new slug, in-tier persona)', async () => {
+  const r = await bundleFetchHandler(
+    { customer_id: 'cust-1', agent_slug: 'slide-master' },
+    buildDeps({ customer: customer({ tier: 'voice-starter' }) }),
+  )
+  assert.equal(r.ok, true)
+})
+
+test('voice-starter + trade-pro → 403 (new slug, higher-tier persona blocked)', async () => {
+  const r = await bundleFetchHandler(
+    { customer_id: 'cust-1', agent_slug: 'trade-pro' },
+    buildDeps({ customer: customer({ tier: 'voice-starter' }) }),
+  )
+  assert.equal(r.ok, false)
+  if (!r.ok) assert.equal(r.error, 'tier_does_not_grant_persona')
+})
+
+test('voice-starter + web-app-builder → 403 (lower tier cannot reach library-only persona)', async () => {
+  const r = await bundleFetchHandler(
+    { customer_id: 'cust-1', agent_slug: 'web-app-builder' },
+    buildDeps({ customer: customer({ tier: 'voice-starter' }) }),
+  )
+  assert.equal(r.ok, false)
+  if (!r.ok) assert.equal(r.error, 'tier_does_not_grant_persona')
+})
+
+test('done-for-you + social-conductor → 200 (8-persona Pro set)', async () => {
+  const r = await bundleFetchHandler(
+    { customer_id: 'cust-1', agent_slug: 'social-conductor' },
+    buildDeps({ customer: customer({ tier: 'done-for-you' }) }),
+  )
+  assert.equal(r.ok, true)
+})
+
+test('done-for-you + web-app-builder → 403 (web-app-builder persona not in the 8-set)', async () => {
+  const r = await bundleFetchHandler(
+    { customer_id: 'cust-1', agent_slug: 'web-app-builder' },
+    buildDeps({ customer: customer({ tier: 'done-for-you' }) }),
+  )
+  assert.equal(r.ok, false)
+  if (!r.ok) assert.equal(r.error, 'tier_does_not_grant_persona')
+})
+
+test('library-full + business-agent → 200 (full 10-persona library)', async () => {
+  const r = await bundleFetchHandler(
+    { customer_id: 'cust-1', agent_slug: 'business-agent' },
+    buildDeps({ customer: customer({ tier: 'library-full' }) }),
+  )
+  assert.equal(r.ok, true)
+})
+
+test('enterprise + any KNOWN persona → 200 (custom set — persona gate skipped)', async () => {
+  for (const slug of ['the-pro', 'web-app-builder', 'business-agent']) {
+    const r = await bundleFetchHandler(
+      { customer_id: 'cust-1', agent_slug: slug },
+      buildDeps({ customer: customer({ tier: 'enterprise' }) }),
+    )
+    assert.equal(r.ok, true, `enterprise should allow "${slug}"`)
+  }
+})
+
+test('enterprise + unknown agent_slug → 400 (still bounded to KNOWN_PERSONA_SLUGS)', async () => {
+  const r = await bundleFetchHandler(
+    { customer_id: 'cust-1', agent_slug: 'fictional-persona' },
+    buildDeps({ customer: customer({ tier: 'enterprise' }) }),
+  )
+  assert.equal(r.ok, false)
+  if (!r.ok) assert.equal(r.error, 'unknown_agent_slug')
+})
+
+test('unrecognized tier slug → 403 invalid_customer_tier (defense in depth)', async () => {
+  const r = await bundleFetchHandler(
+    { customer_id: 'cust-1', agent_slug: 'the-pro' },
+    buildDeps({ customer: customer({ tier: 'platinum-deluxe' }) }),
+  )
+  assert.equal(r.ok, false)
+  if (!r.ok) {
+    assert.equal(r.status, 403)
+    assert.equal(r.error, 'invalid_customer_tier')
+  }
+})
