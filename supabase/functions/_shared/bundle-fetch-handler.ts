@@ -13,8 +13,7 @@
 import {
   KNOWN_PERSONA_SLUGS,
 } from './manifest-validator.ts'
-import { TIER_ORDINAL, type WorkflowTier } from './workflow-types.ts'
-import { personasForTier } from './tier-personas.ts'
+import { personasForTier, resolveTier } from './tier-personas.ts'
 
 // ─── input + output ────────────────────────────────────────────────────
 
@@ -47,7 +46,13 @@ export type BundleFetchResult = BundleFetchOk | BundleFetchErr
 
 export type CustomerInfo = {
   id: string
-  tier: WorkflowTier
+  /**
+   * Tier slug as stored on the subscription. Accepts both the canonical
+   * Phase A slugs (voice-starter / library-full / done-for-you /
+   * enterprise) AND the deprecated count-based slugs (starter / pro /
+   * studio) — resolveTier() normalizes either via the alias map.
+   */
+  tier: string
   bundle_versions: Record<string, string>
   bundle_update_policy: 'pin' | 'latest' | 'staged'
 }
@@ -128,8 +133,14 @@ export async function bundleFetchHandler(
   if (!customer) {
     return { ok: false, status: 404, error: 'customer_not_found' }
   }
-  // Tier sanity (defense in depth — every paid customer should have a tier).
-  if (!TIER_ORDINAL[customer.tier]) {
+  // Tier sanity (defense in depth — every paid customer should have a tier
+  // slug that resolves to a known tier). resolveTier() accepts both the
+  // canonical Phase A slugs and the deprecated count-based aliases; an
+  // unrecognized slug throws → 403.
+  let canonicalTier: ReturnType<typeof resolveTier>
+  try {
+    canonicalTier = resolveTier(customer.tier)
+  } catch {
     return {
       ok: false,
       status: 403,
@@ -143,19 +154,26 @@ export async function bundleFetchHandler(
   // Source: docs/audit/2026-05-13-pass-3-multi-persona-and-progress.md §P1-PASS3-1
   //
   // Pre-fix: handler only checked agent_slug ∈ KNOWN_PERSONA_SLUGS (typo
-  // catch) and never compared against the customer's tier — so a Starter
-  // customer with an active subscription could mint a signed URL for
-  // any Studio-only persona bundle (web-app-builder, business-agent) and
-  // download the prompt-IP. tier-personas.ts is the single source of
-  // truth (D1 lock 2026-05-12) used by setup-script + bundle-pull;
-  // mirroring it here closes the privilege-escalation gap.
-  const allowedSlugs = personasForTier(customer.tier)
-  if (!allowedSlugs.includes(input.agent_slug)) {
-    return {
-      ok: false,
-      status: 403,
-      error: 'tier_does_not_grant_persona',
-      detail: `agent_slug "${input.agent_slug}" not available on tier "${customer.tier}"`,
+  // catch) and never compared against the customer's tier — so a lower
+  // tier customer with an active subscription could mint a signed URL for
+  // any higher-tier-only persona bundle (web-app-builder, business-agent)
+  // and download the prompt-IP. tier-personas.ts is the single source of
+  // truth used by setup-script + bundle-pull; mirroring it here closes the
+  // privilege-escalation gap.
+  //
+  // Phase A: `enterprise` has a CUSTOM persona set (no fixed roster), so
+  // the persona-membership gate is skipped for enterprise — the agent_slug
+  // ∈ KNOWN_PERSONA_SLUGS check above still bounds it to the real library,
+  // so this never widens beyond the 10 known personas.
+  if (canonicalTier !== 'enterprise') {
+    const allowedSlugs = personasForTier(customer.tier)
+    if (!allowedSlugs.includes(input.agent_slug)) {
+      return {
+        ok: false,
+        status: 403,
+        error: 'tier_does_not_grant_persona',
+        detail: `agent_slug "${input.agent_slug}" not available on tier "${customer.tier}"`,
+      }
     }
   }
 

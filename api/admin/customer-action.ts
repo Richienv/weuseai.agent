@@ -24,6 +24,7 @@ import {
   isTier,
   personasForTier,
   setupFeeForTier,
+  tierEntry,
   type Tier as CatalogTier,
 } from '../_shared/tier-catalog.js'
 
@@ -106,7 +107,7 @@ function supabaseHeaders(): Record<string, string> {
 
 // ─── manual_provision ───────────────────────────────────────────────────
 
-function buildManualProvisionWelcomeEmail(args: { display_name: string; tier: Tier }): {
+function buildManualProvisionWelcomeEmail(args: { display_name: string; tier: string }): {
   subject: string
   text: string
 } {
@@ -368,7 +369,9 @@ async function triggerVpsSpinUp(args: {
         // customer back-compat path in xendit-webhook-handler.
         customerTelegramBotToken: '',
         alwaysOnEnabled: false,
-        useStarterCredits: args.tier === 'starter',
+        // Onboarding LLM credits go to the entry voice tier (the Phase A
+        // successor to the old "starter").
+        useStarterCredits: args.tier === 'voice-starter',
         agentSlug: args.agentSlug,
       }),
     })
@@ -543,10 +546,22 @@ export async function handleManualProvisionV2(
     return
   }
   if (!isTier(tierRaw)) {
-    res.status(400).json({ ok: false, error: 'Tier tidak valid (pilih starter / pro / studio).' })
+    res.status(400).json({
+      ok: false,
+      error: 'Tier tidak valid (pilih voice-starter / library-full / done-for-you / enterprise).',
+    })
     return
   }
   const tier: CatalogTier = tierRaw
+  // Enterprise has no fixed persona set + no fixed fee — it must go
+  // through the sales flow, not manual provisioning.
+  if (tier === 'enterprise') {
+    res.status(400).json({
+      ok: false,
+      error: 'enterprise tier tidak bisa di-provision manual — pakai sales flow.',
+    })
+    return
+  }
   const personas = personasForTier(tier)
   const defaultPersona = personas[0] // The Pro — default-at-index-0 invariant
 
@@ -578,7 +593,9 @@ export async function handleManualProvisionV2(
     }
   }
 
-  const tier_default_amount = setupFeeForTier(tier)
+  // Non-enterprise tiers always have a numeric setup fee (enterprise was
+  // rejected above). `?? 0` only guards the type, never hit at runtime.
+  const tier_default_amount = setupFeeForTier(tier) ?? 0
   const price_override = amount_idr !== tier_default_amount
 
   const completed_steps: string[] = []
@@ -741,8 +758,11 @@ export async function handleManualProvisionV2(
   const auditOk = auditRes.ok
   if (auditOk) completed_steps.push('audit')
 
-  // Step 7: email (best-effort).
-  const emailBody = buildManualProvisionWelcomeEmail({ display_name, tier })
+  // Step 7: email (best-effort). Use the human label, not the raw slug.
+  const emailBody = buildManualProvisionWelcomeEmail({
+    display_name,
+    tier: tierEntry(tier).label,
+  })
   const email_status = await sendEmail({
     to: email,
     subject: emailBody.subject,

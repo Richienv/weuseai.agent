@@ -35,36 +35,58 @@
     { slug: 'business-agent',    name: 'Business Director', tier: 'studio'  },
   ];
 
-  // Tier catalog mirrors supabase/functions/_shared/tier-personas.ts (D1 lock
-  // 2026-05-12) + CLAUDE.md "Business model" setup-fee values (v1.2 lock
-  // 2026-05-13). Locked composition per tier — operator cannot change the
-  // persona set, only the tier. The bundle-fetch security gate (PR #92)
-  // enforces the same set server-side. Drift gate:
-  // tests/admin-tier-catalog-drift.spec.ts.
+  // Tier catalog mirrors supabase/functions/_shared/tier-personas.ts +
+  // api/_shared/tier-catalog.ts (Phase A restructure 2026-05-28). Locked
+  // composition per tier — operator cannot change the persona set, only
+  // the tier. The bundle-fetch security gate enforces the same set
+  // server-side. Drift gate: tests/admin-tier-catalog-drift.spec.ts.
+  //
+  // `enterprise` is contact-only — no fixed personas, no fixed fee — and
+  // is NOT provisionable via the manual-provision form (the form disables
+  // submit + shows a sales-flow notice; the API rejects it too).
+  // `features` (voice / web_app / custom_build) are Phase B/C FLAGS only;
+  // middleware ships later within these same tier slugs.
   const TIER_CATALOG = {
-    starter: {
-      label: 'Starter',
-      setup_fee_idr: 399000,
+    'voice-starter': {
+      label: 'Voice Starter',
+      setup_fee_idr: 699000,
+      monthly_fee_idr: 99000,
       personas: ['the-pro', 'doc-expert', 'slide-master'],
+      features: { voice: true, web_app: false, custom_build: false },
+      contact_required: false,
     },
-    pro: {
-      label: 'Pro',
-      setup_fee_idr: 1290000,
-      personas: [
-        'the-pro', 'doc-expert', 'slide-master',
-        'deep-researcher', 'trade-pro', 'project-conductor',
-        'video-producer', 'social-conductor',
-      ],
-    },
-    studio: {
-      label: 'Studio',
-      setup_fee_idr: 5900000,
+    'library-full': {
+      label: 'Library Lengkap',
+      setup_fee_idr: 899000,
+      monthly_fee_idr: 99000,
       personas: [
         'the-pro', 'doc-expert', 'slide-master',
         'deep-researcher', 'trade-pro', 'project-conductor',
         'video-producer', 'social-conductor',
         'web-app-builder', 'business-agent',
       ],
+      features: { voice: true, web_app: false, custom_build: false },
+      contact_required: false,
+    },
+    'done-for-you': {
+      label: 'Siap Pakai',
+      setup_fee_idr: 1299000,
+      monthly_fee_idr: 99000,
+      personas: [
+        'the-pro', 'doc-expert', 'slide-master',
+        'deep-researcher', 'trade-pro', 'project-conductor',
+        'video-producer', 'social-conductor',
+      ],
+      features: { voice: true, web_app: true, custom_build: false },
+      contact_required: false,
+    },
+    enterprise: {
+      label: 'Enterprise',
+      setup_fee_idr: null,
+      monthly_fee_idr: null,
+      personas: null,
+      features: { voice: true, web_app: true, custom_build: true },
+      contact_required: true,
     },
   };
 
