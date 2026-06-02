@@ -19,6 +19,13 @@
 
 import { buildBundlePullScript } from './bundle-pull-script.js'
 import { personaScaffold } from '../../../supabase/functions/_shared/soul-md-template.js'
+// Phase B (voice-input STT, 2026-06-02): the voice config write is
+// tier-gated on TIERS[resolveTier(tier)].features.voice — the SAME source
+// of truth the persona list resolves through. resolveTier handles both the
+// new canonical slugs (voice-starter / library-full / done-for-you /
+// enterprise) AND the deprecated count-based aliases (starter / pro /
+// studio) that still flow through this script's `Tier` type.
+import { resolveTier, TIERS } from '../../../supabase/functions/_shared/tier-personas.js'
 
 export type Tier = 'starter' | 'pro' | 'studio'
 
@@ -123,6 +130,37 @@ export type SetupScriptParams = {
    * and include `Authorization: Bearer <token>` on platform callbacks.
    */
   hermesInstanceToken?: string
+  /**
+   * Phase B (voice-input STT, 2026-06-02): the STT provider API key for
+   * Hermes' NATIVE voice-memo transcription. Threaded from the
+   * provisioning service env (VOICE_STT_GROQ_KEY / VOICE_STT_OPENAI_KEY,
+   * read in customer-flow.ts) → here → the VPS .env.
+   *
+   * The env var NAME we write depends on `voiceSttProvider`:
+   *   - 'groq'   → GROQ_API_KEY            (Whisper-large-v3 on Groq)
+   *   - 'openai' → VOICE_TOOLS_OPENAI_KEY  (Whisper on api.openai.com)
+   *
+   * IMPORTANT — this is NOT the OPENAI_API_KEY we already write for the
+   * chat model. That one holds the customer's OpenRouter sub-key (Hermes
+   * is OpenAI-compatible, pointed at openrouter.ai). Hermes' OpenAI STT
+   * reads a SEPARATE var, VOICE_TOOLS_OPENAI_KEY, which must be a REAL
+   * api.openai.com key — an OpenRouter key will NOT work there. We default
+   * to the Groq provider (free + fast + good Bahasa) to sidestep that.
+   *
+   * Optional: when absent, the voice/stt CONFIG block is still written to
+   * config.yaml (so the moment the founder sets the key + re-runs
+   * refresh-env, STT works) but the key env line is omitted. Hermes then
+   * falls back gracefully — incoming voice messages are not transcribed
+   * until the key is present, and TEXT chat keeps working. The voice
+   * config is only emitted at all when the tier grants voice.
+   */
+  voiceSttKey?: string
+  /**
+   * Phase B (voice-input STT): which STT provider Hermes uses. Single
+   * constant, easy to switch fleet-wide. Defaults to VOICE_STT_PROVIDER
+   * ('groq') in buildSetupScript when absent.
+   */
+  voiceSttProvider?: 'groq' | 'openai'
 }
 
 const DEFAULT_WORKFLOW_EXECUTE_URL =
@@ -139,6 +177,104 @@ const OPENROUTER_DEFAULT_MODEL = 'deepseek/deepseek-v4-pro'
 // to a known-good upstream tag. Override via HERMES_VERSION env at
 // provision time. See docs/runbooks/hermes-upgrade-test.md.
 const DEFAULT_HERMES_VERSION = 'v0.13.0'
+
+// ─── Phase B: native Hermes voice-input (STT) config ────────────────────
+//
+// We do NOT build any external STT middleware. There is no seam — after
+// complete-onboarding deletes the Telegram webhook, the upstream Hermes
+// Python gateway owns the Telegram connection DIRECTLY on the customer's
+// VPS. Instead we enable Hermes' OWN voice-memo transcription via its
+// native config: writing the `voice` + `stt` block to ~/.hermes/config.yaml
+// and the STT key env var to ~/.hermes/.env. No Hermes code is touched.
+//
+// Verified from upstream docs (hermes-agent.nousresearch.com/docs/
+// user-guide/features/voice-mode + /docs/guides/use-voice-mode-with-hermes,
+// 2026-06-02):
+//   - Incoming Telegram voice messages are transcribed AUTOMATICALLY once
+//     `stt.enabled: true` + `stt.provider` are set — the customer does NOT
+//     need to type `/voice on`. (`/voice on` controls TTS voice REPLIES,
+//     a separate pipeline we keep OFF for input-only.)
+//   - STT providers: "local" (faster-whisper, no key), "groq" (GROQ_API_KEY),
+//     "openai" (VOICE_TOOLS_OPENAI_KEY — a REAL api.openai.com key, NOT the
+//     OpenRouter key we already write as OPENAI_API_KEY).
+//
+// Provider choice (founder lock 2026-06-02): default to Groq Whisper. It is
+// free + fast + good at Bahasa, and — critically — it sidesteps the
+// OpenAI-vs-OpenRouter key trap (our chat path already uses an OpenRouter
+// key under OPENAI_API_KEY; Hermes' OpenAI STT would need a separate real
+// OpenAI key). Switch fleet-wide by changing this one constant (and setting
+// the matching provisioning env var). config.yaml is the source of truth
+// for the active provider; the env var only carries the key.
+const VOICE_STT_PROVIDER: 'groq' | 'openai' = 'groq'
+
+// Groq Whisper model. whisper-large-v3-turbo is the upstream default and
+// has strong multilingual (incl. Bahasa Indonesia) coverage. Written as
+// STT_GROQ_MODEL in .env (Hermes reads it as the model override).
+const VOICE_STT_GROQ_MODEL = 'whisper-large-v3-turbo'
+
+// OpenAI Whisper model (only used when provider === 'openai').
+const VOICE_STT_OPENAI_MODEL = 'whisper-1'
+
+/**
+ * The .env key var NAME for an STT provider. Hermes reads a DIFFERENT var
+ * per provider — Groq from GROQ_API_KEY, OpenAI from VOICE_TOOLS_OPENAI_KEY
+ * (deliberately NOT OPENAI_API_KEY, which already holds the OpenRouter
+ * chat key).
+ */
+function sttKeyEnvName(provider: 'groq' | 'openai'): string {
+  return provider === 'groq' ? 'GROQ_API_KEY' : 'VOICE_TOOLS_OPENAI_KEY'
+}
+
+/**
+ * .env lines for native STT. Only the KEY env vars live here; the config
+ * block (provider selection, enabled flag) is materialized into
+ * config.yaml separately (see voiceConfigYamlBlock). Returns [] when the
+ * tier doesn't grant voice OR no key was supplied — in the no-key case the
+ * config block is still written so STT activates the moment a key arrives
+ * via refresh-env.
+ */
+function voiceSttEnvLines(p: SetupScriptParams, provider: 'groq' | 'openai'): string[] {
+  if (!p.voiceSttKey) return []
+  const lines = [`${sttKeyEnvName(provider)}=${p.voiceSttKey}`]
+  if (provider === 'groq') {
+    // Pin the Groq model + base URL so a future upstream default change
+    // doesn't silently swap the model under our customers.
+    lines.push(`STT_GROQ_MODEL=${VOICE_STT_GROQ_MODEL}`)
+    lines.push(`GROQ_BASE_URL=https://api.groq.com/openai/v1`)
+  }
+  return lines
+}
+
+/**
+ * The `voice` + `stt` config.yaml block, TTS left OFF (input-only this
+ * phase). `auto_tts: false` + no `/voice on` means the bot transcribes
+ * incoming voice memos to text and replies in TEXT — never speaks back.
+ *
+ * Heredoc-appended to config.yaml in step 7c. We APPEND (not sed-merge)
+ * because a fresh non-interactive Hermes install ships config.yaml WITHOUT
+ * a voice/stt block, so there is nothing to sed; appending top-level keys
+ * is valid YAML. The block is idempotency-guarded at write time (grep for
+ * an existing `stt:` key) so a re-provision/refresh doesn't duplicate it.
+ */
+function voiceConfigYamlBlock(provider: 'groq' | 'openai'): string {
+  const model = provider === 'groq' ? VOICE_STT_GROQ_MODEL : VOICE_STT_OPENAI_MODEL
+  // Indentation matters — YAML. Two-space nesting under each top-level key.
+  return [
+    '',
+    '# ── weuseai voice-input (Phase B, native Hermes STT) ──',
+    '# Input-only: incoming voice memos are transcribed to text; the bot',
+    '# replies in TEXT (auto_tts:false, no TTS provider activated). STT runs',
+    "# passively once enabled — the customer does NOT type /voice on.",
+    'voice:',
+    '  auto_tts: false',
+    '  max_recording_seconds: 120',
+    'stt:',
+    '  enabled: true',
+    `  provider: "${provider}"`,
+    `  ${provider}:`,
+    `    model: "${model}"`,
+  ].join('\n')
+}
 
 // ─── persona + skill content ──────────────────────────────────────────────
 //
@@ -314,11 +450,31 @@ export function buildSetupScript(p: SetupScriptParams): string {
   const hmacEnvLines = p.hermesInstanceToken
     ? [`HERMES_INSTANCE_TOKEN=${p.hermesInstanceToken}`]
     : []
+
+  // ─── Phase B voice gate ───────────────────────────────────────────────
+  // Strictly tier-gated: the voice/stt config (env + config.yaml block) is
+  // emitted ONLY when the customer's tier grants voice. resolveTier handles
+  // both canonical slugs and the deprecated aliases (starter/pro/studio)
+  // that this script's `Tier` type still carries. A future text-only tier
+  // (features.voice === false) gets NOTHING — no env line, no config block,
+  // no regression to the text flow. Unknown slug → resolveTier throws,
+  // which we DON'T want to abort provisioning over a voice add-on, so we
+  // degrade to voice-off on any resolve error.
+  let voiceEnabled = false
+  try {
+    voiceEnabled = TIERS[resolveTier(p.tier)].features.voice === true
+  } catch {
+    voiceEnabled = false
+  }
+  const voiceProvider = p.voiceSttProvider ?? VOICE_STT_PROVIDER
+  const voiceSttLines = voiceEnabled ? voiceSttEnvLines(p, voiceProvider) : []
+
   const allEnvLines = [
     ...telegramEnvLines,
     ...llmEnvLines(p),
     ...workflowEnvLines(p),
     ...hmacEnvLines,
+    ...voiceSttLines,
   ]
 
   // Halo block — fires FIRST so customer sees life immediately.
@@ -530,6 +686,32 @@ fi
 
   const pinnedHermesVersion = p.hermesVersion ?? DEFAULT_HERMES_VERSION
 
+  // ─── Phase B: voice/stt config.yaml block (tier-gated) ────────────────
+  // Appended inside step 7c (the existing config.yaml tweak block), after
+  // the model pin. Empty string when the tier doesn't grant voice — so a
+  // text-only tier's config.yaml is byte-identical to pre-Phase-B. The
+  // append is idempotency-guarded (grep for an existing `stt:` key) so a
+  // re-provision doesn't stack duplicate blocks. config.yaml may legitimately
+  // be absent at this point (non-fatal) — the outer `if [ -f "$CONFIG_YAML" ]`
+  // in step 7c already guards that; we sit inside it.
+  const voiceConfigShellBlock = voiceEnabled
+    ? `
+  # ── Phase B: native voice-input (STT) config ──
+  # Append the voice + stt block so Hermes transcribes incoming voice memos
+  # to text (input-only; TTS stays off). Idempotent: skip if an stt: key is
+  # already present. Provider=${voiceProvider}; the key lives in .env
+  # (${sttKeyEnvName(voiceProvider)}). If the key is absent the block is still
+  # written and STT falls back gracefully — text chat is unaffected.
+  if ! grep -qE '^stt:' "$CONFIG_YAML"; then
+    cat >> "$CONFIG_YAML" <<'WEUSEAI_VOICE_EOF'
+${voiceConfigYamlBlock(voiceProvider)}
+WEUSEAI_VOICE_EOF
+    log "✓ voice/stt config appended (provider=${voiceProvider}, input-only)"
+  else
+    log "✓ voice/stt config already present (idempotent skip)"
+  fi`
+    : ''
+
   // Skills + persona writes
   return `#!/bin/bash
 # weuseai.agent — VPS setup script (run via SSH from the provisioning service).
@@ -733,6 +915,7 @@ if [ -f "$CONFIG_YAML" ]; then
   else
     printf '\\nmodel: deepseek/deepseek-v4-pro\\n' >> "$CONFIG_YAML"
   fi
+${voiceConfigShellBlock}
   chown weuseai:weuseai "$CONFIG_YAML"
   log "✓ config.yaml tweaked (tool_progress=\"off\", interim_assistant_messages=false, model=deepseek/deepseek-v4-pro)"
 else
