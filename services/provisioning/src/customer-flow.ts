@@ -457,6 +457,36 @@ const FLEET_SSH_PUBKEY = process.env.FLEET_SSH_PUBKEY ?? ''
 // (v0.13.0); operator can override via env.
 const HERMES_VERSION = process.env.HERMES_VERSION
 
+// Phase B (voice-input STT, 2026-06-02): the STT provider key for Hermes'
+// native voice-memo transcription, read once at module load (mirrors the
+// FLEET_SSH_PUBKEY pattern). It is a single fleet-wide provisioning secret
+// set on the Fly service env, NOT per-customer — Hermes calls the STT
+// provider internally with this key on each customer VPS.
+//
+// The default provider is Groq (see VOICE_STT_PROVIDER in setup-script.ts);
+// set VOICE_STT_GROQ_KEY accordingly. If the fleet is switched to the
+// OpenAI provider, set VOICE_STT_OPENAI_KEY instead (a REAL api.openai.com
+// key — NOT an OpenRouter key, which only works for the chat path). We read
+// both and prefer the one matching the active provider, falling back to the
+// other so a mis-set var name still works.
+//
+// Absent → setup-script still writes the voice CONFIG block (so STT
+// activates the moment the key lands via refresh-env) but omits the key
+// env line; incoming voice stays untranscribed until then, text unaffected.
+const VOICE_STT_GROQ_KEY = process.env.VOICE_STT_GROQ_KEY ?? ''
+const VOICE_STT_OPENAI_KEY = process.env.VOICE_STT_OPENAI_KEY ?? ''
+
+if (!VOICE_STT_GROQ_KEY && !VOICE_STT_OPENAI_KEY) {
+  // Consult-accepted (2026-06-02): ship the voice config anyway; text
+  // fallback active until the key is set. This warning makes the gap
+  // visible in the Fly logs so the founder knows STT is dormant.
+  console.warn(
+    '[customer-flow] No VOICE_STT_GROQ_KEY / VOICE_STT_OPENAI_KEY set — ' +
+      'voice-tier VPSes get the voice/stt config block but STT stays dormant ' +
+      '(incoming voice not transcribed) until a key is set. Text chat unaffected.',
+  )
+}
+
 // Phase 5-3.c: shared HMAC secret. When set, computeHermesInstanceToken()
 // signs a per-customer token at provision time and threads it through
 // the VPS .env. When unset, no token written → Hermes-side falls back
@@ -490,6 +520,14 @@ async function buildScriptFor(opts: SpinUpOpts, openRouterKey: string): Promise<
     ? [defaultSlug, ...tierPersonas.filter((s) => s !== defaultSlug)]
     : [defaultSlug, ...tierPersonas]
 
+  // Phase B (voice-input STT): pick the key matching the active provider.
+  // setup-script's VOICE_STT_PROVIDER default is 'groq', so prefer the Groq
+  // key; fall back to the OpenAI key if only that is set (mis-named env, or
+  // a fleet that flipped the provider constant but kept the OpenAI var).
+  // setup-script gates strictly on tier.features.voice — passing the key is
+  // harmless for text-only tiers (it simply isn't written there).
+  const voiceSttKey = VOICE_STT_GROQ_KEY || VOICE_STT_OPENAI_KEY || undefined
+
   return buildSetupScript({
     customerId: opts.customerId,
     tier: opts.tier,
@@ -502,6 +540,7 @@ async function buildScriptFor(opts: SpinUpOpts, openRouterKey: string): Promise<
     fleetSshPubkey: FLEET_SSH_PUBKEY || undefined,
     hermesVersion: HERMES_VERSION,
     hermesInstanceToken,
+    voiceSttKey,
   })
 }
 

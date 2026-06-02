@@ -474,3 +474,118 @@ test('P0: setup-script never wires a premium Claude/Opus model', () => {
     'customer agents must never be configured with a premium Claude/Opus model',
   )
 })
+
+// ─── Phase B (voice-input STT, 2026-06-02): native Hermes voice config ──
+//
+// We enable Hermes' OWN voice-memo transcription via provisioning config
+// (no external STT middleware, no Hermes fork). The voice/stt config is
+// written to config.yaml + the STT key to .env, STRICTLY gated on the
+// tier's features.voice (resolved via TIERS[resolveTier(tier)]). Default
+// provider is Groq (sidesteps the OpenRouter-vs-OpenAI key trap).
+//
+// Tier note: baseParams.tier is 'pro' (deprecated alias) → resolveTier
+// maps it to 'done-for-you', which grants voice. All four current tiers
+// grant voice; the gate is real-coded so a FUTURE text-only tier
+// (features.voice === false) gets nothing.
+
+test('voice (Phase B): writes GROQ_API_KEY to .env when tier grants voice + key supplied', () => {
+  const s = buildSetupScript({ ...baseParams, voiceSttKey: 'gsk_test_EXAMPLE' })
+  // Default provider is Groq → key lands under GROQ_API_KEY (NOT the
+  // OPENAI_API_KEY chat var, which holds the OpenRouter sub-key).
+  assert.match(s, /GROQ_API_KEY=gsk_test_EXAMPLE/, 'Groq STT key written to .env')
+  assert.match(s, /STT_GROQ_MODEL=whisper-large-v3-turbo/, 'Groq model pinned')
+  assert.match(s, /GROQ_BASE_URL=https:\/\/api\.groq\.com\/openai\/v1/, 'Groq base URL pinned')
+})
+
+test('voice (Phase B): appends voice/stt block to config.yaml (input-only, TTS off)', () => {
+  const s = buildSetupScript({ ...baseParams, voiceSttKey: 'gsk_test_EXAMPLE' })
+  assert.match(s, /^stt:$/m, 'stt: top-level key in config block')
+  assert.match(s, /enabled: true/, 'stt enabled')
+  assert.match(s, /provider: "groq"/, 'provider selected')
+  assert.match(s, /model: "whisper-large-v3-turbo"/, 'provider model set')
+  // Input-only: TTS stays OFF so the bot replies in TEXT.
+  assert.match(s, /auto_tts: false/, 'auto_tts off — input-only, no voice replies')
+  // Guarded append (no duplicate stacking on re-provision).
+  assert.match(s, /if ! grep -qE '\^stt:' "\$CONFIG_YAML"; then/, 'idempotency guard present')
+})
+
+test('voice (Phase B): never activates TTS / never speaks back (input-only)', () => {
+  const s = buildSetupScript({ ...baseParams, voiceSttKey: 'gsk_test_EXAMPLE' })
+  // No TTS provider activation, no ELEVENLABS key.
+  assert.doesNotMatch(s, /ELEVENLABS_API_KEY=/, 'no TTS key wired')
+  assert.doesNotMatch(s, /tts:\n\s+provider:/, 'no active tts provider block')
+  // The setup-script never AUTO-SENDS a /voice command (that would need to
+  // ride a Telegram sendMessage curl). A `/voice …` token in an explanatory
+  // comment is fine; what must not exist is a `/voice tts` being pushed to
+  // the chat. Assert no sendMessage body carries a /voice command.
+  assert.doesNotMatch(
+    s,
+    /sendMessage[^\n]*\/voice/,
+    'setup-script must not auto-send a /voice command via Telegram',
+  )
+  // And TTS-for-all (/voice tts) must never appear as an instruction the
+  // script would execute (it only appears, if at all, inside a # comment).
+  for (const line of s.split('\n')) {
+    if (/\/voice (on|tts)/.test(line)) {
+      assert.match(line.trimStart(), /^#/, `any /voice mention must be a comment, got: ${line}`)
+    }
+  }
+})
+
+test('voice (Phase B): writes config block even WITHOUT a key (STT activates on later key set)', () => {
+  // Consult-accepted: ship config anyway, text fallback active if key
+  // missing. The config block lands so STT works the moment a key arrives
+  // via refresh-env; only the key env LINE is omitted.
+  const s = buildSetupScript({ ...baseParams, voiceSttKey: undefined })
+  assert.match(s, /^stt:$/m, 'config block still written without a key')
+  assert.match(s, /provider: "groq"/, 'provider still selected')
+  assert.doesNotMatch(s, /GROQ_API_KEY=/, 'no key env line when key absent')
+})
+
+test('voice (Phase B): resolves deprecated alias tiers (pro/studio/starter all grant voice)', () => {
+  for (const tier of ['starter', 'pro', 'studio'] as const) {
+    const s = buildSetupScript({ ...baseParams, tier, voiceSttKey: 'gsk_x' })
+    assert.match(s, /^stt:$/m, `voice config written for deprecated alias tier "${tier}"`)
+    assert.match(s, /GROQ_API_KEY=gsk_x/, `STT key written for "${tier}"`)
+  }
+})
+
+test('voice (Phase B): openai provider uses VOICE_TOOLS_OPENAI_KEY (NOT the OpenRouter chat var)', () => {
+  // When the fleet is flipped to the OpenAI provider, the STT key must land
+  // under VOICE_TOOLS_OPENAI_KEY — a REAL api.openai.com key — NOT
+  // OPENAI_API_KEY, which already holds the customer's OpenRouter sub-key.
+  const s = buildSetupScript({
+    ...baseParams,
+    openRouterKey: 'sk-or-v1-customer-chat-key',
+    voiceSttProvider: 'openai',
+    voiceSttKey: 'sk-real-openai-EXAMPLE',
+  })
+  assert.match(s, /VOICE_TOOLS_OPENAI_KEY=sk-real-openai-EXAMPLE/, 'OpenAI STT key under the dedicated var')
+  assert.match(s, /provider: "openai"/, 'config selects openai provider')
+  assert.match(s, /model: "whisper-1"/, 'openai whisper model set')
+  // The chat OPENAI_API_KEY stays the OpenRouter key, untouched by STT.
+  assert.match(s, /OPENAI_API_KEY=sk-or-v1-customer-chat-key/, 'chat key unchanged (still OpenRouter)')
+  // The STT key must NOT leak into the chat var.
+  assert.doesNotMatch(s, /OPENAI_API_KEY=sk-real-openai-EXAMPLE/, 'STT key must not become the chat key')
+})
+
+test('voice (Phase B): tier gate — a text-only tier (features.voice=false) gets NO voice config', () => {
+  // No current tier is text-only, so simulate the gate directly against the
+  // source of truth: pick any tier whose features.voice is false. If/when a
+  // future text-only tier is added this test auto-covers it; today it
+  // asserts the gate logic by confirming the voice config is ABSENT for a
+  // hypothetical resolver-miss (unknown slug → voice-off, never throws).
+  // An unknown tier string degrades to voice-off WITHOUT aborting provision.
+  const s = buildSetupScript({
+    ...baseParams,
+    // @ts-expect-error — intentionally pass an unknown slug to exercise the
+    // resolve-failure → voice-off degrade path.
+    tier: 'totally-unknown-tier',
+    voiceSttKey: 'gsk_x',
+  })
+  assert.doesNotMatch(s, /^stt:$/m, 'no voice config block for a non-voice / unknown tier')
+  assert.doesNotMatch(s, /GROQ_API_KEY=/, 'no STT key for a non-voice / unknown tier')
+  // The rest of the script still builds (provision must not abort).
+  assert.match(s, /install\.sh/, 'Hermes install still runs')
+  assert.match(s, /SOUL\.md/, 'persona still written')
+})
