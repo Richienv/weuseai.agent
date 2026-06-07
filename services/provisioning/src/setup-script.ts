@@ -173,6 +173,63 @@ const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1'
 // 80%+ of agent tasks per Hermes community validation.
 const OPENROUTER_DEFAULT_MODEL = 'deepseek/deepseek-v4-pro'
 
+/**
+ * Pin the customer agent model to DeepSeek v4-pro in config.yaml — ROBUST to
+ * the upstream config SHAPE (scalar OR nested dict OR missing).
+ *
+ * P0 cost fix (2026-05-17) — without a pin a fresh Hermes install resolves to
+ * Claude Opus 4.6 (model.default in the shipped config), burning a customer
+ * sub-key 5x over budget. model.default is the AUTHORITATIVE key Hermes reads.
+ *
+ * Hardened (2026-06-07) after the model-block YAML incident: a pinned-Hermes
+ * update changed top-level `model:` from a SCALAR to a DICT block. The old
+ * `sed 's|^model:.*|model: <x>|'` collapsed that dict PARENT into a scalar,
+ * ORPHANING its indented `default:` child → invalid YAML ("while parsing a
+ * block mapping") → Hermes discarded the whole config → empty model →
+ * OpenRouter `HTTP 400: No models provided` → "model provider failed after
+ * retries" in the customer's chat. (See docs/investigation/.)
+ *
+ * Shape-independent fix: delete ANY existing top-level `model:` construct
+ * (the line + its entire indented body, scalar or dict) with awk, then append
+ * one canonical nested block. Idempotent — re-running removes the canonical
+ * block it wrote and re-appends it. Operates on $CONFIG_YAML.
+ */
+export function modelPinShellBlock(): string {
+  return `  # Remove any existing top-level model: block (scalar or dict + indented
+  # body), then append a single canonical nested block. Shape-independent so a
+  # future upstream config-schema change can't silently re-break this.
+  awk '
+    inblk && /^[[:space:]]/ {next}
+    inblk && /^[[:space:]]*$/ {next}
+    inblk {inblk=0}
+    /^model:/ {inblk=1; next}
+    {print}
+  ' "$CONFIG_YAML" > "$CONFIG_YAML.tmp" && mv "$CONFIG_YAML.tmp" "$CONFIG_YAML"
+  printf 'model:\\n  default: ${OPENROUTER_DEFAULT_MODEL}\\n' >> "$CONFIG_YAML"`
+}
+
+/**
+ * Hard YAML-shape guard (2026-06-07). Validates the FINAL config.yaml (after
+ * every tweak, including the appended voice block) actually PARSES and pins
+ * the expected model — using the Hermes venv python, which always ships
+ * pyyaml. Fails the provision loudly so a future upstream shape change
+ * surfaces to US at provision time, not via a customer 402. Operates on
+ * $CONFIG_YAML; `log` is defined earlier in the script.
+ */
+export function configYamlValidateShellBlock(): string {
+  return `  # YAML-shape guard — never hand a customer a config Hermes can't parse.
+  CONFIG_VALIDATE_PY=/home/weuseai/.hermes/hermes-agent/venv/bin/python
+  if [ -x "$CONFIG_VALIDATE_PY" ] && "$CONFIG_VALIDATE_PY" -c 'import yaml' 2>/dev/null; then
+    if ! "$CONFIG_VALIDATE_PY" -c 'import sys,yaml; d=yaml.safe_load(open(sys.argv[1])) or {}; m=d.get("model"); sys.exit(0 if isinstance(m,dict) and m.get("default")=="${OPENROUTER_DEFAULT_MODEL}" else 1)' "$CONFIG_YAML"; then
+      log "✗ FATAL: config.yaml failed YAML/model validation after tweaks (model not pinned or unparseable)"
+      exit 1
+    fi
+    log "✓ config.yaml validated (parses; model.default=${OPENROUTER_DEFAULT_MODEL})"
+  else
+    log "⚠ config.yaml YAML validation skipped (Hermes venv python/pyyaml unavailable)"
+  fi`
+}
+
 // Phase 2E-3 lock (Q7, founder 2026-05-08): default Hermes version pinned
 // to a known-good upstream tag. Override via HERMES_VERSION env at
 // provision time. See docs/runbooks/hermes-upgrade-test.md.
@@ -899,25 +956,15 @@ if [ -f "$CONFIG_YAML" ]; then
   # strings). interim_assistant_messages IS a real boolean — unquoted.
   sed -i -E 's/^[[:space:]]*tool_progress:.*/  tool_progress: "off"/' "$CONFIG_YAML"
   sed -i -E 's/^[[:space:]]*interim_assistant_messages:.*/  interim_assistant_messages: false/' "$CONFIG_YAML"
-  # ── P0 cost fix (2026-05-17): pin the agent model to DeepSeek v4-pro ──
-  # A fresh non-interactive Hermes install leaves config.yaml's top-level
-  # model key empty (Hermes DEFAULT_CONFIG ships an empty model string),
-  # and the agent then resolved to Claude Opus 4.6 via OpenRouter — it
-  # burned a customer OpenRouter sub-key 5-dollar cap to 41 percent in 3
-  # hours. The .env OPENAI_MODEL is NOT authoritative for the main agent;
-  # the top-level config.yaml model key is. DeepSeek v4-pro (about
-  # 0.44/0.87 USD per M tokens) is ~1/55th the cost — customer agents
-  # must never run a premium model. The model key is a top-level scalar
-  # here (non-interactive install = no setup wizard, so it never becomes
-  # a dict block); replace it, or append it if Hermes omitted the key.
-  if grep -qE '^model:' "$CONFIG_YAML"; then
-    sed -i -E 's|^model:.*|model: deepseek/deepseek-v4-pro|' "$CONFIG_YAML"
-  else
-    printf '\\nmodel: deepseek/deepseek-v4-pro\\n' >> "$CONFIG_YAML"
-  fi
+  # ── P0 cost fix (2026-05-17, hardened 2026-06-07) — pin agent model to
+  # DeepSeek v4-pro, robust to upstream config.yaml shape. See
+  # modelPinShellBlock() for the full incident write-up.
+${modelPinShellBlock()}
 ${voiceConfigShellBlock}
+  # ── YAML-shape guard — hard-fail if the final config doesn't parse / pin.
+${configYamlValidateShellBlock()}
   chown weuseai:weuseai "$CONFIG_YAML"
-  log "✓ config.yaml tweaked (tool_progress=\"off\", interim_assistant_messages=false, model=deepseek/deepseek-v4-pro)"
+  log "✓ config.yaml display tweaks applied (tool_progress=\"off\", interim_assistant_messages=false)"
 else
   log "⚠ config.yaml not found at setup time — display tweak skipped (non-fatal)"
 fi
