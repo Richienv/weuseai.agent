@@ -4,6 +4,15 @@
 **Severity:** High (LLM path dead on affected customer VPSes; silent Opus cost-burn on others)
 **Status:** Resolved — fleet remediated, generator fixed + drift-gated, lock added.
 
+> **Postscript (2026-06-07, later):** all three test customers referenced below
+> — `admin@example.com` (`9b3daadb…`), richie (`65e6c0ff…`), renita
+> (`2f60325d…`) and their VPSes (139.180.144.49 / 66.42.59.231 /
+> 139.180.157.57) — were **deleted by the founder** for a clean-slate
+> `/checkout` retest. The IDs/IPs here are a **historical forensic record**,
+> not live rows. The generator fix (PR #223) is what protects future
+> provisions; it only takes effect once the Fly `weuseai-provisioning` service
+> is redeployed onto #223 (see "Deploy" note at end).
+
 ---
 
 ## Symptom
@@ -99,6 +108,22 @@ OpenRouter call returns **HTTP 200** (`deepseek/deepseek-v4-pro-20260423`).
   double-greet. Needs a separate look at the concierge-vs-standard greeting
   path and whether any non-VPS process holds the bot token. Did not block the
   LLM fix; the LLM path is verified working independently of it.
+
+## Deploy
+
+The generator fix is merged to `main` (PR #223) but the Fly
+`weuseai-provisioning` service must be **redeployed** for it to take effect on
+new provisions — until then, the service still runs the pre-#223 setup-script
+and any newly provisioned VPS reproduces this bug. **Do not provision a new
+customer (incl. a `/checkout` run that reaches onboarding/provisioning) until
+the service is on #223.** Deploy from the repo root:
+
+```
+fly deploy --config services/provisioning/fly.toml \
+  --dockerfile services/provisioning/Dockerfile -a weuseai-provisioning
+```
+
+Verify: `fly releases -a weuseai-provisioning` shows a version **> v37**.
 
 ## Follow-ups
 
