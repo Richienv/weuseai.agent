@@ -455,14 +455,21 @@ test('P0: setup-script pins .env OPENAI_MODEL to deepseek/deepseek-v4-pro', () =
   )
 })
 
-test('P0: setup-script pins config.yaml model: to deepseek/deepseek-v4-pro', () => {
+test('P0: setup-script pins config.yaml model.default to deepseek/deepseek-v4-pro (nested, shape-robust)', () => {
   const s = buildSetupScript(baseParams)
-  // The config.yaml top-level model key is authoritative for the main
-  // agent — the .env var alone is not enough (that was the Opus bug).
+  // config.yaml model.default is authoritative for the main agent — the
+  // .env var alone is not enough (that was the Opus bug). As of 2026-06-07
+  // it is pinned as a NESTED dict and the old scalar-collapsing sed is gone
+  // (that sed orphaned the upstream dict's child → unparseable config →
+  // empty model → OpenRouter 400). See setup-script-config-yaml-model.spec.ts.
   assert.match(
     s,
-    /model: deepseek\/deepseek-v4-pro/,
-    'setup-script must pin config.yaml model: to deepseek/deepseek-v4-pro',
+    /printf 'model:\\n {2}default: deepseek\/deepseek-v4-pro\\n'/,
+    'must append canonical nested model.default block',
+  )
+  assert.ok(
+    !/sed -i -E 's\|\^model:\.\*\|/.test(s),
+    'must not use the scalar-collapsing model sed (the 2026-06-07 bug)',
   )
 })
 

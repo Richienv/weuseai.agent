@@ -183,6 +183,27 @@ Kita pakai NousResearch/hermes-agent (https://github.com/NousResearch/hermes-age
 - Bug di agent core → upstream issue, bukan kita fix
 - Update Hermes = re-install di VPS pelanggan, bukan rebuild image. Currently pinned to `v0.13.0` (HERMES_VERSION env override pulls a different tag on next-provisioned VPS).
 
+**LOCKED (2026-06-07) — Hermes config.yaml SHAPE can drift across versions.**
+The upstream `config.yaml` schema is NOT a stable contract: between installs the
+top-level `model:` key moved from a scalar to a nested dict (`model.default`),
+which broke our scalar-based `sed` pin and shipped customers an unparseable
+config → empty model → OpenRouter `400 No models provided` → "model provider
+failed after retries" (see `docs/investigation/2026-06-07-config-yaml-model-shape-incident.md`).
+Rules going forward:
+1. **NEVER edit config.yaml with shape-assuming `sed`/`grep` that assumes a key
+   is a scalar vs a dict.** Use shape-independent block-replacement (see
+   `modelPinShellBlock()` in `setup-script.ts`).
+2. **The setup-script HARD-VALIDATES the final config.yaml** (`configYamlValidateShellBlock()`):
+   it parses with the Hermes venv pyyaml and asserts `model.default` is pinned
+   to DeepSeek, failing the provision loudly. A future upstream shape change
+   surfaces to US at provision time — never via a customer 402.
+3. **When bumping `HERMES_VERSION`,** re-verify the config.yaml shape on a
+   throwaway VPS before the new tag reaches customers; the drift gate
+   (`tests/setup-script-config-yaml-model.spec.ts`) only guards the shapes we
+   know about.
+4. Retroactive remediation for already-provisioned VPSes:
+   `scripts/remediate-config-yaml-model.sh`.
+
 **Sanctioned upstream contribution (NOT a fork):** When a needed knob doesn't exist upstream, the path is a clean PR to NousResearch/hermes-agent — never a fork or local patch of the pinned install.
 - Upstream PR #27771 contributed (`feat(config): add agent.sanitize_provider_errors`, https://github.com/NousResearch/hermes-agent/pull/27771); no active pursuit — NousResearch can merge or close on their own schedule. Item 2 mitigation = cost monitoring (Item 3) prevents 402 from firing in normal flow.
 
