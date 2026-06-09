@@ -5,9 +5,17 @@
  * No I/O, no env reads — all inputs explicit.
  */
 
-import type { Tier, SpinUpOpts, SpinUpResult } from './customer-flow.js'
+import type { ProvisionTier, SpinUpOpts, SpinUpResult } from './customer-flow.js'
 
-const VALID_TIERS: ReadonlyArray<Tier> = ['starter', 'pro', 'studio']
+// All provisionable tier slugs: v1.4 canonical (bare/solo/voice-starter/
+// library-full/done-for-you) + the deprecated legacy slugs. `enterprise`
+// is intentionally absent — it is contact-sales, not self-provisionable.
+// Persona/voice come from the canonical slug; VPS spec/budget collapse to a
+// spec-class via resolveTierToSpecClass (customer-flow.ts).
+const VALID_TIERS: ReadonlyArray<ProvisionTier> = [
+  'bare', 'solo', 'voice-starter', 'library-full', 'done-for-you',
+  'starter', 'pro', 'studio',
+]
 
 export type EnvLike = {
   TELEGRAM_BOT_TOKEN?: string
@@ -32,7 +40,7 @@ export function parseSpinUpRequest(
 
   if (!customerId) return { ok: false, error: 'missing customerId' }
   if (!tier) return { ok: false, error: 'missing tier' }
-  if (!VALID_TIERS.includes(tier as Tier)) {
+  if (!VALID_TIERS.includes(tier as ProvisionTier)) {
     return { ok: false, error: `invalid tier: ${tier}` }
   }
 
@@ -52,7 +60,7 @@ export function parseSpinUpRequest(
     ok: true,
     opts: {
       customerId,
-      tier: tier as Tier,
+      tier: tier as ProvisionTier,
       telegramChatId: body.telegramChatId as string | undefined,
       customerTelegramBotToken,
       customerTelegramAllowedUserIds,

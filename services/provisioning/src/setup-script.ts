@@ -27,11 +27,27 @@ import { personaScaffold } from '../../../supabase/functions/_shared/soul-md-tem
 // studio) that still flow through this script's `Tier` type.
 import { resolveTier, TIERS } from '../../../supabase/functions/_shared/tier-personas.js'
 
+/** VPS spec-class slugs — the resource sizing classes (legacy slug names). */
 export type Tier = 'starter' | 'pro' | 'studio'
+
+/**
+ * Any provisionable tier slug: the v1.4 canonical non-enterprise tiers OR
+ * the deprecated legacy slugs. `enterprise` is NOT provisionable (contact
+ * sales). Persona + voice are derived from the REAL canonical slug via
+ * resolveTier/personasForTier; only VPS spec + LLM budget collapse to a
+ * `Tier` spec-class (see resolveTierToSpecClass in customer-flow.ts).
+ */
+export type ProvisionTier =
+  | 'bare'
+  | 'solo'
+  | 'voice-starter'
+  | 'library-full'
+  | 'done-for-you'
+  | Tier
 
 export type SetupScriptParams = {
   customerId: string
-  tier: Tier
+  tier: ProvisionTier
   telegramBotToken?: string
   telegramAllowedUserIds?: string
   /**
@@ -444,13 +460,21 @@ function workflowEnvLines(p: SetupScriptParams): string[] {
   // which bundle is theirs + where to POST workflow-execute calls.
   // Skipped when no bundle is shipped (back-compat with Phase 1/2A).
   if (!p.bundleTarBase64) return []
-  const slug = p.agentSlug ?? 'the-pro'
+  // v1.4 `bare`: persona-free tier — emit EMPTY slug lists so bundle-pull
+  // installs nothing (vanilla Hermes). bundle-pull-script exits 0 cleanly
+  // on an empty WEUSEAI_AGENT_SLUGS.
+  const personaFree = isPersonaFreeTier(p.tier)
+  const slug = personaFree ? '' : (p.agentSlug ?? 'the-pro')
   // D1 lock (2026-05-12 multi-persona MVP): emit WEUSEAI_AGENT_SLUGS
   // as a CSV of all personas the customer has at their tier. The
   // bundle-pull script loops over this list at every Hermes boot.
   // Falls back to [slug] for back-compat callers that only pass
   // agentSlug (e.g., legacy test fixtures).
-  const slugs = p.agentSlugs && p.agentSlugs.length > 0 ? p.agentSlugs : [slug]
+  const slugs = personaFree
+    ? []
+    : p.agentSlugs && p.agentSlugs.length > 0
+      ? p.agentSlugs
+      : [slug]
   const url = p.workflowExecuteUrl ?? DEFAULT_WORKFLOW_EXECUTE_URL
   // The playbook state-machine engine (Phase 1 Week 2) lives at the
   // `flow-state` Edge Function — same functions base as workflow-execute.
@@ -476,6 +500,52 @@ function telegramJson(chatId: string, text: string): string {
   return JSON.stringify({ chat_id: chatId, text })
 }
 
+/**
+ * Persona-free tier (v1.4 `bare`) — vanilla Hermes, no persona skills, no
+ * bundle, no persona SOUL. Derived from the canonical catalog so it tracks
+ * the source of truth (bare.personas === []). enterprise (null) is never
+ * provisioned, so the empty/null collapse is safe.
+ */
+function isPersonaFreeTier(tier: ProvisionTier): boolean {
+  let personas: readonly string[] | null
+  try {
+    personas = TIERS[resolveTier(tier)].personas
+  } catch {
+    // Unknown slug → degrade to the normal (persona) path, never abort
+    // provision. Matches the voice gate's resolve-failure handling.
+    return false
+  }
+  return !personas || personas.length === 0
+}
+
+/**
+ * Neutral first-boot SOUL.md for the `bare` tier. Honest: it tells the
+ * customer this is the base version with no specialised persona. Brand
+ * rules: Bahasa, "kamu", calm-premium, zero exclamation marks.
+ */
+const VANILLA_SOUL = `# About me
+
+Aku asisten AI pribadi kamu di weuseai.agent — jalan di server kamu sendiri, lewat Telegram. Model dasar DeepSeek, bahasa utama Bahasa Indonesia.
+
+# How I communicate
+
+Bahasa Indonesia, pakai "kamu". Ringkas, satu ide per kalimat. Kalau kamu nulis dalam bahasa Inggris, aku balas dalam bahasa Inggris.
+
+# What I do
+
+Aku bantu tugas harian umum: jawab pertanyaan, susun draft, rangkum teks, dan bantu mikir. Aku versi dasar — belum ada persona khusus, template library, atau playbook tambahan.
+
+# Hard limits
+
+- Tidak pernah share API key, password, atau data kamu ke pihak ketiga.
+- Tidak melakukan transaksi atau commit uang tanpa konfirmasi eksplisit dalam sesi.
+- Tidak mengarang fakta. Kalau aku tidak tahu, aku bilang tidak tahu.
+
+# When my customer first messages me
+
+Sapa hangat dan singkat. Sebutkan kamu versi dasar — asisten umum berbasis DeepSeek. Tanya apa yang bisa dibantu hari ini.
+`
+
 // ─── main builder ───────────────────────────────────────────────────────────
 
 export function buildSetupScript(p: SetupScriptParams): string {
@@ -489,7 +559,7 @@ export function buildSetupScript(p: SetupScriptParams): string {
   // here means a customer who messages before that overwrite still gets
   // their picked persona's voice. Unknown / absent slug → The Pro
   // (personaScaffold's fallback), matching the legacy default.
-  const soulMd = personaScaffold(p.agentSlug)
+  const soulMd = isPersonaFreeTier(p.tier) ? VANILLA_SOUL : personaScaffold(p.agentSlug)
 
   // Telegram env block — only when bot token present. Customer pastes
   // token via dashboard later → we re-run a smaller "telegram-activate"

@@ -9,7 +9,7 @@
 - **Per-customer VPS:** Vultr Singapore `vc2-1c-1gb` ($5/mo) provisioned via Vultr API. DigitalOcean SGP1 as failover when Vultr capacity exhausted.
 - **Provisioning service:** Fly.io `weuseai-provisioning` (region `sin`, shared-cpu-1x / 256MB)
 - **Payments:** Xendit currently in TEST mode (founder lock-in 2026-05-14 — Phase F runs on test-mode through unlock; first real-money customer post-rotation doubles as prod-mode validation). `XENDIT_API_KEY` Supabase secret is `xnd_development_*`; rotate to `xnd_production_*` to go live. Smoke Step 7 explicitly fails on `checkout-staging.xendit.co` so the test-mode state is never silently masked.
-- **Agent personas:** 10-persona library (`tier-personas.ts` is single source of truth). Phase A feature-bundle tiers: voice-starter 3 / done-for-you 8 / library-full 10 / enterprise custom (old slugs aliased — see Business model v1.3). The Pro is the default-persona invariant across every non-null persona list.
+- **Agent personas:** 10-persona library (`tier-personas.ts` is single source of truth). v1.4 feature-bundle tiers: bare 0 / solo 3 / voice-starter 3 / done-for-you 8 / library-full 10 / enterprise custom (old slugs aliased — see Business model v1.4). The Pro is the default-persona invariant across every non-null, non-empty persona list (bare is persona-free).
 - **Telegram delivery:** per-customer bot, customer supplies bot token at onboarding.
 
 **Prioritas urut:** Lihat `NEXT.md`. Kerjain dari atas, jangan skip. Stop kalau task gagal — lapor + tunggu input founder.
@@ -64,27 +64,52 @@ Landing files dan platform satu monorepo. `services/*` dan `packages/*` di-link 
 
 ---
 
-## Business model (LOCKED v1.3, 2026-05-28 — feature-bundle restructure)
+## Business model (LOCKED v1.4, 2026-06-09 — entry tiers + launch framing)
 
 **Setup fee one-time + Hosting fee monthly + Optional Always-On + BYOK LLM ongoing.**
 
-### Pricing structure (Phase A — 4-tier feature matrix)
+### Pricing structure (v1.4 — 6-tier feature matrix)
 
-The count-based v1.2 ladder (Starter 3 / Pro 8 / Studio 10 personas) is
-replaced by a FEATURE-BUNDLE model. This is a matrix, not a price ladder:
+v1.4 (customer research showed price sensitivity) adds two cheaper entry
+points and reduces the two mid tiers. Still a feature MATRIX, not a ladder:
 `library-full` carries MORE personas (10) than the pricier `done-for-you`
 (8), because `done-for-you` trades persona breadth for the web_app unlock.
 
-| Tier slug | Label (id) | Personas | Setup (IDR) | Hosting/bln | Features {voice, web_app, custom_build} | Contact |
-|---|---|---|---|---|---|---|
-| `voice-starter` | Voice Starter | 3 (the-pro, doc-expert, slide-master) | 699.000 | 99.000 | {✓, ✗, ✗} | no |
-| `library-full` | Library Lengkap | all 10 | 899.000 | 99.000 | {✓, ✗, ✗} | no |
-| `done-for-you` | Siap Pakai | 8 (Pro set) | 1.299.000 | 99.000 | {✓, ✓, ✗} | no |
-| `enterprise` | Enterprise | custom | quote | quote | {✓, ✓, ✓} | yes |
+| Tier slug | Label (id) | Personas | Voice | Setup (IDR) | Hosting/bln | Features {voice, web_app, custom_build} | Contact |
+|---|---|---|---|---|---|---|---|
+| `bare` | Bare Agent | none (vanilla Hermes) | ✗ | 99.000 | 99.000 | {✗, ✗, ✗} | no |
+| `solo` | Solo Starter | 3 (the-pro, doc-expert, slide-master) | ✗ | 399.000 | 99.000 | {✗, ✗, ✗} | no |
+| `voice-starter` | Voice Starter | 3 (same 3) | ✓ | 599.000 | 99.000 | {✓, ✗, ✗} | no |
+| `library-full` | Library Lengkap | all 10 | ✓ | 799.000 (anchor ~~999.000~~) | 99.000 | {✓, ✗, ✗} | no |
+| `done-for-you` | Siap Pakai | 8 (Pro set) | ✓ | 1.299.000 | 99.000 | {✓, ✓, ✗} | no |
+| `enterprise` | Enterprise | custom | ✓ | quote | quote | {✓, ✓, ✓} | yes |
+
+Price history: `voice-starter` 699→599, `library-full` 899→799 (v1.4).
+The `library-full` **999k is a display-only strikethrough anchor — NEVER
+charged** (`setup_fee_anchor_idr`); the charged amount is always
+`setup_fee_idr` (799k). Post-promo prices STAY at these reduced levels
+(no real expiry — see Launch FOMO honesty note below).
 
 Always-On (+Rp 49rb/bulan) opsional unchanged across tiers (VPS 24/7,
 skip auto-suspend). `the-pro` is the default-persona-at-index-0 invariant
-in every non-null persona list.
+in every **non-null, non-empty** persona list — `bare` is intentionally
+persona-free (`personas: []`) and exempt.
+
+**`bare` provisioning:** vanilla Hermes — emits an EMPTY `WEUSEAI_AGENT_SLUGS`
+(bundle-pull installs nothing), a neutral SOUL (no The Pro identity), and no
+voice config. DeepSeek model pin (PR #223) applies. **Provisioning slug
+handling:** persona + voice resolve from the REAL canonical slug; VPS spec +
+LLM budget collapse to a spec-class via `resolveTierToSpecClass()`
+(bare/solo/voice-starter → smallest box + $3). `/spin-up` `VALID_TIERS` now
+accepts all canonical non-enterprise slugs + legacy (the lossy `bare→starter`
+checkout alias the consult proposed was REJECTED — it would mis-provision
+bare/solo).
+
+**Launch FOMO (honesty lock):** the 15-min timer + "first 100 customer"
+badge are session-urgency + anchoring ONLY. NEVER write "harga naik setelah
+July 2" — prices do not rise. The "100 customer" counter MUST read a real
+subscription count. The strikethrough is pure anchoring against a price that
+never charges.
 
 `enterprise` is contact-only (no fixed persona set, no fixed fee) — it is
 NOT provisionable via the manual-provision form or any self-serve
@@ -157,7 +182,7 @@ Reframe hosting sebagai utility (kayak bayar listrik), bukan subscription tradis
 | Payment | Xendit (currently TEST mode — see Production deploy section) | QRIS primary, e-wallet + cards supported. Webhook signed via `XENDIT_WEBHOOK_TOKEN`. `services/payment/` punya IPaymentProvider abstraction (mock + xendit). |
 | Database | Supabase | Migrations live di `supabase/migrations/*.sql`, applied via Supabase Mgmt API. RLS-locked per Sesi D pass-1/2/3 (X-CID enforcement on customers + subscriptions + consent_events). |
 | Edge Functions | Supabase Functions | Live: `xendit-webhook`, `create-invoice` (gates ToS), `complete-onboarding`, `bundle-fetch` (tier-enforced), `customer-progress-proxy` (X-CID), `customer-readiness` (X-CID), `workflow-execute`, `bundle-pull-record`, +others. |
-| Multi-persona library | `supabase/functions/_shared/tier-personas.ts` (Phase A 2026-05-28) | voice-starter 3 / done-for-you 8 / library-full 10 / enterprise custom. Old slugs aliased (expand-then-contract). The Pro persona is default-at-index-0 invariant across every non-null list. |
+| Multi-persona library | `supabase/functions/_shared/tier-personas.ts` (v1.4 2026-06-09) | bare 0 / solo 3 / voice-starter 3 / done-for-you 8 / library-full 10 / enterprise custom. Old slugs aliased (expand-then-contract). The Pro persona is default-at-index-0 invariant across every non-null, non-empty list (bare is persona-free). |
 | Channel | Telegram | Phase 1 only. WhatsApp ditunda. Per-customer bot, customer supplies token. |
 
 ---

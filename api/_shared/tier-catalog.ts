@@ -20,8 +20,8 @@
  * form (api/admin/customer-action.ts rejects it).
  */
 
-/** Canonical Phase A tier slugs. */
-export type Tier = 'voice-starter' | 'library-full' | 'done-for-you' | 'enterprise'
+/** Canonical tier slugs (v1.4 added bare + solo). */
+export type Tier = 'bare' | 'solo' | 'voice-starter' | 'library-full' | 'done-for-you' | 'enterprise'
 
 /** Deprecated count-based slugs — resolve via the alias map below. */
 export type LegacyTier = 'starter' | 'pro' | 'studio'
@@ -45,9 +45,25 @@ export type TierEntry = {
 }
 
 export const TIER_CATALOG: Readonly<Record<Tier, TierEntry>> = {
+  bare: {
+    label: 'Bare Agent',
+    setup_fee_idr: 99_000,
+    monthly_fee_idr: 99_000,
+    personas: [], // vanilla Hermes — no persona library
+    features: { voice: false, web_app: false, custom_build: false },
+    contact_required: false,
+  },
+  solo: {
+    label: 'Solo Starter',
+    setup_fee_idr: 399_000,
+    monthly_fee_idr: 99_000,
+    personas: ['the-pro', 'doc-expert', 'slide-master'], // TEXT only (voice off)
+    features: { voice: false, web_app: false, custom_build: false },
+    contact_required: false,
+  },
   'voice-starter': {
     label: 'Voice Starter',
-    setup_fee_idr: 699_000,
+    setup_fee_idr: 599_000, // v1.4: reduced from 699_000
     monthly_fee_idr: 99_000,
     personas: ['the-pro', 'doc-expert', 'slide-master'],
     features: { voice: true, web_app: false, custom_build: false },
@@ -55,7 +71,7 @@ export const TIER_CATALOG: Readonly<Record<Tier, TierEntry>> = {
   },
   'library-full': {
     label: 'Library Lengkap',
-    setup_fee_idr: 899_000,
+    setup_fee_idr: 799_000, // v1.4: reduced from 899_000 (999k strikethrough anchor lives in tier-personas.ts)
     monthly_fee_idr: 99_000,
     personas: [
       'the-pro', 'doc-expert', 'slide-master',
@@ -89,6 +105,8 @@ export const TIER_CATALOG: Readonly<Record<Tier, TierEntry>> = {
 }
 
 export const TIERS: readonly Tier[] = [
+  'bare',
+  'solo',
   'voice-starter',
   'library-full',
   'done-for-you',

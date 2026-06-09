@@ -47,9 +47,25 @@
   // `features` (voice / web_app / custom_build) are Phase B/C FLAGS only;
   // middleware ships later within these same tier slugs.
   const TIER_CATALOG = {
+    'bare': {
+      label: 'Bare Agent',
+      setup_fee_idr: 99000,
+      monthly_fee_idr: 99000,
+      personas: [],
+      features: { voice: false, web_app: false, custom_build: false },
+      contact_required: false,
+    },
+    'solo': {
+      label: 'Solo Starter',
+      setup_fee_idr: 399000,
+      monthly_fee_idr: 99000,
+      personas: ['the-pro', 'doc-expert', 'slide-master'],
+      features: { voice: false, web_app: false, custom_build: false },
+      contact_required: false,
+    },
     'voice-starter': {
       label: 'Voice Starter',
-      setup_fee_idr: 699000,
+      setup_fee_idr: 599000,
       monthly_fee_idr: 99000,
       personas: ['the-pro', 'doc-expert', 'slide-master'],
       features: { voice: true, web_app: false, custom_build: false },
@@ -57,7 +73,7 @@
     },
     'library-full': {
       label: 'Library Lengkap',
-      setup_fee_idr: 899000,
+      setup_fee_idr: 799000,
       monthly_fee_idr: 99000,
       personas: [
         'the-pro', 'doc-expert', 'slide-master',

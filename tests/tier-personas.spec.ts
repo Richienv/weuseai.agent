@@ -74,18 +74,32 @@ test('enterprise personas is null (custom — no fixed roster)', () => {
 
 // ─── fee + feature pins ─────────────────────────────────────────────────
 
-test('tier fees match the Phase A structure', () => {
-  assert.equal(TIERS['voice-starter'].setup_fee_idr, 699_000)
-  assert.equal(TIERS['library-full'].setup_fee_idr, 899_000)
+test('tier fees match the v1.4 structure', () => {
+  assert.equal(TIERS.bare.setup_fee_idr, 99_000)
+  assert.equal(TIERS.solo.setup_fee_idr, 399_000)
+  assert.equal(TIERS['voice-starter'].setup_fee_idr, 599_000)
+  assert.equal(TIERS['library-full'].setup_fee_idr, 799_000)
   assert.equal(TIERS['done-for-you'].setup_fee_idr, 1_299_000)
   assert.equal(TIERS.enterprise.setup_fee_idr, null)
-  for (const t of ['voice-starter', 'library-full', 'done-for-you'] as const) {
+  for (const t of ['bare', 'solo', 'voice-starter', 'library-full', 'done-for-you'] as const) {
     assert.equal(TIERS[t].monthly_fee_idr, 99_000)
   }
   assert.equal(TIERS.enterprise.monthly_fee_idr, null)
 })
 
-test('tier features flags match the Phase A structure', () => {
+test('library-full carries the never-charged 999k strikethrough anchor', () => {
+  // Display-only psychological anchor; the CHARGED amount is setup_fee_idr.
+  assert.equal(TIERS['library-full'].setup_fee_anchor_idr, 999_000)
+  assert.ok(TIERS['library-full'].setup_fee_anchor_idr! > TIERS['library-full'].setup_fee_idr!)
+  // No other tier carries an anchor.
+  for (const t of ['bare', 'solo', 'voice-starter', 'done-for-you'] as const) {
+    assert.equal(TIERS[t].setup_fee_anchor_idr, undefined)
+  }
+})
+
+test('tier features flags match the v1.4 structure', () => {
+  assert.deepEqual(TIERS.bare.features, { voice: false, web_app: false, custom_build: false })
+  assert.deepEqual(TIERS.solo.features, { voice: false, web_app: false, custom_build: false })
   assert.deepEqual(TIERS['voice-starter'].features, { voice: true, web_app: false, custom_build: false })
   assert.deepEqual(TIERS['library-full'].features, { voice: true, web_app: false, custom_build: false })
   assert.deepEqual(TIERS['done-for-you'].features, { voice: true, web_app: true, custom_build: false })
@@ -93,18 +107,26 @@ test('tier features flags match the Phase A structure', () => {
 })
 
 test('only enterprise requires contact (sales flow)', () => {
-  assert.equal(TIERS['voice-starter'].contact_required, false)
-  assert.equal(TIERS['library-full'].contact_required, false)
-  assert.equal(TIERS['done-for-you'].contact_required, false)
+  for (const t of ['bare', 'solo', 'voice-starter', 'library-full', 'done-for-you'] as const) {
+    assert.equal(TIERS[t].contact_required, false)
+  }
   assert.equal(TIERS.enterprise.contact_required, true)
+})
+
+test('bare is persona-free (vanilla Hermes); solo is the 3-persona TEXT set', () => {
+  assert.deepEqual(TIERS.bare.personas, [])
+  assert.deepEqual(TIERS.solo.personas, ['the-pro', 'doc-expert', 'slide-master'])
+  assert.equal(TIERS.bare.features.voice, false)
+  assert.equal(TIERS.solo.features.voice, false)
 })
 
 // ─── invariants ─────────────────────────────────────────────────────────
 
-test('the-pro is at index 0 in every non-null persona list (first-of-list invariant)', () => {
+test('the-pro is at index 0 in every non-null NON-EMPTY persona list (first-of-list invariant)', () => {
   for (const slug of Object.keys(TIERS) as Array<keyof typeof TIERS>) {
     const personas = TIERS[slug].personas
-    if (personas === null) continue // enterprise — custom, no fixed list
+    // enterprise — custom (null); bare — intentionally persona-free ([]).
+    if (!personas || personas.length === 0) continue
     assert.equal(personas[0], DEFAULT_PERSONA, `tier "${slug}" does not lead with default persona`)
   }
 })
@@ -148,7 +170,7 @@ test('DEFAULT_PERSONA is the-pro (D2 lock)', () => {
 })
 
 test('TIER_PERSONAS map mirrors TIERS for the non-custom tiers', () => {
-  for (const slug of ['voice-starter', 'library-full', 'done-for-you'] as const) {
+  for (const slug of ['bare', 'solo', 'voice-starter', 'library-full', 'done-for-you'] as const) {
     assert.deepEqual(TIER_PERSONAS[slug], TIERS[slug].personas)
   }
 })
