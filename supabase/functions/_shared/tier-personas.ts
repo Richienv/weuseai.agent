@@ -43,8 +43,12 @@
 
 import { KNOWN_PERSONA_SLUGS } from './manifest-validator.ts'
 
-/** Canonical Phase A tier slugs (feature-bundle model). */
-export type Tier = 'voice-starter' | 'library-full' | 'done-for-you' | 'enterprise'
+/**
+ * Canonical tier slugs (feature-bundle model).
+ * v1.4 (2026-06-09) added two cheaper entry tiers: `bare` (vanilla Hermes,
+ * no personas, no voice) and `solo` (3 personas, TEXT only).
+ */
+export type Tier = 'bare' | 'solo' | 'voice-starter' | 'library-full' | 'done-for-you' | 'enterprise'
 
 /** Deprecated count-based slugs — still resolve via the alias map below. */
 export type LegacyTier = 'starter' | 'pro' | 'studio'
@@ -99,10 +103,16 @@ export type TierFeatures = {
 
 export type TierConfig = {
   readonly label_id: string
-  /** null = custom/no-fixed-set (enterprise). */
+  /** null = custom/no-fixed-set (enterprise); [] = persona-free (bare). */
   readonly personas: readonly string[] | null
   /** null = contact-for-quote (enterprise). */
   readonly setup_fee_idr: number | null
+  /**
+   * Display-only psychological anchor (a strikethrough "harga normal").
+   * NEVER charged — the charged amount is always `setup_fee_idr`. Only set
+   * on library-full (999k → 799k launch framing). Absent elsewhere.
+   */
+  readonly setup_fee_anchor_idr?: number
   readonly monthly_fee_idr: number | null
   readonly features: TierFeatures
   readonly contact_required: boolean
@@ -118,10 +128,29 @@ export type TierConfig = {
  * slug rename needed).
  */
 export const TIERS: { readonly [T in Tier]: TierConfig } = {
+  bare: {
+    label_id: 'Bare Agent',
+    // Vanilla Hermes — DeepSeek chat in Bahasa via Telegram. No persona,
+    // no template library, no playbook, no voice.
+    personas: [],
+    setup_fee_idr: 99_000,
+    monthly_fee_idr: 99_000,
+    features: { voice: false, web_app: false, custom_build: false },
+    contact_required: false,
+  },
+  solo: {
+    label_id: 'Solo Starter',
+    // Same 3 personas as Voice Starter, but TEXT only (voice OFF).
+    personas: VOICE_STARTER_PERSONAS,
+    setup_fee_idr: 399_000,
+    monthly_fee_idr: 99_000,
+    features: { voice: false, web_app: false, custom_build: false },
+    contact_required: false,
+  },
   'voice-starter': {
     label_id: 'Voice Starter',
     personas: VOICE_STARTER_PERSONAS,
-    setup_fee_idr: 699_000,
+    setup_fee_idr: 599_000, // v1.4: reduced from 699_000
     monthly_fee_idr: 99_000,
     features: { voice: true, web_app: false, custom_build: false },
     contact_required: false,
@@ -129,7 +158,8 @@ export const TIERS: { readonly [T in Tier]: TierConfig } = {
   'library-full': {
     label_id: 'Library Lengkap',
     personas: FULL_LIBRARY_PERSONAS,
-    setup_fee_idr: 899_000,
+    setup_fee_idr: 799_000, // v1.4: reduced from 899_000
+    setup_fee_anchor_idr: 999_000, // strikethrough display only — NEVER charged
     monthly_fee_idr: 99_000,
     features: { voice: true, web_app: false, custom_build: false },
     contact_required: false,
@@ -159,6 +189,8 @@ export const TIERS: { readonly [T in Tier]: TierConfig } = {
  * direct map without going through the resolver.
  */
 export const TIER_PERSONAS: { readonly [T in Exclude<Tier, 'enterprise'>]: readonly string[] } = {
+  bare: [],
+  solo: VOICE_STARTER_PERSONAS,
   'voice-starter': VOICE_STARTER_PERSONAS,
   'library-full': FULL_LIBRARY_PERSONAS,
   'done-for-you': PRO_SET_PERSONAS,

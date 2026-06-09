@@ -23,13 +23,19 @@ import { readFileSync } from 'node:fs'
 import { TIERS } from '../supabase/functions/_shared/tier-personas.ts'
 import { TIER_CATALOG, personasForTier, setupFeeForTier } from '../api/_shared/tier-catalog.ts'
 
+// v1.4 pricing lock (2026-06-09): added bare (99k) + solo (399k) entry
+// tiers; reduced voice-starter 699→599 and library-full 899→799.
 const SETUP_FEES = {
-  'voice-starter': 699_000,
-  'library-full': 899_000,
+  bare: 99_000,
+  solo: 399_000,
+  'voice-starter': 599_000,
+  'library-full': 799_000,
   'done-for-you': 1_299_000,
 } as const
 
-const NON_ENTERPRISE = ['voice-starter', 'library-full', 'done-for-you'] as const
+// All non-enterprise tiers (persona + fee mirror checks). bare has an EMPTY
+// persona set, so it is excluded from the index-0 invariant below.
+const NON_ENTERPRISE = ['bare', 'solo', 'voice-starter', 'library-full', 'done-for-you'] as const
 
 test('TIER_CATALOG.personas matches tier-personas.ts TIERS for every tier', () => {
   for (const tier of NON_ENTERPRISE) {
@@ -44,18 +50,27 @@ test('TIER_CATALOG.personas matches tier-personas.ts TIERS for every tier', () =
   assert.equal(TIERS.enterprise.personas, null)
 })
 
-test('TIER_CATALOG setup fees match the Phase A lock', () => {
+test('TIER_CATALOG setup fees match the v1.4 lock', () => {
+  assert.equal(setupFeeForTier('bare'), SETUP_FEES.bare)
+  assert.equal(setupFeeForTier('solo'), SETUP_FEES.solo)
   assert.equal(setupFeeForTier('voice-starter'), SETUP_FEES['voice-starter'])
   assert.equal(setupFeeForTier('library-full'), SETUP_FEES['library-full'])
   assert.equal(setupFeeForTier('done-for-you'), SETUP_FEES['done-for-you'])
   assert.equal(setupFeeForTier('enterprise'), null)
 })
 
-test('TIER_CATALOG has the 4 expected tier keys (no drift in shape)', () => {
+test('TIER_CATALOG has the 6 expected tier keys (no drift in shape)', () => {
   assert.deepEqual(
     Object.keys(TIER_CATALOG).sort(),
-    ['done-for-you', 'enterprise', 'library-full', 'voice-starter'],
+    ['bare', 'done-for-you', 'enterprise', 'library-full', 'solo', 'voice-starter'],
   )
+})
+
+test('bare = empty persona set + no voice; solo = 3 personas + no voice', () => {
+  assert.deepEqual(personasForTier('bare'), [])
+  assert.equal(TIER_CATALOG.bare.features.voice, false)
+  assert.deepEqual(personasForTier('solo'), ['the-pro', 'doc-expert', 'slide-master'])
+  assert.equal(TIER_CATALOG.solo.features.voice, false)
 })
 
 test('voice-starter persona count = 3', () => {
@@ -70,14 +85,18 @@ test('library-full persona count = 10 (full library)', () => {
   assert.equal(personasForTier('library-full').length, 10)
 })
 
-test('the-pro is index-0 in every non-null tier (default-persona invariant)', () => {
+test('the-pro is index-0 in every non-empty tier (default-persona invariant)', () => {
+  // bare is intentionally persona-free ([]) — excluded from the lead-with-
+  // the-pro invariant.
   for (const tier of NON_ENTERPRISE) {
-    assert.equal(personasForTier(tier)[0], 'the-pro')
+    const personas = personasForTier(tier)
+    if (personas.length === 0) continue
+    assert.equal(personas[0], 'the-pro')
   }
 })
 
 test('feature flags mirror between tier-catalog and tier-personas', () => {
-  for (const tier of ['voice-starter', 'library-full', 'done-for-you', 'enterprise'] as const) {
+  for (const tier of ['bare', 'solo', 'voice-starter', 'library-full', 'done-for-you', 'enterprise'] as const) {
     assert.deepEqual(
       TIER_CATALOG[tier].features,
       TIERS[tier].features,
@@ -114,10 +133,17 @@ test('admin-shared.js TIER_CATALOG mirrors source of truth (source-grep drift ga
     flat.includes("'web-app-builder', 'business-agent',"),
     'admin-shared.js library-full full persona set diverged',
   )
-  // Setup-fee pins.
-  assert.ok(js.includes('setup_fee_idr: 699000'), 'voice-starter fee changed in admin-shared.js')
-  assert.ok(js.includes('setup_fee_idr: 899000'), 'library-full fee changed in admin-shared.js')
+  // Setup-fee pins (v1.4 prices).
+  assert.ok(js.includes('setup_fee_idr: 99000'), 'bare fee changed in admin-shared.js')
+  assert.ok(js.includes('setup_fee_idr: 399000'), 'solo fee changed in admin-shared.js')
+  assert.ok(js.includes('setup_fee_idr: 599000'), 'voice-starter fee changed in admin-shared.js')
+  assert.ok(js.includes('setup_fee_idr: 799000'), 'library-full fee changed in admin-shared.js')
   assert.ok(js.includes('setup_fee_idr: 1299000'), 'done-for-you fee changed in admin-shared.js')
+  // New v1.4 tiers present.
+  assert.ok(js.includes("label: 'Bare Agent'"), 'admin-shared.js Bare tier missing')
+  assert.ok(js.includes("label: 'Solo Starter'"), 'admin-shared.js Solo tier missing')
+  // bare carries an empty persona set.
+  assert.ok(/bare['"]?\s*:\s*\{[\s\S]*?personas:\s*\[\s*\]/.test(js), 'admin-shared.js bare must have empty personas')
   // Enterprise present + contact-only.
   assert.ok(js.includes("label: 'Enterprise'"), 'admin-shared.js Enterprise tier missing')
   assert.ok(js.includes('contact_required: true'), 'admin-shared.js Enterprise contact flag missing')
