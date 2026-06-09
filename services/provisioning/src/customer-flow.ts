@@ -26,13 +26,13 @@ import { readFileSync } from 'node:fs'
 import { resolve as pathResolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { buildSetupScript, type Tier } from './setup-script.js'
+import { buildSetupScript, type Tier, type ProvisionTier } from './setup-script.js'
 import { personasForTier, DEFAULT_PERSONA } from '../../../supabase/functions/_shared/tier-personas.js'
 // Phase 5-3.c rollout: per-customer HMAC token computed at customer-creation
 // time. Reuses the same auth module as the verifier side (Edge Functions).
 import { signCustomerToken } from '../../../supabase/functions/_shared/hermes-instance-auth'
 
-export type { Tier }
+export type { Tier, ProvisionTier }
 
 // IDCloudHost jkt01 enforces vcpu >= 2 ("CPU count must be between 2 and 32").
 const TIER_SPEC: Record<Tier, VPSSpec> = {
@@ -52,9 +52,39 @@ const TIER_LLM_LIMIT_CENTS: Record<Tier, number> = {
   studio: 3000,    // $30
 }
 
+/**
+ * Map any provisionable tier slug (v1.4 canonical OR legacy) to a VPS
+ * spec-class. Persona + voice are derived SEPARATELY from the REAL
+ * canonical slug (personasForTier / TIERS[resolveTier]) — this only sizes
+ * the VPS + LLM budget by resource class, so collapsing same-size tiers is
+ * lossless. bare / solo / voice-starter share the smallest box ($3);
+ * done-for-you sizes like pro ($5); library-full sizes like studio ($30).
+ */
+export function resolveTierToSpecClass(tier: ProvisionTier): Tier {
+  switch (tier) {
+    case 'starter':
+    case 'bare':
+    case 'solo':
+    case 'voice-starter':
+      return 'starter'
+    case 'pro':
+    case 'done-for-you':
+      return 'pro'
+    case 'studio':
+    case 'library-full':
+      return 'studio'
+    default: {
+      // Exhaustiveness guard — a new ProvisionTier must be classed here.
+      const _exhaustive: never = tier
+      void _exhaustive
+      return 'starter'
+    }
+  }
+}
+
 export type SpinUpOpts = {
   customerId: string
-  tier: Tier
+  tier: ProvisionTier
   /** Where the welcome / liveness message lands. Optional. */
   telegramChatId?: string
   customerTelegramBotToken?: string
@@ -173,13 +203,13 @@ export async function spinUpCustomer(
 
   // ── Mint per-customer OpenRouter key (Phase 2A — replaces proxy + BYOK) ──
   // Done BEFORE VM creation so a minter failure costs us nothing in IDCH IPs.
-  log(`Minting OpenRouter key (limit: $${TIER_LLM_LIMIT_CENTS[opts.tier] / 100})...`)
+  log(`Minting OpenRouter key (limit: $${TIER_LLM_LIMIT_CENTS[resolveTierToSpecClass(opts.tier)] / 100})...`)
   let openRouterKey: string
   let openRouterHash: string
   try {
     const minted = await deps.llmMinter.mint({
       name: `weuseai-customer-${opts.customerId}`,
-      limitUsdCents: TIER_LLM_LIMIT_CENTS[opts.tier],
+      limitUsdCents: TIER_LLM_LIMIT_CENTS[resolveTierToSpecClass(opts.tier)],
     })
     openRouterKey = minted.key
     openRouterHash = minted.hash
@@ -208,7 +238,7 @@ export async function spinUpCustomer(
   await deps.store.upsertOpenRouterKey({
     customer_id: opts.customerId,
     openrouter_key_hash: openRouterHash,
-    credit_limit_usd_cents: TIER_LLM_LIMIT_CENTS[opts.tier],
+    credit_limit_usd_cents: TIER_LLM_LIMIT_CENTS[resolveTierToSpecClass(opts.tier)],
   })
 
   // ── Build setup script (the customer's persona, skill, halo, install) ──
@@ -221,7 +251,7 @@ export async function spinUpCustomer(
   try {
     vps = await deps.vps.create({
       name: `liren-${opts.customerId.slice(0, 8)}-${Date.now().toString().slice(-6)}`,
-      spec: TIER_SPEC[opts.tier],
+      spec: TIER_SPEC[resolveTierToSpecClass(opts.tier)],
       password: sshPassword,
       // cloudInit intentionally omitted — IDCH drops it silently
       billingAccountId,
@@ -513,12 +543,17 @@ async function buildScriptFor(opts: SpinUpOpts, openRouterKey: string): Promise<
   // to pick a non-default primary persona (e.g., Studio fixture that
   // wants Business Director as the bare-message default).
   const tierPersonas = personasForTier(opts.tier)
-  const defaultSlug = opts.agentSlug ?? DEFAULT_PERSONA
+  // v1.4 `bare`: persona-free tier → no default-persona hoist, no slugs.
+  // Vanilla Hermes (setup-script also gates on the tier, defence in depth).
+  const personaFree = tierPersonas.length === 0
+  const defaultSlug = personaFree ? undefined : (opts.agentSlug ?? DEFAULT_PERSONA)
   // Ensure the chosen default appears first in the list (first-of-list
   // invariant): if the caller picked a non-default primary, hoist it.
-  const agentSlugs = tierPersonas.includes(defaultSlug)
-    ? [defaultSlug, ...tierPersonas.filter((s) => s !== defaultSlug)]
-    : [defaultSlug, ...tierPersonas]
+  const agentSlugs = personaFree
+    ? []
+    : tierPersonas.includes(defaultSlug as string)
+      ? [defaultSlug as string, ...tierPersonas.filter((s) => s !== defaultSlug)]
+      : [defaultSlug as string, ...tierPersonas]
 
   // Phase B (voice-input STT): pick the key matching the active provider.
   // setup-script's VOICE_STT_PROVIDER default is 'groq', so prefer the Groq
