@@ -563,7 +563,10 @@ export async function handleManualProvisionV2(
     return
   }
   const personas = personasForTier(tier)
-  const defaultPersona = personas[0] // The Pro — default-at-index-0 invariant
+  // The Pro — default-at-index-0 invariant. v1.4 `bare` is persona-free
+  // ([]), so fall back to '' — the setup-script's persona-free gate (keyed
+  // on the tier) emits no slugs + a neutral SOUL regardless of this value.
+  const defaultPersona = personas[0] ?? ''
 
   const amount_idr =
     typeof amountRaw === 'number'
