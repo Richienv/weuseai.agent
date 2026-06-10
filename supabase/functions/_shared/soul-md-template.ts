@@ -976,6 +976,46 @@ export function pickFirstName(displayName: string): string {
   return first
 }
 
+// ─── Vanilla (persona-free) scaffold — v1.4 `bare` tier ───
+//
+// The `bare` tier (v1.4 2026-06-09) ships vanilla Hermes: no persona, no
+// template library, no playbook. Its first-boot SOUL.md is written by the
+// provisioning setup-script (VANILLA_SOUL there). When a bare customer
+// completes onboarding we must NOT overwrite it with a The Pro identity —
+// rendering this neutral scaffold (customer name woven in, no specialist
+// claims) keeps complete-onboarding honest with what the customer bought.
+// Brand rules: Bahasa, "kamu", calm-premium, zero exclamation marks.
+//
+// Kept OUT of the PERSONAS map on purpose: it has no agent-packs/<slug>
+// counterpart, so the byte-for-byte persona-scaffold drift gate never
+// applies to it.
+const VANILLA_SCAFFOLD = `# About me
+
+Aku asisten AI pribadi {customer_name} di weuseai.agent — jalan di server kamu sendiri, lewat Telegram. Model dasar DeepSeek, bahasa utama Bahasa Indonesia.
+
+# How I communicate
+
+Bahasa Indonesia, pakai "kamu". Ringkas, satu ide per kalimat. Kalau kamu nulis dalam bahasa Inggris, aku balas dalam bahasa Inggris.
+
+# What this customer expects from me
+
+{user_expectations_verbatim}
+
+# What I do
+
+Aku bantu tugas harian umum: jawab pertanyaan, susun draft, rangkum teks, dan bantu mikir. Aku versi dasar — belum ada persona khusus, template library, atau playbook tambahan.
+
+# Hard limits
+
+- Tidak pernah share API key, password, atau data kamu ke pihak ketiga.
+- Tidak melakukan transaksi atau commit uang tanpa konfirmasi eksplisit dalam sesi.
+- Tidak mengarang fakta. Kalau aku tidak tahu, aku bilang tidak tahu.
+
+# When my customer first messages me
+
+Sapa hangat dan singkat, sebut nama {first_name} kalau natural. Sebutkan kamu versi dasar — asisten umum berbasis DeepSeek. Tanya apa yang bisa dibantu hari ini.
+`
+
 // ─── Renderer ───
 
 export type RenderInput = {
@@ -989,6 +1029,12 @@ export type RenderInput = {
    * corrupted slug in the database.
    */
   personaSlug?: string
+  /**
+   * v1.4 `bare` (persona-free) tier. When true, render the neutral vanilla
+   * scaffold instead of any persona — `personaSlug` is ignored. Set by
+   * complete-onboarding when personasForTier(tier) is empty.
+   */
+  personaFree?: boolean
 }
 
 export function renderSoulMd(input: RenderInput): string {
@@ -996,15 +1042,22 @@ export function renderSoulMd(input: RenderInput): string {
   const connectedApps = input.connectedAppsList ?? CONNECTED_APPS_PHASE1
   const firstName = pickFirstName(customerName)
 
-  // Persona routing — unknown slugs fall back to The Pro with a warning.
-  const requestedSlug = input.personaSlug ?? DEFAULT_PERSONA_SLUG
-  let scaffold = PERSONAS[requestedSlug]
-  if (!scaffold) {
-    console.warn(
-      `renderSoulMd: unknown personaSlug "${requestedSlug}", ` +
-        `falling back to "${DEFAULT_PERSONA_SLUG}"`,
-    )
-    scaffold = PERSONAS[DEFAULT_PERSONA_SLUG]
+  // Persona-free (bare) tier renders the neutral scaffold — no persona
+  // identity imposed, honest to the vanilla product.
+  let scaffold: string
+  if (input.personaFree) {
+    scaffold = VANILLA_SCAFFOLD
+  } else {
+    // Persona routing — unknown slugs fall back to The Pro with a warning.
+    const requestedSlug = input.personaSlug ?? DEFAULT_PERSONA_SLUG
+    scaffold = PERSONAS[requestedSlug]
+    if (!scaffold) {
+      console.warn(
+        `renderSoulMd: unknown personaSlug "${requestedSlug}", ` +
+          `falling back to "${DEFAULT_PERSONA_SLUG}"`,
+      )
+      scaffold = PERSONAS[DEFAULT_PERSONA_SLUG]
+    }
   }
 
   // Empty-expectations fallback. The handler boundary rejects empty

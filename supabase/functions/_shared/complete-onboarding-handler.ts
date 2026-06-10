@@ -6,7 +6,7 @@
 //   edit H (SOUL.md scaffold + sanitizer + sha256 audit).
 
 import {
-  TIER_CREDIT_USD_CENTS,
+  creditLimitForTier,
   type ILlmKeyMinter,
   type IOnboardingStore,
   type IOnboardingProvisioningClient,
@@ -107,11 +107,18 @@ export async function handleCompleteOnboarding(
   // (first-of-list invariant). This keeps the Phase F harness + any
   // pre-picker client working: no agent_slug == the historical behavior.
   const tierPersonas = personasForTier(subscription.tier)
+  // v1.4 `bare`: persona-free tier (personasForTier === []). It grants NO
+  // persona, so the gate below — which defaults an omitted slug to The Pro
+  // and asserts membership — would 403 every bare customer (the-pro ∉ []).
+  // Exempt persona-free tiers: no persona is chosen, and the SOUL.md is
+  // rendered neutral (vanilla), matching the bare first-boot SOUL the
+  // setup-script writes. Mirrors isPersonaFreeTier() in setup-script.ts.
+  const personaFree = tierPersonas.length === 0
   const chosenSlug =
     typeof body.agent_slug === 'string' && body.agent_slug.length > 0
       ? body.agent_slug
       : DEFAULT_PERSONA
-  if (!tierPersonas.includes(chosenSlug)) {
+  if (!personaFree && !tierPersonas.includes(chosenSlug)) {
     return json(
       {
         error: 'tier_does_not_grant_persona',
@@ -120,6 +127,10 @@ export async function handleCompleteOnboarding(
       403,
     )
   }
+  // Persona persisted + forwarded to provisioning. Null for persona-free
+  // (bare) so the DB row + WEUSEAI_AGENT_SLUG stay empty (vanilla Hermes);
+  // setup-script's isPersonaFreeTier() also collapses this independently.
+  const effectiveSlug: string | null = personaFree ? null : chosenSlug
 
   // ─── 2. Idempotency — BRANCHED (Track 1 persona-refinement 2026-05-10) ──
   // Pre-fix: any customer with chat_id + soul_md_text + active subscription
@@ -199,6 +210,7 @@ export async function handleCompleteOnboarding(
     customerName,
     expectationsClean: sanitized.clean,
     personaSlug: chosenSlug,
+    personaFree,
   })
   const soulMdSha256 = await sha256Hex(soulMdText)
 
@@ -240,7 +252,7 @@ export async function handleCompleteOnboarding(
     // Persona selection (2026-05-17): persist the validated choice. On a
     // persona-refinement re-onboard this also lets the customer switch
     // personas — chosenSlug is re-validated against the tier every time.
-    agent_slug: chosenSlug,
+    agent_slug: effectiveSlug,
     pairing_code: null,
     pairing_code_expires_at: null,
   })
@@ -300,7 +312,7 @@ export async function handleCompleteOnboarding(
   try {
     mintResult = await deps.minter.mint({
       name: customer_id,
-      limitUsdCents: TIER_CREDIT_USD_CENTS[subscription.tier],
+      limitUsdCents: creditLimitForTier(subscription.tier),
     })
   } catch (e) {
     return json(
@@ -340,8 +352,9 @@ export async function handleCompleteOnboarding(
     // Persona selection (2026-05-17): forward the chosen persona so the
     // provisioning service drives the VPS's primary-persona bundle pull
     // (setup-script WEUSEAI_AGENT_SLUG → bundle-pull-script fetches this
-    // slug's bundle from Storage).
-    agentSlug: chosenSlug,
+    // slug's bundle from Storage). Null for bare (persona-free) → empty
+    // WEUSEAI_AGENT_SLUGS, vanilla Hermes.
+    agentSlug: effectiveSlug ?? undefined,
   })
 
   if (!spinResult.ok) {
