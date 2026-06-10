@@ -414,14 +414,80 @@ Sapa customer sebagai kontak pertama. Ikuti persis bagian "When my customer firs
 - Jangan jelaskan apa itu /start. Langsung balas dengan sapaan natural, seakan ini awal percakapan.
 `
 
-const DAILY_NEWS_CRON_PROMPT =
-  'Cek 5 berita teratas dari detik.com, kompas.com, cnbcindonesia.com. ' +
-  'Ringkas tiap berita 2 kalimat. ' +
-  'Format Telegram: judul tebal, ringkasan di bawah. ' +
-  'Mulai dengan Selamat pagi WIB greeting.'
+// Persona Genesis interview skill (Mission 2, 2026-06-10). Installed ONLY
+// on tiers that grant generation (GENESIS_TIERS — done-for-you/enterprise);
+// the server re-enforces the gate, this just keeps the command off
+// ineligible bots. Drives a five-question Bahasa interview, then POSTs the
+// profile to the persona-genesis Edge Function.
+const BIKIN_PERSONA_SKILL_MD = `# bikin-persona — persona khusus untuk customer
+
+## Kapan dipakai
+Customer mengetik /bikin-persona, atau bilang hal seperti "bikin persona khusus buat aku", "bikinin asisten yang ngerti kerjaan aku", "custom persona".
+
+## Yang dilakukan
+Kamu mewawancarai customer dulu, lalu mengirim hasilnya ke sistem pembuat persona. Santai, satu pertanyaan per pesan, dalam Bahasa Indonesia.
+
+Langkah:
+1. Jelaskan singkat: kamu akan tanya lima hal tentang pekerjaan mereka, lalu sistem membuatkan persona yang dirancang khusus — lengkap dengan kemampuan dan template untuk pekerjaan mereka. Prosesnya beberapa menit.
+2. Tanya satu per satu, tunggu jawaban sebelum lanjut:
+   a. Apa peran kamu dan di mana kamu kerja? (contoh: marketing manager di startup F&B)
+   b. Hari kerja kamu biasanya isinya apa saja?
+   c. Output apa yang paling sering kamu buat? (laporan, deck, konten, dsb.)
+   d. Tools apa yang kamu pakai sehari-hari?
+   e. Bagian mana dari kerjaan yang paling makan waktu atau bikin frustrasi?
+3. Rangkum jawaban mereka dalam 2-3 kalimat, minta konfirmasi: "Sudah pas, atau ada yang mau ditambah?"
+4. Setelah customer konfirmasi, POST ke endpoint pembuat persona:
+
+   POST $WEUSEAI_PERSONA_GENESIS_URL
+   Headers: Content-Type: application/json, X-CID: $WEUSEAI_CUSTOMER_ID
+   Body: {
+     "customer_id": "$WEUSEAI_CUSTOMER_ID",
+     "profile": {
+       "role": "<jawaban a>",
+       "daily_tasks": "<jawaban b>",
+       "outputs": "<jawaban c>",
+       "tools": "<jawaban d>",
+       "pain_points": "<jawaban e>"
+     }
+   }
+
+5. Kalau respons ok=true: sampaikan message_bahasa dari respons ke customer, apa adanya.
+6. Kalau respons error: sampaikan message_bahasa kalau ada; kalau tidak ada, bilang jujur bahwa pembuatan persona belum berhasil dan mereka bisa coba lagi.
+
+## Yang tidak dilakukan
+- Jangan mengarang jawaban customer — tanya sampai dijawab.
+- Jangan menjanjikan akses ke kalender, email, atau aplikasi mereka.
+- Jangan tampilkan JSON atau detail teknis ke customer.
+`
+
+// Pagi Briefing (Mission 2, 2026-06-10). Replaces the generic daily-news
+// cron — the audit's U1: customers were SOLD "briefing pagi tiap hari jam 7
+// WIB" but only got 5 generic headlines. This prompt is static, yet
+// personalized BY CONSTRUCTION at runtime: the agent reads its own SOUL.md
+// (the customer's name, expectations, and — post-Persona-Genesis — their
+// bespoke persona) when composing. Honesty rule (audit U4): the prompt
+// explicitly forbids claiming calendar/email data we do not have.
+export const PAGI_BRIEFING_CRON_PROMPT =
+  'Susun Pagi Briefing untuk customer kamu, dalam Bahasa Indonesia, sapa pakai nama mereka. ' +
+  'Baca SOUL.md kamu: siapa customer ini, apa pekerjaan dan fokus mereka. Susun: ' +
+  '(1) Sapaan singkat selamat pagi. ' +
+  '(2) Outstanding dari percakapan kalian sebelumnya — komitmen, follow-up, atau hal yang kemarin belum selesai. Kalau tidak ada, lewati bagian ini tanpa komentar. ' +
+  '(3) Tiga berita atau perkembangan paling relevan untuk PEKERJAAN customer ini (cek detik.com, kompas.com, cnbcindonesia.com, atau sumber yang lebih spesifik ke bidang mereka). Ringkas masing-masing 2 kalimat, jelaskan kenapa relevan buat mereka. ' +
+  '(4) Tutup dengan satu pertanyaan: apa prioritas mereka hari ini. ' +
+  'PENTING: kamu TIDAK punya akses kalender atau email customer — jangan pernah menyebut jadwal, meeting, atau email seolah kamu tahu isinya. ' +
+  'Format Telegram: ringkas, judul tebal seperlunya, tanpa tanda seru.'
+
+// End-of-day summary cron (audit U2: promised 18:00 WIB, never fired).
+// 11:00 UTC = 18:00 WIB.
+export const EOD_SUMMARY_CRON_PROMPT =
+  'Susun ringkasan akhir hari untuk customer kamu, dalam Bahasa Indonesia, sapa pakai nama mereka. ' +
+  'Dari percakapan kalian hari ini: (1) apa saja yang selesai, (2) apa yang masih outstanding untuk besok, ' +
+  '(3) satu hal yang perlu konfirmasi atau keputusan mereka. ' +
+  'Kalau kalian tidak berinteraksi sama sekali hari ini, kirim satu kalimat singkat saja: tanya apakah ada yang bisa disiapkan untuk besok. ' +
+  'Kamu TIDAK punya akses kalender atau email — hanya percakapan kalian. Tanpa tanda seru.'
 
 const LIVENESS_PING_TEXT =
-  'Halo, gue agen lo. Setup beres. Daily briefing aktif jam 7 pagi tiap hari WIB. ' +
+  'Halo, gue agen lo. Setup beres. Pagi Briefing aktif jam 7 pagi WIB, ringkasan sore jam 6. ' +
   'Coba ketik apa aja buat tes.'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
@@ -481,6 +547,8 @@ function workflowEnvLines(p: SetupScriptParams): string[] {
   // Derive it from the workflow-execute URL so a test/staging override of
   // workflowExecuteUrl carries the flow-state URL along with it.
   const flowStateUrl = url.replace(/\/workflow-execute(\/?)$/, '/flow-state$1')
+  // Persona Genesis endpoint — same functions base as workflow-execute.
+  const personaGenesisUrl = url.replace(/\/workflow-execute(\/?)$/, '/persona-genesis$1')
   return [
     `WEUSEAI_AGENT_SLUG=${slug}`,
     `WEUSEAI_AGENT_SLUGS=${slugs.join(',')}`,
@@ -488,7 +556,23 @@ function workflowEnvLines(p: SetupScriptParams): string[] {
     `WEUSEAI_CUSTOMER_ID=${p.customerId}`,
     `WEUSEAI_WORKFLOW_EXECUTE_URL=${url}`,
     `WEUSEAI_FLOW_STATE_URL=${flowStateUrl}`,
+    `WEUSEAI_PERSONA_GENESIS_URL=${personaGenesisUrl}`,
   ]
+}
+
+/**
+ * Persona Genesis eligibility — mirrors GENESIS_TIERS in
+ * persona-genesis-handler.ts (server-side gate is authoritative; this only
+ * decides whether the /bikin-persona command is installed on the bot).
+ * Unknown slug → false (no genesis on unrecognized tiers).
+ */
+function isGenesisTier(tier: ProvisionTier): boolean {
+  try {
+    const canonical = resolveTier(tier)
+    return canonical === 'done-for-you' || canonical === 'enterprise'
+  } catch {
+    return false
+  }
 }
 
 /** Single-quote escape for embedding in bash -c '…'. */
@@ -604,6 +688,19 @@ export function buildSetupScript(p: SetupScriptParams): string {
     ...voiceSttLines,
   ]
 
+  // Persona Genesis interview command — eligible tiers only (server-side
+  // gate in persona-genesis-handler is authoritative).
+  const bikinPersonaSkillBlock = isGenesisTier(p.tier)
+    ? `
+# ─── 6 (cont). /bikin-persona — Persona Genesis interview ─────────────
+# Tier grants generated personas: install the interview command. The
+# server (persona-genesis Edge Function) re-enforces tier + ownership.
+sudo -u weuseai mkdir -p /home/weuseai/.hermes/skills/bikin-persona
+cat > /home/weuseai/.hermes/skills/bikin-persona/SKILL.md <<'WEUSEAI_BIKIN_PERSONA_EOF'
+${BIKIN_PERSONA_SKILL_MD}WEUSEAI_BIKIN_PERSONA_EOF
+`
+    : ''
+
   // Halo block — fires FIRST so customer sees life immediately.
   const haloJson = telegramJson(p.telegramAllowedUserIds ?? '', LIVENESS_PING_TEXT)
   const haloCurl = hasTelegram
@@ -680,8 +777,11 @@ if ! ${HERMES} gateway start --system >> "$LOG" 2>&1; then
   exit 10
 fi
 
-log "Adding daily-news cron (optional, cosmetic)..."
-su - weuseai -c '${HERMES} cron add --schedule "0 0 * * *" --prompt "${shSingleQuote(DAILY_NEWS_CRON_PROMPT)}" --deliver telegram' >> "$LOG" 2>&1 || log "⚠ cron add failed (truly optional — daily-news skill still works on demand)"
+log "Adding Pagi Briefing cron (07:00 WIB)..."
+su - weuseai -c '${HERMES} cron add --schedule "0 0 * * *" --prompt "${shSingleQuote(PAGI_BRIEFING_CRON_PROMPT)}" --deliver telegram' >> "$LOG" 2>&1 || log "⚠ pagi-briefing cron add failed (non-fatal — briefing still works on demand)"
+
+log "Adding end-of-day summary cron (18:00 WIB)..."
+su - weuseai -c '${HERMES} cron add --schedule "0 11 * * *" --prompt "${shSingleQuote(EOD_SUMMARY_CRON_PROMPT)}" --deliver telegram' >> "$LOG" 2>&1 || log "⚠ eod-summary cron add failed (non-fatal)"
 `
     : `
 log "No TELEGRAM_BOT_TOKEN at first spinUp — gateway installed but not started."
@@ -962,7 +1062,7 @@ ${DAILY_NEWS_SKILL_MD}WEUSEAI_SKILL_EOF
 sudo -u weuseai mkdir -p /home/weuseai/.hermes/skills/start
 cat > /home/weuseai/.hermes/skills/start/SKILL.md <<'WEUSEAI_START_SKILL_EOF'
 ${START_SKILL_MD}WEUSEAI_START_SKILL_EOF
-chown -R weuseai:weuseai /home/weuseai/.hermes
+${bikinPersonaSkillBlock}chown -R weuseai:weuseai /home/weuseai/.hermes
 
 # ─── 6b. Agent-pack bundle (Phase 2E-1.5, Hermes-native) ───────────────
 #
