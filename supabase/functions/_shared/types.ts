@@ -138,10 +138,25 @@ export interface IInvoiceStore {
   }): Promise<{ id: string }>
 }
 
+/**
+ * Any tier slug a subscription row may carry: the legacy spec-class slugs
+ * (Tier) PLUS the v1.4 canonical slugs. The DB column stores whichever the
+ * producer wrote (checkout still emits legacy; admin manual-provision emits
+ * canonical). Resolve to behavior via personasForTier() / creditLimitForTier()
+ * — both accept the full set.
+ */
+export type SubscriptionTier =
+  | Tier
+  | 'bare'
+  | 'solo'
+  | 'voice-starter'
+  | 'library-full'
+  | 'done-for-you'
+
 export type SubscriptionRow = {
   id: string
   customer_id: string
-  tier: Tier
+  tier: SubscriptionTier
   status: 'pending' | 'active' | 'pending_provision' | 'paused' | 'canceled' | 'failed'
   xendit_invoice_id: string | null
   always_on_enabled: boolean
@@ -166,7 +181,7 @@ export interface IXenditClient {
 export interface IProvisioningClient {
   spinUp(input: {
     customerId: string
-    tier: Tier
+    tier: SubscriptionTier
     customerTelegramBotToken?: string
     customerTelegramAllowedUserIds?: string
     alwaysOnEnabled: boolean
@@ -212,11 +227,13 @@ export type CustomerRow = {
   soul_md_text: string | null
   /** Persona selection (2026-05-17): the persona slug the customer chose
    *  at onboarding — one of personasForTier(tier). Defaults to 'the-pro'
-   *  at the DB level (migration 20260517000000) so a pre-picker customer
-   *  row is never null. complete-onboarding validates the submitted slug
-   *  against the tier before persisting it here, then threads it into
-   *  spinUp + renderSoulMd. */
-  agent_slug: string
+   *  at the DB level (migration 20260517000000). complete-onboarding
+   *  validates the submitted slug against the tier before persisting it
+   *  here, then threads it into spinUp + renderSoulMd.
+   *  v1.4: NULL for the persona-free `bare` tier (vanilla Hermes, no
+   *  persona) — complete-onboarding persists null and renders the neutral
+   *  SOUL instead of a persona scaffold. */
+  agent_slug: string | null
   /** Bug-1 fix (2026-05-16): set the first time the proactive greeting
    *  is delivered. Idempotency guard so the greeting fires exactly once
    *  whether complete-onboarding's happy path OR the provisioning
@@ -346,12 +363,44 @@ export interface ILlmKeyMinter {
   revoke(hash: string): Promise<RevokeResult>
 }
 
-// Tier → credit-cap map. Single source of truth. Used by complete-onboarding
-// to translate `subscriptions.tier` into a mint limit.
+// Tier → credit-cap map (legacy spec-classes). Single source of truth for
+// the mint limit. Keyed by the three resource spec-classes; canonical v1.4
+// slugs resolve to one of these via creditLimitForTier() below.
 export const TIER_CREDIT_USD_CENTS: Record<Tier, number> = {
   starter: 300,    // $3
   pro: 500,        // $5
   studio: 3000,    // $30
+}
+
+/**
+ * Credit cap (USD cents) for any subscription tier slug — v1.4 canonical
+ * (bare/solo/voice-starter/library-full/done-for-you) OR the deprecated
+ * legacy slugs (starter/pro/studio).
+ *
+ * Mirrors services/provisioning/src/customer-flow.ts `resolveTierToSpecClass`
+ * (the founder-locked v1.4 mapping, PR #226): bare/solo/voice-starter size to
+ * the smallest box ($3); done-for-you sizes like pro ($5); library-full sizes
+ * like studio ($30). This is wiring to that existing decision, NOT a new
+ * pricing call. Before this, `TIER_CREDIT_USD_CENTS[canonicalSlug]` returned
+ * `undefined` → a canonical-slug subscription minted with an undefined cap.
+ */
+export function creditLimitForTier(tier: string): number {
+  switch (tier) {
+    case 'starter':
+    case 'bare':
+    case 'solo':
+    case 'voice-starter':
+      return TIER_CREDIT_USD_CENTS.starter
+    case 'pro':
+    case 'done-for-you':
+      return TIER_CREDIT_USD_CENTS.pro
+    case 'studio':
+    case 'library-full':
+      return TIER_CREDIT_USD_CENTS.studio
+    default:
+      // Unknown slug → smallest cap (fail-safe, never undefined).
+      return TIER_CREDIT_USD_CENTS.starter
+  }
 }
 
 // ─── Telegram bot client (for webhook reply) ───
@@ -437,7 +486,7 @@ export interface ITelegramClient {
 
 export type SpinUpInput = {
   customerId: string
-  tier: Tier
+  tier: SubscriptionTier
   telegramChatId: string
   /** Customer's own bot token (per Option A — pair-flow 2026-05-09).
    *  Provisioning writes this to /home/weuseai/.hermes/.env as

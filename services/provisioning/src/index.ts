@@ -23,7 +23,13 @@ import express from 'express'
 // path Fly's allowlisted address actually uses.
 dns.setDefaultResultOrder('ipv4first')
 net.setDefaultAutoSelectFamily(false)
-import { spinUpCustomer, tearDownCustomer, type SpinUpDeps } from './customer-flow.js'
+import {
+  spinUpCustomer,
+  tearDownCustomer,
+  suspendCustomer,
+  resumeCustomer,
+  type SpinUpDeps,
+} from './customer-flow.js'
 import { createVPSProvider } from './providers/index.js'
 import { createDataStore } from './stores/index.js'
 import { createMessageBroker } from '../../hermes/src/adapters/index.js'
@@ -179,6 +185,55 @@ app.post('/tear-down', async (req, res) => {
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
     res.status(500).json({ error: msg })
+  }
+})
+
+// Fleet Sentinel (2026-06-07): lifecycle suspend/resume. Called by the
+// Supabase fleet-sentinel Edge Function cron. /suspend halts an idle VPS
+// (Vultr stop — compute off, storage retained); /resume powers it back on
+// when the customer returns. Both are REVERSIBLE (never delete) and
+// idempotent (stop on a stopped box / start on a running box is a no-op at
+// the provider). The lifecycle_state/suspended_at column stamping is done
+// by the Edge Function which owns those columns.
+app.post('/suspend', async (req, res) => {
+  const { customerId, vpsId, provider } = req.body as {
+    customerId?: string; vpsId?: string; provider?: string
+  }
+  if (!customerId || !vpsId) {
+    return res.status(400).json({ ok: false, error: 'missing customerId or vpsId' })
+  }
+  try {
+    const result = await suspendCustomer(
+      { customerId, vpsId, provider },
+      { vps: sharedDeps.vps, store: sharedDeps.store },
+    )
+    if (!result.ok) return res.status(404).json(result)
+    res.json(result)
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    console.error('suspend failed:', msg)
+    res.status(502).json({ ok: false, error: 'suspend_failed', detail: msg })
+  }
+})
+
+app.post('/resume', async (req, res) => {
+  const { customerId, vpsId, provider } = req.body as {
+    customerId?: string; vpsId?: string; provider?: string
+  }
+  if (!customerId || !vpsId) {
+    return res.status(400).json({ ok: false, error: 'missing customerId or vpsId' })
+  }
+  try {
+    const result = await resumeCustomer(
+      { customerId, vpsId, provider },
+      { vps: sharedDeps.vps, store: sharedDeps.store },
+    )
+    if (!result.ok) return res.status(404).json(result)
+    res.json(result)
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    console.error('resume failed:', msg)
+    res.status(502).json({ ok: false, error: 'resume_failed', detail: msg })
   }
 })
 

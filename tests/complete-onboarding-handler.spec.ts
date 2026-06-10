@@ -1072,6 +1072,40 @@ test('persona: omitted agent_slug falls back to the-pro (back-compat)', async ()
   assert.equal(customer?.agent_slug, 'the-pro', 'agent_slug defaulted')
 })
 
+test('persona: bare (persona-free) tier onboards with neutral SOUL + null persona', async () => {
+  const { db, minter, provisioning, telegram } = setupHappyPath()
+  // v1.4 bare: persona-free. personasForTier('bare') === [].
+  db.seedSubscription({
+    id: 'sub-1',
+    customer_id: 'cust-1',
+    tier: 'bare',
+    status: 'pending_provision',
+    always_on_enabled: false,
+  })
+  const res = await handleCompleteOnboarding(
+    buildReq({
+      customer_id: 'cust-1',
+      whatsapp: '08123456789',
+      expectations_text: 'Bantu jawab pertanyaan dan susun draft harian.',
+      // Even if the client sends a persona, bare grants none — it must not 403.
+      agent_slug: 'the-pro',
+    }),
+    { db, minter, provisioning, telegram, publicBase: PUBLIC_BASE },
+  )
+  assert.equal(res.status, 200, 'bare onboards (no tier_does_not_grant_persona 403)')
+  const customer = await db.findCustomerById('cust-1')
+  // No persona persisted (vanilla Hermes).
+  assert.equal(customer?.agent_slug, null, 'bare persists null agent_slug')
+  // SOUL is the neutral vanilla scaffold — not The Pro.
+  assert.doesNotMatch(customer?.soul_md_text ?? '', /I am The Pro, a specialist agent/)
+  assert.match(customer?.soul_md_text ?? '', /versi dasar/, 'neutral vanilla SOUL rendered')
+  // spinUp forwarded with no persona → empty WEUSEAI_AGENT_SLUGS downstream.
+  assert.equal(provisioning.calls[0].agentSlug, undefined, 'no persona forwarded to spinUp')
+  // Credit cap resolves to the $3 starter-class for bare (not undefined).
+  const k = db.openrouterKeys.get('cust-1')
+  assert.equal(k?.credit_limit_usd_cents, 300, 'bare mints at $3 starter-class cap')
+})
+
 test('persona: starter tier rejects a pro-only persona', async () => {
   const { db, minter, provisioning, telegram } = setupHappyPath()
   // Re-seed the subscription as starter (only the-pro/doc-expert/slide-master).

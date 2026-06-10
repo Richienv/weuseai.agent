@@ -449,6 +449,81 @@ export async function tearDownCustomer(
   return { ok: true }
 }
 
+/**
+ * Resolve the right provider adapter for a stored VPS row — by the row's
+ * `provider` field, falling back to deps.vps (mock / specific adapter in
+ * tests). Same routing tearDownCustomer uses; extracted so suspend/resume
+ * share it.
+ */
+function adapterForRow(
+  row: { provider?: string },
+  deps: { vps: IVPSProvider },
+  label: string,
+): IVPSProvider {
+  let adapter: IVPSProvider = deps.vps
+  if (row.provider && row.provider !== 'mock') {
+    try {
+      adapter = createVPSProviderByName(row.provider)
+    } catch (e) {
+      console.warn(
+        `[${label}] couldn't construct provider="${row.provider}" — falling back to deps.vps: ${e instanceof Error ? e.message : String(e)}`,
+      )
+    }
+  }
+  return adapter
+}
+
+/**
+ * The VPS a lifecycle action targets. The fleet-sentinel Edge Function
+ * already holds the vps_instances row (it queried the fleet to build its
+ * snapshot), so it passes vps_id + provider explicitly. This is also why
+ * suspend/resume do NOT go through findActiveVPSByCustomer — that lookup
+ * filters to status running/provisioning, which would make a SUSPENDED
+ * (stopped) VPS impossible to find at resume time.
+ */
+export type LifecycleTarget = {
+  customerId: string
+  vpsId: string
+  provider?: string
+}
+
+/**
+ * Fleet Sentinel lifecycle — suspend (Vultr halt) an idle customer's VPS.
+ * Compute stops; storage (and the box) is retained, so a resume just powers
+ * it back on. REVERSIBLE — never deletes. The vps_instances row is patched
+ * status='stopped'; the lifecycle_state/suspended_at stamping is done by the
+ * caller (fleet-sentinel Edge Function) which owns those columns.
+ *
+ * Spec: docs/specs/2026-06-07-fable5-10x-build-spec.md
+ */
+export async function suspendCustomer(
+  target: LifecycleTarget,
+  deps: { vps: IVPSProvider; store: IDataStore },
+): Promise<{ ok: boolean; reason?: string; vpsId?: string }> {
+  if (!target.vpsId) return { ok: false, reason: 'missing_vps_id' }
+  const adapter = adapterForRow(target, deps, 'suspendCustomer')
+  await adapter.stop(target.vpsId)
+  await deps.store.updateVPSInstance(target.vpsId, { status: 'stopped' })
+  return { ok: true, vpsId: target.vpsId }
+}
+
+/**
+ * Fleet Sentinel lifecycle — resume (Vultr start) a previously-suspended
+ * VPS when the customer shows fresh activity. Patches status='running';
+ * Hermes auto-starts on boot (systemd Restart=always) and its bundle-pull
+ * ExecStartPre re-runs. Caller clears lifecycle_state/suspended_at.
+ */
+export async function resumeCustomer(
+  target: LifecycleTarget,
+  deps: { vps: IVPSProvider; store: IDataStore },
+): Promise<{ ok: boolean; reason?: string; vpsId?: string }> {
+  if (!target.vpsId) return { ok: false, reason: 'missing_vps_id' }
+  const adapter = adapterForRow(target, deps, 'resumeCustomer')
+  await adapter.start(target.vpsId)
+  await deps.store.updateVPSInstance(target.vpsId, { status: 'running' })
+  return { ok: true, vpsId: target.vpsId }
+}
+
 // ──────── helpers ────────
 
 // Phase 2E-2 Day 2: bootstrap bundle (~5KB tar.gz) read once at module

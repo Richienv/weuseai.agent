@@ -256,6 +256,40 @@ test('render: explicit personaSlug="the-pro" produces The Pro scaffold', () => {
   assert.match(out, /pendamping kerja harian/)
 })
 
+test('render: personaFree (bare) renders the neutral vanilla scaffold, not a persona', () => {
+  const out = renderSoulMd({
+    customerName: 'Sarah Tanaka',
+    expectationsClean: sanitizedSample,
+    // personaSlug is ignored when personaFree is set.
+    personaSlug: 'the-pro',
+    personaFree: true,
+  })
+  // Vanilla scaffold markers — base assistant, no The Pro specialty.
+  assert.match(out, /asisten AI pribadi Sarah Tanaka/)
+  assert.match(out, /versi dasar/)
+  // MUST NOT impose the The Pro identity on a persona-free customer.
+  assert.doesNotMatch(out, /I am The Pro, a specialist agent/)
+  assert.doesNotMatch(out, /pendamping kerja harian/)
+  // Customer expectations still woven in.
+  assert.ok(out.includes(sanitizedSample))
+})
+
+test('render: personaFree does not emit an unknown-persona warning', () => {
+  const warnings: string[] = []
+  const origWarn = console.warn
+  console.warn = (...args: unknown[]) => warnings.push(args.map(String).join(' '))
+  try {
+    renderSoulMd({
+      customerName: 'Putri',
+      expectationsClean: sanitizedSample,
+      personaFree: true,
+    })
+    assert.equal(warnings.length, 0, 'persona-free render must not warn')
+  } finally {
+    console.warn = origWarn
+  }
+})
+
 test('render: unknown personaSlug falls back to The Pro + warns', () => {
   const warnings: string[] = []
   const origWarn = console.warn

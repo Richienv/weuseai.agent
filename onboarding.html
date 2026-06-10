@@ -1025,17 +1025,31 @@
     // in complete-onboarding (tier_does_not_grant_persona, 403), so this
     // mirror is a UX convenience, not a trust boundary. Keep in lockstep
     // with tier-personas.ts when the persona library changes.
+    const _SET_3 = ['the-pro', 'doc-expert', 'slide-master'];
+    const _SET_8 = [
+      'the-pro', 'doc-expert', 'slide-master', 'deep-researcher',
+      'trade-pro', 'project-conductor', 'video-producer', 'social-conductor',
+    ];
+    const _SET_10 = [
+      'the-pro', 'doc-expert', 'slide-master', 'deep-researcher',
+      'trade-pro', 'project-conductor', 'video-producer', 'social-conductor',
+      'web-app-builder', 'business-agent',
+    ];
     const TIER_PERSONAS = {
-      starter: ['the-pro', 'doc-expert', 'slide-master'],
-      pro: [
-        'the-pro', 'doc-expert', 'slide-master', 'deep-researcher',
-        'trade-pro', 'project-conductor', 'video-producer', 'social-conductor',
-      ],
-      studio: [
-        'the-pro', 'doc-expert', 'slide-master', 'deep-researcher',
-        'trade-pro', 'project-conductor', 'video-producer', 'social-conductor',
-        'web-app-builder', 'business-agent',
-      ],
+      // v1.4 canonical slugs (tier-personas.ts TIER_PERSONAS). bare is
+      // persona-free ([]); done-for-you carries the 8 Pro set; library-full
+      // carries all 10. Pinned to tier-personas.ts by the onboarding
+      // tier-persona drift gate (tests/onboarding-tier-personas-drift.spec.ts).
+      'bare': [],
+      'solo': _SET_3,
+      'voice-starter': _SET_3,
+      'done-for-you': _SET_8,
+      'library-full': _SET_10,
+      // Deprecated count-based aliases (expand-then-contract) — still resolve
+      // server-side via resolveTier(). starter→3, pro→8 Pro set, studio→10.
+      'starter': _SET_3,
+      'pro': _SET_8,
+      'studio': _SET_10,
     };
     const DEFAULT_PERSONA = 'the-pro';
     const PERSONA_META = {
@@ -1191,7 +1205,10 @@
         return r.json();
       }).then((rows) => {
         const t = rows[0]?.tier;
-        return (t === 'starter' || t === 'pro' || t === 'studio') ? t : null;
+        // Accept any tier slug we have a persona map for — the v1.4
+        // canonical slugs (bare/solo/voice-starter/library-full/done-for-you)
+        // AND the deprecated aliases (starter/pro/studio). Unknown → null.
+        return (t && Object.prototype.hasOwnProperty.call(TIER_PERSONAS, t)) ? t : null;
       });
     }
 
@@ -1203,6 +1220,19 @@
      */
     function renderPersonaPicker() {
       const slugs = TIER_PERSONAS[customerTier] || TIER_PERSONAS.starter;
+      // v1.4 `bare` (persona-free): no picker. Render an honest note and
+      // leave selectedPersona null — the submit handler skips the persona
+      // gate for persona-free tiers and posts agent_slug: null.
+      if (slugs.length === 0) {
+        selectedPersona = null;
+        $personaError.textContent = '';
+        $personaGrid.innerHTML =
+          '<p class="persona-blurb" style="opacity:.8">' +
+          'Paket dasar — agent kamu jalan sebagai asisten umum berbasis DeepSeek, ' +
+          'tanpa persona khusus. Kamu bisa upgrade kapan saja untuk menambah persona.' +
+          '</p>';
+        return;
+      }
       const preferred = slugs.indexOf(DEFAULT_PERSONA) !== -1
         ? DEFAULT_PERSONA
         : slugs[0];
@@ -1950,8 +1980,11 @@
       // Persona selection (2026-05-17): a persona MUST be picked before
       // submit. selectedPersona is set by renderPersonaPicker's default,
       // so this guards only the pathological no-render case.
+      // v1.4 `bare` (persona-free): tier grants no personas — skip the gate
+      // entirely and submit with selectedPersona null (agent_slug: null).
       const tierSlugs = TIER_PERSONAS[customerTier] || TIER_PERSONAS.starter;
-      if (!selectedPersona || tierSlugs.indexOf(selectedPersona) === -1) {
+      if (tierSlugs.length > 0 &&
+          (!selectedPersona || tierSlugs.indexOf(selectedPersona) === -1)) {
         $personaError.textContent = 'Pilih satu persona untuk agent kamu.';
         $personaGrid.scrollIntoView({ behavior: 'smooth', block: 'center' });
         return;
