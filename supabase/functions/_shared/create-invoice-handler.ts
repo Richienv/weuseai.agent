@@ -6,7 +6,7 @@ import {
   type IInvoiceStore,
   type IXenditClient,
   type PaymentMethodId,
-  type Tier,
+  type PurchasablePlan,
 } from './types.ts'
 import { totalCharge, XENDIT_PAYMENT_METHODS, paymentFee } from './pricing.ts'
 
@@ -21,7 +21,9 @@ export type CreateInvoiceDeps = {
 export type CreateInvoiceBody = {
   email: string
   displayName?: string
-  plan: Tier
+  /** v1.4 canonical slug (self-serve checkout) OR a frozen legacy v1.2
+   *  slug the live checkout still emits. Validated against PLANS. */
+  plan: PurchasablePlan
   alwaysOn: boolean
   methodId: PaymentMethodId
   country?: string
