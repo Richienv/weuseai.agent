@@ -170,6 +170,41 @@ test('happy path: fresh tos_accepted_at → invoice created + 1 consent row (tos
   assert.equal(store.state.consents[0].version, 'v1.0')
 })
 
+// ─── 1b. v1.4 canonical plan slugs (Mission 2 Phase 0.3) ────────────────
+
+test('canonical v1.4 plan (library-full) → 200, subscription persisted with canonical slug', async () => {
+  const store = makeStore()
+  const res = await handleCreateInvoice(
+    buildReq(buildHappyBody({ plan: 'library-full' })),
+    {
+      db: store,
+      xendit: makeXendit(),
+      successRedirectBase: 'https://welcome.test',
+      failureRedirectBase: 'https://checkout.test',
+      now: () => FIXED_NOW,
+    },
+  )
+  assert.equal(res.status, 200)
+  assert.equal(store.state.subs.length, 1)
+  assert.equal(store.state.subs[0].tier, 'library-full')
+})
+
+test('enterprise plan → 400 invalid_plan (contact-sales only, never self-serve)', async () => {
+  const store = makeStore()
+  const res = await handleCreateInvoice(
+    buildReq(buildHappyBody({ plan: 'enterprise' })),
+    {
+      db: store,
+      xendit: makeXendit(),
+      successRedirectBase: 'https://welcome.test',
+      failureRedirectBase: 'https://checkout.test',
+      now: () => FIXED_NOW,
+    },
+  )
+  assert.equal(res.status, 400)
+  assert.equal(((await res.json()) as { error?: string }).error, 'invalid_plan')
+})
+
 // ─── 2. Happy path: tos + marketing ─────────────────────────────────────
 
 test('happy path + marketing opt-in: 2 consent rows (tos + marketing)', async () => {

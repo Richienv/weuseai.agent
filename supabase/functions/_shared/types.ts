@@ -1,17 +1,61 @@
 // Shared types for create-invoice and xendit-webhook.
 // Pure TypeScript — works in Deno (Edge Functions) and Node (tests).
 
+import { TIERS } from './tier-personas.ts'
+
 export type Tier = 'starter' | 'pro' | 'studio'
 
+/**
+ * Every plan slug create-invoice accepts: the v1.4 canonical tiers
+ * (self-serve checkout, Mission 2 Phase 0.3) PLUS the legacy v1.2 slugs the
+ * live checkout.html still emits. `enterprise` is intentionally absent —
+ * contact-sales only, never self-serve.
+ */
+export type PurchasablePlan =
+  | 'bare'
+  | 'solo'
+  | 'voice-starter'
+  | 'library-full'
+  | 'done-for-you'
+  | Tier
+
 export type PlanCatalog = Record<
-  Tier,
-  { setupIdr: number; setupOldIdr: number; displayName: string }
+  PurchasablePlan,
+  { setupIdr: number; setupOldIdr?: number; displayName: string }
 >
 
-// Server-authoritative pricing — single source of truth, matches CLAUDE.md
-// Business Model v1.1. Front-end PLANS object must mirror these numbers
-// (display only; charge amount is recomputed here per request).
+// Server-authoritative pricing — charge amount is recomputed here per
+// request; the front-end PLANS object is display only.
+//
+// v1.4 canonical entries are DERIVED from tier-personas.ts (the founder-
+// locked catalog) so there is no mirror to drift. `setupOldIdr` maps to the
+// display-only strikethrough anchor (library-full 999k — NEVER charged).
+//
+// Legacy entries are FROZEN at the v1.2 prices the live checkout.html still
+// displays: server-authoritative pricing means display and charge must move
+// together, so legacy slugs keep charging exactly what the legacy page
+// shows until the checkout v1.4 flip lands (held PR — see Mission 2 Phase
+// 0.3). That flip remaps legacy plan params to canonical slugs client-side
+// and retires these entries.
+function canonicalPlan(
+  slug: 'bare' | 'solo' | 'voice-starter' | 'library-full' | 'done-for-you',
+): { setupIdr: number; setupOldIdr?: number; displayName: string } {
+  const t = TIERS[slug]
+  return {
+    // Non-null: every non-enterprise tier has a fixed setup fee.
+    setupIdr: t.setup_fee_idr as number,
+    ...(t.setup_fee_anchor_idr ? { setupOldIdr: t.setup_fee_anchor_idr } : {}),
+    displayName: t.label_id,
+  }
+}
+
 export const PLANS: PlanCatalog = {
+  bare: canonicalPlan('bare'),
+  solo: canonicalPlan('solo'),
+  'voice-starter': canonicalPlan('voice-starter'),
+  'library-full': canonicalPlan('library-full'),
+  'done-for-you': canonicalPlan('done-for-you'),
+  // Legacy v1.2 (frozen — see note above).
   starter: { setupIdr: 399_000, setupOldIdr: 699_000, displayName: 'Starter' },
   pro: { setupIdr: 1_290_000, setupOldIdr: 2_500_000, displayName: 'Pro' },
   studio: { setupIdr: 5_900_000, setupOldIdr: 10_900_000, displayName: 'Studio' },
@@ -53,7 +97,9 @@ export interface IInvoiceStore {
   ): Promise<SubscriptionRow | null>
   insertSubscription(input: {
     customer_id: string
-    tier: Tier
+    // Canonical v1.4 slug or frozen legacy slug — whatever the customer
+    // bought. The DB column is text; downstream resolves via resolveTier().
+    tier: SubscriptionTier
     always_on_enabled: boolean
     status: 'pending' | 'active' | 'failed'
     xendit_invoice_id?: string

@@ -6,10 +6,10 @@ import {
   PAYMENT_METHOD_FEES,
   PLANS,
   type PaymentMethodId,
-  type Tier,
+  type PurchasablePlan,
 } from './types.ts'
 
-export function chargeBeforeFee(tier: Tier, alwaysOn: boolean): number {
+export function chargeBeforeFee(tier: PurchasablePlan, alwaysOn: boolean): number {
   return PLANS[tier].setupIdr + HOSTING_MONTHLY_IDR + (alwaysOn ? ALWAYS_ON_MONTHLY_IDR : 0)
 }
 
@@ -19,7 +19,7 @@ export function paymentFee(amount: number, methodId: PaymentMethodId): number {
 }
 
 export function totalCharge(
-  tier: Tier,
+  tier: PurchasablePlan,
   alwaysOn: boolean,
   methodId: PaymentMethodId,
 ): { base: number; fee: number; total: number } {
