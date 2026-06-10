@@ -209,3 +209,76 @@ drift-gate culture; clean handler/entrypoint separation.
 
 Everything else above is logged here for the founder's prioritization; none of
 it is a same-day fire except where actioned.
+
+---
+
+# Appendix — Mission 2 delta audit (2026-06-10)
+
+Scope per the Mission 2 brief: (a) round-1 findings flagged-not-actioned,
+(b) changes on main since 2026-06-07, (c) the dimension round 1
+underweighted — **the customer's first 48 hours of actual agent usage**.
+
+## (c) First-48-hours usage — promise sold vs experience delivered
+
+This is the most important finding of Mission 2. Round 1 audited the path TO
+a running agent; this pass walked what the agent actually does afterward.
+
+| # | Sev | Finding | Evidence |
+|---|-----|---------|----------|
+| U1 | **P0** | **The #1 sold feature — "briefing pagi tiap hari jam 7 WIB" — never delivers what's promised.** The only scheduled job on a customer VPS is a generic 5-headline news cron (`setup-script.ts` "daily-news cron"); the full `morning-briefing-cycle` playbook the SOUL.md + manifest promise is never fired by anything. | `setup-script.ts` gateway-start block (single `hermes cron add`, prompt = daily news); `agent-packs/the-pro/manifest.json` (`"Cron 07:00 WIB default"` is prose, not config) |
+| U2 | **P0** | **End-of-day summary (18:00 WIB) never fires at all.** No cron exists; the playbook is installed but unreachable proactively. | no 18:00 cron anywhere in `setup-script.ts` |
+| U3 | **P1** | **3 of the-pro's 5 skills are dead code.** `execution: "hermes-skill"` playbooks (morning-briefing-cycle, customer-reply, end-of-day-summary) have no implemented dispatch — `workflow-execute-handler.ts` returns "not implemented in 2E-1" for non-edge-fn handlers. | `workflow-execute-handler.ts:196-215` |
+| U4 | **P1** | **The daily-briefing edge skill serves MOCK calendar/email as if real.** `templates_used: mocks/calendar/typical-day.json` — a customer asking "briefing pagi" gets five canned meetings that do not exist. SKILL.md itself admits "masih mock fixture (Phase 2C-2 wires real Gmail/Calendar MCP)". This is fabricated data shown to a paying customer — honesty-lock class. | `daily-briefing-handler/index.ts:60-74`; `the-pro/manifest.json:11-12` |
+| U5 | **P1** | **"Ingatan lintas sesi" rests on Hermes defaults.** Zero memory configuration is written to config.yaml at provision; cross-session recall is sold on the landing but not explicitly provisioned. | `setup-script.ts` config blocks (no memory section) |
+| U6 | **P1** | Voice tiers can silently fail STT: the voice config block is written even when no STT key is supplied, so a voice note can no-op. | `setup-script.ts:166-173, 254-280` |
+| U7 | **P2** | No skill discovery: only `/start` is installed as a meta-skill; there is no `/help`, and playbooks have no documented conversational triggers. | `setup-script.ts` start-skill block |
+| U8 | **P2** | done-for-you's `web_app` feature flag has no customer-visible surface at all — paid for, never redeemable. | `tier-personas.ts` features vs (no UI anywhere) |
+
+**What works:** `/start` → SOUL first-contact greeting; the 07:00 news cron
+does fire (mechanism proven — `hermes cron add --deliver telegram` works);
+conversational skill routing; per-tier bundle install.
+
+**Root cause:** SOUL.md + manifests were written as design intent; the
+provisioning layer shipped a thinner product. The cron mechanism works —
+it's just pointed at a generic prompt instead of the briefing the customer
+was sold.
+
+**Actioned by Mission 2 (Phase 2 build):** U1 is fixed by the Pagi Briefing
+build (real 07:00 WIB briefing cron, honest data, personalized at runtime
+via SOUL); U2 gets the same rail (18:00 cron). U4's mock-data honesty issue
+is mitigated in the new briefing prompt (it never claims calendar/email
+data we don't have) — full fix (real connectors or skill retirement) is a
+founder roadmap call. U3/U5–U8 are logged for the founder's prioritization.
+
+## (a) Round-1 flagged-not-actioned — status
+
+- **CI gate:** SHIPPED (#228). `test-and-typecheck` runs on every PR + push
+  to main; all latent typecheck errors fixed (`typecheck:all` clean for the
+  first time). Founder one-minute action: mark it Required in branch
+  protection (docs/runbooks/ci-gate.md).
+- **FOMO counter honesty:** backend SHIPPED (#229) —
+  `/api/public/subscription-count` returns the real active-subscription
+  count. Frontend wiring is in the held funnel PR (PR2 conflict surface).
+- **checkout v1.4 latent break:** backend SHIPPED (#229) — create-invoice
+  accepts canonical slugs at locked v1.4 prices; legacy slugs frozen at
+  displayed v1.2 prices (display==charge invariant, pinned by test).
+  Frontend flip held until PR2 lands.
+- **Fleet Sentinel deploy:** NOT DEPLOYABLE from this session — the
+  container has no Supabase Mgmt/Fly/service-role secrets (verified: env is
+  empty of them; no CLIs). Runbook is turnkey; founder (or a
+  secrets-bearing session) executes. Dry-run report therefore cannot be
+  produced honestly from here — the savings math: each suspended idle VPS
+  saves ~$5/mo (Vultr vc2-1c-1gb compute) less storage retention; at N
+  idle VPSes the projection is N × $5/mo. The sentinel's first dry-run
+  tick DMs the actual candidate list.
+- **Legacy `starter` price/feature mismatch (new, found this pass):** the
+  live legacy checkout sells `starter` at Rp 399k, but the v1.4 alias maps
+  starter → voice-starter (sold at Rp 599k) — so today a URL-crafted (or
+  organic) legacy purchase gets voice-starter features for 200k less. The
+  held funnel PR closes this by retiring legacy slugs from the UI;
+  create-invoice keeps honoring them only while the legacy page is live.
+
+## (b) Main since 2026-06-07
+
+Only #227 (round 1), #228, #229 (this mission). PR2 (landing FOMO redesign)
+has NOT landed — funnel frontend work is held accordingly.
