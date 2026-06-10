@@ -9,6 +9,7 @@
  */
 
 import { PRICING, calculateCostUsdCents } from './pricing.js'
+import { capMaxTokens, validateChatRequest, shouldChargeUsage } from './guards.js'
 
 export interface Env {
   PROXY_JWT_SECRET: string
@@ -55,11 +56,18 @@ async function handleChatCompletion(
   ctx: ExecutionContext,
   customerId: string,
 ): Promise<Response> {
-  const body = (await req.json()) as { model?: string; messages?: unknown }
+  const body = (await req.json()) as { model?: string; messages?: unknown; max_tokens?: number }
   const model = body.model ?? 'glm-4-flash'
   const pricing = PRICING[model]
   if (!pricing) {
     return jsonResponse({ error: 'unknown_model', model }, 400)
+  }
+
+  // Cost-guard: reject malformed / oversized requests before they touch the
+  // provider (a runaway loop or a giant body burns our key). See guards.ts.
+  const valid = validateChatRequest(body)
+  if (!valid.ok) {
+    return jsonResponse({ error: valid.error }, 400)
   }
 
   // Check balance — except for free models (no need to gate)
@@ -74,6 +82,10 @@ async function handleChatCompletion(
     }
   }
 
+  // Cost-guard: force a bounded max_tokens so a single call can't generate
+  // 50k+ tokens on our key.
+  const cappedBody = capMaxTokens(body)
+
   // Route ke provider
   const { upstream, headers } = providerRoute(pricing.provider, env)
   const upstreamReq = new Request(`${upstream}/chat/completions`, {
@@ -82,14 +94,15 @@ async function handleChatCompletion(
       'content-type': 'application/json',
       ...headers,
     },
-    body: JSON.stringify(body),
+    body: JSON.stringify(cappedBody),
   })
 
   const upstreamRes = await fetch(upstreamReq)
   const result = (await upstreamRes.clone().json()) as any
 
-  // Calculate cost from usage
-  if (!isFree && result.usage) {
+  // Calculate cost from usage — ONLY on a successful upstream call. A 5xx
+  // that still carried a usage field used to debit for a failed request.
+  if (!isFree && shouldChargeUsage(upstreamRes.ok, result.usage)) {
     const cost = calculateCostUsdCents(model, result.usage)
     // Debit + log async (don't block response)
     ctx.waitUntil(
