@@ -90,24 +90,22 @@ export async function decryptCredential(
 ): Promise<string> {
   validateKey(hexKey)
 
-  let keyBytes: Uint8Array
-  let cryptoKey: CryptoKey
-  let iv: Uint8Array
-  let ctBytes: Uint8Array
-  let tagBytes: Uint8Array
-
+  // All intermediates live inside the try so a failure at any stage maps to
+  // the single opaque error below. (Also keeps this file typecheckable under
+  // BOTH tsconfig lib sets — the root config has no DOM lib, so naming the
+  // `CryptoKey` type here was a TS2304.)
   try {
-    keyBytes = hexToBytes(hexKey)
-    cryptoKey = await crypto.subtle.importKey(
+    const keyBytes = hexToBytes(hexKey)
+    const cryptoKey = await crypto.subtle.importKey(
       'raw',
       keyBytes,
       { name: ALGORITHM },
       false,
       ['decrypt'],
     )
-    iv = base64ToBytes(cipher.iv)
-    ctBytes = base64ToBytes(cipher.ciphertext)
-    tagBytes = base64ToBytes(cipher.auth_tag)
+    const iv = base64ToBytes(cipher.iv)
+    const ctBytes = base64ToBytes(cipher.ciphertext)
+    const tagBytes = base64ToBytes(cipher.auth_tag)
 
     // Reassemble ciphertext + tag for Web Crypto's decrypt.
     const combined = new Uint8Array(ctBytes.length + tagBytes.length)
@@ -139,7 +137,10 @@ function validateKey(hexKey: string): void {
   }
 }
 
-function hexToBytes(hex: string): Uint8Array {
+// Return types pinned to Uint8Array<ArrayBuffer> (not the ArrayBufferLike
+// default) so the DOM-lib Web Crypto signatures (BufferSource) accept them
+// under TS 5.9's generic TypedArrays.
+function hexToBytes(hex: string): Uint8Array<ArrayBuffer> {
   const out = new Uint8Array(hex.length / 2)
   for (let i = 0; i < out.length; i++) {
     out[i] = parseInt(hex.substr(i * 2, 2), 16)
@@ -154,7 +155,7 @@ function bytesToBase64(bytes: Uint8Array): string {
   return btoa(binary)
 }
 
-function base64ToBytes(b64: string): Uint8Array {
+function base64ToBytes(b64: string): Uint8Array<ArrayBuffer> {
   const binary = atob(b64)
   const out = new Uint8Array(binary.length)
   for (let i = 0; i < binary.length; i++) out[i] = binary.charCodeAt(i)

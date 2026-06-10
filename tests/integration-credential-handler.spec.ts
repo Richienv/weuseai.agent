@@ -188,7 +188,7 @@ test('credential-handler GET: 404 when not configured', async () => {
     bearer,
   }))
   assert.equal(res.status, 404)
-  const body = await res.json()
+  const body = (await res.json()) as Record<string, any>
   assert.equal(body.configured, false)
 })
 
@@ -213,7 +213,7 @@ test('credential-handler GET: 200 when configured', async () => {
     bearer,
   }))
   assert.equal(res.status, 200)
-  const body = await res.json()
+  const body = (await res.json()) as Record<string, any>
   assert.equal(body.configured, true)
   assert.equal(body.label, 'Xendit Live')
   // CRITICAL: never leak ciphertext.
@@ -241,7 +241,7 @@ test('credential-handler GET: 410 when revoked', async () => {
     bearer,
   }))
   assert.equal(res.status, 410)
-  const body = await res.json()
+  const body = (await res.json()) as Record<string, any>
   assert.equal(body.configured, false)
   assert.ok(body.revoked_at)
 })
@@ -259,7 +259,7 @@ test('credential-handler POST: validates upstream + persists ciphertext', async 
     body: { api_key: 'xnd_development_FAKE_KEY', label: 'Xendit Sandbox' },
   }))
   assert.equal(res.status, 200)
-  const body = await res.json()
+  const body = (await res.json()) as Record<string, any>
   assert.equal(body.configured, true)
   assert.ok(body.last_validated_at)
 
@@ -283,7 +283,7 @@ test('credential-handler POST: rejects bad key with Bahasa error', async () => {
   }))
   // 4xx, body has Bahasa message.
   assert.equal(res.status, 400)
-  const body = await res.json()
+  const body = (await res.json()) as Record<string, any>
   assert.equal(body.ok, false)
   assert.match(body.message_bahasa, /Xendit/)
   // No row persisted on validation failure.
