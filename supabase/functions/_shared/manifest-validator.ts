@@ -215,14 +215,29 @@ export type ManifestValidateOk = { ok: true; manifest: Manifest }
 export type ManifestValidateErr = { ok: false; errors: string[] }
 export type ManifestValidateResult = ManifestValidateOk | ManifestValidateErr
 
+export type ValidateManifestOpts = {
+  /**
+   * Persona Genesis (2026-06-10): per-customer generated personas carry a
+   * `custom-<customer_id>` slug that is intentionally NOT in
+   * KNOWN_PERSONA_SLUGS. Callers validating a GENERATED manifest pass the
+   * exact slug(s) they minted here; every other caller gets the unchanged
+   * known-slug gate. This is an explicit opt-in, never a default — the
+   * curated-persona gate stays intact.
+   */
+  allowAgentSlugs?: readonly string[]
+}
+
 /**
  * Validate a parsed manifest object. Performs schema validation +
  * cross-field invariants:
- *   - agent_slug must be a known persona slug
+ *   - agent_slug must be a known persona slug (or explicitly allow-listed)
  *   - every skill.templates_used reference must exist in templates[]
  *   - extension_dir must be absolute path
  */
-export function validateManifest(input: unknown): ManifestValidateResult {
+export function validateManifest(
+  input: unknown,
+  opts: ValidateManifestOpts = {},
+): ManifestValidateResult {
   // Discard $schema field if present (it's reference metadata, not part
   // of the runtime manifest contract).
   const stripped = stripSchemaField(input)
@@ -240,7 +255,11 @@ export function validateManifest(input: unknown): ManifestValidateResult {
   // Cross-field invariants
   const errors: string[] = []
 
-  if (!(KNOWN_PERSONA_SLUGS as readonly string[]).includes(m.agent_slug)) {
+  const allowedSlugs = opts.allowAgentSlugs ?? []
+  if (
+    !(KNOWN_PERSONA_SLUGS as readonly string[]).includes(m.agent_slug) &&
+    !allowedSlugs.includes(m.agent_slug)
+  ) {
     errors.push(
       `agent_slug "${m.agent_slug}" is not a known persona — must be one of ${KNOWN_PERSONA_SLUGS.join(', ')}`,
     )

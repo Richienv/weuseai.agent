@@ -97,6 +97,18 @@ Deno.serve(async (req) => {
       const expiresAt = new Date(Date.now() + expirySeconds * 1000).toISOString()
       return { url: data.signedUrl, expiresAt }
     },
+    // Persona Genesis (2026-06-10): the customer's generated persona row.
+    // The handler enforces ownership (slug must be custom-<this cid>) and
+    // only serves status='active'.
+    customPersonaLookup: async (customerId) => {
+      const { data, error } = await supabase
+        .from('custom_personas')
+        .select('version, status')
+        .eq('customer_id', customerId)
+        .maybeSingle()
+      if (error || !data) return null
+      return data as { version: string; status: 'generating' | 'active' | 'failed' }
+    },
   }
 
   const result = await bundleFetchHandler(body, deps)

@@ -172,6 +172,19 @@ import json, sys
 manifest_path, tier = sys.argv[1], sys.argv[2]
 with open(manifest_path) as f:
     m = json.load(f)
+# v1.4 fix (2026-06-10): WEUSEAI_TIER carries the REAL slug, which since
+# the v1.4 restructure can be a canonical feature-bundle slug. Manifest
+# enabled_for_tiers values are the legacy spec-class slugs, so resolve the
+# canonical slug to its spec-class FIRST — mirrors resolveTierToSpecClass()
+# in customer-flow.ts (drift-pinned by tests/bundle-pull-tier-filter.spec.ts).
+# Without this, e.g. tier='done-for-you' matched nothing and EVERY skill was
+# skipped at install — a customer with persona shells but zero skills.
+TIER_SPEC_CLASS = {
+    'bare': 'starter', 'solo': 'starter', 'voice-starter': 'starter',
+    'done-for-you': 'pro',
+    'library-full': 'studio',
+}
+tier = TIER_SPEC_CLASS.get(tier, tier)
 TIER_RANK = { 'starter': 1, 'pro': 2, 'studio': 3 }
 def tier_to_efl(t):
     rank = TIER_RANK.get(t, 0)
@@ -316,6 +329,44 @@ pull_bundle() {
   return 0
 }
 
+# ─── Custom persona pull (Persona Genesis, 2026-06-10) ────────────────
+# Best-effort attempt to pull this customer's GENERATED persona bundle
+# (slug custom-<cid>). Most customers have none — bundle-fetch answers
+# 403/404 and we skip SILENTLY (no telemetry row: an absent custom persona
+# is the normal state, not a failure). Real failures (network, 5xx after a
+# bundle exists) still surface via pull_bundle's normal telemetry on the
+# next call. Tier + ownership are enforced server-side by bundle-fetch —
+# this client never decides eligibility.
+pull_custom_persona() {
+  local slug="custom-$CID"
+  local probe
+  probe=$(curl -sS -o /tmp/weuseai-custom-probe.json -w "%{http_code}" -X POST "${fetchUrl}" \\
+    -H "Content-Type: application/json" \\
+    -d "{\\"customer_id\\":\\"$CID\\",\\"agent_slug\\":\\"$slug\\"}" \\
+    --max-time ${FETCH_TIMEOUT_SEC} 2>>"$LOG") || {
+      log "  (custom persona probe network-failed; skipping silently)"
+      rm -f /tmp/weuseai-custom-probe.json
+      return 0
+    }
+  rm -f /tmp/weuseai-custom-probe.json
+  case "$probe" in
+    200)
+      log "▶ Custom persona found for cid=$CID; pulling $slug"
+      if pull_bundle "$slug"; then
+        SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
+      else
+        FAIL_COUNT=$((FAIL_COUNT + 1))
+      fi
+      ;;
+    403|404|400)
+      log "  (no custom persona for this customer — normal)"
+      ;;
+    *)
+      log "  ⚠ custom persona probe HTTP $probe; skipping this boot"
+      ;;
+  esac
+}
+
 # ─── Main loop ────────────────────────────────────────────────────────
 LOOP_START_MS=$(date +%s%3N)
 SUCCESS_COUNT=0
@@ -332,6 +383,8 @@ for slug in "\${SLUGS_ARR[@]}"; do
     FAIL_COUNT=$((FAIL_COUNT + 1))
   fi
 done
+
+pull_custom_persona
 
 TOTAL_DURATION=$(( $(date +%s%3N) - LOOP_START_MS ))
 log "✓ Multi-persona pull complete: $SUCCESS_COUNT success, $FAIL_COUNT fail in \${TOTAL_DURATION}ms"

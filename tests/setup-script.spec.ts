@@ -40,7 +40,9 @@ test('script: halo text matches Phase 1 spec', () => {
   const s = buildSetupScript(baseParams)
   assert.match(s, /Halo, gue agen lo/, 'liveness greeting')
   assert.match(s, /Setup beres/, 'completion phrasing')
-  assert.match(s, /jam 7 pagi tiap hari WIB/, 'briefing schedule')
+  // Mission 2 (2026-06-10): copy reflects the real Pagi Briefing + EOD crons.
+  assert.match(s, /Pagi Briefing aktif jam 7 pagi WIB/, 'briefing schedule')
+  assert.match(s, /ringkasan sore jam 6/, 'eod schedule')
 })
 
 test('script: halo curl substitutes bot token + chat id', () => {
