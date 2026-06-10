@@ -36,9 +36,9 @@ import {
   type PendingProvisionRow,
   type RetryAttempt,
   type RetryHandlerDeps,
+  type RetrySpinUpClient,
 } from '../supabase/functions/_shared/retry-pending-provisions-handler.ts'
 import type {
-  IProvisioningClient,
   SpinUpInput,
   SpinUpResult,
 } from '../supabase/functions/_shared/types.ts'
@@ -71,7 +71,7 @@ function attempt(overrides: Partial<RetryAttempt> = {}): RetryAttempt {
 function makeProvisioning(opts: {
   result?: SpinUpResult
   calls?: SpinUpInput[]
-} = {}): IProvisioningClient {
+} = {}): RetrySpinUpClient {
   return {
     async spinUp(input) {
       opts.calls?.push(input)

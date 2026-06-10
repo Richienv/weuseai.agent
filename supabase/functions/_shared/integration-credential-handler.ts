@@ -152,7 +152,9 @@ async function handlePost(
 ): Promise<Response> {
   let body: { api_key?: string; label?: string }
   try {
-    body = await req.json()
+    // Cast: undici's Request.json() (root tsconfig, no DOM lib) types as
+    // Promise<unknown>. Fields are runtime-validated immediately below.
+    body = (await req.json()) as { api_key?: string; label?: string }
   } catch {
     return jsonResponse(400, { ok: false, error: 'invalid_json' })
   }

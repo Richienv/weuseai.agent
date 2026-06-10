@@ -35,10 +35,18 @@
  */
 
 import type {
-  IProvisioningClient,
+  IOnboardingProvisioningClient,
   SpinUpInput,
   Tier,
 } from './types.ts'
+
+/**
+ * The slice of the provisioning client the retry worker needs. This is the
+ * RICH client (SpinUpInput in, jobId out) — the Edge Function wires exactly
+ * that shape. (Previously mistyped as the webhook-era IProvisioningClient,
+ * whose narrower input/result made `.jobId` a type error.)
+ */
+export type RetrySpinUpClient = Pick<IOnboardingProvisioningClient, 'spinUp'>
 
 // ─── Tunable constants ───────────────────────────────────────────────
 
@@ -140,9 +148,9 @@ export type RetryHandlerDeps = {
     outcome: RetryAttempt['outcome']
     detail?: string
   }): Promise<{ id: string }>
-  /** The existing IProvisioningClient (provisioning-service or mock
+  /** The rich provisioning client slice (provisioning-service or mock
    *  in tests). Worker delegates spin-up unchanged. */
-  provisioning: IProvisioningClient
+  provisioning: RetrySpinUpClient
   /** For deterministic tests. Defaults to () => new Date() in prod. */
   now?: () => Date
   /** Best-effort log sink (Vercel/Supabase logs surface this). */

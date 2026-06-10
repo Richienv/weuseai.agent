@@ -43,7 +43,6 @@ import {
 import { buildSetupHelpEmailBody } from '../_shared/lifecycle-email-bodies.ts'
 import { sendEmail } from '../_shared/email-delivery.ts'
 import type {
-  IProvisioningClient,
   SpinUpInput,
   SpinUpResult,
   Tier,
@@ -74,7 +73,8 @@ const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
 
 // ─── Provisioning client (HTTP call to Fly /spin-up) ─────────────────
 
-const provisioning: IProvisioningClient = {
+// The rich client slice the retry worker needs (SpinUpInput in, jobId out).
+const provisioning: RetryHandlerDeps['provisioning'] = {
   async spinUp(input: SpinUpInput): Promise<SpinUpResult> {
     const url = PROVISIONING_URL.replace(/\/$/, '') + '/spin-up'
     let r: Response

@@ -18,10 +18,10 @@ import {
   type PendingProvisionRow,
   type RetryAttempt,
   type RetryHandlerDeps,
+  type RetrySpinUpClient,
   type SetupHelpNotification,
 } from '../supabase/functions/_shared/retry-pending-provisions-handler.ts'
 import type {
-  IProvisioningClient,
   SpinUpResult,
 } from '../supabase/functions/_shared/types.ts'
 
@@ -29,7 +29,7 @@ const FIXED_NOW = new Date('2026-06-01T12:00:00.000Z')
 
 // ─── helpers ────────────────────────────────────────────────────────────
 
-function makeProvisioning(opts: { result?: SpinUpResult } = {}): IProvisioningClient {
+function makeProvisioning(opts: { result?: SpinUpResult } = {}): RetrySpinUpClient {
   return {
     async spinUp(_input) {
       return opts.result ?? { ok: true, jobId: 'job_test' }
