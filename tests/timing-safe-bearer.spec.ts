@@ -72,7 +72,7 @@ test('isValidBearer: handles non-ASCII secrets (unicode equality, byte-length ma
 const ADMIN_FILES = [
   'api/admin/customers.ts',
   'api/admin/support-tickets.ts',
-  'api/admin/observability/customer.ts',
+  'api/_shared/observability/customer.ts',
   'api/nightly-cleanup.ts',
 ]
 

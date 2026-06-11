@@ -110,7 +110,7 @@
         setBusy(true);
         setActionMsg(null);
         try {
-          const r = await fetch('/api/admin/library-proposal-decide', {
+          const r = await fetch('/api/admin/library-proposals', {
             method: 'POST',
             headers: { 'content-type': 'application/json' },
             body: JSON.stringify({ id, decision }),

@@ -2,59 +2,181 @@
   "cleanUrls": true,
   "trailingSlash": false,
   "rewrites": [
-    { "source": "/persona/:slug", "destination": "/persona.html?slug=:slug" },
-    { "source": "/admin", "destination": "/admin/index.html" },
-    { "source": "/admin/login", "destination": "/admin/login.html" },
-    { "source": "/admin/manual-provision", "destination": "/admin/manual-provision.html" },
-    { "source": "/admin/customers", "destination": "/admin/customers.html" },
-    { "source": "/admin/customers/:id", "destination": "/admin/customer-detail.html?id=:id" },
-    { "source": "/admin/fleet", "destination": "/admin/fleet.html" },
-    { "source": "/admin/cost", "destination": "/admin/cost.html" },
-    { "source": "/admin/templates", "destination": "/admin/templates.html" },
-    { "source": "/admin/proposals", "destination": "/admin/proposals.html" }
+    {
+      "source": "/api/admin/observability/cost",
+      "destination": "/api/admin/observability?report=cost"
+    },
+    {
+      "source": "/api/admin/observability/customer",
+      "destination": "/api/admin/observability?report=customer"
+    },
+    {
+      "source": "/api/admin/observability/fleet-summary",
+      "destination": "/api/admin/observability?report=fleet-summary"
+    },
+    {
+      "source": "/api/admin/observability/template-no-match",
+      "destination": "/api/admin/observability?report=template-no-match"
+    },
+    {
+      "source": "/api/admin/library-proposal-decide",
+      "destination": "/api/admin/library-proposals"
+    },
+    {
+      "source": "/persona/:slug",
+      "destination": "/persona.html?slug=:slug"
+    },
+    {
+      "source": "/admin",
+      "destination": "/admin/index.html"
+    },
+    {
+      "source": "/admin/login",
+      "destination": "/admin/login.html"
+    },
+    {
+      "source": "/admin/manual-provision",
+      "destination": "/admin/manual-provision.html"
+    },
+    {
+      "source": "/admin/customers",
+      "destination": "/admin/customers.html"
+    },
+    {
+      "source": "/admin/customers/:id",
+      "destination": "/admin/customer-detail.html?id=:id"
+    },
+    {
+      "source": "/admin/fleet",
+      "destination": "/admin/fleet.html"
+    },
+    {
+      "source": "/admin/cost",
+      "destination": "/admin/cost.html"
+    },
+    {
+      "source": "/admin/templates",
+      "destination": "/admin/templates.html"
+    },
+    {
+      "source": "/admin/proposals",
+      "destination": "/admin/proposals.html"
+    }
   ],
   "redirects": [
-    { "source": "/liren-v3", "destination": "/", "permanent": true },
-    { "source": "/liren-v3.html", "destination": "/", "permanent": true },
-    { "source": "/privasi", "destination": "/privacy", "permanent": true },
-    { "source": "/privasi.html", "destination": "/privacy", "permanent": true },
-    { "source": "/syarat", "destination": "/terms", "permanent": true },
-    { "source": "/syarat.html", "destination": "/terms", "permanent": true },
-    { "source": "/kontak", "destination": "/contact", "permanent": true },
-    { "source": "/kontak.html", "destination": "/contact", "permanent": true }
+    {
+      "source": "/liren-v3",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/liren-v3.html",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/privasi",
+      "destination": "/privacy",
+      "permanent": true
+    },
+    {
+      "source": "/privasi.html",
+      "destination": "/privacy",
+      "permanent": true
+    },
+    {
+      "source": "/syarat",
+      "destination": "/terms",
+      "permanent": true
+    },
+    {
+      "source": "/syarat.html",
+      "destination": "/terms",
+      "permanent": true
+    },
+    {
+      "source": "/kontak",
+      "destination": "/contact",
+      "permanent": true
+    },
+    {
+      "source": "/kontak.html",
+      "destination": "/contact",
+      "permanent": true
+    }
   ],
   "headers": [
     {
       "source": "/assets/:path*.mp4",
-      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
     },
     {
       "source": "/assets/:path*.png",
-      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
     },
     {
       "source": "/assets/:path*.jpg",
-      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
     },
     {
       "source": "/assets/:path*.jpeg",
-      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
     },
     {
       "source": "/assets/:path*.svg",
-      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
     },
     {
       "source": "/assets/:path*.webp",
-      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
     },
     {
       "source": "/assets/:path*.ico",
-      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
     },
     {
       "source": "/assets/:path*.woff2",
-      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
     }
   ],
   "crons": [
