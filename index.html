@@ -7781,7 +7781,7 @@
                 boxShadow: '0 6px 20px -4px rgba(229,50,45,0.7), 0 0 0 1px rgba(229,50,45,0.5)',
               }}
             >
-              Paling diminati
+              Rekomendasi kami
             </div>
           )}
 
@@ -8329,6 +8329,52 @@
       // contact-only card rendered separately below.
       const tiers = [
         {
+          name: 'Bare Agent',
+          slug: 'bare',
+          tagline: 'Pintu masuk. Asisten umum di Telegram, hari ini juga.',
+          priceLabel: 'Rp 99rb',
+          setupIdr: 99_000,
+          setupAside: 'biaya setup sekali bayar',
+          hostingMonth: 'Rp 99rb',
+          month1Total: 'Rp 198rb',
+          recurringLabel: 'Rp 99rb/bulan',
+          persona: 'Buat kamu yang mau coba dulu, tanpa komitmen besar.',
+          outcomes: [
+            'Asisten AI umum di Telegram kamu',
+            'Jawab pertanyaan, susun draft, rangkum teks',
+            'VPS dedicated, bukan shared',
+            'Kredit LLM perkenalan termasuk — lanjut pakai kunci kamu sendiri',
+          ],
+          apps: ['Telegram', 'Web'],
+          appsTotal: 2,
+          cta: 'Mulai Bare Agent',
+          ctaHref: 'https://wa.me/6282154902561?text=Halo%2C%20saya%20mau%20mulai%20paket%20Bare%20Agent%20di%20weuseai.agent',
+          featured: false,
+        },
+        {
+          name: 'Solo Starter',
+          slug: 'solo',
+          tagline: 'Tiga spesialis inti buat kerja harian kamu.',
+          priceLabel: 'Rp 399rb',
+          setupIdr: 399_000,
+          setupAside: 'biaya setup sekali bayar',
+          hostingMonth: 'Rp 99rb',
+          month1Total: 'Rp 498rb',
+          recurringLabel: 'Rp 99rb/bulan',
+          persona: 'Buat kamu yang siap kerja bareng tim persona, lewat teks.',
+          outcomes: [
+            '3 persona: The Pro, Doc Expert, Slide Master',
+            'Teks penuh di Telegram (tanpa voice)',
+            'VPS dedicated, bukan shared',
+            'Kredit LLM perkenalan termasuk — lanjut pakai kunci kamu sendiri',
+          ],
+          apps: ['Telegram', 'Web'],
+          appsTotal: 2,
+          cta: 'Mulai Solo Starter',
+          ctaHref: 'https://wa.me/6282154902561?text=Halo%2C%20saya%20mau%20mulai%20paket%20Solo%20Starter%20di%20weuseai.agent',
+          featured: false,
+        },
+        {
           name: 'Voice Starter',
           slug: 'voice-starter',
           tagline: 'Pendamping pertama kamu, lengkap dengan suara.',
@@ -8436,12 +8482,24 @@
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-6 items-stretch">
-              {tiers.map((t, i) => (
+            {/* Entry tiers (Bare, Solo) — lighter row, leads into the full lineup */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6 items-stretch max-w-4xl mx-auto">
+              {tiers.slice(0, 2).map((t, i) => (
                 <PricingCard
                   key={t.name}
                   tier={t}
                   index={i}
+                  onShowBreakdown={() => setBreakdownTier(t)}
+                />
+              ))}
+            </div>
+            {/* Full tiers (Voice Starter, Library Lengkap, Siap Pakai) */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-6 items-stretch mt-5 md:mt-6">
+              {tiers.slice(2).map((t, i) => (
+                <PricingCard
+                  key={t.name}
+                  tier={t}
+                  index={i + 2}
                   onShowBreakdown={() => setBreakdownTier(t)}
                 />
               ))}
