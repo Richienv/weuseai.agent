@@ -4444,10 +4444,10 @@
             <div className="mt-12 md:mt-auto pb-6 md:pb-12 pt-12 md:pt-20 w-full max-w-5xl mx-auto">
               <div className="liquid-glass rounded-2xl md:rounded-3xl p-5 md:p-10 grid grid-cols-2 md:grid-cols-4 gap-5 md:gap-6 text-center">
                 {[
-                  { kind: 'plain', n: 10,  suffix: '+', label: 'Carefully-tuned agent\n(and growing)' },
-                  { kind: 'plain', n: 674, suffix: '+', label: 'Pre-existing skills\n(and growing)' },
-                  { kind: 'text',  text: 'ID', label: 'Indonesian priority\nbahasa & konteks' },
-                  { kind: 'plain', n: 20,  suffix: '×', label: 'More context memory\n(than normal AI)' },
+                  { kind: 'plain', n: 8,   suffix: ' mnt', label: 'Dari bayar ke pesan pertama\n(diukur, bukan janji)' },
+                  { kind: 'plain', n: 10,  suffix: '',  label: 'Persona spesialis\ndi-engineer satu per satu' },
+                  { kind: 'plain', n: 190, suffix: '+', label: 'Template Indonesia\nPPN · BPJS · KBLI · IDX' },
+                  { kind: 'plain', n: 24,  suffix: '',  label: 'Playbook multi-langkah\nbriefing pagi sampai laporan' },
                 ].map((it, i) => (
                   <Mot.div key={it.label}
                     initial={{ opacity: 0, y: 16 }}
@@ -6646,7 +6646,7 @@
               style={{ letterSpacing: '-0.03em' }}
               delay={80} />
             <p className="mt-5 md:mt-6 max-w-2xl text-white/65 font-body font-light text-[13px] md:text-base leading-relaxed">
-              Setiap agent dibangun dengan US$5.000 token untuk craft persona pre-trained. Kamu gak perlu bakar token sendiri — ready to use.
+              Setiap persona di-engineer dan diuji satu per satu — bukan prompt kosong yang harus kamu latih sendiri. Kamu terima agent yang sudah tahu pekerjaannya, hari pertama.
             </p>
             <AgentCarousel />
           </div>
@@ -6774,7 +6774,7 @@
               <span>Agen kamu bekerja</span>
             </div>
             <h2 className="db-headline">Satu super-agent. Growing skills.<br className="hidden md:inline" /> Create Anything You Want.</h2>
-            <p className="db-sub">Agent pro-actively reach you out — bukan kamu yang daily chat. Automate Everything. Gak perlu pusing mikirin prompt.</p>
+            <p className="db-sub">Dia yang menyapa kamu duluan — briefing pagi masuk sebelum diminta. Ilustrasi pengalaman; integrasi email dan kalender menyusul bertahap.</p>
           </div>
 
           <div className="db-frame">
@@ -7435,7 +7435,7 @@
       const steps = [
         { n: 1, title: 'Pilih plan kamu',     body: 'Ambil plan yang paling pas. Semua sudah termasuk satu instance weuseai.agent dedicated.', mock: 'plan' },
         { n: 2, title: 'Isi informasi',       body: 'Pilih channel komunikasi (Telegram/Discord). Hand-picked best AI brain buat kamu — pastiin price-to-value paling worth it dan terupdate. Bot token opsional kalau pakai bot custom.', mock: 'form' },
-        { n: 3, title: 'Sistem auto-setup',   body: 'Kamu terima beres. Kami siapkan instance, sambungkan 40+ tools, dan tune sesuai voice kamu — tanpa kamu ngapa-ngapain.', mock: 'setup' },
+        { n: 3, title: 'Sistem auto-setup',   body: 'Kamu terima beres. Kami siapkan server kamu, pasang persona dan template library-nya, dan tune ke gaya kamu — tanpa kamu ngapa-ngapain.', mock: 'setup' },
         { n: 4, title: 'Mulai pakai',         body: 'Buka Telegram, kirim pesan, biarkan ia bekerja. Nggak ada langkah setup. Nggak ada checklist.', mock: 'chat' },
       ];
 
@@ -8332,22 +8332,22 @@
           name: 'Voice Starter',
           slug: 'voice-starter',
           tagline: 'Pendamping pertama kamu, lengkap dengan suara.',
-          priceLabel: 'Rp 699rb',
-          setupIdr: 699_000,
+          priceLabel: 'Rp 599rb',
+          setupIdr: 599_000,
           setupAside: 'biaya setup sekali bayar',
           hostingMonth: 'Rp 99rb',
-          month1Total: 'Rp 798rb',
+          month1Total: 'Rp 698rb',
           recurringLabel: 'Rp 99rb/bulan',
           persona: 'Buat kamu yang mau coba rasanya didampingi agent.',
           outcomes: [
             'Voice — ngobrol pakai suara di Telegram',
             '3 persona: The Pro, Doc Expert, Slide Master',
             'VPS dedicated, bukan shared',
-            'LLM cost masuk subscription (DeepSeek default, bisa upgrade)',
+            'Kredit LLM perkenalan termasuk — lanjut pakai kunci kamu sendiri, kami bantu pasang',
             'Community support',
           ],
-          apps: ['Telegram', 'Discord', 'Web'],
-          appsTotal: 41,
+          apps: ['Telegram', 'Voice note', 'Web'],
+          appsTotal: 3,
           cta: 'Mulai Voice Starter',
           ctaHref: 'https://wa.me/6282154902561?text=Halo%2C%20saya%20mau%20mulai%20paket%20Voice%20Starter%20di%20weuseai.agent',
           featured: false,
@@ -8356,22 +8356,22 @@
           name: 'Library Lengkap',
           slug: 'library-full',
           tagline: 'Seluruh pustaka agent dalam satu paket.',
-          priceLabel: 'Rp 899rb',
-          setupIdr: 899_000,
+          priceLabel: 'Rp 799rb',
+          setupIdr: 799_000,
           setupAside: 'biaya setup sekali bayar',
           hostingMonth: 'Rp 99rb',
-          month1Total: 'Rp 998rb',
+          month1Total: 'Rp 898rb',
           recurringLabel: 'Rp 99rb/bulan',
           persona: 'Buat kamu yang mau semua persona tanpa kompromi.',
           outcomes: [
             'Voice — ngobrol pakai suara di Telegram',
             'Semua 10 persona, dari The Pro sampai Business Director',
             'VPS dedicated 24/7',
-            'LLM cost masuk subscription (DeepSeek default, bisa upgrade)',
+            'Kredit LLM perkenalan termasuk — lanjut pakai kunci kamu sendiri, kami bantu pasang',
             '24/7 support — antrean paling depan',
           ],
-          apps: ['Notion', 'Gmail', 'Drive', 'Kalender', 'Slack'],
-          appsTotal: 40,
+          apps: ['Telegram', 'Voice note', 'Web'],
+          appsTotal: 3,
           cta: 'Ambil Library Lengkap',
           ctaHref: 'https://wa.me/6282154902561?text=Halo%2C%20saya%20mau%20ambil%20paket%20Library%20Lengkap%20di%20weuseai.agent',
           featured: true,
@@ -8394,8 +8394,8 @@
             'VPS dedicated 24/7',
             '24/7 dedicated support + onboarding privat',
           ],
-          apps: ['Apple Health', 'Stripe', 'GitHub', 'Notion', 'Linear'],
-          appsTotal: 55,
+          apps: ['Telegram', 'Voice note', 'Web app'],
+          appsTotal: 4,
           cta: 'Ambil Siap Pakai',
           ctaHref: 'https://wa.me/6282154902561?text=Halo%2C%20saya%20mau%20ambil%20paket%20Siap%20Pakai%20di%20weuseai.agent',
           featured: false,
@@ -8420,6 +8420,10 @@
               >
                 Harga
               </div>
+              <p className="mt-4 max-w-xl text-white/60 font-body font-light text-xs md:text-sm leading-relaxed">
+                Tiap agent dibangun dan dicek satu per satu, bukan digenerate massal.
+                Kapasitas onboarding tiap minggu terbatas — kalau slot minggu ini penuh, kamu masuk antrian berikutnya.
+              </p>
               <BlurText
                 as="h2"
                 text="Pilih ukuran agent yang cocok dengan hidup kamu."
@@ -8837,27 +8841,27 @@
         },
         {
           q: 'Apa beda dengan subscription biasa?',
-          a: 'Setup-nya beneran sekali bayar — kamu beli engineering work yang udah kami lakukan. Hosting Rp 99k/bulan transparent: itu cost VPS yang real, kayak bayar listrik. Stop kapan saja, agent kamu auto-pause. Tagihan berhenti, setup tetap kamu punya.',
+          a: 'Setup-nya beneran sekali bayar — kamu beli engineering work yang sudah kami lakukan. Hosting Rp 99rb/bulan transparan: itu biaya server yang real, kayak bayar listrik. Berhenti kapan saja — tagihan berhenti, setup tetap kamu punya.',
         },
         {
           q: 'Kenapa harus bayar hosting kalau setup-nya sudah bayar?',
           a: 'Setup itu kerja kami sekali (konfigurasi VPS, install agent, tune ke voice kamu). Hosting itu cost VPS yang jalan terus 24/7. Server butuh listrik dan resource yang real. Kami nggak mau pretend itu gratis — lebih jujur kalau transparent.',
         },
         {
-          q: 'Kalau nggak pakai sebentar, masih ditagih?',
-          a: 'Nggak. Kalau kamu nggak chat agent >30 hari, VPS auto-pause dan billing hosting pause juga. Wake up kapan saja dari dashboard, ~30 detik agent hidup lagi. Setup kamu nggak hilang.',
+          q: 'Kalau nggak cocok atau mau berhenti?',
+          a: 'Berhenti kapan saja — tagihan hosting berhenti, setup tetap milik kamu. Refund policy tertulis, link-nya di footer. Mau lanjut lagi nanti, tinggal bilang.',
         },
         {
           q: 'Berapa lama proses setup sampai agent saya jalan?',
-          a: '8 menit setelah bayar — agent langsung bisa kamu pakai. Kami sarankan kasih waktu 3–5 hari supaya agent fully incorporate ke workflow kamu. Ada mode "intern" — agent watch dan adjust diri ke sistem dan flow kerja kamu, lalu tumbuh sesuai kebutuhan (gak stuck di satu personality).',
+          a: 'Sekitar 8 menit setelah bayar — angka yang kami ukur, bukan janji. Agent makin nyambung setelah beberapa hari dipakai, karena dia ingat percakapan dan menyesuaikan gaya kamu.',
         },
         {
           q: 'Berapa biaya LLM-nya?',
-          a: 'Gak perlu mikirin — LLM cost udah masuk subscription. Apa pun AI brain yang kamu mau pakai, kami bantu setup dan kasih konsultasi free. Tinggal hubungin WhatsApp kami buat tanya-tanya lebih dalam.',
+          a: 'Kredit perkenalan sudah termasuk di setup — cukup untuk ratusan pesan pertama. Setelah itu kamu pakai kunci API sendiri (DeepSeek mulai dari puluhan ribu rupiah per bulan untuk pemakaian normal) — kami bantu pasang, dan biayanya transparan langsung ke penyedia, tanpa markup dari kami.',
         },
         {
           q: 'Apa beda dengan ChatGPT atau Claude biasa?',
-          a: 'ChatGPT dan Claude itu tools generic — kamu kasih prompt, mereka jawab. Agent kami stateful: dia tahu workflow kamu, ingat percakapan terakhir, dan eksekusi action di 40+ tools (kirim email, schedule meeting, post di Discord, scrape web, dst). ChatGPT bantu kamu mikir. Agent kami bantu kamu kerja.',
+          a: 'ChatGPT nunggu kamu tanya. Agent ini ngerjain duluan: briefing pagi jam 7, ringkasan sore, draft dokumen dan caption dari template Indonesia, riset web, dan playbook multi-langkah — sambil ingat percakapan kamu lintas hari. ChatGPT bantu kamu mikir. Agent ini bantu kamu kerja.',
         },
         {
           q: 'Kalau saya cancel di tengah jalan, uang setup balik?',
@@ -8869,11 +8873,11 @@
         },
         {
           q: 'Data dan percakapan saya disimpan di mana? Aman dari kebocoran?',
-          a: 'VPS di Singapore atau Jakarta (kamu pilih) lewat DigitalOcean atau Biznet. Data percakapan disimpan di database lokal di VPS kamu sendiri — bukan di shared server kami. API key LLM enkripsi at-rest dengan AES-256. Kami nggak akses isi percakapan kamu kecuali kamu yang request support dan kasih izin eksplisit.',
+          a: 'Server kamu ada di Singapore — paling dekat dan paling stabil untuk Indonesia. Data percakapan disimpan lokal di server kamu sendiri, bukan di server bersama. Kunci API dienkripsi at-rest. Kami tidak mengakses isi percakapan kamu kecuali kamu minta bantuan support dan kasih izin eksplisit.',
         },
         {
           q: 'Always-On vs hosting biasa, kapan saya butuh yang Always-On?',
-          a: 'Hosting default auto-pause kalau kamu nggak chat agent lebih dari 30 hari. Wake up dari pause cuma butuh sekitar 30 detik. Always-On bikin VPS jalan 24/7 — relevan kalau kamu butuh agent reaktif ke event eksternal (terima webhook, jalan cron schedule, listen incoming email). Untuk pemakaian harian conversational, hosting default cukup.',
+          a: 'Untuk pemakaian harian — chat, briefing pagi, draft dokumen — hosting default sudah cukup. Always-On menjamin server kamu menyala 24/7 nonstop dengan prioritas penuh, untuk kamu yang menjadikan agent bagian kritis dari operasional harian.',
         },
         {
           q: 'Bisa lihat demo atau ngobrol dulu sebelum bayar?',
@@ -8938,10 +8942,10 @@
     // ─────────────────────── STATS ───────────────────────
     function Stats() {
       const items = [
-        { kind: 'plain', n: 10,  suffix: '+', label: 'Carefully-tuned agent\n(and growing)' },
-        { kind: 'plain', n: 674, suffix: '+', label: 'Pre-existing skills\n(and growing)' },
-        { kind: 'text',  text: 'ID', label: 'Indonesian priority\nbahasa & konteks' },
-        { kind: 'plain', n: 20,  suffix: '×', label: 'More context memory\n(than normal AI)' },
+        { kind: 'plain', n: 8,   suffix: ' mnt', label: 'Dari bayar ke pesan pertama\n(diukur, bukan janji)' },
+        { kind: 'plain', n: 10,  suffix: '',  label: 'Persona spesialis\ndi-engineer satu per satu' },
+        { kind: 'plain', n: 190, suffix: '+', label: 'Template Indonesia\nPPN · BPJS · KBLI · IDX' },
+        { kind: 'plain', n: 24,  suffix: '',  label: 'Playbook multi-langkah\nbriefing pagi sampai laporan' },
       ];
       return (
         <section className="relative overflow-hidden py-20 md:py-28 px-5 md:px-6 lg:px-16" style={{ minHeight: 420 }}>
@@ -9032,6 +9036,47 @@
       );
     }
 
+    // ─────────────────────── TECH SPECS (Di balik layar) ───────────────────────
+    // Real architecture, plain words. Every line here is true as shipped.
+    function TechSpecs() {
+      const specs = [
+        { t: 'Server kamu sendiri', d: 'Satu VPS di Singapore, khusus untuk kamu. Bukan akun ramai-ramai — data dan percakapan tinggal di mesin kamu.' },
+        { t: 'Model bahasa kelas frontier', d: 'Default DeepSeek — cepat dan hemat. Mau ganti otak ke model lain, tinggal pasang kunci kamu sendiri.' },
+        { t: 'Hidup di Telegram', d: 'Tanpa aplikasi baru. Ketik atau kirim voice note — transkripsi suara jalan otomatis di paket voice.' },
+        { t: 'Ingat lintas sesi', d: 'Cerita hari Senin, ditanyakan lagi hari Rabu — tanpa kamu mengulang konteks.' },
+      ];
+      return (
+        <section className="relative py-20 md:py-28 px-5 md:px-6 lg:px-16 bg-black">
+          <div className="max-w-6xl mx-auto">
+            <div className="flex flex-col items-center text-center mb-12 md:mb-16">
+              <div className="liquid-glass rounded-full px-3.5 py-1 text-xs font-medium font-body text-white/90">
+                Di balik layar
+              </div>
+              <BlurText
+                as="h2"
+                text="Teknologi serius. Pengalaman sederhana."
+                className="mt-5 md:mt-6 text-3xl md:text-5xl lg:text-6xl font-heading text-white tracking-tight leading-[1.0] md:leading-[0.95] max-w-3xl"
+                style={{ letterSpacing: '-0.04em' }}
+                delay={70} />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5 max-w-4xl mx-auto">
+              {specs.map((x, i) => (
+                <Mot.div key={x.t}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, amount: 0.3 }}
+                  transition={{ duration: 0.6, ease: EASE, delay: 0.06 * i }}
+                  className="liquid-glass rounded-2xl p-6 md:p-7">
+                  <div className="text-white font-body font-medium text-sm md:text-base">{x.t}</div>
+                  <p className="mt-2 text-white/60 font-body font-light text-xs md:text-sm leading-relaxed">{x.d}</p>
+                </Mot.div>
+              ))}
+            </div>
+          </div>
+        </section>
+      );
+    }
+
     // ─────────────────────── CTA + FOOTER ───────────────────────
     function CtaFooter() {
       return (
@@ -9047,11 +9092,11 @@
           <div className="relative z-10 flex flex-col items-center text-center px-5 md:px-6 pt-28 md:pt-40 pb-10 max-w-5xl mx-auto">
             <BlurText
               as="h2"
-              text="Mulai berdiri, lebih tinggi."
+              text="Besok pagi jam 7, briefing pertama kamu masuk."
               className="text-4xl md:text-6xl lg:text-7xl font-heading leading-[0.92] md:leading-[0.85] tracking-tight max-w-4xl"
               delay={90} />
             <p className="mt-6 md:mt-8 max-w-xl text-white/70 font-body font-light text-sm md:text-base px-2">
-              Lihat agen yang cocok dengan kebutuhan kamu. 5 menit setup, langsung jalan.
+              Atau besok pagi sama seperti pagi ini — kamu yang pilih. Setup 5 menit, bayar pakai QRIS, mulai Rp 99rb.
             </p>
             <div className="mt-8 md:mt-10 flex items-center gap-3 md:gap-4 flex-wrap justify-center">
               <a href="checkout.html" className="bg-white text-black rounded-full px-5 md:px-6 py-3 text-sm font-medium flex items-center gap-2 no-underline">
@@ -9104,6 +9149,7 @@
               <ChatVsAgentSection />
               <CostComparisonSection />
               <Pricing />
+              <TechSpecs />
               <CommunitySection />
               <FAQ />
               <Stats />
