@@ -1,4 +1,4 @@
-// Integration tests for api/admin/observability/cost.ts.
+// Integration tests for api/_shared/observability/cost.ts (moved 2026-06-11, Hobby function-cap consolidation).
 //
 // Exercises the request lifecycle except the live network round-trips
 // (PostgREST + OpenRouter): auth check → env validation → 502 on
@@ -35,14 +35,14 @@ function fakeRes() {
 
 async function loadHandler() {
   const url = new URL(
-    '../api/admin/observability/cost.ts?bust=' + Date.now(),
+    '../api/_shared/observability/cost.ts?bust=' + Date.now(),
     import.meta.url,
   ).href
   const mod = (await import(url)) as { default: Function }
   return mod.default
 }
 
-describe('api/admin/observability/cost — auth & env validation', () => {
+describe('api/_shared/observability/cost — auth & env validation', () => {
   beforeEach(() => {
     delete process.env.OBSERVABILITY_ADMIN_SECRET
     delete process.env.SUPABASE_URL
