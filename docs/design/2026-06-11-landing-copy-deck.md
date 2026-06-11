@@ -13,7 +13,7 @@ paste.
 
 **Badge (keep):** `Hand-built` · `Indonesian-first`
 
-**Headline (pick one):**
+**Headline — FOUNDER PICKED A (2026-06-11, applied to index.html):**
 
 - A — product moment: **Asisten yang nge-chat kamu duluan, tiap pagi jam 7.**
 - B — loss/identity: **Klien kamu gak nunggu. Mulai sekarang, kamu juga punya yang ngerjain duluan.**
