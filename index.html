@@ -8982,44 +8982,51 @@
 
     // ─────────────────────── TESTIMONIALS ───────────────────────
     function Testimonials() {
-      const items = [
-        { q: 'Setelah tiga minggu, agent ini tau cara saya nulis. Saya berhenti edit draft, langsung ship.', n: 'Andi Pratama', r: 'Founder · Studio Hijrah (Bandung)' },
-        { q: 'Dia ping saya jam 2 pagi: "Selesai — 47 sumber, di-sort by relevance." Saya minta sebelum tidur dan lupa.', n: 'Sari Wijaya', r: 'Solo Entrepreneur · Sari Bakery (Jakarta)' },
-        { q: 'Saya cancel 3 SaaS subscription di hari yang sama agent ini setup. Compounding-nya nyata.', n: 'Reza Mahendra', r: 'Marketing Lead · TaniHub' },
+      // Build-in-public honesty block (founder-approved swap 2026-06-11).
+      // The previous three quotes were not from real customers — for this
+      // audience one sniffed-fake review poisons the whole page. Swap real
+      // testimonials in ONE BY ONE here as real customers agree to be
+      // quoted, then retire the candor card.
+      const proofs = [
+        { t: 'Counter pembeli di atas kebaca langsung dari data pembayaran — bukan angka hiasan.' },
+        { t: 'Refund policy tertulis, bisa kamu baca sebelum keluar uang.' },
+        { t: 'Founder-nya bisa kamu tanya-tanyai dulu lewat WhatsApp, sebelum memutuskan.' },
       ];
       return (
         <section className="relative py-20 md:py-28 px-5 md:px-6 lg:px-16">
           <div className="max-w-6xl mx-auto">
             <div className="flex flex-col items-center text-center mb-14 md:mb-20">
               <div className="liquid-glass rounded-full px-3.5 py-1 text-xs font-medium font-body text-white/90">
-                Suara mereka
+                Jujur dari awal
               </div>
               <BlurText
                 as="h2"
-                text="Tidak perlu percaya kata-kata kami."
+                text="Produk ini baru. Kami tidak pura-pura sebaliknya."
                 className="mt-5 md:mt-6 text-3xl md:text-5xl lg:text-6xl font-heading text-white tracking-tight leading-[1.0] md:leading-[0.95]"
                 style={{ letterSpacing: '-0.04em' }}
                 delay={70} />
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-6">
-              {items.map((t, i) => (
-                <Mot.div key={t.n}
-                  initial={{ opacity: 0, y: 24 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, amount: 0.3 }}
-                  transition={{ duration: 0.7, ease: EASE, delay: 0.08 * i }}
-                  className="liquid-glass rounded-2xl p-6 md:p-8">
-                  <p className="text-white/80 font-body font-light text-sm italic leading-relaxed">"{t.q}"</p>
-                  <div className="mt-6 md:mt-8 pt-5 md:pt-6 border-t border-white/10">
-                    <div className="text-white font-body font-medium text-sm">{t.n}</div>
-                    <div className="text-white/50 font-body font-light text-xs mt-0.5">{t.r}</div>
+            <Mot.div
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.3 }}
+              transition={{ duration: 0.7, ease: EASE }}
+              className="liquid-glass rounded-2xl p-7 md:p-10 max-w-3xl mx-auto">
+              <p className="text-white/85 font-body font-light text-sm md:text-base leading-relaxed text-center">
+                Belum ada seribu review bintang lima di sini — dan kami tidak akan menulis yang palsu.
+                Yang ada hari ini: bukti yang bisa kamu cek sendiri.
+              </p>
+              <div className="mt-7 md:mt-8 grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5">
+                {proofs.map((x, i) => (
+                  <div key={i} className="rounded-xl border border-white/10 p-4 md:p-5">
+                    <p className="text-white/70 font-body font-light text-xs md:text-sm leading-relaxed">{x.t}</p>
                   </div>
-                </Mot.div>
-              ))}
-            </div>
-            <p className="mt-8 md:mt-10 text-center text-[11px] text-white/40 font-body font-light italic max-w-2xl mx-auto leading-relaxed">
-              * Testimoni dari early access tester. Identitas asli, beberapa nama bisnis di-anonimkan untuk privacy.
-            </p>
+                ))}
+              </div>
+              <p className="mt-7 md:mt-8 text-center text-white/55 font-body font-light text-xs md:text-sm">
+                Kami tumbuh dari sini, bareng kamu. Review asli akan muncul di halaman ini satu per satu — dengan izin, bukan karangan.
+              </p>
+            </Mot.div>
           </div>
         </section>
       );
@@ -9055,7 +9062,7 @@
               </a>
             </div>
             <p className="mt-6 text-xs text-white/45 font-body font-light max-w-md mx-auto leading-relaxed">
-              Tier Studio (Rp 5,9jt) atau enterprise? Booking konsultasi 30 menit dulu —{' '}
+              Butuh setup custom atau enterprise? Ngobrol dulu —{' '}
               <a href="https://cal.com/weuseai.agent/15min" target="_blank" rel="noopener" className="text-white/75 hover:text-white underline-offset-2 hover:underline">Jadwalkan panggilan</a>
             </p>
 
