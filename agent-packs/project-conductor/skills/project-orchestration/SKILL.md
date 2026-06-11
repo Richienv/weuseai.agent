@@ -149,13 +149,13 @@ Hal yang sama berlaku untuk fan-out di Langkah 5: spawn beberapa specialist agen
 - **Tautan/endpoint:** `hermes-skill:multi-agent-router`
 - **Input yang diharapkan:** Task list final dari `state_data` (setelah penyesuaian Langkah 4), referensi board, dan owner override dari `state_data`.
 - **Output yang diharapkan:** Hasil agregat dispatch ke `step_output` — `{ "dispatched": [ { "task_id", "target_persona", "child_session_ref", "status" } ], "queued_tasks", "human_tasks" }`. `queued_tasks` adalah task yang masih nunggu dependency; `human_tasks` adalah task yang dikerjakan customer sendiri.
-- **Validasi:** Tiap task non-human yang dependency-nya siap punya satu entri dispatch. Persona target dicek terhadap tier customer sebelum spawn.
+- **Validasi:** Tiap task non-human yang dependency-nya siap punya satu entri dispatch. Persona target dicek terhadap env `$WEUSEAI_AGENT_SLUGS` (daftar persona tier customer di mesin ini) sebelum spawn — mekanisme dan kalimat tier-gate persisnya ada di `multi-agent-router`, bagian "Gerbang tier".
 
   | Kondisi | Tindakan |
   |---|---|
   | Semua task siap berhasil di-spawn | `advance` ke Langkah 6 |
   | Sebagian task masih nunggu dependency | Catat di `queued_tasks`, `advance` ke Langkah 6 — task antre di-spawn nanti saat dependency selesai di Langkah 6 |
-  | Persona target tidak tersedia di tier customer | Tandai task itu, sampaikan ke customer, tawarkan owner alternatif atau handle manual, jangan paksa spawn |
+  | Persona target tidak ada di `$WEUSEAI_AGENT_SLUGS` | Tandai task itu, sampaikan kalimat gerbang tier dari `multi-agent-router` (persis, jangan improvisasi), tawarkan owner alternatif atau handle manual, jangan paksa spawn |
 
 - **Gerbang eskalasi:** `none`. Plan dan owner sudah di-approve di checkpoint Langkah 4, jadi dispatch jalan tanpa berhenti. Project Conductor tidak men-spawn dirinya sendiri — kalau sebuah task owner-nya project-conductor, tandai untuk handle manual dan sampaikan ke customer.
 - **Error handling:** Kalau satu spawn gagal, ulang spawn task itu saja, bukan seluruh batch. Task yang sudah berhasil di-spawn tetap tercatat. Kalau seluruh dispatch gagal, ulangi Langkah 5 dengan task list yang sama dari `state_data` — tidak perlu mengulang decompose atau pembuatan board.
@@ -173,10 +173,26 @@ Hal yang sama berlaku untuk fan-out di Langkah 5: spawn beberapa specialist agen
   | Masih ada task di To Do, In Progress, atau Review | Jalankan satu siklus monitoring, perbarui `step_output`, **tetap di Langkah 6**, jangan `advance` |
   | Ada task antre yang dependency-nya baru selesai | Spawn task itu lewat `multi-agent-router`, catat di `newly_dispatched`, tetap di Langkah 6 |
   | Ada blocker yang butuh keputusan customer | Surface blocker ke customer segera, tetap di Langkah 6 sampai dijawab |
-  | Semua task sampai Done, atau customer bilang project ditutup | `advance` lalu `complete`, kirim recap penutup ke customer |
+  | Semua task sampai Done, atau customer bilang project ditutup | `advance` lalu `complete`, kirim deliverable akhir ke customer (format di bawah) |
 
 - **Gerbang eskalasi:** `none`. Langkah ini tidak parkir di gerbang — ia berulang sampai kondisi keluar terpenuhi. Blocker di-surface sebagai pesan biasa, bukan parkir state-machine; customer bisa terus check-in dan run tetap di Langkah 6. Saat project selesai, agent `advance` lalu `complete`.
 - **Error handling:** Kalau satu siklus monitoring gagal me-render dashboard, sampaikan status dalam bentuk teks dari `state_data` yang terakhir tercatat, jangan `advance`. Kalau spawn task antre gagal, ulang spawn task itu saja di siklus berikutnya. Jangan `abort` selama masih ada task yang bergerak — `abort` hanya kalau customer eksplisit minta project dihentikan.
+
+## Deliverable akhir (format wajib saat project selesai)
+
+Saat menutup project, rangkai SEMUA output specialist jadi SATU deliverable
+utuh, bukan daftar link atau potongan terpisah. Struktur:
+
+1. Judul = goal project.
+2. Satu bagian per output specialist, judul bagian = nama persona + task-nya
+   (mis. "## Doc Expert — draft-press-release"). Isi = output-nya, utuh.
+3. Bagian "## Siapa mengerjakan apa" — satu baris per task: nama persona,
+   task, statusnya ("selesai", "belum berhasil", "kehabisan waktu", atau
+   "tidak termasuk paket kamu").
+4. Kalau ada task gagal, timeout, atau terblokir tier: bagian "## Catatan jujur" —
+   apa yang tidak jadi dan kenapa, dalam bahasa biasa, plus tawaran
+   coba ulang. Deliverable parsial yang jujur SELALU lebih baik daripada
+   diam atau pura-pura lengkap.
 
 ## Voice signature
 

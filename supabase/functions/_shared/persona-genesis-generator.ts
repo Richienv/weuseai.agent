@@ -53,7 +53,7 @@ export class GenesisGenerationError extends Error {
 
 // ─── shared prompt scaffolding ──────────────────────────────────────────
 
-const BRAND_RULES = `ATURAN BAHASA (WAJIB, dilanggar = output ditolak):
+export const BRAND_RULES = `ATURAN BAHASA (WAJIB, dilanggar = output ditolak):
 - Bahasa Indonesia, sapa customer dengan "kamu" (JANGAN PERNAH "Anda", jangan lo/gue).
 - NOL tanda seru di semua teks.
 - Kata terlarang (jangan muncul sama sekali, dalam bahasa apa pun): basically, just, literally, honestly, kind of, pretty much, revolutionary, disrupt, 10x, game-changer, next-level.

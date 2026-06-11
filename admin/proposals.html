@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow, noarchive" />
+  <title>Library Proposals — weuseai.agent admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Instrument+Serif&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/admin/assets/admin.css" />
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js"></script>
+  <script src="/admin/assets/admin-shared.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel" data-presets="env,react">
+    const { useState } = React;
+    const { Sidebar, useFetch, formatDate } = window.WeUseAdmin;
+
+    // Self-Improving Library approval queue (Mission 3). Every row is a
+    // DeepSeek draft that already passed the quality gate; NOTHING ships
+    // to a customer bundle until Approve is clicked here.
+    function evidenceSummary(p) {
+      const e = p.evidence || {};
+      if (e.kind === 'template_no_match') {
+        return `${e.events} no-match dari ${e.distinct_customers} customer · skill ${e.skill_id}`;
+      }
+      if (e.kind === 'playbook_dead_end') {
+        return `${e.events} run mati di langkah ${e.step}/${e.total_steps} · ${e.distinct_customers} customer`;
+      }
+      return '—';
+    }
+
+    function draftPreview(p) {
+      const d = p.draft || {};
+      if (d.kind === 'playbook_fix') return d.revised_skill_md || '';
+      return d.content || '';
+    }
+
+    function ProposalRow({ p, onDecide, busy }) {
+      const [open, setOpen] = useState(false);
+      const samples = (p.evidence && p.evidence.sample_deliverables) || [];
+      return (
+        <div className="section" style={{ marginBottom: '1rem' }}>
+          <div className="section-head">
+            <h2>
+              <span className="tag">{p.persona_slug}</span>{' '}
+              <code style={{ fontSize: '0.8rem' }}>{p.target_id}</code>{' '}
+              <span className="meta">{p.kind}</span>
+            </h2>
+            <div className="meta">{formatDate(p.created_at)} · status: {p.status}</div>
+          </div>
+          <p style={{ color: 'var(--ink-2)', fontSize: '0.85rem' }}>
+            Bukti sinyal: {evidenceSummary(p)}
+          </p>
+          {samples.length > 0 ? (
+            <ul style={{ fontSize: '0.8rem', color: 'var(--ink-2)' }}>
+              {samples.map((s, i) => <li key={i}>"{s}"</li>)}
+            </ul>
+          ) : null}
+          {p.draft && p.draft.rationale_id ? (
+            <p style={{ fontSize: '0.85rem' }}>Alasan draft: {p.draft.rationale_id}</p>
+          ) : null}
+          <button type="button" className="action-btn" onClick={() => setOpen(!open)}>
+            {open ? 'Tutup draft' : 'Lihat draft lengkap'}
+          </button>
+          {open ? (
+            <pre style={{ whiteSpace: 'pre-wrap', fontSize: '0.75rem', background: 'rgba(255,255,255,0.04)', padding: '0.75rem', borderRadius: '8px', maxHeight: '420px', overflow: 'auto' }}>
+              {draftPreview(p)}
+            </pre>
+          ) : null}
+          {p.status === 'pending' ? (
+            <div className="toolbar" style={{ marginTop: '0.75rem' }}>
+              <button type="button" className="action-btn primary" disabled={busy} onClick={() => onDecide(p.id, 'approve')}>
+                Approve + ship ke bundle
+              </button>
+              <button type="button" className="action-btn" disabled={busy} onClick={() => onDecide(p.id, 'reject')}>
+                Reject
+              </button>
+            </div>
+          ) : null}
+          {p.status === 'applied' ? (
+            <p className="meta">Terkirim sebagai versi {p.applied_version}.</p>
+          ) : null}
+          {p.status === 'apply_failed' ? (
+            <p className="alert error">Apply gagal: {p.error_detail}</p>
+          ) : null}
+        </div>
+      );
+    }
+
+    function ProposalsPage() {
+      const initialStatus = new URLSearchParams(window.location.search).get('status') || 'pending';
+      const [statusFilter, setStatusFilter] = useState(initialStatus);
+      const [busy, setBusy] = useState(false);
+      const [actionMsg, setActionMsg] = useState(null);
+      const { data, err, loading } = useFetch('/api/admin/library-proposals?status=' + encodeURIComponent(statusFilter));
+
+      const onApplyFilter = () => {
+        const u = new URL(window.location.href);
+        u.searchParams.set('status', statusFilter);
+        window.location.href = u.toString();
+      };
+
+      const onDecide = async (id, decision) => {
+        if (decision === 'approve' && !window.confirm('Approve dan ship ke bundle customer?')) return;
+        setBusy(true);
+        setActionMsg(null);
+        try {
+          const r = await fetch('/api/admin/library-proposal-decide', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ id, decision }),
+          });
+          const body = await r.json();
+          if (r.ok && body.ok) {
+            setActionMsg(decision === 'approve'
+              ? `Approved — versi baru ${body.applied_version}${body.broadcast_ok ? ', broadcast jalan.' : ', broadcast GAGAL (cek log).'}`
+              : 'Rejected.');
+            setTimeout(() => window.location.reload(), 1200);
+          } else {
+            setActionMsg('Gagal: ' + (body.error || r.status) + (body.detail ? ' — ' + body.detail : ''));
+          }
+        } catch (e) {
+          setActionMsg('Gagal: ' + e.message);
+        } finally {
+          setBusy(false);
+        }
+      };
+
+      return (
+        <div className="app-shell">
+          <Sidebar activeHref="/admin/proposals" />
+          <main className="app-main">
+            <header className="page-head">
+              <div>
+                <h1>Library Proposals</h1>
+                <p>Draft perbaikan library dari sinyal pemakaian nyata. Sudah lolos quality gate; tidak ada yang sampai ke customer tanpa approve di sini.</p>
+              </div>
+              <div className="toolbar">
+                <label>
+                  Status
+                  <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                    <option value="pending">pending</option>
+                    <option value="applied">applied</option>
+                    <option value="rejected">rejected</option>
+                    <option value="apply_failed">apply_failed</option>
+                    <option value="all">semua</option>
+                  </select>
+                </label>
+                <button type="button" className="action-btn" onClick={onApplyFilter}>Apply</button>
+              </div>
+            </header>
+
+            {loading ? <div className="alert info">Memuat...</div> : null}
+            {err ? <div className="alert error">Gagal load data: {err}</div> : null}
+            {actionMsg ? <div className="alert info">{actionMsg}</div> : null}
+
+            {data ? (
+              data.proposals.length === 0 ? (
+                <div className="alert info">Tidak ada proposal berstatus "{statusFilter}". Pipeline refine jalan mingguan — proposal muncul saat ada sinyal yang cukup kuat.</div>
+              ) : (
+                data.proposals.map((p) => (
+                  <ProposalRow key={p.id} p={p} onDecide={onDecide} busy={busy} />
+                ))
+              )
+            ) : null}
+          </main>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<ProposalsPage />);
+  </script>
+</body>
+</html>

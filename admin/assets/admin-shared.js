@@ -20,6 +20,7 @@
     { href: '/admin/fleet',            label: 'Fleet Summary' },
     { href: '/admin/cost',             label: 'Cost Monitoring' },
     { href: '/admin/templates',        label: 'Template no-match' },
+    { href: '/admin/proposals',        label: 'Library Proposals' },
   ];
 
   const PERSONA_OPTIONS = [

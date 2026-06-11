@@ -73,6 +73,28 @@ function usesAnda(text: string): boolean {
   return /\bAnda\b/.test(text)
 }
 
+/**
+ * Brand-voice floor for ONE customer-facing artifact — the same gate
+ * Persona Genesis applies, exported so the Self-Improving Library's
+ * refinement pipeline (Mission 3) runs drafts through the identical bar.
+ * Returns [] when clean; one message per violation otherwise.
+ */
+export function brandVoiceViolations(label: string, text: string): string[] {
+  const errors: string[] = []
+  const hits = bannedWordHits(text)
+  if (hits.length > 0) {
+    errors.push(`${label}: banned word(s) ${hits.join(', ')}`)
+  }
+  const bangs = exclamationCount(text)
+  if (bangs > 0) {
+    errors.push(`${label}: ${bangs} exclamation mark(s) — body copy must have zero`)
+  }
+  if (usesAnda(text)) {
+    errors.push(`${label}: uses "Anda" — register is "kamu"`)
+  }
+  return errors
+}
+
 // ─── the gate ────────────────────────────────────────────────────────────
 
 const MIN_SOUL_CHARS = 400
@@ -158,17 +180,7 @@ export function validateGeneratedPersona(p: GeneratedPersona): GenesisValidation
     ].join('\n')],
   ]
   for (const [label, text] of artifacts) {
-    const hits = bannedWordHits(text)
-    if (hits.length > 0) {
-      errors.push(`${label}: banned word(s) ${hits.join(', ')}`)
-    }
-    const bangs = exclamationCount(text)
-    if (bangs > 0) {
-      errors.push(`${label}: ${bangs} exclamation mark(s) — body copy must have zero`)
-    }
-    if (usesAnda(text)) {
-      errors.push(`${label}: uses "Anda" — register is "kamu"`)
-    }
+    errors.push(...brandVoiceViolations(label, text))
   }
 
   // 6. Bahasa register present in the identity: SOUL must address "kamu".

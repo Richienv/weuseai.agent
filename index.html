@@ -7551,41 +7551,31 @@
     }
 
     // ─────────────────────── PRICING ───────────────────────
+    // Honesty lock (CLAUDE.md): the counter MUST read a REAL subscription
+    // count. This fetches /api/public/subscription-count (active paid
+    // subscriptions, edge-cached 5 min). If the fetch fails the banner
+    // renders NOTHING — we never show a fabricated number.
     function LimitedSeats() {
       const TOTAL = 1000;
-      const KEY = 'wai-seats-remaining-v1';
-      const FLOOR = 47;
+      const [paid, setPaid] = useState(null);
 
-      const [remaining, setRemaining] = useState(247);
-      const [pulse, setPulse] = useState(false);
-
-      // hydrate from localStorage on mount (avoids SSR/hydration mismatch)
       useEffect(() => {
-        try {
-          const stored = parseInt(window.localStorage.getItem(KEY) || '0', 10);
-          if (stored > FLOOR && stored <= TOTAL) setRemaining(stored);
-          else window.localStorage.setItem(KEY, '247');
-        } catch (e) {}
-      }, []);
-
-      // simulate "live" decrements every ~7s with 30% probability
-      useEffect(() => {
-        const id = setInterval(() => {
-          setRemaining((prev) => {
-            if (prev <= FLOOR) return prev;
-            if (Math.random() < 0.30) {
-              const next = prev - 1;
-              try { window.localStorage.setItem(KEY, String(next)); } catch (e) {}
-              setPulse(true);
-              setTimeout(() => setPulse(false), 1400);
-              return next;
+        let alive = true;
+        fetch('/api/public/subscription-count')
+          .then((r) => (r.ok ? r.json() : null))
+          .then((data) => {
+            if (!alive || !data) return;
+            if (typeof data.paid_customers === 'number' && data.paid_customers >= 0) {
+              setPaid(data.paid_customers);
             }
-            return prev;
-          });
-        }, 7000);
-        return () => clearInterval(id);
+          })
+          .catch(() => {});
+        return () => { alive = false; };
       }, []);
 
+      if (paid === null) return null;
+
+      const remaining = Math.max(0, TOTAL - paid);
       const pct = (remaining / TOTAL) * 100;
 
       return (
@@ -7598,7 +7588,7 @@
         >
           <div className="seats-stack">
             <p className="seats-caption">Hanya 1.000 seat untuk launch ini.</p>
-            <div className={`seats-num-big ${pulse ? 'pulse' : ''}`}>
+            <div className="seats-num-big">
               {remaining.toLocaleString('id-ID')}
             </div>
             <p className="seats-sub">dari 1.000 seat tersisa</p>
@@ -7606,7 +7596,7 @@
               <div className="seats-fill" style={{ width: `${pct}%` }} />
             </div>
             <div className="seats-foot">
-              Counter update real-time tiap ada yang sukses bayar
+              Counter terhubung ke data pembayaran. Update tiap beberapa menit.
             </div>
           </div>
         </Mot.div>
