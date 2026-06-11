@@ -1,7 +1,7 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "project-conductor",
-  "version": "2.5.0",
+  "version": "2.6.0",
   "description_id": "Bundle skill + template Project Conductor v2 — kanban orchestrator pakai Hermes v0.13.0, bagi project jadi task, spawn specialist agents, monitor dashboard, weekly recap. Tier Pro+. Playbook: project-orchestration, pt-perorangan-registration, weekly-recap-cycle. v2.4 tambah 7 template generik (sprint, quarter, year, status, raci, risk, retro). v2.5 tambah 5 template Indonesia-deep: NIB OSS-RBA, BPJS karyawan, BPOM produk, KBLI 2020, status report direksi.",
   "skills": [
     {
@@ -12,7 +12,10 @@
       "template_fetch_required": true,
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:kanban-orchestrator",
-      "enabled_for_tiers": ["pro", "studio"]
+      "enabled_for_tiers": [
+        "pro",
+        "studio"
+      ]
     },
     {
       "id": "task-decomposer",
@@ -22,7 +25,10 @@
       "template_fetch_required": true,
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:task-decomposer",
-      "enabled_for_tiers": ["pro", "studio"]
+      "enabled_for_tiers": [
+        "pro",
+        "studio"
+      ]
     },
     {
       "id": "multi-agent-router",
@@ -31,7 +37,10 @@
       "templates_used": [],
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:multi-agent-router",
-      "enabled_for_tiers": ["pro", "studio"]
+      "enabled_for_tiers": [
+        "pro",
+        "studio"
+      ]
     },
     {
       "id": "progress-monitor",
@@ -41,7 +50,10 @@
       "template_fetch_required": true,
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:progress-monitor",
-      "enabled_for_tiers": ["pro", "studio"]
+      "enabled_for_tiers": [
+        "pro",
+        "studio"
+      ]
     },
     {
       "id": "extend-capabilities",
@@ -50,7 +62,10 @@
       "templates_used": [],
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:extend-capabilities",
-      "enabled_for_tiers": ["pro", "studio"]
+      "enabled_for_tiers": [
+        "pro",
+        "studio"
+      ]
     },
     {
       "id": "project-orchestration",
@@ -60,7 +75,10 @@
       "templates_used": [],
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:project-orchestration",
-      "enabled_for_tiers": ["pro", "studio"]
+      "enabled_for_tiers": [
+        "pro",
+        "studio"
+      ]
     },
     {
       "id": "pt-perorangan-registration",
@@ -70,7 +88,10 @@
       "templates_used": [],
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:pt-perorangan-registration",
-      "enabled_for_tiers": ["pro", "studio"]
+      "enabled_for_tiers": [
+        "pro",
+        "studio"
+      ]
     },
     {
       "id": "weekly-recap-cycle",
@@ -80,7 +101,10 @@
       "templates_used": [],
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:weekly-recap-cycle",
-      "enabled_for_tiers": ["pro", "studio"]
+      "enabled_for_tiers": [
+        "pro",
+        "studio"
+      ]
     }
   ],
   "templates": [

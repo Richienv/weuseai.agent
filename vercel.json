@@ -10,7 +10,8 @@
     { "source": "/admin/customers/:id", "destination": "/admin/customer-detail.html?id=:id" },
     { "source": "/admin/fleet", "destination": "/admin/fleet.html" },
     { "source": "/admin/cost", "destination": "/admin/cost.html" },
-    { "source": "/admin/templates", "destination": "/admin/templates.html" }
+    { "source": "/admin/templates", "destination": "/admin/templates.html" },
+    { "source": "/admin/proposals", "destination": "/admin/proposals.html" }
   ],
   "redirects": [
     { "source": "/liren-v3", "destination": "/", "permanent": true },
