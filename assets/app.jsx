@@ -465,8 +465,8 @@
                 border: '1px solid rgba(255, 255, 255, 0.22)',
                 backdropFilter: 'blur(8px)'
               }}>
-              <span style={{ background: '#E5322D', color: '#fff' }} className="rounded-full px-3 py-1 text-[10px] font-mono font-medium uppercase tracking-[0.18em]">Hand-built</span>
-              <span className="pr-3 font-mono uppercase tracking-[0.14em] text-[11px] text-white/85">Indonesian-first</span>
+              <span style={{ background: '#E5322D', color: '#fff' }} className="rounded-full px-3 py-1 text-[10px] font-mono font-medium uppercase tracking-[0.18em]">Resep Hangzhou</span>
+              <span className="pr-3 font-mono uppercase tracking-[0.14em] text-[11px] text-white/85">Dirakit untuk Indonesia</span>
             </Mot.div>
 
             <BlurText
@@ -2710,7 +2710,7 @@
           <FadeTop /> <FadeBottom />
           <div className="relative z-10 flex flex-col items-center text-center px-6 py-40" style={{ minHeight: 500 }}>
             <div className="liquid-glass rounded-full px-3.5 py-1 text-xs font-medium font-body text-white/90">
-              Era baru
+              Kenalan dengan tim kamu
             </div>
             <BlurText
               as="h2"
@@ -3077,18 +3077,18 @@
     // ─────────────────────── USE CASES (Velvet, with bg-video) ───────────────────────
     function VelvetSection() {
       const capabilities = [
-        { n: '01', kind: 'email',     title: 'Sortir Email',     body: 'Inbox numpuk 300+ email pasca-cuti? Otomatis dibaca, dikelompokin per topik, dirangkum jadi 1 halaman — tinggal balas yang penting.' },
-        { n: '02', kind: 'slide',     title: 'Auto-Slide',       body: 'Dari materi mentah ke slide presentasi lengkap — judul, isi, speaker notes, layout. Begadang Sunday night ganti 10 menit Senin pagi.' },
-        { n: '03', kind: 'multipost', title: 'Multi-Posting',    body: 'Upload listing sekali, otomatis ke OLX, Lamudi, Rumah123, IG, FB Marketplace, dan 5 platform lain — caption tiap kanal dioptimalkan sendiri.' },
-        { n: '04', kind: 'autoreply', title: 'Auto-Balas 24/7',  body: 'Klien chat tengah malem otomatis dibalas dalam gaya bahasa brand. Pertanyaan susah di-escalate dengan ringkasan — siap di-handle pagi harinya.' },
-        { n: '05', kind: 'pitch',     title: 'Pitch Deck',       body: 'Dari ide ke deck 12 slide profesional — problem, solusi, market, traction, ask. Investor besok pagi siap dipitch malam ini.' },
-        { n: '06', kind: 'crm',       title: 'Personal CRM',     body: 'Track 200+ kenalan networking — kapan terakhir ngobrol, ulang tahun, project terbaru. Tiap minggu dapet saran follow-up — relationship nggak pernah dingin.' },
-        { n: '07', kind: 'radar',     title: 'Trend Radar',      body: 'Auto-monitor TikTok, IG, X tiap 6 jam. Sound atau topik naik 200%+? Langsung notif — jadi brand pertama yang ride trend.' },
-        { n: '08', kind: 'script',    title: 'Script Generator', body: 'Dari topik ke script TikTok 60 detik — hook 3 detik, body, CTA, saran scene, sound trending, caption, hashtag. Output naik 10× per hari.' },
-        { n: '09', kind: 'excel',     title: 'Excel Wizard',     body: 'Pivot table, VLOOKUP, dashboard? Screenshot data — dapet formula + tutorial, atau file Excel jadi sekalian. Kursus Rp 500rb digantikan satu prompt.' },
-        { n: '10', kind: 'recap',     title: 'Zoom Recap',       body: 'Rekaman kuliah atau meeting 2 jam diringkas jadi 1 halaman — poin penting, Q&A, timestamp materi krusial. Catch up dalam 5 menit.' },
-        { n: '11', kind: 'calendar',  title: 'Smart Calendar',   body: 'Kerja, family event, networking, weekend trip — semua kalender di-sync. Bentrok di-warning, reschedule di-saran dengan tone paling diplomatis.' },
-        { n: '12', kind: 'brief',     title: 'Morning Brief',    body: 'Tiap pagi, top 5 berita yang relevan masuk WhatsApp atau Telegram. Setup 1 jam, jalan selamanya — ganti scrolling FYP jadi 2 menit baca.' },
+        { n: '01', kind: 'email',     title: 'Rangkum Apa Pun',  body: 'Tempel thread email atau dokumen panjang — dirangkum jadi satu halaman, lengkap dengan draft balasan yang tinggal kamu kirim.' },
+        { n: '02', kind: 'slide',     title: 'Auto-Slide',       body: 'Dari materi mentah ke slide lengkap — judul, isi, speaker notes, layout. Begadang malam Minggu diganti 10 menit Senin pagi.' },
+        { n: '03', kind: 'multipost', title: 'Caption Multi-Kanal', body: 'Satu listing, caption berbeda untuk tiap kanal — panjang dan nada disesuaikan per platform, tinggal copy-paste.' },
+        { n: '04', kind: 'autoreply', title: 'Siaga 24/7',       body: 'Jam 23:47 kamu kepikiran sesuatu? Chat saja. Tim kamu tidak tidur, tidak cuti, dan tidak bosan ditanya.' },
+        { n: '05', kind: 'pitch',     title: 'Pitch Deck',       body: 'Dari ide ke deck 12 slide — masalah, solusi, pasar, traksi, ajakan. Investor besok pagi, deck siap malam ini.' },
+        { n: '06', kind: 'crm',       title: 'Memori Relasi',    body: 'Cerita sekali soal kenalan kamu — dia ingat. Minggu depan dia ingatkan siapa yang perlu kamu follow-up, dan kenapa.' },
+        { n: '07', kind: 'radar',     title: 'Radar Ide',        body: 'Minta ide konten kapan pun — dapat angle, hook 3 detik, dan format yang cocok untuk brand kamu. Lima ide dalam satu perintah.' },
+        { n: '08', kind: 'script',    title: 'Script Generator', body: 'Dari topik ke script TikTok 60 detik — hook, body, CTA, saran scene, caption, hashtag. Sekali perintah, siap rekam.' },
+        { n: '09', kind: 'excel',     title: 'Excel Wizard',     body: 'Pivot table, VLOOKUP, dashboard? Kirim datanya — dapat formula plus penjelasan, atau file Excel jadi sekalian.' },
+        { n: '10', kind: 'recap',     title: 'Recap Rapat',      body: 'Tempel transkrip atau catatan rapat 2 jam — diringkas jadi satu halaman: keputusan, aksi, dan siapa pegang apa.' },
+        { n: '11', kind: 'calendar',  title: 'Rencana Minggu',   body: 'Ceritakan jadwal kamu — dia susun prioritas mingguan, deteksi bentrok, dan siapkan draft reschedule yang sopan.' },
+        { n: '12', kind: 'brief',     title: 'Morning Brief',    body: 'Tiap pagi jam 7, briefing masuk ke Telegram kamu — berita relevan, outstanding kemarin, prioritas hari ini. Tanpa diminta.' },
       ];
 
       const CapViz = ({ kind }) => {
@@ -3130,8 +3130,8 @@
           return (
             <div className="cap-viz cap-autoreply">
               <div className="clock">23:47</div>
-              <div className="bubble b1">Masih ada size M?</div>
-              <div className="bubble b2">Ada — link checkout</div>
+              <div className="bubble b1">Besok meeting jam berapa?</div>
+              <div className="bubble b2">09:30 — materinya sudah siap</div>
             </div>
           );
         }
@@ -3238,7 +3238,7 @@
         { kind: 'memory',    title: 'Memori',          body: 'Ingat segalanya lintas sesi. Memori permanen dengan pencarian 10ms untuk 10.000+ entri — nggak perlu jelasin konteks dari awal lagi.' },
         { kind: 'schedule',  title: 'Jadwal',          body: 'Otomasi jadwal pakai bahasa biasa. Tulis "setiap Senin jam 8, lakukan X" — tanpa coding, tanpa batas harian.' },
         { kind: 'browse',    title: 'Browsing',        body: 'Browsing internet secara mandiri. Scraping, search, dan otomasi browser via Firecrawl.' },
-        { kind: 'platforms', title: 'Multi-platform',  body: 'Hidup di 15+ platform sekaligus — Telegram, Discord, Slack, WhatsApp, iMessage, WeChat, Email, SMS. Satu agen, semua kanal.' },
+        { kind: 'platforms', title: 'Multi-platform',  body: 'Runtime-nya mendukung 15+ kanal — Telegram, Discord, Slack, dan lainnya. Kamu mulai di Telegram; kanal lain menyusul.' },
         { kind: 'subagent',  title: 'Sub-agen',        body: 'Mendelegasikan tugas paralel ke 5 sub-agen spesialis sekaligus — tiap satu fokus di domain-nya.' },
         { kind: 'skill',     title: 'Skill mandiri',   body: 'Menulis skill sendiri secara otomatis. Setelah tugas kompleks, ia mendokumentasi metodologinya — biar nggak perlu mikir ulang.' },
         { kind: 'home',      title: 'Smart Home',      body: 'Kontrol rumah pintar. Integrasi native Home Assistant dengan perintah suara biasa.' },
@@ -3438,7 +3438,7 @@
               />
 
               <p className="mt-5 md:mt-7 max-w-xl text-white/70 font-body font-light text-sm md:text-base leading-relaxed">
-                Bukan demo. Siap pakai dari hari pertama — pekerjaan nyata yang dikerjakan agent kamu tiap hari.
+                Bukan demo. Siap pakai dari hari pertama — pekerjaan nyata yang dikerjakan tim kamu tiap hari.
               </p>
             </div>
 
@@ -4583,7 +4583,7 @@
                 Harga
               </div>
               <p className="mt-4 max-w-xl text-white/60 font-body font-light text-xs md:text-sm leading-relaxed">
-                Tiap agent dibangun dan dicek satu per satu, bukan digenerate massal.
+                Tiap tim dirakit dan dicek satu per satu, bukan digenerate massal.
                 Kapasitas onboarding tiap minggu terbatas — kalau slot minggu ini penuh, kamu masuk antrian berikutnya.
               </p>
               <BlurText
@@ -4946,7 +4946,7 @@
               </div>
               <BlurText
                 as="h2"
-                text="Skill yang sudah hidup di agent kamu."
+                text="Skill yang sudah hidup di tim kamu."
                 className="mt-5 md:mt-6 text-3xl md:text-5xl lg:text-6xl font-heading text-white tracking-tight leading-[1.0] md:leading-[0.95] max-w-3xl"
                 style={{ letterSpacing: '-0.04em' }}
                 delay={70}
@@ -5069,7 +5069,7 @@
                 delay={70}
               />
               <p className="mt-5 max-w-xl text-white/55 font-body font-light text-sm md:text-base leading-relaxed">
-                Hal-hal yang biasanya bikin orang ragu sebelum mulai. Reassurance dulu sebelum kamu klik bayar.
+                Hal-hal yang biasanya bikin orang ragu sebelum mulai. Jawaban jujur, sebelum kamu klik bayar.
               </p>
             </div>
 
@@ -5256,11 +5256,11 @@
           <div className="relative z-10 flex flex-col items-center text-center px-5 md:px-6 pt-28 md:pt-40 pb-10 max-w-5xl mx-auto">
             <BlurText
               as="h2"
-              text="Besok pagi jam 7, briefing pertama kamu masuk."
+              text="Besok pagi jam 7, briefing pertama dari tim kamu masuk."
               className="text-4xl md:text-6xl lg:text-7xl font-heading leading-[0.92] md:leading-[0.85] tracking-tight max-w-4xl"
               delay={90} />
             <p className="mt-6 md:mt-8 max-w-xl text-white/70 font-body font-light text-sm md:text-base px-2">
-              Atau besok pagi sama seperti pagi ini — kamu yang pilih. Setup 5 menit, bayar pakai QRIS, hosting cuma Rp 99rb/bulan.
+              Atau besok pagi sama seperti pagi ini — kamu yang pilih. Resep dari Hangzhou, tim penuh di Telegram kamu, hosting Rp 99rb/bulan.
             </p>
             <div className="mt-8 md:mt-10 flex items-center gap-3 md:gap-4 flex-wrap justify-center">
               <a href="checkout.html" className="bg-white text-black rounded-full px-5 md:px-6 py-3 text-sm font-medium flex items-center gap-2 no-underline">

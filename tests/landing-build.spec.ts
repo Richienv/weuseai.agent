@@ -69,6 +69,7 @@ test('demo conversation stays honest (no email/calendar capability claims)', () 
   for (const banned of [
     'Sorted', 'emails', 'GST', 'PR #142', 'Auto-publish',
     'Calendar update', 'confirmed dalam', 'Live di 6 platform', 'overnight', 'trending apa',
+    'Auto-monitor', 'otomatis ke OLX', 'kalender di-sync', 'Otomatis dibaca', '10×',
   ]) {
     assert.ok(!jsx.includes(banned), `stale fabricated demo content: "${banned}"`)
   }
