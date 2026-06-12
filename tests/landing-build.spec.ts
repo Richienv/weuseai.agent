@@ -63,7 +63,13 @@ test('app.jsx compiles clean and app.js is a sane bundle', () => {
 
 test('demo conversation stays honest (no email/calendar capability claims)', () => {
   const jsx = read('assets/app.jsx').toString()
-  for (const banned of ['Sorted', 'emails', 'GST', 'PR #142', 'Auto-publish']) {
+  // Each string below is a fabricated integration we do NOT have (calendar
+  // invites, multi-platform auto-posting, live trend scraping, overnight
+  // chat handling). They crept back into the demo once; keep them out.
+  for (const banned of [
+    'Sorted', 'emails', 'GST', 'PR #142', 'Auto-publish',
+    'Calendar update', 'confirmed dalam', 'Live di 6 platform', 'overnight', 'trending apa',
+  ]) {
     assert.ok(!jsx.includes(banned), `stale fabricated demo content: "${banned}"`)
   }
   assert.ok(jsx.includes('Pagi Briefing — dikirim otomatis'), 'honest demo script present')
