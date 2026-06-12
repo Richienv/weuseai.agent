@@ -470,7 +470,7 @@
             </Mot.div>
 
             <BlurText
-              text="Asisten yang nge-chat kamu duluan, tiap pagi jam 7."
+              text="Asisten AI yang ngerjain. Bukan chatbot yang cuma jawab."
               className="mt-7 md:mt-10 text-[2.5rem] sm:text-5xl md:text-6xl lg:text-[5.5rem] xl:text-[6.5rem] font-heading leading-[0.96] md:leading-[0.94] max-w-[18ch] md:max-w-[22ch] lg:max-w-[26ch] xl:max-w-[28ch] text-white px-2"
               style={{ letterSpacing: '-0.045em', fontStyle: 'normal' }}
               delay={100} />
@@ -480,7 +480,7 @@
               animate={{ filter: 'blur(0px)', opacity: 1, y: 0 }}
               transition={{ duration: 0.6, ease: EASE, delay: 0.8 }}
               className="mt-6 md:mt-8 max-w-[52ch] text-sm md:text-lg font-body font-light leading-[1.5] text-white/85 px-2">
-              Asisten AI pribadi di Telegram kamu — bukan aplikasi baru yang harus dipelajari. Dia yang menyesuaikan ke cara kerja kamu. Aktif kurang lebih 8 menit setelah bayar.
+              Cara China pakai AI — sekarang di Telegram kamu. Bukan aplikasi baru yang harus dipelajari; dia yang menyesuaikan ke cara kerja kamu, aktif sekitar 8 menit setelah bayar.
             </Mot.p>
 
             <Mot.p
@@ -2714,7 +2714,7 @@
             </div>
             <BlurText
               as="h2"
-              text="Fine-tuned agent yang ngerjain. Bukan chatbot yang cuma jawab."
+              text="Sepuluh spesialis. Satu chat Telegram."
               className="mt-8 text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-heading tracking-tight leading-[1.05] md:leading-[0.9] max-w-3xl"
               style={{ letterSpacing: '-0.03em' }}
               delay={80} />
@@ -2746,22 +2746,22 @@
         { type: 'agent', content: (<>Ingat — supplier biji kopi dari Bandung, kamu nunggu sampel sebelum nego harga. Ini ringkasannya:<div className="db-list"><div className="item"><span className="marker" />Sampel dijanjikan datang minggu ini <span className="meta">cek status</span></div><div className="item"><span className="marker" />Target harga kamu di bawah pasar <span className="meta">tercatat</span></div><div className="item"><span className="marker" />Draft pesan follow-up sudah aku siapkan <span className="meta">tinggal kirim</span></div></div></>) },
         { type: 'user', text: 'Kirim draft follow-up nya' },
         { type: 'agent', content: (<>Ini draftnya — gaya nulis kamu, singkat dan sopan. Aku tidak mengirim apa pun tanpa kamu setujui.<div className="db-cal-row"><div className="db-cal-cell">Sen</div><div className="db-cal-cell evt">Sel<br/>cek sampel</div><div className="db-cal-cell">Rab</div><div className="db-cal-cell evt">Kam<br/>nego</div><div className="db-cal-cell">Jum</div><div className="db-cal-cell">Sab</div><div className="db-cal-cell">Min</div></div></>) },
-        { type: 'user', text: 'Rabu 2pm aja' },
-        { type: 'agent', content: (<>Sent invite. <strong>Andre confirmed dalam 4 menit ✓</strong> Calendar update: Rabu 2pm — Polaris HQ.</>) },
-        { type: 'user', text: 'Pitch deck buat ketemu dia — angel ask Rp 2,5M' },
-        { type: 'agent', content: (<>Done. <strong>12 slides</strong>, oxblood theme. Story arc: problem → solution → market → traction → ask.<div className="db-attach"><span className="ic">PDF</span><span className="nm">pitch-andre-v3.pdf · 12 slides</span></div></>) },
-        { type: 'user', text: 'TikTok lagi trending apa hari ini?' },
-        { type: 'agent', content: (<>Trend baru terdeteksi 6 jam terakhir: <strong>#5MinuteRoutine</strong> naik <strong>312%</strong>. Cocok buat brand wellness kamu.<div className="db-radar"><svg viewBox="0 0 60 60"><circle className="ring" cx="30" cy="30" r="24" /><circle className="ring" cx="30" cy="30" r="16" /><circle className="ring" cx="30" cy="30" r="8" /><line className="sw" x1="30" y1="30" x2="30" y2="6" /><circle className="blip" cx="42" cy="22" r="2" /><circle className="blip" cx="20" cy="40" r="1.6" /></svg><div className="info"><div className="t">#5MinuteRoutine · +312%</div><div className="s">TikTok · last 6h</div></div></div></>) },
-        { type: 'user', text: 'Bikin script TikTok 60s pake trend itu, gaya humor' },
-        { type: 'agent', content: (<>Ready. Sound: <strong>"morning anchor" remix #4</strong>.<div className="db-script"><div className="db-script-row"><span className="t">0:03</span><span className="lbl">HOOK</span><span className="bar" style={{ background: '#E5322D' }} /></div><div className="db-script-row"><span className="t">0:48</span><span className="lbl">BODY</span><span className="bar" /></div><div className="db-script-row"><span className="t">1:00</span><span className="lbl">CTA</span><span className="bar" style={{ width: '70%' }} /></div></div></>) },
-        { type: 'user', text: 'Customer chats overnight, ada yang escalate?' },
-        { type: 'agent', content: (<>Handled <strong>23 chats</strong> overnight. 18 closed langsung, <strong>5 escalated</strong> ke pagi queue.<div className="db-list"><div className="item"><span className="marker" />"Refund process berapa lama?" <span className="meta">05:08</span></div><div className="item"><span className="marker" />"Bisa custom warna?" <span className="meta">04:21</span></div><div className="item"><span className="marker" />"Ada wholesale discount?" <span className="meta">03:14</span></div></div></>) },
-        { type: 'user', text: 'Pivot table Q4 sales by region' },
-        { type: 'agent', content: (<>Done. Formula: <strong style={{ fontFamily: "'JetBrains Mono', monospace", color: '#E5322D' }}>=SUMIFS(C:C, A:A, "Q4", B:B, region)</strong>. Atau langsung file siap.<div className="db-attach"><span className="ic">XLSX</span><span className="nm">q4-sales-pivot.xlsx · 4 sheets</span></div></>) },
-        { type: 'user', text: 'Post listing rumah BSD 2,8M ke semua platform' },
-        { type: 'agent', content: (<>Live di <strong>6 platform</strong>. Caption dioptimalkan per kanal.<div className="db-chips"><span className="db-chip">OLX</span><span className="db-chip">Lamudi</span><span className="db-chip">Rumah123</span><span className="db-chip">Instagram</span><span className="db-chip">Facebook</span><span className="db-chip">TikTok</span></div></>) },
-        { type: 'user', text: 'Networking — siapa yang harus follow up minggu ini?' },
-        { type: 'agent', content: (<>Lima hangat. Top 2: <strong>Andre</strong> baru launch produk, <strong>Sarah</strong> anniversary nikah Sabtu.</>) },
+        { type: 'user', text: 'Rapikan catatan rapat ini jadi notulen' },
+        { type: 'agent', content: (<>Sudah aku rapikan — keputusan, aksi, dan PIC-nya terpisah jelas.<div className="db-list"><div className="item"><span className="marker" />3 keputusan utama <span className="meta">terangkum</span></div><div className="item"><span className="marker" />5 item aksi <span className="meta">+ tenggat</span></div><div className="item"><span className="marker" />Format siap kamu teruskan <span className="meta">ke tim</span></div></div></>) },
+        { type: 'user', text: 'Bikin pitch deck 12 slide buat investor' },
+        { type: 'agent', content: (<>Beres. <strong>12 slide</strong>, tema oxblood. Alur cerita: masalah → solusi → pasar → traksi → ajakan.<div className="db-attach"><span className="ic">MD</span><span className="nm">pitch-deck-v3.md · 12 slide</span></div></>) },
+        { type: 'user', text: 'Kasih 5 ide konten TikTok buat brand wellness' },
+        { type: 'agent', content: (<>Lima ide, lengkap dengan angle dan hook pembuka.<div className="db-list"><div className="item"><span className="marker" />"Rutinitas pagi 5 menit" <span className="meta">edukasi</span></div><div className="item"><span className="marker" />"Mitos vs fakta wellness" <span className="meta">engagement</span></div><div className="item"><span className="marker" />Behind-the-scenes produk <span className="meta">trust</span></div></div></>) },
+        { type: 'user', text: 'Bikin script TikTok 60 detik, gaya humor' },
+        { type: 'agent', content: (<>Siap — terstruktur, tinggal kamu rekam.<div className="db-script"><div className="db-script-row"><span className="t">0:03</span><span className="lbl">HOOK</span><span className="bar" style={{ background: '#E5322D' }} /></div><div className="db-script-row"><span className="t">0:48</span><span className="lbl">BODY</span><span className="bar" /></div><div className="db-script-row"><span className="t">1:00</span><span className="lbl">CTA</span><span className="bar" style={{ width: '70%' }} /></div></div></>) },
+        { type: 'user', text: 'Susun draft balasan buat 3 pertanyaan customer ini' },
+        { type: 'agent', content: (<>Tiga draft balasan siap — nada ramah, sesuai gaya brand kamu. Aku tidak kirim sendiri, kamu yang tekan kirim.<div className="db-list"><div className="item"><span className="marker" />"Refund prosesnya berapa lama?" <span className="meta">draft</span></div><div className="item"><span className="marker" />"Bisa custom warna?" <span className="meta">draft</span></div><div className="item"><span className="marker" />"Ada diskon grosir?" <span className="meta">draft</span></div></div></>) },
+        { type: 'user', text: 'Pivot Q4 sales by region' },
+        { type: 'agent', content: (<>Beres. Formula: <strong style={{ fontFamily: "'JetBrains Mono', monospace", color: '#E5322D' }}>=SUMIFS(C:C, A:A, "Q4", B:B, region)</strong>. Atau langsung file siap.<div className="db-attach"><span className="ic">XLSX</span><span className="nm">q4-sales-pivot.xlsx · 4 sheet</span></div></>) },
+        { type: 'user', text: 'Tulis caption listing rumah BSD buat 3 kanal' },
+        { type: 'agent', content: (<>Tiga caption, panjang dan nada disesuaikan tiap kanal. Tinggal copy-paste.<div className="db-chips"><span className="db-chip">Instagram</span><span className="db-chip">Facebook</span><span className="db-chip">Marketplace</span></div></>) },
+        { type: 'user', text: 'Minggu lalu aku sebut target Q3 — masih ingat?' },
+        { type: 'agent', content: (<>Ingat — target Q3 kamu: tambah 2 reseller dan rapikan SOP gudang. Mau aku buatkan rencana langkahnya?</>) },
       ];
 
       const [step, setStep] = useState(0);
@@ -3036,13 +3036,13 @@
               </div>
               <BlurText
                 as="h2"
-                text="No need for trial and error. Incorporate workflow kamu langsung."
+                text="Bikin sendiri itu mahal. Kami sudah bayar harganya."
                 className="mt-5 md:mt-6 text-3xl md:text-5xl lg:text-6xl font-heading text-white tracking-tight leading-[1.0] md:leading-[0.95] max-w-4xl"
                 style={{ letterSpacing: '-0.04em' }}
                 delay={70}
               />
               <p className="mt-5 md:mt-6 max-w-2xl text-white/55 font-body font-light text-sm md:text-base leading-relaxed">
-                Setup AI agent stack sendiri butuh waktu dan biaya — we learned that the hard way. Biar gak terjadi sama kamu. Kamu fokus build, kami fokus improve.
+                Nyusun agent stack sendiri habis waktu dan token, dan sering tetap rapuh. Semua trial-and-error itu sudah kami lewati di China. Kamu tinggal pakai hasilnya.
               </p>
             </div>
 
@@ -3431,14 +3431,14 @@
 
               <BlurText
                 as="h2"
-                text="Yang bisa ia kerjakan untuk kamu."
+                text="Yang bisa kamu serahkan, mulai hari pertama."
                 className="mt-6 md:mt-8 text-3xl md:text-5xl lg:text-[4rem] font-heading text-white tracking-tight leading-[1.0] md:leading-[0.95]"
                 style={{ letterSpacing: '-0.04em' }}
                 delay={70}
               />
 
               <p className="mt-5 md:mt-7 max-w-xl text-white/70 font-body font-light text-sm md:text-base leading-relaxed">
-                Bukan demo. Production-ready buat kamu — langsung pakai dan try out hal-hal nyata yang dikerjakan agent kamu setiap hari.
+                Bukan demo. Siap pakai dari hari pertama — pekerjaan nyata yang dikerjakan agent kamu tiap hari.
               </p>
             </div>
 
@@ -4588,7 +4588,7 @@
               </p>
               <BlurText
                 as="h2"
-                text="Pilih ukuran agent yang cocok dengan hidup kamu."
+                text="Pilih ukuran agent kamu. Upgrade kapan saja."
                 className="mt-5 md:mt-6 text-3xl md:text-5xl lg:text-6xl font-heading text-white tracking-tight leading-[1.0] md:leading-[0.95] max-w-3xl"
                 style={{ letterSpacing: '-0.04em' }}
                 delay={70}
@@ -4946,13 +4946,13 @@
               </div>
               <BlurText
                 as="h2"
-                text="Yang sudah jalan, di luar sana."
+                text="Skill yang sudah hidup di agent kamu."
                 className="mt-5 md:mt-6 text-3xl md:text-5xl lg:text-6xl font-heading text-white tracking-tight leading-[1.0] md:leading-[0.95] max-w-3xl"
                 style={{ letterSpacing: '-0.04em' }}
                 delay={70}
               />
               <p className="mt-5 md:mt-6 max-w-xl text-white/55 font-body font-light text-sm md:text-base leading-relaxed">
-                Skill bawaan yang sudah hidup di agent kamu hari pertama. Plus apa yang lagi dikerjain agent lain di komunitas.
+                Bawaan, siap dipakai hari pertama. Plus apa yang lagi dikerjain agent lain di komunitas.
               </p>
             </div>
 
