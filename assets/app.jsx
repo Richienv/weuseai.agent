@@ -470,7 +470,7 @@
             </Mot.div>
 
             <BlurText
-              text="Asisten AI yang ngerjain. Bukan chatbot yang cuma jawab."
+              text="Resep kampus elite China. Tenaga satu tim penuh. Aktif dalam 8 menit."
               className="mt-7 md:mt-10 text-[2.5rem] sm:text-5xl md:text-6xl lg:text-[5.5rem] xl:text-[6.5rem] font-heading leading-[0.96] md:leading-[0.94] max-w-[18ch] md:max-w-[22ch] lg:max-w-[26ch] xl:max-w-[28ch] text-white px-2"
               style={{ letterSpacing: '-0.045em', fontStyle: 'normal' }}
               delay={100} />
@@ -480,7 +480,7 @@
               animate={{ filter: 'blur(0px)', opacity: 1, y: 0 }}
               transition={{ duration: 0.6, ease: EASE, delay: 0.8 }}
               className="mt-6 md:mt-8 max-w-[52ch] text-sm md:text-lg font-body font-light leading-[1.5] text-white/85 px-2">
-              Cara China pakai AI — sekarang di Telegram kamu. Bukan aplikasi baru yang harus dipelajari; dia yang menyesuaikan ke cara kerja kamu, aktif sekitar 8 menit setelah bayar.
+              Satu tim agent AI di Telegram kamu — riset, surat, slide, laporan. Dipelajari langsung di Zhejiang University, Hangzhou, dibawa pulang untuk kamu. Bukan chatbot yang cuma jawab; tim yang mengerjakan.
             </Mot.p>
 
             <Mot.p
@@ -2714,12 +2714,12 @@
             </div>
             <BlurText
               as="h2"
-              text="Sepuluh spesialis. Satu chat Telegram."
+              text="Sepuluh spesialis. Satu tim. Satu chat."
               className="mt-8 text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-heading tracking-tight leading-[1.05] md:leading-[0.9] max-w-3xl"
               style={{ letterSpacing: '-0.03em' }}
               delay={80} />
             <p className="mt-5 md:mt-6 max-w-2xl text-white/65 font-body font-light text-[13px] md:text-base leading-relaxed">
-              Setiap persona di-engineer dan diuji satu per satu — bukan prompt kosong yang harus kamu latih sendiri. Kamu terima agent yang sudah tahu pekerjaannya, hari pertama.
+              Setiap persona di-engineer dan diuji satu per satu — bukan prompt kosong yang harus kamu latih sendiri. Kamu terima tim yang sudah tahu pekerjaannya, hari pertama.
             </p>
             <AgentCarousel />
           </div>
@@ -4197,12 +4197,12 @@
               </div>
               <BlurText
                 as="h2"
-                text="Resep ini kami pelajari langsung di China."
+                text="Resep ini kami pelajari di kampus elite China."
                 className="mt-5 md:mt-6 text-4xl md:text-6xl lg:text-7xl font-heading text-white tracking-tight leading-[1.0] md:leading-[0.95] max-w-4xl"
                 style={{ letterSpacing: '-0.04em' }}
                 delay={70} />
               <p className="mt-6 max-w-2xl text-white/60 font-body font-light text-base md:text-lg leading-relaxed">
-                Dunia masih sibuk ngobrol sama chatbot. China sudah pindah ke agent — dan kami belajar dari dalam, lalu membawanya pulang.
+                Dunia masih sibuk ngobrol sama chatbot. China sudah pindah ke agent — dan kami mempelajarinya dari dalam, di Zhejiang University, Hangzhou, lalu membawanya pulang.
               </p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-7 max-w-5xl mx-auto">
@@ -4340,7 +4340,7 @@
                 delay={70}
               />
               <p className="mt-5 md:mt-6 max-w-xl text-white/55 font-body font-light text-sm md:text-base leading-relaxed">
-                Asisten manusia part-time di Jakarta: Rp 5–8 juta sebulan, dan pulang jam 5. Agent kamu: Rp 99rb sebulan, dan tidak pulang.
+                Asisten manusia part-time di Jakarta: Rp 5–8 juta sebulan, dan pulang jam 5. Tim agent kamu: Rp 99rb sebulan, dan tidak pulang.
               </p>
             </div>
 
@@ -4588,7 +4588,7 @@
               </p>
               <BlurText
                 as="h2"
-                text="Pilih ukuran agent kamu. Upgrade kapan saja."
+                text="Pilih ukuran tim kamu. Upgrade kapan saja."
                 className="mt-5 md:mt-6 text-3xl md:text-5xl lg:text-6xl font-heading text-white tracking-tight leading-[1.0] md:leading-[0.95] max-w-3xl"
                 style={{ letterSpacing: '-0.04em' }}
                 delay={70}
