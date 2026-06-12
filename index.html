@@ -7970,15 +7970,15 @@
           orderMobile: 'order-1',
           orderDesktop: 'md:order-2',
           rows: [
-            { have: true, text: 'Multi-agent paralel: planner, builder, reviewer kerja barengan' },
-            { have: true, text: 'Riset 50+ sumber sekali jalan' },
-            { have: true, text: 'Scrape situs apapun tanpa bot-detection' },
-            { have: true, text: 'Bikin slide deck dari satu prompt' },
-            { have: true, text: 'Triage 300+ email jadi 1 halaman ringkasan' },
-            { have: true, text: 'Auto-publish ke IG, X, LinkedIn, TikTok' },
-            { have: true, text: 'Browser automation — login, form, klik, screenshot' },
-            { have: true, text: 'Jalan 24/7 di VPS sendiri' },
-            { have: true, text: 'Voice tuning — nulis dengan gaya kamu' },
+            { have: true, text: 'Tim 10 spesialis yang kerja paralel — periset, penulis, penyusun slide, satu komando' },
+            { have: true, text: 'Nge-chat kamu duluan — briefing pagi jam 7, ringkasan sore jam 6, tiap hari' },
+            { have: true, text: 'Riset web mendalam: banding sumber, rangkum jadi keputusan' },
+            { have: true, text: 'Slide deck dan dokumen jadi dari satu perintah' },
+            { have: true, text: '190+ template Indonesia — PPN, BPJS, KBLI, IDX, siap isi' },
+            { have: true, text: 'Kirim voice note, terima kerjaan jadi' },
+            { have: true, text: 'Ingat lintas hari — kamu tidak pernah mengulang konteks' },
+            { have: true, text: 'Jalan 24/7 di server milik kamu sendiri' },
+            { have: true, text: 'Di-tune ke gaya nulis dan pekerjaan kamu, satu per satu' },
           ],
           ariaLabel: 'Perbandingan weuseai.agent Pro (paket kami)',
         },
@@ -8020,12 +8020,12 @@
               <BlurText
                 as="h2"
                 text="Chat menjawab. Agent mengerjakan."
-                className="mt-5 md:mt-6 text-3xl md:text-5xl lg:text-6xl font-heading text-white tracking-tight leading-[1.0] md:leading-[0.95] max-w-3xl"
+                className="mt-5 md:mt-6 text-4xl md:text-6xl lg:text-7xl font-heading text-white tracking-tight leading-[1.0] md:leading-[0.95] max-w-4xl"
                 style={{ letterSpacing: '-0.04em' }}
                 delay={70}
               />
               <p className="mt-5 md:mt-6 max-w-xl text-white/55 font-body font-light text-sm md:text-base leading-relaxed">
-                ChatGPT dan Claude jago menjawab. Tapi mereka satu bot di satu giliran — tidak punya tim agent yang scrape, schedule, deploy, sambil kamu tidur.
+                Menjawab itu mudah. Mengerjakan itu beda kelas. ChatGPT dan Claude berhenti saat kamu berhenti ngetik — tim agent kamu baru mulai.
               </p>
             </div>
 
@@ -8042,7 +8042,7 @@
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true, amount: 0.3 }}
                     transition={{ duration: 0.6, ease: EASE, delay: 0.05 * i }}
-                    className={`liquid-glass rounded-2xl ${isWide ? 'p-7 md:p-9 md:col-span-2' : 'p-6 md:p-7'} flex flex-col ${c.orderMobile} ${c.orderDesktop}`}
+                    className={`liquid-glass rounded-3xl ${isWide ? 'p-8 md:p-12 md:col-span-2' : 'p-7 md:p-9'} flex flex-col ${c.orderMobile} ${c.orderDesktop}`}
                     style={
                       isFeatured
                         ? {
@@ -8054,7 +8054,7 @@
                     }
                   >
                     <h3
-                      className={`font-heading text-white leading-[1.1] ${isWide ? 'text-xl md:text-2xl' : 'text-lg md:text-xl'}`}
+                      className={`font-heading text-white leading-[1.1] ${isWide ? 'text-2xl md:text-4xl' : 'text-xl md:text-2xl'}`}
                       style={{ letterSpacing: '-0.02em' }}
                     >
                       {c.name}
@@ -8064,9 +8064,9 @@
                       <span className="text-white/45"> {c.subtitleAside}</span>
                     </div>
 
-                    <ul className={`${isWide ? 'mt-5 md:mt-6 space-y-2.5' : 'mt-5 md:mt-6 space-y-3'} flex-1`}>
+                    <ul className={`${isWide ? 'mt-6 md:mt-8 space-y-3.5' : 'mt-6 md:mt-8 space-y-4'} flex-1`}>
                       {c.rows.map((r, ri) => (
-                        <li key={ri} className="flex items-start gap-2.5 text-sm font-body font-light leading-relaxed">
+                        <li key={ri} className="flex items-start gap-3 text-sm md:text-base font-body font-light leading-relaxed">
                           <span
                             aria-hidden="true"
                             className="mt-[3px] inline-flex items-center justify-center rounded-full flex-shrink-0 font-bold w-4 h-4 text-[10px]"
@@ -8114,6 +8114,57 @@
     // part-time. Six rows lock in: Bahasa native, 10 agents, 24/7,
     // persistent memory, setup time, cost. weuseai column hits ✓ across
     // all + Rp 99rb/bulan at the foot.
+    // ─────────────── DARI HANGZHOU (founder edge — true story) ───────────────
+    // Every claim here is the founder's verifiable life: ZJU GMBA Hangzhou,
+    // firsthand study of China's agent-first daily workflows. This answers
+    // the skeptic's #1 question: kenapa bisa semurah dan sesiap ini.
+    function HangzhouEdge() {
+      const points = [
+        { t: 'Dipelajari di sumbernya', d: 'Founder kami kuliah GMBA di Zhejiang University, Hangzhou — jantungnya ekosistem AI China. Setup agent yang dipakai orang sana tiap hari, kami pelajari langsung, bukan dari thread internet.' },
+        { t: 'Di China, agent itu alat harian', d: 'Mahasiswa pakai agent buat tugas dan slide. Pemilik usaha pakai agent buat operasional. Bukan ChatGPT — agent yang lebih murah, lebih pribadi, dan benar-benar mengerjakan.' },
+        { t: 'Resep yang sama, untuk Indonesia', d: 'Arsitektur efisien yang kami pelajari di sana, kami bangun ulang untuk Bahasa dan konteks bisnis Indonesia. Itu kenapa harga kami serendah ini — resepnya hemat, bukan fiturnya yang dipotong.' },
+        { t: 'Bandingkan dengan bikin sendiri', d: 'Rakit sendiri berarti bakar token untuk eksperimen, debug tengah malam, dan hasil yang belum tentu stabil. Kami sudah bayar harga belajarnya — kamu tinggal pakai.' },
+      ];
+      return (
+        <section className="relative overflow-hidden py-24 md:py-36 px-5 md:px-6 lg:px-16 bg-black">
+          <FadeTop /> <FadeBottom />
+          <div className="relative z-10 max-w-7xl mx-auto">
+            <div className="flex flex-col items-center text-center mb-14 md:mb-20">
+              <div className="liquid-glass rounded-full px-3.5 py-1 text-xs font-medium font-body text-white/90" style={{ borderColor: 'rgba(229, 50, 45, 0.45)' }}>
+                Keunggulan kami
+              </div>
+              <BlurText
+                as="h2"
+                text="Resep ini kami pelajari langsung di China."
+                className="mt-5 md:mt-6 text-4xl md:text-6xl lg:text-7xl font-heading text-white tracking-tight leading-[1.0] md:leading-[0.95] max-w-4xl"
+                style={{ letterSpacing: '-0.04em' }}
+                delay={70} />
+              <p className="mt-6 max-w-2xl text-white/60 font-body font-light text-base md:text-lg leading-relaxed">
+                Dunia masih sibuk ngobrol sama chatbot. China sudah pindah ke agent — dan kami belajar dari dalam, lalu membawanya pulang.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-7 max-w-5xl mx-auto">
+              {points.map((x, i) => (
+                <Mot.div key={x.t}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, amount: 0.3 }}
+                  transition={{ duration: 0.6, ease: EASE, delay: 0.06 * i }}
+                  className="liquid-glass rounded-3xl p-8 md:p-10">
+                  <div className="text-white font-heading text-xl md:text-2xl" style={{ letterSpacing: '-0.02em' }}>{x.t}</div>
+                  <p className="mt-3 text-white/65 font-body font-light text-sm md:text-base leading-relaxed">{x.d}</p>
+                </Mot.div>
+              ))}
+            </div>
+            <p className="mt-12 md:mt-16 text-center text-sm md:text-base text-white/50 font-body font-light max-w-2xl mx-auto leading-relaxed">
+              Kamu tidak perlu pindah ke Hangzhou untuk kerja seperti mereka. Cukup satu checkout.
+            </p>
+          </div>
+        </section>
+      );
+    }
+
+    // ─────────────────────── COST COMPARISON ───────────────────────
     function CostComparisonSection() {
       const rows = [
         {
@@ -8160,12 +8211,12 @@
             <div className="flex flex-col gap-0.5">
               <span
                 className={`font-heading ${cell.accent ? 'text-white' : 'text-white/85'}`}
-                style={{ fontSize: cell.accent ? '1.15rem' : '0.95rem', letterSpacing: '-0.01em' }}
+                style={{ fontSize: cell.accent ? '1.5rem' : '1.1rem', letterSpacing: '-0.01em' }}
               >
                 {cell.mark}
               </span>
               {cell.aside ? (
-                <span className="text-[11px] text-white/45 font-body font-light leading-snug">
+                <span className="text-[13px] text-white/50 font-body font-light leading-snug">
                   {cell.aside}
                 </span>
               ) : null}
@@ -8194,7 +8245,7 @@
               {ok ? '✓' : partial ? '~' : '✗'}
             </span>
             {cell.aside ? (
-              <span className="text-[11px] text-white/45 font-body font-light leading-snug">
+              <span className="text-[13px] text-white/50 font-body font-light leading-snug">
                 {cell.aside}
               </span>
             ) : null}
@@ -8209,9 +8260,9 @@
       ];
 
       return (
-        <section id="vs-cost" className="relative overflow-hidden py-20 md:py-32 px-5 md:px-6 lg:px-16 bg-black">
+        <section id="vs-cost" className="relative overflow-hidden py-24 md:py-36 px-5 md:px-6 lg:px-16 bg-black">
           <FadeTop /> <FadeBottom />
-          <div className="relative z-10 max-w-6xl mx-auto">
+          <div className="relative z-10 max-w-7xl mx-auto">
             <div className="flex flex-col items-center text-center mb-14 md:mb-20">
               <div
                 className="liquid-glass rounded-full px-3.5 py-1 text-xs font-medium font-body text-white/90"
@@ -8222,12 +8273,12 @@
               <BlurText
                 as="h2"
                 text="Rp 99rb/bulan. Bukan Rp 5–8jt."
-                className="mt-5 md:mt-6 text-3xl md:text-5xl lg:text-6xl font-heading text-white tracking-tight leading-[1.0] md:leading-[0.95] max-w-3xl"
+                className="mt-5 md:mt-6 text-4xl md:text-6xl lg:text-7xl font-heading text-white tracking-tight leading-[1.0] md:leading-[0.95] max-w-4xl"
                 style={{ letterSpacing: '-0.04em' }}
                 delay={70}
               />
               <p className="mt-5 md:mt-6 max-w-xl text-white/55 font-body font-light text-sm md:text-base leading-relaxed">
-                Mayoritas pemilik usaha sekarang gabungkan AI agent biasa dan asisten manusia part-time. Total bisa Rp 5–8jt per bulan dan tetap berhenti jam 5 sore.
+                Asisten manusia part-time di Jakarta: Rp 5–8 juta sebulan, dan pulang jam 5. Agent kamu: Rp 99rb sebulan, dan tidak pulang.
               </p>
             </div>
 
@@ -8248,7 +8299,7 @@
                           : {}
                       }
                     >
-                      <div className={`font-heading ${c.isUs ? 'text-white' : 'text-white/85'} text-base md:text-lg leading-[1.15]`} style={{ letterSpacing: '-0.02em' }}>
+                      <div className={`font-heading ${c.isUs ? 'text-white' : 'text-white/85'} text-lg md:text-2xl leading-[1.15]`} style={{ letterSpacing: '-0.02em' }}>
                         {c.label}
                       </div>
                       <div className="mt-1 text-[11px] text-white/45 font-body font-light">
@@ -8262,7 +8313,7 @@
                     key={r.label}
                     className={`grid grid-cols-4 gap-0 ${ri < rows.length - 1 ? 'border-b border-white/6' : ''}`}
                   >
-                    <div className="px-5 py-5 text-sm font-body text-white/75 leading-snug">
+                    <div className="px-6 py-6 md:px-7 md:py-7 text-base md:text-lg font-body text-white/85 leading-snug">
                       {r.label}
                     </div>
                     {cols.map((c) => (
@@ -9198,6 +9249,7 @@
               <VelvetSection />
               <FeaturesGrid />
               <ChatVsAgentSection />
+              <HangzhouEdge />
               <CostComparisonSection />
               <Pricing />
               <TechSpecs />
