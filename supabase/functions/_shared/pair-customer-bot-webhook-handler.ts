@@ -25,7 +25,16 @@
 
 import { constantTimeEqual } from './constant-time-equal.ts'
 import { isPairingCodeExpired } from './pairing-code.ts'
-import type { IOnboardingStore, ITelegramClient } from './types.ts'
+import type { CustomerRow, GenesisDraft, IOnboardingStore, ITelegramClient } from './types.ts'
+
+/** Genesis Onboarding (2026-06-13): distill forwarded samples into a draft.
+ *  Returns null on any failure (incl. genesis-distill not deployed) so the
+ *  webhook degrades cleanly. The entry wires this to the genesis-distill
+ *  function (tier resolved from the subscription). */
+export type GenesisDistillFn = (input: {
+  customerId: string
+  samples: string
+}) => Promise<Omit<GenesisDraft, 'created_at'> | null>
 
 export type PairCustomerBotWebhookDeps = {
   db: IOnboardingStore
@@ -33,6 +42,29 @@ export type PairCustomerBotWebhookDeps = {
   /** Same secret used in validate-bot-token-handler.setWebhook. */
   webhookSecret: string
   now?: () => number
+  /** Genesis Onboarding (2026-06-13): optional. When present (and the store
+   *  exposes saveGenesisDraft), a paired-but-not-onboarded customer who
+   *  forwards substantial non-command text gets it distilled into a draft
+   *  the web form picks up. Omit to keep the pairing-only behavior. */
+  distillSamples?: GenesisDistillFn
+}
+
+/** Min chars before a forwarded message is treated as Genesis samples. */
+const GENESIS_SAMPLES_MIN = 40
+/** Per-customer cooldown between distill calls (cost + abuse floor). */
+const GENESIS_COOLDOWN_MS = 30_000
+
+const GENESIS_REPLY_FAILED =
+  'Aku belum berhasil menyusun dari pesan itu. Lanjutkan di tab onboarding kamu — tulis langsung di sana.'
+
+const GENESIS_REPLY_THROTTLED =
+  'Sudah aku catat barusan. Buka tab onboarding kamu untuk cek dan lanjut.'
+
+function genesisReplyDrafted(summary: string): string {
+  return (
+    `${summary}\n\n` +
+    'Sudah aku catat. Buka lagi tab onboarding kamu — bagian "cara pakai" sudah aku isikan. Tinggal kamu cek dan lanjut.'
+  )
 }
 
 // Subset of Telegram's Update — we only consume `message`.
@@ -126,8 +158,21 @@ export async function handlePairCustomerBotWebhook(
     return ok({ ignored: 'no_bot_token' })
   }
 
-  // ─── 6. Check if already paired ───────────────────────────────────
+  // ─── 6. Already paired → pairing no-op OR Genesis sample capture ──
   if (customer.telegram_chat_id) {
+    const pairedText = message.text.trim()
+    // Genesis Onboarding (2026-06-13): a paired-but-not-onboarded customer
+    // who forwards substantial work samples (not a command) gets them
+    // distilled into a draft the web form picks up. Gated on the optional
+    // distill dep + store capability, so absent wiring this is unchanged.
+    if (
+      deps.distillSamples &&
+      typeof deps.db.saveGenesisDraft === 'function' &&
+      !pairedText.startsWith('/') &&
+      pairedText.length >= GENESIS_SAMPLES_MIN
+    ) {
+      return await handleGenesisSamples(cid, customer, pairedText, botToken, message.chat.id, deps)
+    }
     // Customer's bot already paired with a chat. Send a polite reply
     // so they know nothing is broken.
     await safeReply(deps.telegram, botToken, message.chat.id, REPLY_ALREADY_PAIRED)
@@ -181,6 +226,58 @@ export async function handlePairCustomerBotWebhook(
   // sendMessage. The webhook is then deleted by complete-onboarding step
   // 8b so Hermes can long-poll cleanly.
   return ok({ replied: 'paired_silent' })
+}
+
+/**
+ * Genesis Onboarding (2026-06-13): distill forwarded samples → persist a
+ * draft → reply with what we caught. Read-mostly: the only write is the
+ * customer's own genesis_draft column. Never touches pairing, SOUL, or
+ * provisioning. Every failure degrades to an honest "finish on the web"
+ * reply — onboarding is never blocked.
+ */
+async function handleGenesisSamples(
+  cid: string,
+  customer: CustomerRow,
+  samples: string,
+  botToken: string,
+  chatId: number | string,
+  deps: PairCustomerBotWebhookDeps,
+): Promise<Response> {
+  const now = deps.now ?? (() => Date.now())
+
+  // Cooldown — one distill per customer per window (cost + abuse floor).
+  const prev = customer.genesis_draft
+  if (prev?.created_at) {
+    const ageMs = now() - Date.parse(prev.created_at)
+    if (Number.isFinite(ageMs) && ageMs >= 0 && ageMs < GENESIS_COOLDOWN_MS) {
+      await safeReply(deps.telegram, botToken, chatId, GENESIS_REPLY_THROTTLED)
+      return ok({ replied: 'genesis_throttled' })
+    }
+  }
+
+  let draft: Omit<GenesisDraft, 'created_at'> | null = null
+  try {
+    draft = await deps.distillSamples!({ customerId: cid, samples })
+  } catch {
+    draft = null
+  }
+  if (!draft) {
+    await safeReply(deps.telegram, botToken, chatId, GENESIS_REPLY_FAILED)
+    return ok({ replied: 'genesis_failed' })
+  }
+
+  try {
+    await deps.db.saveGenesisDraft!(cid, {
+      ...draft,
+      created_at: new Date(now()).toISOString(),
+    })
+  } catch {
+    await safeReply(deps.telegram, botToken, chatId, GENESIS_REPLY_FAILED)
+    return ok({ replied: 'genesis_save_failed' })
+  }
+
+  await safeReply(deps.telegram, botToken, chatId, genesisReplyDrafted(draft.summary_bahasa))
+  return ok({ replied: 'genesis_drafted' })
 }
 
 async function safeReply(

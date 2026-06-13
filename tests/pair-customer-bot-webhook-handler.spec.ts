@@ -345,3 +345,122 @@ test('reply copy uses kamu, no Anda, no exclamation', () => {
     )
   }
 })
+
+// ─── Genesis Onboarding: Telegram-native sample capture (2026-06-13) ──
+
+const DRAFT = {
+  expectations_paragraph: 'Bantu aku siapkan caption listing dan balas pertanyaan klien.',
+  recommended_persona: 'the-pro',
+  persona_name: 'The Pro',
+  voice_note: 'ringkas dan sopan',
+  summary_bahasa: 'Ini yang aku tangkap soal kamu: agen properti di area BSD.',
+}
+
+const SAMPLE_TEXT =
+  'Listing rumah BSD 2,8M SHM dekat AEON. Chat klien: masih ada unit Foresta? Saya kirim price list dan simulasi KPR.'
+
+function sampleReq(text = SAMPLE_TEXT) {
+  return buildReq({ update_id: 2, message: { message_id: 101, text, chat: { id: 6805409051, type: 'private' } } })
+}
+
+function setupPaired(genesisDraft: (typeof DRAFT & { created_at: string }) | null = null) {
+  const db = new FakeOnboardingStore()
+  const telegram = new FakeTelegram()
+  db.seedCustomer({
+    id: 'cust-1',
+    email: 'sarah@example.com',
+    display_name: 'Sarah Tanaka',
+    telegram_chat_id: '6805409051', // already paired
+    telegram_bot_username: 'weuseai_e2e_fixture_bot',
+    genesis_draft: genesisDraft,
+  })
+  return (async () => {
+    await db.setBotTokenAndUsername('cust-1', VALID_TOKEN, 'weuseai_e2e_fixture_bot')
+    return { db, telegram }
+  })()
+}
+
+function fakeDistill(calls: Array<{ customerId: string; samples: string }>, result: typeof DRAFT | null = DRAFT) {
+  return async (input: { customerId: string; samples: string }) => {
+    calls.push(input)
+    return result
+  }
+}
+
+test('paired customer forwarding samples → distilled, saved, replied with summary', async () => {
+  const { db, telegram } = await setupPaired()
+  const calls: Array<{ customerId: string; samples: string }> = []
+  const res = await handlePairCustomerBotWebhook(sampleReq(), {
+    db, telegram, webhookSecret: SECRET, distillSamples: fakeDistill(calls),
+  })
+  assert.equal(res.status, 200)
+  assert.equal(((await res.json()) as { replied?: string }).replied, 'genesis_drafted')
+  assert.equal(calls.length, 1)
+  assert.equal(calls[0].customerId, 'cust-1')
+  assert.equal(db.genesisDrafts.length, 1)
+  assert.equal(db.genesisDrafts[0].draft.recommended_persona, 'the-pro')
+  assert.ok(db.genesisDrafts[0].draft.created_at, 'created_at stamped')
+  assert.equal(telegram.replies.length, 1)
+  assert.match(telegram.replies[0].text, /Ini yang aku tangkap soal kamu/)
+  assert.doesNotMatch(telegram.replies[0].text, /!/, 'no exclamation in reply')
+})
+
+test('cooldown: a recent draft throttles re-distill (no LLM call)', async () => {
+  const { db, telegram } = await setupPaired({ ...DRAFT, created_at: new Date().toISOString() })
+  const calls: Array<{ customerId: string; samples: string }> = []
+  const res = await handlePairCustomerBotWebhook(sampleReq(), {
+    db, telegram, webhookSecret: SECRET, distillSamples: fakeDistill(calls),
+  })
+  assert.equal(((await res.json()) as { replied?: string }).replied, 'genesis_throttled')
+  assert.equal(calls.length, 0)
+})
+
+test('a draft past the cooldown re-distills', async () => {
+  const { db, telegram } = await setupPaired({ ...DRAFT, created_at: new Date(Date.now() - 60_000).toISOString() })
+  const calls: Array<{ customerId: string; samples: string }> = []
+  const res = await handlePairCustomerBotWebhook(sampleReq(), {
+    db, telegram, webhookSecret: SECRET, distillSamples: fakeDistill(calls),
+  })
+  assert.equal(((await res.json()) as { replied?: string }).replied, 'genesis_drafted')
+  assert.equal(calls.length, 1)
+})
+
+test('distill failure → honest reply, nothing saved', async () => {
+  const { db, telegram } = await setupPaired()
+  const res = await handlePairCustomerBotWebhook(sampleReq(), {
+    db, telegram, webhookSecret: SECRET, distillSamples: async () => null,
+  })
+  assert.equal(((await res.json()) as { replied?: string }).replied, 'genesis_failed')
+  assert.equal(db.genesisDrafts.length, 0)
+  assert.match(telegram.replies[0].text, /tab onboarding/)
+})
+
+test('short text while paired stays a pairing no-op (not Genesis)', async () => {
+  const { db, telegram } = await setupPaired()
+  const calls: Array<{ customerId: string; samples: string }> = []
+  const res = await handlePairCustomerBotWebhook(sampleReq('halo'), {
+    db, telegram, webhookSecret: SECRET, distillSamples: fakeDistill(calls),
+  })
+  assert.equal(((await res.json()) as { replied?: string }).replied, 'already_paired')
+  assert.equal(calls.length, 0)
+  assert.equal(telegram.replies[0].text, PAIR_CUSTOMER_BOT_REPLIES.alreadyPaired)
+})
+
+test('a long command while paired is never treated as Genesis samples', async () => {
+  const { db, telegram } = await setupPaired()
+  const calls: Array<{ customerId: string; samples: string }> = []
+  const res = await handlePairCustomerBotWebhook(sampleReq('/start ' + 'x'.repeat(80)), {
+    db, telegram, webhookSecret: SECRET, distillSamples: fakeDistill(calls),
+  })
+  assert.equal(((await res.json()) as { replied?: string }).replied, 'already_paired')
+  assert.equal(calls.length, 0)
+})
+
+test('without distillSamples wired, paired samples stay a pairing no-op (back-compat)', async () => {
+  const { db, telegram } = await setupPaired()
+  const res = await handlePairCustomerBotWebhook(sampleReq(), {
+    db, telegram, webhookSecret: SECRET,
+  })
+  assert.equal(((await res.json()) as { replied?: string }).replied, 'already_paired')
+  assert.equal(db.genesisDrafts.length, 0)
+})

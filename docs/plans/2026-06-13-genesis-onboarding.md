@@ -132,13 +132,27 @@ and the expectations textarea pre-filled (both editable). On confirm, it
 submits to `complete-onboarding` exactly as the typed path does today. The
 typed/dropdown path stays as the fallback for people who prefer it.
 
-### Phase 3 — Telegram-native forwarding (specced, not built)
+### Phase 3 — Telegram-native forwarding (3a BUILT, 3b next)
 
-Extend `telegram-bot-webhook-handler.ts` (today pairing-only) to accept
-forwarded messages / pasted text during a `genesis` onboarding window, so the
-customer can do the whole thing inside Telegram. Voice and photo samples ride
-the same path once those middleware land (the `voice-starter` tier flag and a
-vision model). Out of scope here; flagged for sequencing after Phase 2.
+The customer's own bot points at `pair-customer-bot-webhook?cid=<id>` from
+pairing until `complete-onboarding` deletes the webhook — exactly the Genesis
+window, with the `customer_id` already in the URL and the bot token already
+decrypted for replies.
+
+**Phase 3a (built):** `pair-customer-bot-webhook-handler` gains an additive
+branch — a paired-but-not-onboarded customer who forwards substantial
+non-command text (≥40 chars) gets it distilled (server-to-server call to
+`genesis-distill`, tier resolved from the subscription), the draft persisted
+to `customers.genesis_draft` (new nullable column, migration
+`20260613000000`), and an in-character *"ini yang aku tangkap"* reply. It is
+gated, cooldown-limited (30s per customer), and touches nothing in pairing /
+SOUL / provisioning. The `distillSamples` dep is optional, so absent wiring
+the handler is byte-for-byte the old pairing-only behavior.
+
+**Phase 3b (next):** `onboarding.html` reads `customers.genesis_draft` on
+load and pre-fills Step 4 (expectations + persona + summary card) — so a
+customer who forwarded samples in Telegram finishes with one confirm on the
+web. Voice/photo samples ride the same path once that middleware lands.
 
 ## Honesty + security notes
 

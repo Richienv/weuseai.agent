@@ -61,6 +61,49 @@ const db = createOnboardingStore({
 
 const telegram = new TelegramBotClient({ token: PLATFORM_BOT_TOKEN })
 
+// Genesis Onboarding (2026-06-13): distill samples a paired-but-not-onboarded
+// customer forwards into their bot. Resolves the tier from the subscription,
+// then server-to-server POSTs the genesis-distill function (X-CID-bound).
+// Returns null on any failure so the webhook degrades cleanly.
+async function distillSamples(
+  input: { customerId: string; samples: string },
+): Promise<
+  | {
+      expectations_paragraph: string
+      recommended_persona: string | null
+      persona_name: string | null
+      voice_note: string | null
+      summary_bahasa: string
+    }
+  | null
+> {
+  try {
+    const sub = await db.findActiveOrPendingSubscriptionByCustomer(input.customerId)
+    const tier = sub?.tier ?? 'starter'
+    const r = await fetch(`${SUPABASE_URL}/functions/v1/genesis-distill`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-cid': input.customerId,
+        authorization: `Bearer ${SERVICE_KEY}`,
+      },
+      body: JSON.stringify({ customer_id: input.customerId, tier, samples: input.samples }),
+    })
+    if (!r.ok) return null
+    const data = (await r.json()) as Record<string, unknown>
+    if (!data || data.ok !== true) return null
+    return {
+      expectations_paragraph: String(data.expectations_paragraph ?? ''),
+      recommended_persona: (data.recommended_persona as string | null) ?? null,
+      persona_name: (data.persona_name as string | null) ?? null,
+      voice_note: (data.voice_note as string | null) ?? null,
+      summary_bahasa: String(data.summary_bahasa ?? ''),
+    }
+  } catch {
+    return null
+  }
+}
+
 Deno.serve(async (req) => {
   // Telegram doesn't preflight; tolerate Supabase status pings via
   // the wildcard webhookCorsHeaders.
@@ -71,6 +114,7 @@ Deno.serve(async (req) => {
     db,
     telegram,
     webhookSecret: PAIR_WEBHOOK_SECRET,
+    distillSamples,
   })
   return withCors(res, webhookCorsHeaders)
 })
