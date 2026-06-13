@@ -27,6 +27,7 @@ export const FIXTURE_DISTILL_JSON = JSON.stringify({
   recommended_persona: 'social-conductor',
   expectations_paragraph:
     'Bantu aku siapkan caption listing, balas pertanyaan klien dengan rapi, dan susun simulasi KPR cepat.',
+  voice_note: 'sopan dan ringkas, suka langsung ke poin',
   summary_bahasa:
     'Ini yang aku tangkap soal kamu: kamu agen properti di area BSD. Harianmu banyak di listing, balas klien, dan simulasi KPR. Aku bisa bantu rapikan semua itu.',
 })
