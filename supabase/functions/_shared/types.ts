@@ -3,18 +3,37 @@
 
 export type Tier = 'starter' | 'pro' | 'studio'
 
-export type PlanCatalog = Record<
-  Tier,
-  { setupIdr: number; setupOldIdr: number; displayName: string }
->
+/**
+ * The 5 sellable v1.4 catalog slugs the checkout chain charges against
+ * (enterprise is contact-only, never self-serve). These are the CANONICAL
+ * keys of PLANS — create-invoice resolves any deprecated alias
+ * (starter/pro/studio) to one of these before the PLANS lookup.
+ */
+export type PlanSlug = 'bare' | 'solo' | 'voice-starter' | 'library-full' | 'done-for-you'
 
-// Server-authoritative pricing — single source of truth, matches CLAUDE.md
-// Business Model v1.1. Front-end PLANS object must mirror these numbers
-// (display only; charge amount is recomputed here per request).
+export type PlanEntry = { setupIdr: number; setupOldIdr: number; displayName: string }
+
+// Catalog keyed by the 5 sellable v1.4 slugs. The `string` index signature
+// keeps the legacy `Tier`-typed index in pricing.ts (`PLANS[tier]`) and the
+// alias-resolved handler lookups type-checking without re-introducing the
+// old slugs as catalog entries — create-invoice resolves any deprecated
+// alias to a canonical PlanSlug BEFORE indexing, so every runtime lookup
+// hits a real key.
+export type PlanCatalog = Record<PlanSlug, PlanEntry> & Record<string, PlanEntry>
+
+// Server-authoritative pricing — single source of truth, mirrors
+// supabase/functions/_shared/tier-personas.ts TIERS (Business Model v1.4,
+// 2026-06-09). Front-end PLANS object must mirror these numbers (display
+// only; charge amount is recomputed here per request). setupOldIdr is the
+// display-only strikethrough anchor — ONLY library-full carries a real
+// anchor (999_000); for the others it equals setupIdr (no fake anchor) so
+// the required `setupOldIdr: number` shape stays satisfied.
 export const PLANS: PlanCatalog = {
-  starter: { setupIdr: 399_000, setupOldIdr: 699_000, displayName: 'Starter' },
-  pro: { setupIdr: 1_290_000, setupOldIdr: 2_500_000, displayName: 'Pro' },
-  studio: { setupIdr: 5_900_000, setupOldIdr: 10_900_000, displayName: 'Studio' },
+  bare: { setupIdr: 99_000, setupOldIdr: 99_000, displayName: 'Bare Agent' },
+  solo: { setupIdr: 399_000, setupOldIdr: 399_000, displayName: 'Solo Starter' },
+  'voice-starter': { setupIdr: 599_000, setupOldIdr: 599_000, displayName: 'Voice Starter' },
+  'library-full': { setupIdr: 799_000, setupOldIdr: 999_000, displayName: 'Library Lengkap' },
+  'done-for-you': { setupIdr: 1_299_000, setupOldIdr: 1_299_000, displayName: 'Siap Pakai' },
 }
 
 export const HOSTING_MONTHLY_IDR = 99_000

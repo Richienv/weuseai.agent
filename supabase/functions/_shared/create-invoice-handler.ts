@@ -6,9 +6,46 @@ import {
   type IInvoiceStore,
   type IXenditClient,
   type PaymentMethodId,
+  type PlanSlug,
   type Tier,
 } from './types.ts'
 import { totalCharge, XENDIT_PAYMENT_METHODS, paymentFee } from './pricing.ts'
+
+/**
+ * Back-compat for old checkout links (expand-then-contract). The deprecated
+ * count-based slugs are mapped to their persona-set-consistent v1.4
+ * canonical PlanSlug — same mapping as resolveTier() in tier-personas.ts:
+ *   starter (3 personas) → voice-starter (same 3-set)
+ *   pro     (8 Pro set)   → done-for-you  (same 8 Pro set)
+ *   studio  (10 full)     → library-full  (same 10 full library)
+ * A request with plan:'pro' therefore charges done-for-you's amount.
+ */
+const LEGACY_PLAN_ALIAS: Record<string, PlanSlug> = {
+  starter: 'voice-starter',
+  pro: 'done-for-you',
+  studio: 'library-full',
+}
+
+/** Resolve an incoming plan slug (canonical OR deprecated alias) to the
+ *  canonical PlanSlug. Unknown slugs pass through unchanged so the
+ *  `plan in PLANS` validation can reject them with `invalid_plan`. */
+function resolvePlan(incoming: string): PlanSlug {
+  return (LEGACY_PLAN_ALIAS[incoming] ?? incoming) as PlanSlug
+}
+
+/**
+ * Bridge a canonical v1.4 PlanSlug to the legacy `Tier` type that the
+ * shared pricing helpers (pricing.ts) and the persisted `subscriptions.tier`
+ * column are still declared with. Stored v1.4 slugs are read back through
+ * the v1.4-aware resolveTier()/personasForTier() in tier-personas.ts, so the
+ * value is correct at runtime; this cast only reconciles the not-yet-widened
+ * legacy `Tier` declaration (widening it would ripple into TIER_CREDIT_USD_CENTS
+ * + the provisioning chain — a separate cleanup PR). The charge is still
+ * computed server-side from PLANS[plan].setupIdr — no client amount is trusted.
+ */
+function asTier(plan: PlanSlug): Tier {
+  return plan as unknown as Tier
+}
 
 export type CreateInvoiceDeps = {
   db: IInvoiceStore
@@ -92,7 +129,12 @@ export async function handleCreateInvoice(
   const consentValidation = validateConsent(body, now)
   if (consentValidation) return json({ error: consentValidation }, 400)
 
-  const { email, plan, alwaysOn, methodId } = body
+  const { email, alwaysOn, methodId } = body
+  // Canonical v1.4 slug — deprecated aliases (starter/pro/studio) resolved
+  // here so every downstream lookup (charge, subscription tier, metadata)
+  // uses the server-authoritative canonical slug. validate() already
+  // confirmed `resolvePlan(body.plan) in PLANS`.
+  const plan = resolvePlan(body.plan)
   const displayName = body.displayName?.trim() || undefined
 
   // Find or create customer
@@ -141,13 +183,13 @@ export async function handleCreateInvoice(
 
   // Compute server-authoritative amount — fee is added so customer pays
   // gateway+platform together, matching what checkout.html displays.
-  const charge = totalCharge(plan, alwaysOn, methodId)
+  const charge = totalCharge(asTier(plan), alwaysOn, methodId)
   const fee = paymentFee(charge.base, methodId)
 
   // Insert pending subscription. xendit_invoice_id filled after Xendit call.
   const subscription = await deps.db.insertSubscription({
     customer_id: customer.id,
-    tier: plan,
+    tier: asTier(plan),
     always_on_enabled: alwaysOn,
     status: 'pending',
   })
@@ -202,7 +244,9 @@ export async function handleCreateInvoice(
 function validate(body: CreateInvoiceBody): string | null {
   if (!body) return 'missing_body'
   if (typeof body.email !== 'string' || !body.email.includes('@')) return 'invalid_email'
-  if (!(body.plan in PLANS)) return 'invalid_plan'
+  // Resolve deprecated aliases (starter/pro/studio) to canonical slugs
+  // BEFORE the catalog membership check so old checkout links still work.
+  if (!(resolvePlan(body.plan) in PLANS)) return 'invalid_plan'
   if (typeof body.alwaysOn !== 'boolean') return 'invalid_alwaysOn'
   const validMethods: PaymentMethodId[] = ['qris', 'va', 'card', 'cicilan', 'ewallet', 'bnpl']
   if (!validMethods.includes(body.methodId)) return 'invalid_methodId'

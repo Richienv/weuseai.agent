@@ -224,8 +224,6 @@
     .footer-line a { color: var(--text-muted); text-decoration: none; }
     .footer-line a:hover { text-decoration: underline; }
     .footer-brand { display: flex; align-items: center; gap: 6px; }
-    .powered { font-size: 11px; color: var(--text-subtle); }
-    .powered b { color: var(--text-muted); font-weight: 600; }
 
     /* Mobile order summary collapse */
     .mobile-summary-toggle {
@@ -384,10 +382,6 @@
       background: rgba(255,255,255,0.06); color: var(--text-muted);
       font-size: 10.5px; letter-spacing: 0.02em;
     }
-    .fee-explainer {
-      font-size: 11.5px; color: var(--text-subtle);
-      margin-top: 8px; line-height: 1.45;
-    }
 
     /* Always-On toggle in checkout */
     .ao-toggle {
@@ -439,6 +433,66 @@
     .recurring-note .rn-icons { display: flex; flex-direction: column; gap: 4px; padding-top: 6px; margin-top: 6px; border-top: 1px solid rgba(0,0,0,0.05); font-size: 11.5px; }
     .recurring-note .rn-icons div { display: flex; gap: 6px; align-items: flex-start; }
     .recurring-note .rn-icons div::before { content: '·'; color: var(--text-subtle); }
+
+    /* ─── Payment-method modal (popup picker) ─── */
+    .pay-modal-overlay {
+      position: fixed; inset: 0; z-index: 100;
+      background: rgba(0,0,0,0.62);
+      backdrop-filter: blur(2px);
+      -webkit-backdrop-filter: blur(2px);
+      display: flex; align-items: flex-end; justify-content: center;
+      padding: 0;
+    }
+    @media (min-width: 640px) {
+      .pay-modal-overlay { align-items: center; padding: 24px; }
+    }
+    .pay-modal-overlay[hidden] { display: none; }
+    .pay-modal-card {
+      width: 100%;
+      max-width: 460px;
+      max-height: 92vh;
+      overflow-y: auto;
+      background: var(--bg-summary);
+      border: 1px solid var(--border-strong);
+      border-radius: 16px 16px 0 0;
+      box-shadow: 0 -12px 48px -12px rgba(0,0,0,0.7);
+      padding: 22px 20px 24px;
+      display: flex; flex-direction: column;
+    }
+    @media (min-width: 640px) {
+      .pay-modal-card { border-radius: 16px; box-shadow: 0 24px 64px -16px rgba(0,0,0,0.7); }
+    }
+    .pay-modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 4px; }
+    .pay-modal-title { font-size: 18px; font-weight: 600; color: var(--text); letter-spacing: -0.01em; }
+    .pay-modal-sub { font-size: 12.5px; color: var(--text-muted); margin: 2px 0 16px; line-height: 1.45; }
+    .pay-modal-close {
+      flex-shrink: 0;
+      /* >=44x44 touch target (WCAG 2.5.5) for the mobile-primary audience. */
+      width: 44px; height: 44px; min-width: 44px; min-height: 44px; border-radius: 8px;
+      background: var(--field-bg); border: 1px solid var(--field-border);
+      color: var(--text-muted); cursor: pointer;
+      display: grid; place-items: center;
+      transition: border-color 0.15s ease, color 0.15s ease;
+    }
+    .pay-modal-close:hover { border-color: var(--border-strong); color: var(--text); }
+    .pay-modal-confirm {
+      width: 100%;
+      margin-top: 18px;
+      padding: 13px 16px;
+      border-radius: 8px;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 600;
+      font-size: 15px;
+      border: none;
+      cursor: pointer;
+      transition: background 0.15s ease, transform 0.05s ease;
+      letter-spacing: -0.005em;
+      box-shadow: 0 8px 24px -8px rgba(229,50,45,0.65), 0 0 0 1px rgba(229,50,45,0.5);
+    }
+    .pay-modal-confirm:hover { background: var(--accent-hover); }
+    .pay-modal-confirm:active { transform: translateY(1px); }
+    .pay-modal-confirm:disabled { opacity: 0.6; cursor: not-allowed; }
   </style>
 </head>
 <body>
@@ -465,8 +519,8 @@
             <div class="li-sub" id="planSub">Setup sekali bayar — engineering work yang udah kami lakukan untuk kamu.</div>
           </div>
           <div class="li-price">
-            <span class="li-old" id="planOld">Rp 2.500.000</span>
-            <span id="planPrice">Rp 1.290.000</span>
+            <span class="li-old" id="planOld" style="display:none;">Rp 999.000</span>
+            <span id="planPrice">Rp 599.000</span>
           </div>
         </div>
 
@@ -503,29 +557,17 @@
         </label>
 
         <div class="totals">
-          <div class="totals-row">
+          <div class="totals-row" id="subtotalRow" style="display:none;">
             <span class="lbl">Setup (full price)</span>
-            <span class="val" id="subtotal">Rp 3.500.000</span>
+            <span class="val" id="subtotal">Rp 999.000</span>
           </div>
-          <div class="totals-row">
-            <span class="lbl" id="discountLbl">Launch discount (66%)</span>
-            <span class="val discount" id="discount">−Rp 2.300.000</span>
-          </div>
-          <div class="totals-row">
-            <span class="lbl">Hosting · bulan pertama</span>
-            <span class="val">+Rp 99.000</span>
-          </div>
-          <div class="totals-row" id="aoTotalRow" style="display:none;">
-            <span class="lbl">Always-On · bulan pertama</span>
-            <span class="val">+Rp 49.000</span>
-          </div>
-          <div class="totals-row">
-            <span class="lbl">Payment method fee <span class="pm-tag" id="feeTag">QRIS</span></span>
-            <span class="val fee" id="paymentFee">+Rp 9.100</span>
+          <div class="totals-row" id="discountRow" style="display:none;">
+            <span class="lbl" id="discountLbl">Launch discount</span>
+            <span class="val discount" id="discount">−Rp 200.000</span>
           </div>
           <div class="totals-grand">
             <span>Total hari ini</span>
-            <span id="grandTotal">Rp 1.308.100</span>
+            <span id="grandTotal">Rp 707.190</span>
           </div>
 
           <div class="recurring-note">
@@ -538,8 +580,6 @@
               <div>Stop kapan saja dari dashboard, no commitment</div>
             </div>
           </div>
-
-          <p class="fee-explainer">Payment processor fees ditanggung pelanggan, transparent di atas. Pilih method paling murah dari pilihan di kanan — VA biasanya yang termurah.</p>
         </div>
 
         <div class="promo" id="promoToggle">
@@ -552,8 +592,8 @@
     <!-- Payment form (right on desktop) -->
     <main class="form-pane">
       <div class="form-inner">
-        <h1 class="serif" style="font-size: 28px; line-height: 1.1; letter-spacing: -0.02em; margin: 0 0 6px;">Pilih cara bayar</h1>
-        <p style="font-size: 13px; color: var(--text-muted); margin: 0 0 22px;">Setup sekali bayar. Hosting Rp 99k/bulan, stop kapan saja. Biaya processor transparent di tiap method.</p>
+        <h1 class="serif" style="font-size: 28px; line-height: 1.1; letter-spacing: -0.02em; margin: 0 0 6px;">Detail kamu</h1>
+        <p style="font-size: 13px; color: var(--text-muted); margin: 0 0 22px;">Setup sekali bayar. Hosting Rp 99k/bulan, stop kapan saja. Cara bayar kamu pilih di langkah terakhir.</p>
 
         <!-- B2 (audit §P1-CF-2, 2026-05-13): Xendit failure-return banner.
              Shown only when the URL carries ?error=failed — the param
@@ -581,13 +621,8 @@
         <!-- end xendit-failure-banner -->
 
         <form id="payForm" autocomplete="on" novalidate>
-          <div class="field-group">
-            <div class="method-list" id="methodList" role="radiogroup" aria-label="Cara bayar">
-              <!-- Populated by JS — grouped accordion with category subheaders.
-                   Each row collapsed by default; selected row expands inline
-                   with sub-banks list, info text, and any badges. -->
-            </div>
-          </div>
+          <!-- Payment-method picker moved into #payModal (opened by the
+               Bayar button). The page stays calm — no inline fee wall. -->
 
           <div class="form-section-header" style="font-weight: 600; font-size: 15px; color: var(--text-primary, #141413); margin-top: 8px;">
             Email kamu
@@ -656,7 +691,7 @@
             </label>
           </div>
 
-          <button class="pay-btn" type="submit" id="payBtn">Bayar Sekarang · <span id="payBtnAmount">Rp 1.398.723</span></button>
+          <button class="pay-btn" type="button" id="payBtn">Bayar Sekarang · <span id="payBtnAmount">Rp 707.190</span></button>
 
           <p style="font-size: 12px; color: var(--text-muted); margin: 10px 0 0; text-align: center; line-height: 1.5;">
             Bayar via QRIS, GoPay, OVO, DANA, atau transfer di halaman Xendit.
@@ -669,7 +704,6 @@
           </div>
 
           <div class="footer-line">
-            <div class="powered">Payments by <b>weuseai.agent</b></div>
             <div style="display:flex; gap:14px;">
               <a href="/terms">Syarat</a>
               <a href="/privacy">Privasi</a>
@@ -677,41 +711,88 @@
             </div>
           </div>
           <p style="margin: 14px 0 0; font-size: 11px; color: var(--text-muted, #6b7c93); text-align: center; line-height: 1.5;">
-            Dioperasikan oleh Richie Kidnovell, berbasis di Jakarta.
-            Kontak: <a href="mailto:support@weuseai.agent" style="color: var(--text-muted, #6b7c93); text-decoration: underline;">support@weuseai.agent</a>.
+            Refund sesuai
+            <a href="/refund-policy" style="color: var(--text-muted, #6b7c93); text-decoration: underline;">Kebijakan Pengembalian Dana</a>.
           </p>
         </form>
       </div>
     </main>
   </div>
 
+  <!-- Payment-method picker popup. Hidden by default; opened by #payBtn.
+       Lists exactly QRIS · E-wallet · VA · Card (default QRIS). Selecting a
+       method updates #payModalConfirm to that method's real per-method
+       total; confirm runs the existing invoice-create + Xendit submit. -->
+  <div class="pay-modal-overlay" id="payModal" hidden>
+    <div class="pay-modal-card" role="dialog" aria-modal="true" aria-labelledby="payModalTitle" tabindex="-1">
+      <div class="pay-modal-head">
+        <div id="payModalTitle" class="pay-modal-title">Pilih cara bayar</div>
+        <button type="button" class="pay-modal-close" id="payModalClose" aria-label="Tutup">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="pay-modal-sub">Biaya processor sudah termasuk di total. Pilih yang paling pas buat kamu.</div>
+      <div class="method-list" id="methodList" role="radiogroup" aria-label="Cara bayar">
+        <!-- Populated by JS — grouped accordion with category subheaders.
+             Each row collapsed by default; selected row expands inline
+             with sub-banks list, info text, and any badges. -->
+      </div>
+      <button type="button" class="pay-modal-confirm" id="payModalConfirm">Bayar Rp 707.190 · QRIS</button>
+    </div>
+  </div>
+
   <script>
-    // Plan catalog — kept in sync with the pricing tiers on the landing page.
+    // Plan catalog — v1.4 catalog, kept in sync with the 5 sellable tier
+    // slugs in supabase/functions/_shared/tier-personas.ts (TIERS). Prices
+    // are the charged setup_fee_idr; `anchor` is the display-only
+    // strikethrough (setup_fee_anchor_idr) — ONLY library-full carries one,
+    // and it is NEVER charged. No invented anchors elsewhere.
     const PLANS = {
-      starter: {
-        name: 'Starter',
+      'bare': {
+        name: 'Bare Agent',
+        thumb: 'B',
+        title: 'Bare Agent · setup',
+        sub: 'Hermes dasar — chat umum lewat Telegram, tanpa persona.',
+        price: 99000,
+      },
+      'solo': {
+        name: 'Solo Starter',
         thumb: 'S',
-        title: 'Starter · setup',
-        sub: 'Setup dasar untuk satu agent personal kamu.',
-        old: 699000,
+        title: 'Solo Starter · setup',
+        sub: '3 persona inti — The Pro, Doc Expert, Slide Master. Teks saja.',
         price: 399000,
       },
-      pro: {
-        name: 'Pro',
-        thumb: 'P',
-        title: 'Pro · setup',
-        sub: '1 agent yang di-fine-tune untuk suara dan workflow kamu.',
-        old: 2500000,
-        price: 1290000,
+      'voice-starter': {
+        name: 'Voice Starter',
+        thumb: 'V',
+        title: 'Voice Starter · setup',
+        sub: '3 persona + input suara. Kirim voice note, dia paham.',
+        price: 599000,
       },
-      studio: {
-        name: 'Studio',
-        thumb: 'X',
-        title: 'Studio · setup',
-        sub: '1 fine-tuned agent + 10 platform tersambung untuk monitor seluruh hidupmu.',
-        old: 10900000,
-        price: 5900000,
+      'library-full': {
+        name: 'Library Lengkap',
+        thumb: 'L',
+        title: 'Library Lengkap · setup',
+        sub: 'Semua 10 persona + suara. Library penuh.',
+        price: 799000,
+        anchor: 999000,
       },
+      'done-for-you': {
+        name: 'Siap Pakai',
+        thumb: 'D',
+        title: 'Siap Pakai · setup',
+        sub: '8 persona Pro set + suara + web app. Kami siapkan semua.',
+        price: 1299000,
+      },
+    };
+
+    // Legacy slug aliases (expand-then-contract). Old links keep working:
+    // resolve through this before looking up PLANS. Mapping is persona-set
+    // consistent with tier-personas.ts LEGACY_TIER_ALIAS.
+    const LEGACY_PLAN_ALIAS = {
+      starter: 'voice-starter',
+      pro: 'done-for-you',
+      studio: 'library-full',
     };
 
     // Payment methods — fees match published Xendit/Midtrans rates as of 2026-04.
@@ -760,29 +841,11 @@
         pct: 2.9, flat: 2000, requiresCard: true,
         details: 'Statement kartu kamu akan muncul sebagai <strong>WEUSEAI*AGENT</strong>. Kami nggak simpan detail kartu — langsung ke payment processor lewat TLS.',
       },
-      // — Cicilan & nanti bayar —
-      {
-        id: 'cicilan', group: 'cicilan',
-        name: 'Cicilan 0% (3 / 6 / 12 bulan)', label: 'Cicilan 0%',
-        subBanks: 'BCA · Mandiri · BNI · BRI · CIMB · Citi',
-        icon: '<svg viewBox="0 0 24 24"><line x1="3" y1="3" x2="21" y2="21"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>',
-        pct: 3.5, flat: 2000, requiresCard: true,
-        details: 'Bayar pakai kartu kredit dengan <strong>bunga 0%</strong> dalam 3, 6, atau 12 bulan. Tenor dipilih di halaman konfirmasi kartu kamu. Berlaku di sebagian besar kartu kredit Indonesia di atas Rp 500.000.',
-      },
-      {
-        id: 'bnpl', group: 'cicilan',
-        name: 'BNPL (Kredivo · Akulaku · Indodana)', label: 'Buy Now Pay Later',
-        subBanks: 'Kredivo · Akulaku · Indodana',
-        icon: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>',
-        pct: 3.0, flat: 0, requiresCard: false,
-        details: 'Nggak perlu kartu. Kamu akan dialihkan ke provider BNPL untuk eligibility check 60 detik. Tunduk persetujuan provider.',
-      },
     ];
 
     const GROUPS = [
       { id: 'instan',   label: 'Bayar instan',          tint: '#E5322D' },
       { id: 'transfer', label: 'Transfer & kartu',      tint: '#3a3530' },
-      { id: 'cicilan',  label: 'Cicilan & nanti bayar', tint: '#7A1F1B' },
     ];
 
     const HOSTING_MONTHLY = 99000;
@@ -791,18 +854,29 @@
     const fmt = (n) => 'Rp ' + Math.round(n).toLocaleString('id-ID');
     const calcFee = (amount, m) => Math.round(amount * m.pct / 100) + m.flat;
 
+    // Default to voice-starter (cheapest voiced tier) when ?plan= is absent
+    // or unknown — never hard-fail on an unrecognized slug.
+    const DEFAULT_PLAN = 'voice-starter';
+
+    // Resolve a raw ?plan= value through the legacy alias map, then check it
+    // exists in PLANS. Unknown / missing → DEFAULT_PLAN (no hard error).
+    function resolvePlanKey(raw) {
+      const p = (raw || '').toLowerCase();
+      const canonical = LEGACY_PLAN_ALIAS[p] || p;
+      return PLANS[canonical] ? canonical : DEFAULT_PLAN;
+    }
+
     let state = {
-      planKey: 'pro',
+      planKey: DEFAULT_PLAN,
       methodId: 'qris',
       alwaysOn: false,
     };
 
     function readURL() {
       const u = new URL(window.location.href);
-      const p = (u.searchParams.get('plan') || 'pro').toLowerCase();
       const ao = u.searchParams.get('alwaysOn');
       return {
-        planKey: PLANS[p] ? p : 'pro',
+        planKey: resolvePlanKey(u.searchParams.get('plan')),
         alwaysOn: ao === '1' || ao === 'true',
       };
     }
@@ -822,7 +896,7 @@
       const u = new URL(window.location.href);
       const errParam = u.searchParams.get('error');
       if (errParam !== 'failed') return;
-      const plan = (u.searchParams.get('plan') || 'pro').toLowerCase();
+      const plan = resolvePlanKey(u.searchParams.get('plan'));
       console.log('[checkout] xendit_failed_return', { plan });
       const banner = document.getElementById('xendit-failure-banner');
       if (banner) banner.hidden = false;
@@ -881,6 +955,7 @@
                     role="radio"
                     aria-checked="${isSelected}"
                     aria-expanded="${isSelected}"
+                    tabindex="${isSelected ? 0 : -1}"
                     aria-controls="pm-${m.id}-expanded">
               <span class="method-icon" style="background: ${g.tint}" aria-hidden="true">
                 ${m.icon}
@@ -902,48 +977,90 @@
           wrap.querySelector('.method-row-trigger').addEventListener('click', () => {
             state.methodId = m.id;
             renderAll();
+            // renderMethods() rebuilds innerHTML, detaching the row the user
+            // just activated (focus would fall to <body>). Re-focus the now-
+            // selected row's trigger so keyboard / screen-reader users stay
+            // inside the dialog. Only do this while the modal is open so the
+            // initial page-load renderAll() never steals focus.
+            const pm = document.getElementById('payModal');
+            if (pm && !pm.hidden) {
+              const sel = document.getElementById('methodList')
+                .querySelector('.method-row.is-selected .method-row-trigger');
+              if (sel) sel.focus();
+            }
           });
           list.appendChild(wrap);
         });
       });
     }
 
+    // The page shows ONE clean "Total hari ini" using the DEFAULT (QRIS)
+    // method fee folded in. The modal reflects whichever method is chosen.
+    const DEFAULT_METHOD_ID = 'qris';
+    const methodById = (id) => METHODS.find((x) => x.id === id) || METHODS[0];
+
+    // Total with a given method's fee folded in (setup + hosting + always-on
+    // + that method's fee).
+    function totalWithMethod(plan, alwaysOn, methodId) {
+      const baseAmount = chargeBeforeFee(plan, alwaysOn);
+      return baseAmount + calcFee(baseAmount, methodById(methodId));
+    }
+
     function renderTotals() {
       const plan = PLANS[state.planKey];
-      const m = METHODS.find((x) => x.id === state.methodId) || METHODS[0];
-      const baseAmount = chargeBeforeFee(plan, state.alwaysOn);
-      const fee = calcFee(baseAmount, m);
-      const grand = baseAmount + fee;
-      const discountAmt = plan.old - plan.price;
-      const discountPct = Math.round((discountAmt / plan.old) * 100);
       const recurring = HOSTING_MONTHLY + (state.alwaysOn ? ALWAYS_ON_MONTHLY : 0);
 
-      document.getElementById('payAmount').textContent = fmt(grand);
+      // Page total = QRIS-default total (single, fee folded — no itemized
+      // payment-method fee line).
+      const pageTotal = totalWithMethod(plan, state.alwaysOn, DEFAULT_METHOD_ID);
+
+      document.getElementById('payAmount').textContent = fmt(pageTotal);
       document.getElementById('paySub').textContent = `Setup + bulan pertama hosting · ${plan.name}`;
       document.getElementById('planThumb').textContent = plan.thumb;
       document.getElementById('planTitle').textContent = plan.title;
       document.getElementById('planSub').textContent = plan.sub;
-      document.getElementById('planOld').textContent = fmt(plan.old);
       document.getElementById('planPrice').textContent = fmt(plan.price);
-      document.getElementById('subtotal').textContent = fmt(plan.old);
-      document.getElementById('discount').textContent = '−' + fmt(discountAmt);
-      document.getElementById('discountLbl').textContent = `Launch discount (${discountPct}%)`;
-      document.getElementById('paymentFee').textContent = '+' + fmt(fee);
-      document.getElementById('feeTag').textContent = m.name;
-      document.getElementById('grandTotal').textContent = fmt(grand);
-      document.getElementById('payBtnAmount').textContent = fmt(grand);
+      document.getElementById('grandTotal').textContent = fmt(pageTotal);
+      document.getElementById('payBtnAmount').textContent = fmt(pageTotal);
       document.getElementById('recurringTotal').textContent = fmt(recurring) + '/bulan';
 
-      // Always-On line items: show or hide.
-      const aoVisible = state.alwaysOn ? '' : 'none';
-      document.getElementById('aoLineItem').style.display = aoVisible === 'none' ? 'none' : 'flex';
-      document.getElementById('aoTotalRow').style.display = aoVisible === 'none' ? 'none' : 'flex';
+      // Strikethrough / anchor: ONLY when this plan carries a real anchor
+      // (library-full). For every other plan, hide the old-price + the
+      // "Setup (full price)" / discount rows entirely (no fake anchors).
+      const planOldEl = document.getElementById('planOld');
+      const subtotalRow = document.getElementById('subtotalRow');
+      const discountRow = document.getElementById('discountRow');
+      if (plan.anchor && plan.anchor > plan.price) {
+        const discountAmt = plan.anchor - plan.price;
+        const discountPct = Math.round((discountAmt / plan.anchor) * 100);
+        planOldEl.textContent = fmt(plan.anchor);
+        planOldEl.style.display = '';
+        document.getElementById('subtotal').textContent = fmt(plan.anchor);
+        document.getElementById('discount').textContent = '−' + fmt(discountAmt);
+        document.getElementById('discountLbl').textContent = `Launch discount (${discountPct}%)`;
+        subtotalRow.style.display = 'flex';
+        discountRow.style.display = 'flex';
+      } else {
+        planOldEl.style.display = 'none';
+        subtotalRow.style.display = 'none';
+        discountRow.style.display = 'none';
+      }
+
+      // Always-On line item: show or hide (totals row was folded into the
+      // single grand total).
+      document.getElementById('aoLineItem').style.display = state.alwaysOn ? 'flex' : 'none';
 
       // Sync the toggle UI to URL state.
       const tog = document.getElementById('aoToggle');
       const cb = document.getElementById('aoCheckbox');
       cb.checked = state.alwaysOn;
       tog.classList.toggle('is-on', state.alwaysOn);
+
+      // Modal confirm reflects the CHOSEN method's real per-method total.
+      const chosen = methodById(state.methodId);
+      const modalTotal = totalWithMethod(plan, state.alwaysOn, state.methodId);
+      const confirmBtn = document.getElementById('payModalConfirm');
+      if (confirmBtn) confirmBtn.textContent = `Bayar ${fmt(modalTotal)} · ${chosen.name}`;
 
       document.title = `Checkout · ${plan.name} — weuseai.agent`;
     }
@@ -1019,6 +1136,178 @@
       const _emailErrInit = document.getElementById('emailError');
       _emailInpInit.addEventListener('input', () => clearFieldError(_emailInpInit, _emailErrInit));
 
+      // ─── Payment-method modal (popup picker) ───
+      //
+      // The "Bayar" button no longer submits directly. It first validates
+      // the on-page fields (email + ToS) — those live behind the modal, so
+      // we surface any error before opening — then opens #payModal. The
+      // modal's confirm button calls payForm.requestSubmit(), which runs
+      // the PRESERVED submit handler below verbatim (invoice-create +
+      // Xendit redirect + server-error handling). Selecting a method
+      // re-renders, updating the confirm button to that method's total.
+      const payModal = document.getElementById('payModal');
+      const payModalCard = payModal.querySelector('.pay-modal-card');
+      const payModalClose = document.getElementById('payModalClose');
+      const payModalConfirm = document.getElementById('payModalConfirm');
+      const payBtn = document.getElementById('payBtn');
+      const payForm = document.getElementById('payForm');
+      let lastFocusBeforeModal = null;
+      // Background scroll-lock offset (mobile fix, 2026-06-13). Saved on open
+      // so we can restore the exact scroll position on close.
+      let savedScrollY = 0;
+
+      function openPayModal() {
+        lastFocusBeforeModal = document.activeElement;
+        payModal.hidden = false;
+        // Lock background scroll (mobile primary audience). position:fixed +
+        // saved scrollY is the reliable technique on iOS Safari, which ignores
+        // body{overflow:hidden} for touch momentum.
+        savedScrollY = window.scrollY || window.pageYOffset || 0;
+        document.body.style.position = 'fixed';
+        document.body.style.top = `-${savedScrollY}px`;
+        document.body.style.left = '0';
+        document.body.style.right = '0';
+        document.body.style.width = '100%';
+        // Focus the selected method row on open (roving tabindex keeps it the
+        // only radio in the Tab order) so keyboard + screen-reader users land
+        // inside the dialog.
+        const firstRow = payModal.querySelector('.method-row.is-selected .method-row-trigger')
+          || payModal.querySelector('.method-row-trigger');
+        if (firstRow) firstRow.focus();
+        else payModalCard.focus();
+      }
+      function closePayModal() {
+        if (payModal.hidden) return;
+        payModal.hidden = true;
+        // Unlock background scroll + restore the saved offset BEFORE refocusing
+        // so any subsequent scrollIntoView lands correctly.
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.left = '';
+        document.body.style.right = '';
+        document.body.style.width = '';
+        window.scrollTo(0, savedScrollY);
+        if (lastFocusBeforeModal && typeof lastFocusBeforeModal.focus === 'function') {
+          lastFocusBeforeModal.focus();
+        }
+      }
+
+      // Validate the on-page fields (email + ToS) before opening the modal.
+      // Mirrors the gate inside the submit handler so the customer fixes
+      // hidden fields up front. Returns true when OK to open.
+      function validateBeforePay() {
+        const emailInp = document.getElementById('email');
+        const emailErr = document.getElementById('emailError');
+        clearFieldError(emailInp, emailErr);
+        const email = emailInp.value.trim();
+        let firstInvalid = null;
+        if (!email) {
+          setFieldError(emailInp, emailErr, 'Email wajib diisi.');
+          firstInvalid = firstInvalid || emailInp;
+        } else if (!EMAIL_RE.test(email)) {
+          setFieldError(emailInp, emailErr, 'Format email belum benar (mis. kamu@email.com).');
+          firstInvalid = firstInvalid || emailInp;
+        }
+        const tosInp = document.getElementById('acceptTos');
+        const tosErr = document.getElementById('tosError');
+        if (tosErr) { tosErr.style.display = 'none'; tosErr.textContent = ''; }
+        if (!tosInp.checked) {
+          if (tosErr) {
+            tosErr.textContent = 'Wajib menyetujui Syarat dan Ketentuan untuk lanjut.';
+            tosErr.style.display = 'block';
+          }
+          firstInvalid = firstInvalid || tosInp;
+        }
+        if (firstInvalid) {
+          firstInvalid.focus();
+          firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          return false;
+        }
+        return true;
+      }
+
+      payBtn.addEventListener('click', () => {
+        if (!validateBeforePay()) return;
+        openPayModal();
+      });
+      payModalClose.addEventListener('click', closePayModal);
+      // Click on the overlay (outside the card) closes.
+      payModal.addEventListener('click', (e) => {
+        if (e.target === payModal) closePayModal();
+      });
+      // Esc closes + Tab focus trap (a11y fix, 2026-06-13). aria-modal alone
+      // does NOT stop the browser Tab order, so without this Tab/Shift+Tab
+      // would escape the dialog into the hidden background controls. We cycle
+      // focus within the card: last -> first on Tab, first -> last on
+      // Shift+Tab. The focusable set changes as method rows expand/collapse,
+      // so it's recomputed live on every Tab (never cached).
+      const MODAL_FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+      document.addEventListener('keydown', (e) => {
+        if (payModal.hidden) return;
+        if (e.key === 'Escape') { closePayModal(); return; }
+        if (e.key !== 'Tab') return;
+        const nodes = Array.from(payModalCard.querySelectorAll(MODAL_FOCUSABLE))
+          .filter((el) => el.offsetParent !== null || el === document.activeElement);
+        if (!nodes.length) { e.preventDefault(); payModalCard.focus(); return; }
+        const first = nodes[0];
+        const last = nodes[nodes.length - 1];
+        if (!payModalCard.contains(document.activeElement)) {
+          e.preventDefault();
+          first.focus();
+        } else if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      });
+      // Radiogroup keyboard semantics (APG, a11y fix 2026-06-13). The method
+      // rows declare role=radiogroup / role=radio but had only a click
+      // handler. Delegate keydown on the STABLE #methodList container (the
+      // rows are rebuilt via innerHTML on each selection, so a per-row
+      // listener would be lost): ArrowDown/Right -> next, ArrowUp/Left ->
+      // previous (wrap around), Space/Enter -> select focused. Selection
+      // follows focus per the radiogroup pattern; roving tabindex (set in
+      // renderMethods) keeps Tab landing only on the checked radio. After the
+      // re-render we re-focus the now-selected trigger so focus stays in-modal.
+      const methodListEl = document.getElementById('methodList');
+      methodListEl.addEventListener('keydown', (e) => {
+        const triggers = Array.from(methodListEl.querySelectorAll('.method-row-trigger'));
+        if (!triggers.length) return;
+        const current = triggers.indexOf(document.activeElement);
+        if (current === -1) return;
+        let next = current;
+        if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+          next = (current + 1) % triggers.length;
+        } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+          next = (current - 1 + triggers.length) % triggers.length;
+        } else if (e.key === ' ' || e.key === 'Enter') {
+          e.preventDefault();
+          const id = triggers[current].closest('.method-row').dataset.methodId;
+          if (state.methodId !== id) {
+            state.methodId = id;
+            renderAll();
+          }
+          const again = methodListEl.querySelector('.method-row.is-selected .method-row-trigger');
+          if (again) again.focus();
+          return;
+        } else {
+          return;
+        }
+        e.preventDefault();
+        const id = triggers[next].closest('.method-row').dataset.methodId;
+        state.methodId = id;
+        renderAll();
+        const sel = methodListEl.querySelector('.method-row.is-selected .method-row-trigger');
+        if (sel) sel.focus();
+      });
+      // Confirm = the old submit. requestSubmit() triggers the preserved
+      // payForm 'submit' handler (validation + create-invoice + Xendit).
+      payModalConfirm.addEventListener('click', () => {
+        payForm.requestSubmit();
+      });
+
       // Batch A2 (audit §P1-CF-1, 2026-05-13): Bahasa error mapping on
       // checkout submit failures. Pre-fix: raw server codes like
       // "invalid_methodId" echoed verbatim into the UI ("Gagal:
@@ -1037,7 +1326,7 @@
       const CHECKOUT_ERROR_MAP = {
         invalid_email:           'Email belum benar. Cek lagi formatnya (mis. kamu@email.com).',
         invalid_methodId:        'Cara bayar yang dipilih sedang tidak tersedia. Pilih cara bayar lain dari daftar.',
-        invalid_plan:            'Paket tidak dikenali. Refresh halaman dan coba lagi — kalau berlanjut, hubungi tim.',
+        invalid_plan:            'Paket belum kepilih. Balik ke halaman harga dan pilih paket ya.',
         consent_persist_failed:  'Persetujuan tidak tersimpan. Centang ulang Syarat dan Ketentuan, lalu coba lagi.',
         tos_required:            'Centang dulu Syarat dan Ketentuan untuk lanjut ke pembayaran.',
         tos_stale:               'Sesi kamu sudah kadaluarsa. Centang ulang persetujuan untuk lanjut.',
@@ -1058,9 +1347,25 @@
 
       document.getElementById('payForm').addEventListener('submit', async (e) => {
         e.preventDefault();
+        // Implicit-submission guard (payment-integrity fix, 2026-06-13):
+        // Enter in the lone #email text field fires this 'submit' event even
+        // though there is no type=submit button (HTML single-text-field
+        // implicit submission). The ONLY legitimate trigger of the
+        // create-invoice path is payModalConfirm -> payForm.requestSubmit()
+        // while the modal is open. If the modal is NOT open, this submit came
+        // from an Enter keystroke: validate the on-page fields (email + ToS)
+        // and open the method picker instead of silently POSTing default QRIS.
+        if (payModal.hidden) {
+          if (validateBeforePay()) openPayModal();
+          return;
+        }
         const btn = document.getElementById('payBtn');
         const errEl = document.getElementById('payError');
         const origLabel = btn.innerHTML;
+        // Modal-confirm loading feedback (the user sees the modal, not the
+        // page button, while the invoice is being created).
+        const confirmBtn = document.getElementById('payModalConfirm');
+        const confirmOrigLabel = confirmBtn ? confirmBtn.textContent : '';
 
         // Field-level pre-validation. Email is the only required field
         // at checkout now (Track 1 cascade 2026-05-10) — Xendit needs
@@ -1095,6 +1400,9 @@
         const acceptMarketing = !!(marketingInp && marketingInp.checked);
 
         if (firstInvalid) {
+          // Close the modal so the customer can see + fix the on-page field
+          // (email / ToS) that's behind it.
+          if (payModal && !payModal.hidden) closePayModal();
           firstInvalid.focus();
           firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
           return;
@@ -1102,6 +1410,7 @@
 
         btn.disabled = true;
         btn.textContent = 'Mempersiapkan pembayaran...';
+        if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.textContent = 'Mempersiapkan pembayaran...'; }
         errEl.style.display = 'none';
         errEl.textContent = '';
 
@@ -1217,6 +1526,10 @@
           errEl.style.display = 'block';
           btn.disabled = false;
           btn.innerHTML = origLabel;
+          // Re-enable the modal confirm and close the modal so the
+          // customer sees the error banner on the page below.
+          if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = confirmOrigLabel; }
+          if (payModal && !payModal.hidden) closePayModal();
           renderTotals();
         }
       });

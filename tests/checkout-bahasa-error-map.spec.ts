@@ -51,12 +51,15 @@ test('A2: invalid_methodId maps to Bahasa "pilih cara bayar lain" copy', () => {
   )
 })
 
-test('A2: invalid_plan maps to Bahasa "Paket tidak dikenali" copy with refresh hint', () => {
+test('A2: invalid_plan maps to calm Bahasa "Paket belum kepilih" copy', () => {
+  // 2026-06-09 checkout redesign: softened from the alarming "Paket tidak
+  // dikenali. Refresh halaman..." to a calm "Paket belum kepilih. Balik ke
+  // halaman harga dan pilih paket ya." (no alarm, no "hubungi tim").
   const src = fs.readFileSync(CHECKOUT, 'utf8')
   assert.match(
     src,
-    /invalid_plan[\s\S]{0,300}Paket tidak dikenali/i,
-    'invalid_plan branch must surface "Paket tidak dikenali" copy',
+    /invalid_plan[\s\S]{0,300}Paket belum kepilih/i,
+    'invalid_plan branch must surface the calm "Paket belum kepilih" copy',
   )
 })
 
