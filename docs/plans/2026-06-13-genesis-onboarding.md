@@ -95,6 +95,12 @@ body: { customer_id: string, tier: string, samples: string }
 5. Sanitizes `expectations_paragraph` via `sanitizeExpectations`. On
    rejection, composes a safe paragraph from the extracted profile fields
    and re-sanitizes; final fallback is a minimal safe default.
+5b. **Writing voice (2026-06-13).** Captures a short `voice_note` descriptor
+   of the customer's tone (observed in the samples), itself run through the
+   sanitizer, and folds it into the expectations paragraph *only when the
+   whole thing fits ≤600* — so the SOUL's `{user_expectations_verbatim}`
+   makes the agent mirror how the customer actually writes. The customer
+   sees + can edit it in the pre-filled textarea (transparent, not magic).
 6. Returns the draft:
 
 ```jsonc

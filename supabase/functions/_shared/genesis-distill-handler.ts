@@ -42,8 +42,13 @@ export type GenesisDistillResult = {
   /** Curated persona slug, or null for the persona-free `bare` tier. */
   recommended_persona: string | null
   persona_name: string | null
-  /** Sanitized, ≤600 chars — drops straight into complete-onboarding. */
+  /** Sanitized, ≤600 chars — drops straight into complete-onboarding.
+   *  When a writing-voice descriptor was observed, it is folded in here so
+   *  the SOUL's {user_expectations_verbatim} makes the agent mirror the
+   *  customer's tone. */
   expectations_paragraph: string
+  /** Short Bahasa descriptor of the customer's writing tone (or null). */
+  voice_note: string | null
   /** For the top-tier persona-genesis hand-off. */
   profile: GenesisProfile
   summary_bahasa: string
@@ -73,6 +78,7 @@ type DistillRaw = {
   pain_points?: unknown
   recommended_persona?: unknown
   expectations_paragraph?: unknown
+  voice_note?: unknown
   summary_bahasa?: unknown
 }
 
@@ -86,11 +92,21 @@ function composeExpectations(p: GenesisProfile): string {
   return `${p.role}. Fokus harian: ${p.daily_tasks}. Output utama: ${p.outputs}.`.slice(0, 590)
 }
 
-/** Sanitize the LLM paragraph; on rejection recompose from the profile;
- *  final fallback is a minimal safe default. Never throws. */
-function safeExpectations(rawParagraph: string, profile: GenesisProfile): string {
-  const first = sanitizeExpectations(rawParagraph.slice(0, 600))
+/** Sanitize the expectations paragraph (with the writing-voice note folded
+ *  in when it fits), then degrade safely: paragraph-only → recompose from
+ *  the profile → minimal default. Never throws. The voice note reaches the
+ *  SOUL via {user_expectations_verbatim}, so the agent mirrors the tone the
+ *  customer actually writes in — and they see + can edit it in the textarea. */
+function safeExpectations(rawParagraph: string, voiceNote: string, profile: GenesisProfile): string {
+  const base = rawParagraph.trim()
+  const combined = `${base} Gaya tulisan kamu: ${voiceNote}.`
+  // Fold the voice only when the WHOLE thing fits — never slice it mid-word.
+  const withVoice = voiceNote && base.length > 0 && combined.length <= 600 ? combined : base.slice(0, 600)
+  const first = sanitizeExpectations(withVoice)
   if (first.ok) return first.clean
+  // The combined text tripped the gate — retry the paragraph alone.
+  const paragraphOnly = sanitizeExpectations(base.slice(0, 600))
+  if (paragraphOnly.ok) return paragraphOnly.clean
   const composed = sanitizeExpectations(composeExpectations(profile))
   if (composed.ok) return composed.clean
   const minimal = sanitizeExpectations(profile.role.slice(0, 200))
@@ -109,7 +125,8 @@ Keluarkan HANYA JSON valid dengan field berikut:
   "tools": "tools yang kelihatan dipakai (kalau tidak ada, tulis: belum kelihatan)",
   "pain_points": "yang kemungkinan makan waktu mereka",
   "recommended_persona": "satu slug dari daftar persona yang diizinkan",
-  "expectations_paragraph": "1-3 kalimat, sudut pandang customer, apa yang mereka mau agent kerjakan. Maksimal 500 karakter. Tanpa tanda seru.",
+  "expectations_paragraph": "1-3 kalimat, sudut pandang customer, apa yang mereka mau agent kerjakan. Maksimal 400 karakter. Tanpa tanda seru.",
+  "voice_note": "frasa singkat soal gaya tulisan customer yang terlihat di contoh (mis. 'santai tapi sopan, kalimat pendek'). Kosongkan kalau tidak jelas. Maksimal 80 karakter.",
   "summary_bahasa": "2-4 kalimat ramah: 'Ini yang aku tangkap soal kamu: ...'. Deskripsikan CUSTOMER, jangan janjikan fitur agent yang tidak ada (email/kalender/auto-post)."
 }`
 
@@ -216,8 +233,13 @@ export async function handleGenesisDistill(
     personaName = PERSONA_META[recommendedPersona]?.name ?? null
   }
 
-  // ── expectations (sanitized, never throws) ────────────────────────────
-  const expectations = safeExpectations(str(raw.expectations_paragraph), profile)
+  // ── writing voice + expectations (sanitized, never throws) ────────────
+  // The voice note is itself run through the sanitizer so a prompt-injected
+  // descriptor can never reach the SOUL even if it survives folding.
+  const voiceRaw = str(raw.voice_note).slice(0, 80)
+  const voiceCheck = voiceRaw ? sanitizeExpectations(voiceRaw) : null
+  const voiceNote = voiceCheck && voiceCheck.ok ? voiceCheck.clean : ''
+  const expectations = safeExpectations(str(raw.expectations_paragraph), voiceNote, profile)
 
   // ── confirmation copy ─────────────────────────────────────────────────
   const summary = str(
@@ -230,6 +252,7 @@ export async function handleGenesisDistill(
     recommended_persona: recommendedPersona,
     persona_name: personaName,
     expectations_paragraph: expectations,
+    voice_note: voiceNote || null,
     profile,
     summary_bahasa: summary,
     confirmation_prompt: 'Betul begini, atau mau kamu sesuaikan?',
