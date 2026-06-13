@@ -853,6 +853,44 @@
         </p>
 
         <form id="step3-form" style="margin-top: 28px;" novalidate>
+          <!-- ─── Genesis Onboarding (2026-06-13): "forward aja" fast path ─── -->
+          <!-- Optional. Pastes work samples → genesis-distill → pre-fills the -->
+          <!-- expectations + persona below. The customer still reviews and -->
+          <!-- submits via the normal flow; distill never submits. Degrades -->
+          <!-- gracefully: if it fails (or isn't deployed yet), the manual -->
+          <!-- path below is fully untouched. -->
+          <div id="genesis-panel" style="margin-bottom: 28px; padding: 18px; border: 1px solid rgba(245,245,245,0.14); border-radius: 14px; background: rgba(245,245,245,0.03);">
+            <div class="eyebrow" style="margin-bottom: 8px;">Cara cepat</div>
+            <label class="field-label" for="f-samples" style="margin-bottom: 4px;">
+              Forward contoh kerja kamu, biar aku yang nyusun
+            </label>
+            <p style="font-size: 12px; color: rgba(245,245,245,0.5); margin: 0 0 10px;">
+              Tempel satu proposal, beberapa chat klien, atau caption kamu. Aku baca, lalu isi bagian bawah otomatis — kamu tinggal cek dan sesuaikan.
+            </p>
+            <textarea
+              id="f-samples"
+              class="field-input focus-ring"
+              rows="4"
+              maxlength="8000"
+              placeholder="Tempel di sini: proposal, chat bisnis, caption, atau daftar klien kamu."
+              style="line-height: 1.55; min-height: 96px; resize: vertical;"
+            ></textarea>
+            <div style="display: flex; align-items: center; gap: 12px; margin-top: 10px; flex-wrap: wrap;">
+              <button id="genesis-cta" type="button" class="focus-ring"
+                style="background: transparent; color: #f5f5f5; border: 1px solid rgba(245,245,245,0.3); border-radius: 999px; padding: 10px 18px; font: inherit; font-size: 13px; cursor: pointer;">
+                <span class="genesis-cta-spinner" aria-hidden="true" style="display: none;"></span>
+                <span class="genesis-cta-label">Biar aku yang nyusun</span>
+              </button>
+              <p id="genesis-status" class="field-error" aria-live="polite" style="margin: 0; flex: 1; min-width: 140px;"></p>
+            </div>
+            <div id="genesis-summary" hidden
+              style="margin-top: 14px; padding: 12px 14px; border-radius: 10px; background: rgba(229,50,45,0.08); border: 1px solid rgba(229,50,45,0.28);">
+              <div class="eyebrow" style="margin-bottom: 6px; color: #E5322D;">Ini yang aku tangkap</div>
+              <p id="genesis-summary-text" style="margin: 0; font-size: 13px; line-height: 1.6; color: rgba(245,245,245,0.92);"></p>
+              <p style="margin: 8px 0 0; font-size: 12px; color: rgba(245,245,245,0.55);">Sudah aku isi di bawah — cek dan sesuaikan sebelum lanjut.</p>
+            </div>
+          </div>
+
           <label class="field-label" for="f-expectations">
             Apa yang paling kamu butuhkan dari agent kamu?
           </label>
@@ -1107,6 +1145,13 @@
     const $chips           = document.querySelectorAll('.chip');
     const $personaGrid     = document.getElementById('persona-grid');
     const $personaError    = document.getElementById('persona-error');
+
+    // Genesis Onboarding "forward aja" fast path (2026-06-13)
+    const $samples            = document.getElementById('f-samples');
+    const $genesisCta         = document.getElementById('genesis-cta');
+    const $genesisStatus      = document.getElementById('genesis-status');
+    const $genesisSummary     = document.getElementById('genesis-summary');
+    const $genesisSummaryText = document.getElementById('genesis-summary-text');
 
     const $overlay        = document.getElementById('submit-overlay');
     const $submitPanel    = document.getElementById('submit-panel');
@@ -1969,6 +2014,86 @@
         $expectations.focus();
       });
     });
+
+    // ─── Genesis Onboarding: "forward aja" fast path (2026-06-13) ───
+    // Calls genesis-distill, then PRE-FILLS the expectations textarea +
+    // persona picker below. It never submits — the customer reviews and
+    // uses the normal submit button. Any failure degrades to the manual
+    // path with an honest nudge; it never blocks onboarding.
+    function setGenesisLoading(on) {
+      if (!$genesisCta) return;
+      $genesisCta.disabled = on;
+      const sp = $genesisCta.querySelector('.genesis-cta-spinner');
+      const lb = $genesisCta.querySelector('.genesis-cta-label');
+      if (sp) sp.style.display = on ? 'inline-block' : 'none';
+      if (lb) lb.textContent = on ? 'Lagi baca...' : 'Biar aku yang nyusun';
+    }
+
+    async function runGenesisDistill() {
+      const samples = ($samples.value || '').trim();
+      $genesisStatus.textContent = '';
+      if (samples.length < 40) {
+        $genesisStatus.textContent =
+          'Tempel sedikit lebih banyak — satu proposal atau beberapa chat sudah cukup.';
+        return;
+      }
+      setGenesisLoading(true);
+      let r, data = null;
+      try {
+        r = await fetch(`${SUPABASE_URL}/functions/v1/genesis-distill`, {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+            'X-CID': cid,
+          },
+          body: JSON.stringify({
+            customer_id: cid,
+            tier: customerTier || 'starter',
+            samples,
+          }),
+        });
+        try { data = await r.json(); } catch { /* keep null */ }
+      } catch (err) {
+        setGenesisLoading(false);
+        $genesisStatus.textContent =
+          'Belum bisa nyusun otomatis sekarang. Tulis langsung di bawah aja.';
+        return;
+      }
+      setGenesisLoading(false);
+
+      if (!r.ok || !data || !data.ok) {
+        // Graceful: never block the manual path.
+        $genesisStatus.textContent =
+          'Belum bisa nyusun otomatis sekarang. Tulis langsung di bawah aja.';
+        return;
+      }
+
+      // Pre-fill expectations (drives the char counter + enables submit).
+      if (typeof data.expectations_paragraph === 'string' && data.expectations_paragraph.length > 0) {
+        $expectations.value = data.expectations_paragraph;
+        $expectations.dispatchEvent(new Event('input'));
+      }
+      // Pre-select the recommended persona, if the tier grants one.
+      if (data.recommended_persona) {
+        const tierSlugs = TIER_PERSONAS[customerTier] || TIER_PERSONAS.starter;
+        if (tierSlugs.indexOf(data.recommended_persona) !== -1) {
+          selectedPersona = data.recommended_persona;
+          renderPersonaPicker();
+        }
+      }
+      // Show the honest "here's what I caught about you" confirmation.
+      if (typeof data.summary_bahasa === 'string' && data.summary_bahasa.length > 0) {
+        $genesisSummaryText.textContent = data.summary_bahasa;
+        $genesisSummary.hidden = false;
+      }
+      $expectations.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    if ($genesisCta) {
+      $genesisCta.addEventListener('click', runGenesisDistill);
+    }
 
     $step3Form.addEventListener('submit', async (e) => {
       e.preventDefault();
