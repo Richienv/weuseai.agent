@@ -885,7 +885,7 @@
             </div>
             <div id="genesis-summary" hidden
               style="margin-top: 14px; padding: 12px 14px; border-radius: 10px; background: rgba(229,50,45,0.08); border: 1px solid rgba(229,50,45,0.28);">
-              <div class="eyebrow" style="margin-bottom: 6px; color: #E5322D;">Ini yang aku tangkap</div>
+              <div id="genesis-summary-eyebrow" class="eyebrow" style="margin-bottom: 6px; color: #E5322D;">Ini yang aku tangkap</div>
               <p id="genesis-summary-text" style="margin: 0; font-size: 13px; line-height: 1.6; color: rgba(245,245,245,0.92);"></p>
               <p style="margin: 8px 0 0; font-size: 12px; color: rgba(245,245,245,0.55);">Sudah aku isi di bawah — cek dan sesuaikan sebelum lanjut.</p>
             </div>
@@ -1187,7 +1187,7 @@
       // to the matching customer row. Without the header, anon SELECT
       // returns 0 rows even for the allowlisted columns.
       const url = `${SUPABASE_URL}/rest/v1/customers?id=eq.${encodeURIComponent(cid)}` +
-        `&select=id,display_name,telegram_chat_id,telegram_bot_username,pairing_code,pairing_code_expires_at`;
+        `&select=id,display_name,telegram_chat_id,telegram_bot_username,pairing_code,pairing_code_expires_at,genesis_draft`;
       return fetch(url, {
         headers: {
           apikey: SUPABASE_ANON_KEY,
@@ -2070,25 +2070,37 @@
         return;
       }
 
-      // Pre-fill expectations (drives the char counter + enables submit).
-      if (typeof data.expectations_paragraph === 'string' && data.expectations_paragraph.length > 0) {
-        $expectations.value = data.expectations_paragraph;
+      applyGenesisDraft(data, { scroll: true });
+    }
+
+    // Pre-fill Step 4 from a distilled draft — shared by the web "forward
+    // aja" path (runGenesisDistill) and the Telegram-native path (a draft
+    // already on the customer row, distilled when they forwarded samples to
+    // their bot). Only fills inputs; the customer still reviews + submits.
+    function applyGenesisDraft(draft, opts) {
+      opts = opts || {};
+      if (!draft) return;
+      if (typeof draft.expectations_paragraph === 'string' && draft.expectations_paragraph.length > 0) {
+        $expectations.value = draft.expectations_paragraph;
         $expectations.dispatchEvent(new Event('input'));
       }
-      // Pre-select the recommended persona, if the tier grants one.
-      if (data.recommended_persona) {
+      if (draft.recommended_persona) {
         const tierSlugs = TIER_PERSONAS[customerTier] || TIER_PERSONAS.starter;
-        if (tierSlugs.indexOf(data.recommended_persona) !== -1) {
-          selectedPersona = data.recommended_persona;
+        if (tierSlugs.indexOf(draft.recommended_persona) !== -1) {
+          selectedPersona = draft.recommended_persona;
           renderPersonaPicker();
         }
       }
-      // Show the honest "here's what I caught about you" confirmation.
-      if (typeof data.summary_bahasa === 'string' && data.summary_bahasa.length > 0) {
-        $genesisSummaryText.textContent = data.summary_bahasa;
+      if (typeof draft.summary_bahasa === 'string' && draft.summary_bahasa.length > 0) {
+        const eyebrow = document.getElementById('genesis-summary-eyebrow');
+        if (eyebrow) {
+          eyebrow.textContent =
+            opts.source === 'telegram' ? 'Dari yang kamu forward di Telegram' : 'Ini yang aku tangkap';
+        }
+        $genesisSummaryText.textContent = draft.summary_bahasa;
         $genesisSummary.hidden = false;
       }
-      $expectations.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if (opts.scroll) $expectations.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
     if ($genesisCta) {
@@ -2316,6 +2328,13 @@
       }
       if (!customerTier) customerTier = 'starter';
       renderPersonaPicker();
+
+      // Genesis Onboarding Phase 3b (2026-06-13): if the customer forwarded
+      // work samples to their bot, the webhook already distilled + stored a
+      // draft. Pre-fill Step 4 from it so they finish with one confirm.
+      if (customer && customer.genesis_draft) {
+        applyGenesisDraft(customer.genesis_draft, { source: 'telegram' });
+      }
 
       // Pre-populate the bot username deeplink if we already validated
       // it server-side (resume case after a tab refresh post-Step 2).
