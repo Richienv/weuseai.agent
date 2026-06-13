@@ -28,7 +28,7 @@ supabase db push --project-ref "$REF"
 
 # ── 2. Edge Functions (everything in supabase/functions/) ─────────────
 echo "── 2/4 Edge Functions"
-for fn in fleet-sentinel persona-genesis library-refine library-proposal-apply \
+for fn in fleet-sentinel persona-genesis genesis-distill library-refine library-proposal-apply \
           bundle-fetch create-invoice complete-onboarding xendit-webhook \
           retry-pending-provisions customer-tier-bump restart-hermes; do
   if [ -d "supabase/functions/$fn" ]; then

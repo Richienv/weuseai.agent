@@ -175,3 +175,12 @@ verify_jwt = false
 # JWT. Per docs/security/jwt-role-pattern.md.
 [functions.admin-customer-vps-refresh]
 verify_jwt = true
+
+# Genesis Onboarding (2026-06-13): called from onboarding.html in the
+# browser — same model as complete-onboarding. The customer has no Supabase
+# JWT; authz is "knowledge of the cid UUID" + the handler's own
+# X-CID == customer_id gate. The function has NO side effects (no DB writes,
+# no provisioning) — it only distills pasted samples into a draft the
+# customer confirms — so the exposure here is an LLM call, not state.
+[functions.genesis-distill]
+verify_jwt = false
