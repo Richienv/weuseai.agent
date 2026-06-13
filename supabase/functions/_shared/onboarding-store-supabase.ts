@@ -12,6 +12,7 @@ import { createClient, SupabaseClient } from 'jsr:@supabase/supabase-js@2'
 
 import type {
   CustomerRow,
+  GenesisDraft,
   IOnboardingStore,
   SubscriptionRow,
 } from './types.ts'
@@ -50,7 +51,7 @@ export function createOnboardingStore(opts: {
       const { data } = await supabase
         .from('customers')
         .select(
-          'id, email, display_name, whatsapp_number, telegram_chat_id, telegram_bot_username, pairing_code, pairing_code_expires_at, soul_md_text, agent_slug, greeting_sent_at',
+          'id, email, display_name, whatsapp_number, telegram_chat_id, telegram_bot_username, pairing_code, pairing_code_expires_at, soul_md_text, agent_slug, greeting_sent_at, genesis_draft',
         )
         .eq('id', id)
         .maybeSingle()
@@ -61,7 +62,7 @@ export function createOnboardingStore(opts: {
       const { data } = await supabase
         .from('customers')
         .select(
-          'id, email, display_name, whatsapp_number, telegram_chat_id, telegram_bot_username, pairing_code, pairing_code_expires_at, soul_md_text, agent_slug, greeting_sent_at',
+          'id, email, display_name, whatsapp_number, telegram_chat_id, telegram_bot_username, pairing_code, pairing_code_expires_at, soul_md_text, agent_slug, greeting_sent_at, genesis_draft',
         )
         .eq('pairing_code', code)
         .maybeSingle()
@@ -93,11 +94,19 @@ export function createOnboardingStore(opts: {
         .update(patch)
         .eq('id', id)
         .select(
-          'id, email, display_name, whatsapp_number, telegram_chat_id, telegram_bot_username, pairing_code, pairing_code_expires_at, soul_md_text, agent_slug, greeting_sent_at',
+          'id, email, display_name, whatsapp_number, telegram_chat_id, telegram_bot_username, pairing_code, pairing_code_expires_at, soul_md_text, agent_slug, greeting_sent_at, genesis_draft',
         )
         .single()
       if (error) throw error
       return data as CustomerRow
+    },
+
+    async saveGenesisDraft(id: string, draft: GenesisDraft): Promise<void> {
+      const { error } = await supabase
+        .from('customers')
+        .update({ genesis_draft: draft })
+        .eq('id', id)
+      if (error) throw new Error(`genesis_draft save: ${error.message}`)
     },
 
     async updateSubscription(id, patch) {

@@ -259,6 +259,20 @@ export type XenditInvoiceEvent = {
 // 20260509200000_telegram_bot_per_customer.sql) and the row would be a leak
 // risk if accidentally serialized to logs. Access via dedicated store
 // methods setBotTokenAndUsername / getDecryptedBotToken instead.
+/** Genesis Onboarding (2026-06-13): a draft distilled from work samples the
+ *  customer forwarded into their bot during onboarding. Persisted on the
+ *  customer row so the web onboarding form can pre-fill from it. NO SOUL /
+ *  provisioning state — just the confirmable draft. */
+export type GenesisDraft = {
+  expectations_paragraph: string
+  recommended_persona: string | null
+  persona_name: string | null
+  voice_note: string | null
+  summary_bahasa: string
+  /** ISO timestamp — also drives the per-customer distill cooldown. */
+  created_at: string
+}
+
 export type CustomerRow = {
   id: string
   email: string
@@ -286,6 +300,10 @@ export type CustomerRow = {
    *  second-finisher (admin-customer-vps-refresh) is the one that
    *  completes the gateway-start sequence. Null = not yet greeted. */
   greeting_sent_at: string | null
+  /** Genesis Onboarding (2026-06-13): draft distilled from forwarded
+   *  samples, or null. Optional in the type because most reads don't
+   *  select it. */
+  genesis_draft?: GenesisDraft | null
 }
 
 // Data-store contract for the onboarding handlers.
@@ -303,6 +321,11 @@ export interface IOnboardingStore {
     id: string,
     patch: Partial<Omit<CustomerRow, 'id' | 'email'>>,
   ): Promise<CustomerRow>
+
+  /** Genesis Onboarding (2026-06-13): persist a distilled draft. Optional
+   *  capability — handlers feature-detect it, and fakes that don't need it
+   *  can omit it. */
+  saveGenesisDraft?(customer_id: string, draft: GenesisDraft): Promise<void>
 
   // Subscription status flip after provisioning succeeds.
   updateSubscription(

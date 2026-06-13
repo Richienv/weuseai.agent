@@ -8,6 +8,7 @@
 
 import type {
   CustomerRow,
+  GenesisDraft,
   IOnboardingStore,
   SubscriptionRow,
 } from '../../supabase/functions/_shared/types.ts'
@@ -62,9 +63,19 @@ export class FakeOnboardingStore implements IOnboardingStore {
       // explicit value.
       agent_slug: c.agent_slug ?? 'the-pro',
       greeting_sent_at: c.greeting_sent_at ?? null,
+      genesis_draft: c.genesis_draft ?? null,
     }
     this.customers.set(c.id, row)
     return row
+  }
+
+  /** Genesis Onboarding (2026-06-13): persisted drafts, for assertions. */
+  genesisDrafts: { customer_id: string; draft: GenesisDraft }[] = []
+
+  async saveGenesisDraft(customer_id: string, draft: GenesisDraft): Promise<void> {
+    const existing = this.customers.get(customer_id)
+    if (existing) this.customers.set(customer_id, { ...existing, genesis_draft: draft })
+    this.genesisDrafts.push({ customer_id, draft })
   }
 
   seedSubscription(
