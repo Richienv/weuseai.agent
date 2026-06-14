@@ -121,10 +121,19 @@ jobs:
 
           # Collect the changed function slugs (the dir right under functions/),
           # excluding _shared (handled above) and dotfiles like .gitkeep.
+          # The trailing `|| true` is load-bearing: under `set -euo pipefail`,
+          # a `grep` that matches NOTHING exits 1, and pipefail propagates that
+          # through the command substitution — which `set -e` would treat as a
+          # fatal assignment failure, killing the step BEFORE the graceful
+          # `if [ -z "$FNS" ]` handler below ever runs. That is exactly what
+          # happens on a migration-only / workflow-only push (no function dir,
+          # no _shared changed). `|| true` lets the empty case fall through to
+          # "Nothing to deploy" instead of a false red. (Caught 2026-06-14 when
+          # the migration-applier PR became the first such push.)
           FNS="$(echo "$CHANGED" \
             | grep -E '^supabase/functions/[^_./][^/]*/' \
             | sed -E 's#^supabase/functions/([^/]+)/.*#\1#' \
-            | sort -u)"
+            | sort -u || true)"
 
           if [ -z "$FNS" ]; then
             echo "No individual function dirs changed (likely only the workflow"
