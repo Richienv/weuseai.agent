@@ -39,3 +39,6 @@ supabase/.branches/
 .worktrees/
 .secrets-generated/
 build/
+
+# Claude Code session dir
+.claude/
