@@ -161,8 +161,13 @@ apply_tier_filter() {
   local manifest="${BUNDLE_DIR_BASE}/$slug/$version/manifest.json"
 
   if [ ! -f "$manifest" ]; then
-    log "⚠ manifest.json missing in bundle ($manifest); skipping tier filter"
-    return
+    # A bundle with no manifest.json is a packaging failure, not a benign
+    # skip: silently continuing would install a persona shell with ZERO
+    # tier-filtered skills (or leave stale ones), so the customer looks
+    # provisioned but their skills are missing. Fail the bundle so the
+    # caller records it + (when all bundles fail) systemd surfaces it.
+    log "✗ manifest.json missing in bundle ($manifest); failing tier filter"
+    return 1
   fi
 
   # No jq dependency: use Python (always available on Ubuntu base images)
@@ -242,6 +247,20 @@ PYEOF
   fi
 }
 
+# ─── Safe bundle-fetch request body ───────────────────────────────────
+# Build the {customer_id, agent_slug} JSON with python3 json.dumps so a
+# special char in $CID/$slug (quote, backslash, control char) can NEVER
+# corrupt the request — the previous inline "{\"customer_id\":\"$CID\"...}"
+# string-interpolation broke on any such char. Same no-jq convention as
+# apply_tier_filter (python3 is always present on the Ubuntu base image).
+fetch_body_json() {
+  local agent_slug="$1"
+  python3 - "$CID" "$agent_slug" <<'PYEOF'
+import json, sys
+print(json.dumps({"customer_id": sys.argv[1], "agent_slug": sys.argv[2]}))
+PYEOF
+}
+
 # ─── Pull one bundle ──────────────────────────────────────────────────
 # Returns 0 on success, 1 on failure. Loop continues on either result.
 pull_bundle() {
@@ -250,10 +269,12 @@ pull_bundle() {
   start_ms=$(date +%s%3N)
 
   log "▶ Fetching bundle metadata for $slug (cid=$CID, tier=$TIER)"
+  local fetch_body
+  fetch_body=$(fetch_body_json "$slug")
   local response
   response=$(curl -fsS -X POST "${fetchUrl}" \\
     -H "Content-Type: application/json" \\
-    -d "{\\"customer_id\\":\\"$CID\\",\\"agent_slug\\":\\"$slug\\"}" \\
+    -d "$fetch_body" \\
     --max-time ${FETCH_TIMEOUT_SEC} 2>>"$LOG") || {
       local duration=$(( $(date +%s%3N) - start_ms ))
       log "  ✗ bundle-fetch failed for $slug; skipping"
@@ -281,7 +302,11 @@ pull_bundle() {
     if [ "$installed_version" = "$version" ]; then
       local duration=$(( $(date +%s%3N) - start_ms ))
       log "  ✓ $slug@$version already installed; re-applying tier filter only"
-      apply_tier_filter "$slug" "$version" "$TIER"
+      if ! apply_tier_filter "$slug" "$version" "$TIER"; then
+        log "  ✗ tier filter failed for $slug (manifest missing on installed bundle)"
+        record_attempt "$slug" "failed" "$version" "$version" "manifest.json missing" "" "$duration"
+        return 1
+      fi
       record_attempt "$slug" "success" "$version" "$version" "" "" "$duration"
       return 0
     fi
@@ -319,7 +344,12 @@ pull_bundle() {
 
   chown -R weuseai:weuseai "$target_dir"
 
-  apply_tier_filter "$slug" "$version" "$TIER"
+  if ! apply_tier_filter "$slug" "$version" "$TIER"; then
+    local duration=$(( $(date +%s%3N) - start_ms ))
+    log "  ✗ tier filter failed for $slug (manifest missing); not marking installed"
+    record_attempt "$slug" "failed" "$version" "" "manifest.json missing" "$bytes" "$duration"
+    return 1
+  fi
 
   echo "$version" > "$installed_file"
 
@@ -339,10 +369,12 @@ pull_bundle() {
 # this client never decides eligibility.
 pull_custom_persona() {
   local slug="custom-$CID"
+  local probe_body
+  probe_body=$(fetch_body_json "$slug")
   local probe
   probe=$(curl -sS -o /tmp/weuseai-custom-probe.json -w "%{http_code}" -X POST "${fetchUrl}" \\
     -H "Content-Type: application/json" \\
-    -d "{\\"customer_id\\":\\"$CID\\",\\"agent_slug\\":\\"$slug\\"}" \\
+    -d "$probe_body" \\
     --max-time ${FETCH_TIMEOUT_SEC} 2>>"$LOG") || {
       log "  (custom persona probe network-failed; skipping silently)"
       rm -f /tmp/weuseai-custom-probe.json
@@ -388,6 +420,18 @@ pull_custom_persona
 
 TOTAL_DURATION=$(( $(date +%s%3N) - LOOP_START_MS ))
 log "✓ Multi-persona pull complete: $SUCCESS_COUNT success, $FAIL_COUNT fail in \${TOTAL_DURATION}ms"
+
+# Surface a TOTAL failure to systemd (2026-06-14): when we attempted at
+# least one bundle and EVERY attempt failed, ExecStartPre must see a
+# non-zero exit so the gateway start is held + the failure is visible —
+# otherwise the agent boots with zero personas and looks "running" while
+# broken. A zero-attempt boot (e.g. persona-free \`bare\` tier) is NOT a
+# failure: FAIL_COUNT is 0, so we still exit 0 and let Hermes boot.
+if [ "$SUCCESS_COUNT" -eq 0 ] && [ "$FAIL_COUNT" -gt 0 ]; then
+  log "✗ All $FAIL_COUNT bundle(s) failed — exiting non-zero so systemd ExecStartPre surfaces it"
+  exit 1
+fi
+
 exit 0
 `
 }

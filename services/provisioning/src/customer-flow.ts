@@ -364,47 +364,109 @@ export async function spinUpCustomer(
       }
       log('✓ Setup script complete')
 
-      await deps.store.updateVPSInstance(vps.uuid, { status: 'running' })
-
       // Wait-page race fix (2026-05-16): second-finisher. The setup-
-      // script is done + the VPS row is now 'running', so it is finally
-      // safe to SSH-refresh the .env (the hermes binary is installed →
-      // refresh-env's install-if-missing block won't hit `exit 4`). If
-      // the customer already finished onboarding while we were
-      // provisioning, their complete-onboarding deferred refreshEnv —
-      // fire it now via the hook so hermes-gateway starts and
-      // welcome.html un-sticks. Best-effort: a throw never escapes the
-      // background task (the provision itself already succeeded).
+      // script is done, so it is finally safe to SSH-refresh the .env
+      // (the hermes binary is installed → refresh-env's install-if-missing
+      // block won't hit `exit 4`). If the customer already finished
+      // onboarding while we were provisioning, their complete-onboarding
+      // deferred refreshEnv — fire it now via the hook so hermes-gateway
+      // starts and welcome.html un-sticks.
+      //
+      // Ordering fix (2026-06-14): notifyVpsReady starts the gateway, so
+      // it must run BEFORE we flip the row to 'running'. status='running'
+      // is the customer-visible "your agent is up" signal — set it only
+      // AFTER the second-finisher succeeds. If the hook fails we still
+      // mark 'running' (the VPS + Hermes install genuinely succeeded, and
+      // the customer's own complete-onboarding will refreshEnv once it
+      // sees 'running'), but we NEVER do so silently: a slow/broken hook
+      // gets a loud ERROR log + an operator alert so a degraded
+      // second-finisher is surfaced, not swallowed.
       if (deps.notifyVpsReady) {
         try {
           await deps.notifyVpsReady(opts.customerId)
+          await deps.store.updateVPSInstance(vps.uuid, { status: 'running' })
         } catch (e) {
-          log(
-            `notifyVpsReady failed (non-fatal): ${
-              e instanceof Error ? e.message : String(e)
-            }`,
+          const hookMsg = e instanceof Error ? e.message : String(e)
+          // Loud ERROR: prefix (was a quiet log) — this is a degraded
+          // provision, not benign noise.
+          console.error(
+            `ERROR: [provision:${opts.customerId}] notifyVpsReady failed ` +
+              `(gateway second-finisher); marking running but DEGRADED: ${hookMsg}`,
           )
+          // The box is up + Hermes is installed, so 'running' is honest
+          // (complete-onboarding self-heals the gateway). Do NOT leave it
+          // silently — alert an operator that the second-finisher broke.
+          await deps.store.updateVPSInstance(vps.uuid, { status: 'running' })
+          if (deps.alertChatId) {
+            try {
+              await deps.broker.sendMessage({
+                chatId: deps.alertChatId,
+                text:
+                  `[provisioning alert]\nnotifyVpsReady (gateway second-finisher) ` +
+                  `FAILED for ${opts.customerId} — VPS is running but the gateway ` +
+                  `may not have started. Verify the customer is not stuck. ${hookMsg}`,
+              })
+            } catch {/* best effort */}
+          }
         }
+      } else {
+        // No second-finisher hook wired (legacy callers) — the provision
+        // itself succeeded, so flip to running directly.
+        await deps.store.updateVPSInstance(vps.uuid, { status: 'running' })
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)
-      log(`✗ Background provision failed: ${msg}`)
+      // Wrap the whole failure-handling path so it can never itself throw
+      // silently (a throw here would escape into the detached promise and
+      // lose the original error).
       try {
-        await deps.store.updateVPSInstance(vps.uuid, { status: 'failed' })
-      } catch {/* best effort */}
-      if (deps.alertChatId) {
+        log(`✗ Background provision failed: ${msg}`)
         try {
-          await deps.broker.sendMessage({
-            chatId: deps.alertChatId,
-            text: `[provisioning alert]\nBackground failed for ${opts.customerId}: ${msg}`,
-          })
+          await deps.store.updateVPSInstance(vps.uuid, { status: 'failed' })
         } catch {/* best effort */}
+        if (deps.alertChatId) {
+          try {
+            await deps.broker.sendMessage({
+              chatId: deps.alertChatId,
+              text: `[provisioning alert]\nBackground failed for ${opts.customerId}: ${msg}`,
+            })
+          } catch {/* best effort */}
+        }
+      } catch (handlerErr) {
+        console.error(
+          `ERROR: [provision:${opts.customerId}] failure-handler itself threw ` +
+            `while reacting to "${msg}": ${
+              handlerErr instanceof Error ? handlerErr.message : String(handlerErr)
+            }`,
+        )
       }
       throw e
     }
   })()
 
-  done.catch(() => {/* swallow if caller ignores */})
+  // Never swallow the background failure. The detached catch keeps an
+  // ignored `done` from becoming an unhandled rejection, but it must LOG
+  // (and, as a last resort, mark the row failed + alert) so a broken
+  // provision can't silently sit "running". Callers that DO await `done`
+  // still see the original rejection — this handler is on a separate
+  // branch of the promise and does not consume it.
+  done.catch(async (e) => {
+    const msg = e instanceof Error ? e.message : String(e)
+    console.error(
+      `ERROR: [provision:${opts.customerId}] background provision rejected: ${msg}`,
+    )
+    try {
+      await deps.store.updateVPSInstance(vps.uuid, { status: 'failed' })
+    } catch {/* best effort — inner handler already attempted this */}
+    if (deps.alertChatId) {
+      try {
+        await deps.broker.sendMessage({
+          chatId: deps.alertChatId,
+          text: `[provisioning alert]\nBackground provision rejected for ${opts.customerId}: ${msg}`,
+        })
+      } catch {/* best effort */}
+    }
+  })
 
   return {
     vpsId: vps.uuid,

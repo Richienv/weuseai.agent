@@ -102,17 +102,30 @@ async function notifyVpsReady(customerId: string): Promise<void> {
     return
   }
   const endpoint = `${url.replace(/\/+$/, '')}/functions/v1/admin-customer-vps-refresh`
-  const res = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      authorization: `Bearer ${key}`,
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({
-      customer_id: customerId,
-      reason: 'vps-ready second-finisher (wait-page race fix 2026-05-16)',
-    }),
-  })
+  // Bound the call so a slow/hung Supabase can't keep the background
+  // provision (which awaits this second-finisher) pending forever — a
+  // stuck fetch would leave the VPS row un-flipped + welcome.html stuck.
+  // 30s is generous for the Edge Function's SSH-push; past that we treat
+  // it as failed and let the caller's degraded-path handle it.
+  const ctrl = new AbortController()
+  const timeout = setTimeout(() => ctrl.abort(), 30_000)
+  let res: Response
+  try {
+    res = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${key}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        customer_id: customerId,
+        reason: 'vps-ready second-finisher (wait-page race fix 2026-05-16)',
+      }),
+      signal: ctrl.signal,
+    })
+  } finally {
+    clearTimeout(timeout)
+  }
   const bodyText = await res.text().catch(() => '')
   console.log(
     `[provisioning] notifyVpsReady cid=${customerId} http=${res.status} ` +
@@ -310,9 +323,18 @@ app.post('/refresh-env', async (req, res) => {
       },
     )
     if (!result.ok) {
+      // Critical partial (2026-06-14): the new .env was written but the
+      // systemd restart did NOT take. The gateway is now running stale env
+      // and will silently drop the customer's Telegram messages until an
+      // operator intervenes. Callers never inspected `partial`, so this
+      // used to leak through as a soft failure. Force a 500 so it pages.
+      const stalePartial =
+        result.partial?.env_written === true &&
+        result.partial?.systemd_restarted !== true
       // Map error → status code per design.
       const status =
-        result.error === 'no_active_vps' ? 404
+        stalePartial ? 500
+        : result.error === 'no_active_vps' ? 404
         : result.error === 'invalid_field' ? 400
         : result.error === 'ssh_unreachable' ? 503
         : result.error === 'ssh_auth_failed' ? 502

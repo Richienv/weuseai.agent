@@ -26,6 +26,7 @@ on:
     branches: [main]
     paths:
       - 'supabase/functions/**'
+      - 'agent-packs/**'
       - 'scripts/smoke-create-invoice-plans.ts'
       - '.github/workflows/deploy-supabase-functions.yml'
   workflow_dispatch:
@@ -41,6 +42,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # fetch the previous commit too so the changed-function diff below
+          # (HEAD vs HEAD~1) has a base to compare against on a push.
+          fetch-depth: 2
 
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -55,15 +60,91 @@ jobs:
         with:
           version: latest
 
-      - name: Deploy all Edge Functions
+      - name: Deploy changed Edge Functions (or all)
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-        # Deploys ALL functions (a change to _shared/* ripples across many),
-        # respecting per-function verify_jwt in supabase/config.toml.
-        run: supabase functions deploy --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}"
+          PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          EVENT_NAME: ${{ github.event_name }}
+        # Smart deploy:
+        #   • workflow_dispatch                  → deploy ALL functions
+        #   • push touching _shared/**           → deploy ALL (a shared change
+        #                                          ripples across every function)
+        #   • push touching only some functions  → deploy ONLY those
+        # Per-function verify_jwt in supabase/config.toml is respected either
+        # way (the CLI reads it per slug). A bare `functions deploy` with no
+        # slugs deploys everything.
+        run: |
+          set -euo pipefail
+
+          deploy_all() {
+            echo "Deploying ALL Edge Functions."
+            supabase functions deploy --project-ref "$PROJECT_REF"
+          }
+
+          if [ "$EVENT_NAME" != "push" ]; then
+            echo "Trigger=$EVENT_NAME → deploy all."
+            deploy_all
+            exit 0
+          fi
+
+          # Diff this push against the previous commit. fetch-depth: 2 above
+          # guarantees HEAD~1 exists.
+          CHANGED="$(git diff --name-only HEAD~1 HEAD || true)"
+          echo "Changed files:"
+          echo "$CHANGED"
+
+          # A _shared change ripples — every function may depend on it → all.
+          if echo "$CHANGED" | grep -qE '^supabase/functions/_shared/'; then
+            echo "supabase/functions/_shared/** changed → deploy all."
+            deploy_all
+            exit 0
+          fi
+
+          # Collect the changed function slugs (the dir right under functions/),
+          # excluding _shared (handled above) and dotfiles like .gitkeep.
+          FNS="$(echo "$CHANGED" \
+            | grep -E '^supabase/functions/[^_./][^/]*/' \
+            | sed -E 's#^supabase/functions/([^/]+)/.*#\1#' \
+            | sort -u)"
+
+          if [ -z "$FNS" ]; then
+            echo "No individual function dirs changed (likely only the workflow"
+            echo "or smoke script). Nothing to deploy."
+            exit 0
+          fi
+
+          echo "Deploying changed functions:"
+          echo "$FNS"
+          while IFS= read -r fn; do
+            [ -z "$fn" ] && continue
+            echo "→ supabase functions deploy $fn"
+            supabase functions deploy "$fn" --project-ref "$PROJECT_REF"
+          done <<< "$FNS"
 
       - name: Post-deploy smoke — every catalog slug must be accepted
         env:
           SMOKE_BASE: ${{ secrets.SUPABASE_URL }}
           SMOKE_ANON: ${{ secrets.SUPABASE_ANON_KEY }}
         run: tsx scripts/smoke-create-invoice-plans.ts
+
+      # TODO(bundle-publish): wire `npm run publish:bundles` here so an
+      # agent-packs/** change auto-publishes the per-persona bundles after the
+      # bundle-publish function deploys. NOT enabled yet — the script
+      # (scripts/publish-persona-bundles.mjs) hard-requires SUPABASE_URL AND
+      # SUPABASE_SERVICE_ROLE_KEY (it exit(1)s without the service-role key).
+      # SUPABASE_SERVICE_ROLE_KEY is NOT among the repo secrets this workflow
+      # can confirm (only SUPABASE_ACCESS_TOKEN / _PROJECT_REF / _URL /
+      # _ANON_KEY are referenced anywhere in .github/workflows/). Wiring it now
+      # would fail every run that touches agent-packs/**. To enable: add the
+      # SUPABASE_SERVICE_ROLE_KEY repo secret, then replace this comment with:
+      #
+      #   - name: Publish persona bundles (only if agent-packs changed)
+      #     if: github.event_name == 'workflow_dispatch' ||
+      #         contains(steps.<changed-step>.outputs.changed, 'agent-packs/')
+      #     env:
+      #       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      #       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      #     run: npm run publish:bundles
+      #
+      # Until then bundles are published by an operator running
+      # `npm run publish:bundles` locally (the documented manual path).
