@@ -28,6 +28,7 @@ import { fileURLToPath } from 'node:url'
 
 import { buildSetupScript, type Tier, type ProvisionTier } from './setup-script.js'
 import { personasForTier, DEFAULT_PERSONA } from '../../../supabase/functions/_shared/tier-personas.js'
+import { slog } from '../../../supabase/functions/_shared/structured-log.js'
 // Phase 5-3.c rollout: per-customer HMAC token computed at customer-creation
 // time. Reuses the same auth module as the verifier side (Edge Functions).
 import { signCustomerToken } from '../../../supabase/functions/_shared/hermes-instance-auth'
@@ -387,12 +388,15 @@ export async function spinUpCustomer(
           await deps.store.updateVPSInstance(vps.uuid, { status: 'running' })
         } catch (e) {
           const hookMsg = e instanceof Error ? e.message : String(e)
-          // Loud ERROR: prefix (was a quiet log) — this is a degraded
-          // provision, not benign noise.
-          console.error(
-            `ERROR: [provision:${opts.customerId}] notifyVpsReady failed ` +
-              `(gateway second-finisher); marking running but DEGRADED: ${hookMsg}`,
-          )
+          // Structured ERROR (was an ad-hoc console.error string) — this is a
+          // degraded provision, not benign noise. Same information, now keyed
+          // on a stable event name so founder alerting filters on it.
+          slog('error', 'provision.notify_failed', {
+            customerId: opts.customerId,
+            stage: 'gateway_second_finisher',
+            degraded: true,
+            err: hookMsg,
+          })
           // The box is up + Hermes is installed, so 'running' is honest
           // (complete-onboarding self-heals the gateway). Do NOT leave it
           // silently — alert an operator that the second-finisher broke.
@@ -433,12 +437,11 @@ export async function spinUpCustomer(
           } catch {/* best effort */}
         }
       } catch (handlerErr) {
-        console.error(
-          `ERROR: [provision:${opts.customerId}] failure-handler itself threw ` +
-            `while reacting to "${msg}": ${
-              handlerErr instanceof Error ? handlerErr.message : String(handlerErr)
-            }`,
-        )
+        slog('error', 'provision.failure_handler_threw', {
+          customerId: opts.customerId,
+          originalErr: msg,
+          err: handlerErr instanceof Error ? handlerErr.message : String(handlerErr),
+        })
       }
       throw e
     }
@@ -452,9 +455,10 @@ export async function spinUpCustomer(
   // branch of the promise and does not consume it.
   done.catch(async (e) => {
     const msg = e instanceof Error ? e.message : String(e)
-    console.error(
-      `ERROR: [provision:${opts.customerId}] background provision rejected: ${msg}`,
-    )
+    slog('error', 'provision.background_rejected', {
+      customerId: opts.customerId,
+      err: msg,
+    })
     try {
       await deps.store.updateVPSInstance(vps.uuid, { status: 'failed' })
     } catch {/* best effort — inner handler already attempted this */}
