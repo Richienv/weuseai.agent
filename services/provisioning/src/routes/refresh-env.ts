@@ -798,5 +798,14 @@ async function recordOutcome(
   } catch { /* idempotent — start may already exist */ }
   try {
     await store.recordRefreshRequestComplete(requestId, outcome)
-  } catch { /* swallow — completion log failure shouldn't crash response */ }
+  } catch (e) {
+    // A completion-log write failure must not crash the response, but it
+    // must NOT be silent either: a lost outcome row breaks idempotency
+    // dedup for retries, so surface it for an operator.
+    console.warn(
+      `[refresh-env] recordRefreshRequestComplete failed for request ${requestId}: ${
+        e instanceof Error ? e.message : String(e)
+      }`,
+    )
+  }
 }

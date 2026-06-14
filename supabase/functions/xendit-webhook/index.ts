@@ -193,11 +193,30 @@ const provisioning: IProvisioningClient = {
 
 async function alertSend(chatId: string, text: string): Promise<void> {
   if (!TELEGRAM_BOT_TOKEN) return
-  await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ chat_id: chatId, text }),
-  })
+  // Best-effort: a Telegram outage must NEVER throw out of the webhook
+  // handler — a throw here would 500 the webhook and trigger a Xendit
+  // retry-storm. Swallow but LOG (greppable/alertable) on non-2xx + throw.
+  try {
+    const r = await fetch(
+      `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ chat_id: chatId, text }),
+      },
+    )
+    if (!r.ok) {
+      const body = await r.text().catch(() => '<unreadable>')
+      console.error(
+        `[xendit-webhook] alertSend Telegram non-2xx: ${r.status} ${body}`,
+      )
+    }
+  } catch (err) {
+    console.error(
+      `[xendit-webhook] alertSend Telegram fetch threw: ` +
+        (err instanceof Error ? err.message : String(err)),
+    )
+  }
 }
 
 Deno.serve(async (req) => {

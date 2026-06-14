@@ -30,12 +30,15 @@ import { createClient } from 'jsr:@supabase/supabase-js@2'
 
 import {
   fleetSentinelHandler,
+  fleetWideChecksHandler,
   DEFAULT_SENTINEL_CONFIG,
   type SentinelVps,
   type ExistingAlert,
   type SentinelConfig,
   type SentinelAlert,
   type SentinelAction,
+  type StuckPendingCustomer,
+  type BundlePullFailure,
 } from '../_shared/fleet-sentinel-handler.ts'
 
 // @ts-ignore — Deno global
@@ -50,6 +53,9 @@ const PROVISIONING_URL = Deno.env.get('PROVISIONING_URL')!
 const PROVISIONING_AUTH_TOKEN = Deno.env.get('PROVISIONING_AUTH_TOKEN')!
 const FOUNDER_BOT_TOKEN = Deno.env.get('SUPPORT_TELEGRAM_BOT_TOKEN') ?? ''
 const FOUNDER_CHAT_ID = Deno.env.get('RICHIE_CHAT_ID') ?? ''
+// Parent OpenRouter key (same env the key-minter reads). Optional — when
+// unset the credit-low probe is skipped, never throws.
+const OPENROUTER_PROVISIONING_KEY = Deno.env.get('OPENROUTER_PROVISIONING_KEY') ?? ''
 
 function numEnv(key: string, fallback: number): number {
   const raw = Deno.env.get(key)
@@ -64,6 +70,8 @@ const config: SentinelConfig = {
   deadAgentHours: numEnv('DEAD_AGENT_HOURS', DEFAULT_SENTINEL_CONFIG.deadAgentHours),
   runawayUsdCents: numEnv('RUNAWAY_USD_CENTS', DEFAULT_SENTINEL_CONFIG.runawayUsdCents),
   dryRun: (Deno.env.get('FLEET_SENTINEL_DRY_RUN') ?? 'false') === 'true',
+  stuckPendingMinutes: numEnv('STUCK_PENDING_MINUTES', DEFAULT_SENTINEL_CONFIG.stuckPendingMinutes),
+  openrouterLowUsdCents: numEnv('OPENROUTER_LOW_USD_CENTS', DEFAULT_SENTINEL_CONFIG.openrouterLowUsdCents),
 }
 
 const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
@@ -125,6 +133,90 @@ async function readRecentAlerts(): Promise<ExistingAlert[]> {
     .gte('created_at', cutoff)
   if (error || !data) return []
   return data as ExistingAlert[]
+}
+
+// ─── fleet-wide silent-failure probes (each defensive in isolation) ────────
+
+// 1. STUCK PENDING — subscriptions still pending/pending_provision past the
+//    staleness threshold = customer paid, no VPS yet. The handler applies the
+//    age cut; here we just narrow to the candidate statuses + index column.
+async function probeStuckPending(): Promise<StuckPendingCustomer[]> {
+  try {
+    const cutoff = new Date(Date.now() - config.stuckPendingMinutes * 60_000).toISOString()
+    const { data, error } = await supabase
+      .from('subscriptions')
+      .select('customer_id, status, started_at')
+      .in('status', ['pending', 'pending_provision'])
+      .lte('started_at', cutoff)
+    if (error || !data) {
+      if (error) console.error('[fleet-sentinel] stuck-pending probe failed:', error.message)
+      return []
+    }
+    return (data as Array<{ customer_id: string; status: string; started_at: string | null }>).map((r) => ({
+      customer_id: r.customer_id,
+      status: r.status,
+      started_at: r.started_at,
+    }))
+  } catch (e) {
+    console.error('[fleet-sentinel] stuck-pending probe threw:', e instanceof Error ? e.message : String(e))
+    return []
+  }
+}
+
+// 2. BUNDLE-PULL FAILURES — bundle_pull_attempts rows with a non-success
+//    status in the last hour. Fleet-wide failure burst the per-VPS loop
+//    can't see.
+async function probeBundlePullFailures(): Promise<BundlePullFailure[]> {
+  try {
+    const cutoff = new Date(Date.now() - 60 * 60_000).toISOString()
+    const { data, error } = await supabase
+      .from('bundle_pull_attempts')
+      .select('customer_id, agent_slug, status')
+      .neq('status', 'success')
+      .gte('attempted_at', cutoff)
+    if (error || !data) {
+      if (error) console.error('[fleet-sentinel] bundle-pull probe failed:', error.message)
+      return []
+    }
+    return (data as Array<{ customer_id: string; agent_slug: string; status: string }>).map((r) => ({
+      customer_id: r.customer_id,
+      agent_slug: r.agent_slug,
+      status: r.status,
+    }))
+  } catch (e) {
+    console.error('[fleet-sentinel] bundle-pull probe threw:', e instanceof Error ? e.message : String(e))
+    return []
+  }
+}
+
+// 3. OPENROUTER PARENT CREDIT — the shared provisioning key's remaining
+//    balance. Returns null when the key is unset or the call fails (the
+//    handler never alerts on a null reading — only on a real low balance).
+async function probeOpenrouterBalanceUsdCents(): Promise<number | null> {
+  if (!OPENROUTER_PROVISIONING_KEY) return null
+  try {
+    const r = await fetch('https://openrouter.ai/api/v1/credits', {
+      method: 'GET',
+      headers: { authorization: `Bearer ${OPENROUTER_PROVISIONING_KEY}` },
+    })
+    if (!r.ok) {
+      console.error(`[fleet-sentinel] openrouter credits → HTTP ${r.status}`)
+      return null
+    }
+    // GET /credits → { data: { total_credits, total_usage } } (USD floats).
+    const body = (await r.json()) as { data?: { total_credits?: number; total_usage?: number } }
+    const total = body?.data?.total_credits
+    const used = body?.data?.total_usage
+    if (typeof total !== 'number' || typeof used !== 'number') {
+      console.error('[fleet-sentinel] openrouter credits: unexpected body shape')
+      return null
+    }
+    const remainingUsd = total - used
+    return Math.round(remainingUsd * 100)
+  } catch (e) {
+    console.error('[fleet-sentinel] openrouter credits probe threw:', e instanceof Error ? e.message : String(e))
+    return null
+  }
 }
 
 // ─── executors ─────────────────────────────────────────────────────────────
@@ -222,8 +314,32 @@ Deno.serve(async (req) => {
   void SERVICE_KEY
 
   try {
-    const [vpses, existingAlerts] = await Promise.all([buildSnapshotVpses(), readRecentAlerts()])
-    const result = fleetSentinelHandler({ vpses, existingAlerts, nowMs: Date.now() }, config)
+    const nowMs = Date.now()
+    // Gather everything in parallel: the per-VPS snapshot + the three
+    // fleet-wide silent-failure probes. Each probe is internally defensive
+    // (returns a safe default on failure) so one bad probe never aborts the
+    // existing per-VPS loop.
+    const [vpses, existingAlerts, stuckPending, bundlePullFailures, openrouterBalanceUsdCents] =
+      await Promise.all([
+        buildSnapshotVpses(),
+        readRecentAlerts(),
+        probeStuckPending(),
+        probeBundlePullFailures(),
+        probeOpenrouterBalanceUsdCents(),
+      ])
+    const result = fleetSentinelHandler({ vpses, existingAlerts, nowMs }, config)
+
+    // Fleet-wide checks reuse the same alert ledger + dedup + DM path. Wrapped
+    // so a throw here can never undo the per-VPS actions already executed.
+    let fleetWideAlerts: SentinelAlert[] = []
+    try {
+      fleetWideAlerts = fleetWideChecksHandler(
+        { stuckPending, bundlePullFailures, openrouterBalanceUsdCents, existingAlerts, nowMs },
+        config,
+      )
+    } catch (e) {
+      console.error('[fleet-sentinel] fleet-wide checks threw:', e instanceof Error ? e.message : String(e))
+    }
 
     const vpsByCustomer = new Map(vpses.map((v) => [v.customer_id, v]))
 
@@ -232,13 +348,14 @@ Deno.serve(async (req) => {
     // low (fleet is small; correctness over throughput here).
     for (const action of result.actions) await executeAction(action, vpsByCustomer)
     for (const alert of result.alerts) await recordAndAlert(alert)
+    for (const alert of fleetWideAlerts) await recordAndAlert(alert)
 
     return json({
       ok: true,
       dry_run: config.dryRun,
       fleet_size: vpses.length,
       actions: result.actions.length,
-      alerts: result.alerts.length,
+      alerts: result.alerts.length + fleetWideAlerts.length,
     })
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)

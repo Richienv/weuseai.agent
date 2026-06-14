@@ -14,6 +14,14 @@ name: Deploy provisioning service (Fly)
 # Requires repo secret FLY_API_TOKEN (a Fly deploy/personal access token).
 
 on:
+  # Auto-deploy when a provisioning fix (or this workflow) merges to main, so a
+  # merged fix can never sit undeployed — the exact failure mode this workflow
+  # was created to close (config.yaml model-block bug stayed live after #223).
+  push:
+    branches: [main]
+    paths:
+      - 'services/provisioning/**'
+      - '.github/workflows/deploy-provisioning.yml'
   workflow_dispatch:
 
 concurrency:

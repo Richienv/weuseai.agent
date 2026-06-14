@@ -151,10 +151,27 @@ async function handlePaid(
   try {
     await deps.db.clearStalePairState(subscription.customer_id)
   } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err)
+    // A stale token means the new VPS binds the OLD bot — corruption.
+    // Keep best-effort (don't fail the webhook → no Xendit retry-storm)
+    // but make it LOUD: log + founder alert so it can't slip silently.
     console.error(
-      `[xendit-webhook] clearStalePairState failed for ${subscription.customer_id}: ` +
-        (err instanceof Error ? err.message : String(err)),
+      `[xendit-webhook] clearStalePairState failed for ${subscription.customer_id} ` +
+        `(stale pair state — new VPS may bind the OLD bot, corruption risk): ${detail}`,
     )
+    if (deps.alertChatId && deps.alertSend) {
+      try {
+        await deps.alertSend(
+          deps.alertChatId,
+          `[stale-pair-state alert]\nclearStalePairState failed for ${subscription.customer_id} (sub ${subscription.id}): ${detail}\nStale token may bind the new VPS to the OLD bot — investigate before the customer pairs.`,
+        )
+      } catch (alertErr) {
+        console.error(
+          `[xendit-webhook] clearStalePairState founder-alert failed for ${subscription.customer_id}: ` +
+            (alertErr instanceof Error ? alertErr.message : String(alertErr)),
+        )
+      }
+    }
   }
 
   await deps.db.updateSubscription(subscription.id, {
@@ -205,6 +222,14 @@ async function handlePaid(
     }
   } catch (err) {
     provisionFailureReason = `threw: ${err instanceof Error ? err.message : String(err)}`
+    // Log the error CLASS so transient outages (network/timeout — likely
+    // recoverable by the retry worker) are distinguishable from other
+    // failures in the logs. Control flow unchanged: still parked below.
+    const errClass = err instanceof Error ? err.name : typeof err
+    console.error(
+      `[xendit-webhook] spinUp threw for ${subscription.customer_id} (sub ${subscription.id}) ` +
+        `[errClass=${errClass}]: ${err instanceof Error ? err.message : String(err)}`,
+    )
   }
 
   if (provisionFailureReason) {
@@ -213,10 +238,19 @@ async function handlePaid(
       hosting_active: false,
     })
     if (deps.alertChatId && deps.alertSend) {
-      await deps.alertSend(
-        deps.alertChatId,
-        `[provisioning alert]\nspin-up failed for ${subscription.customer_id} (sub ${subscription.id}): ${provisionFailureReason}\nSubscription marked pending_provision — retry worker should pick up.`,
-      )
+      // Best-effort: a failed founder-alert must NEVER fail the webhook
+      // (would 500 → Xendit retry-storm). Log loudly + continue.
+      try {
+        await deps.alertSend(
+          deps.alertChatId,
+          `[provisioning alert]\nspin-up failed for ${subscription.customer_id} (sub ${subscription.id}): ${provisionFailureReason}\nSubscription marked pending_provision — retry worker should pick up.`,
+        )
+      } catch (err) {
+        console.error(
+          `[xendit-webhook] provisioning alertSend failed for ${subscription.customer_id} (sub ${subscription.id}): ` +
+            (err instanceof Error ? err.message : String(err)),
+        )
+      }
     }
     // Still send receipt — payment is real, customer deserves audit trail
     // regardless of provisioning outcome.
@@ -262,8 +296,13 @@ async function trySendReceipt(
       customer_id: subscription.customer_id,
     })
     await deps.sendReceiptEmail({ to: customer.email, subject, text })
-  } catch {
-    // Best-effort — never block webhook on email send.
+  } catch (err) {
+    // Best-effort — never block webhook on email send. But a silent
+    // receipt failure is invisible; log (greppable) so it's not lost.
+    console.warn(
+      `[xendit-webhook] trySendReceipt failed for ${subscription.customer_id}: ` +
+        (err instanceof Error ? err.message : String(err)),
+    )
   }
 }
 
