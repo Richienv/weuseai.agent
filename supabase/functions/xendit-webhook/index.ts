@@ -29,6 +29,22 @@ declare const Deno: {
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const WEBHOOK_TOKEN = Deno.env.get('XENDIT_WEBHOOK_TOKEN')!
+// Prod-mode seam (CLAUDE.md § Deferred gate). Xendit uses the SAME
+// x-callback-token verification scheme in test and live mode — only the
+// token VALUE rotates per environment — so this does NOT change the auth
+// comparison. It only lets the handler (a) enforce the empty-token guard
+// and (b) tag rejection logs with the environment, so a cross-mode
+// misconfig (live key + stale test token, or vice-versa) is visible on the
+// first real webhook. Resolved from XENDIT_API_KEY's prefix: the founder
+// rotates that secret to `xnd_production_*` to go live (the rotation is
+// founder-only — see CLAUDE.md Production state). Until then it is
+// `xnd_development_*` (or unset) and we run in 'test' mode. XENDIT_API_KEY
+// is read ONLY for this mode flag here; invoice creation lives in the
+// create-invoice function, so this never touches money-moving logic.
+const XENDIT_API_KEY = Deno.env.get('XENDIT_API_KEY') ?? ''
+const XENDIT_KEY_MODE: 'test' | 'live' = XENDIT_API_KEY.startsWith('xnd_production_')
+  ? 'live'
+  : 'test'
 const PROVISIONING_URL = Deno.env.get('PROVISIONING_URL')!
 const PROVISIONING_AUTH_TOKEN = Deno.env.get('PROVISIONING_AUTH_TOKEN')!
 // Phase E (2026-05-14): used to decrypt the customer's existing bot
@@ -227,6 +243,9 @@ Deno.serve(async (req) => {
     db,
     provisioning,
     webhookToken: WEBHOOK_TOKEN,
+    // Prod-mode seam: 'live' once XENDIT_API_KEY rotates to xnd_production_*.
+    // Same token check applies in both modes (Xendit scheme is mode-agnostic).
+    keyMode: XENDIT_KEY_MODE,
     alertChatId: ALERT_CHAT_ID,
     alertSend,
     // Sesi B P0 #7 (2026-05-12): receipt email on PAID. Stub-tolerant —
