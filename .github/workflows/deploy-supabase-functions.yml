@@ -1,0 +1,69 @@
+name: Deploy Supabase Edge Functions
+
+# Deploys the Supabase Edge Functions AND smoke-tests them.
+#
+# Why this exists (2026-06-14): Edge Functions deploy separately from Vercel,
+# so a merged fix could sit undeployed indefinitely. That is exactly how
+# create-invoice went a MONTH stale (#229's canonical-plans fix merged
+# 2026-06-10 but the live function was last deployed 2026-05-13) — customers
+# hit "Paket tidak dikenali" for weeks while the fix sat on main.
+#
+# This workflow auto-deploys on every merge to main that touches
+# supabase/functions/**, then runs a post-deploy smoke that asserts the LIVE
+# create-invoice accepts every sellable catalog slug (and rejects a bogus one).
+# A bad/stale deploy fails the run loudly instead of silently breaking checkout.
+#
+# Manual trigger: gh workflow run deploy-supabase-functions.yml --ref main
+#
+# Required repo secrets:
+#   SUPABASE_ACCESS_TOKEN  — supabase personal access token (deploy auth)
+#   SUPABASE_PROJECT_REF   — the project ref (e.g. gtjgsligllbjcisiyrah)
+#   SUPABASE_URL           — https://<ref>.supabase.co (smoke target)
+#   SUPABASE_ANON_KEY      — anon key (smoke apikey header)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/functions/**'
+      - 'scripts/smoke-create-invoice-plans.ts'
+      - '.github/workflows/deploy-supabase-functions.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-supabase-functions
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: deploy + smoke
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install tsx (for the smoke)
+        run: npm i -g tsx
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Deploy all Edge Functions
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        # Deploys ALL functions (a change to _shared/* ripples across many),
+        # respecting per-function verify_jwt in supabase/config.toml.
+        run: supabase functions deploy --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}"
+
+      - name: Post-deploy smoke — every catalog slug must be accepted
+        env:
+          SMOKE_BASE: ${{ secrets.SUPABASE_URL }}
+          SMOKE_ANON: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: tsx scripts/smoke-create-invoice-plans.ts
