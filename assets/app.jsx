@@ -4470,11 +4470,11 @@
           slug: 'bare',
           decoy: true,
           tagline: 'Versi paling dasar. Tanpa persona, tanpa voice.',
-          priceLabel: 'Rp 249rb',
-          setupIdr: 249_000,
+          priceLabel: 'Rp 99rb',
+          setupIdr: 99_000,
           setupAside: 'biaya setup sekali bayar',
           hostingMonth: 'Rp 99rb',
-          month1Total: 'Rp 348rb',
+          month1Total: 'Rp 198rb',
           recurringLabel: 'Rp 99rb/bulan',
           persona: 'Buat kamu yang cuma mau asisten umum, tanpa spesialis.',
           outcomes: [
@@ -4486,6 +4486,30 @@
           appsTotal: 1,
           cta: 'Mulai Bare Agent',
           ctaHref: 'https://wa.me/6282154902561?text=Halo%2C%20saya%20mau%20mulai%20paket%20Bare%20Agent%20di%20weuseai.agent',
+          featured: false,
+        },
+        {
+          name: 'Solo Starter',
+          slug: 'solo',
+          tagline: '3 persona inti, tanpa voice.',
+          priceLabel: 'Rp 399rb',
+          setupIdr: 399_000,
+          setupAside: 'biaya setup sekali bayar',
+          hostingMonth: 'Rp 99rb',
+          month1Total: 'Rp 498rb',
+          recurringLabel: 'Rp 99rb/bulan',
+          persona: 'Buat kamu yang mau persona kerja inti, cukup lewat teks.',
+          outcomes: [
+            '3 persona: The Pro, Doc Expert, Slide Master',
+            'Mode teks — tanpa voice note',
+            'VPS dedicated, bukan shared',
+            'Kredit LLM perkenalan termasuk — lanjut pakai kunci kamu sendiri, kami bantu pasang',
+            'Community support',
+          ],
+          apps: ['Telegram', 'Web'],
+          appsTotal: 2,
+          cta: 'Mulai Solo Starter',
+          ctaHref: 'https://wa.me/6282154902561?text=Halo%2C%20saya%20mau%20mulai%20paket%20Solo%20Starter%20di%20weuseai.agent',
           featured: false,
         },
         {
@@ -4596,9 +4620,9 @@
               </p>
             </div>
 
-            {/* 4 tiers side by side — Bare (decoy) → Voice → Library Lengkap
-                (recommended, premium glow) → Siap Pakai. */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5 items-stretch">
+            {/* 5 tiers side by side — Bare (decoy) → Solo → Voice → Library
+                Lengkap (recommended, premium glow) → Siap Pakai. */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 md:gap-5 items-stretch">
               {tiers.map((t, i) => (
                 <PricingCard
                   key={t.name}
