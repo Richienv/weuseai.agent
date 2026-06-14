@@ -1,6 +1,6 @@
-name: Deploy Supabase Edge Functions
+name: Deploy Supabase (migrations + Edge Functions)
 
-# Deploys the Supabase Edge Functions AND smoke-tests them.
+# Applies pending DB migrations, deploys the Edge Functions, AND smoke-tests them.
 #
 # Why this exists (2026-06-14): Edge Functions deploy separately from Vercel,
 # so a merged fix could sit undeployed indefinitely. That is exactly how
@@ -8,15 +8,21 @@ name: Deploy Supabase Edge Functions
 # 2026-06-10 but the live function was last deployed 2026-05-13) — customers
 # hit "Paket tidak dikenali" for weeks while the fix sat on main.
 #
-# This workflow auto-deploys on every merge to main that touches
-# supabase/functions/**, then runs a post-deploy smoke that asserts the LIVE
-# create-invoice accepts every sellable catalog slug (and rejects a bogus one).
-# A bad/stale deploy fails the run loudly instead of silently breaking checkout.
+# MIGRATIONS had the SAME gap, one layer deeper: a migration could merge to main
+# and never reach the live DB. That silently broke production — fleet_alerts,
+# custom_personas, library_proposals, customers.genesis_draft all existed on
+# main but not in the DB, so the features depending on them errored
+# (42P01/42703). This workflow now closes that too: it applies any unrecorded
+# migration via the Management API (no DB password needed) BEFORE deploying the
+# functions, so functions always land against an up-to-date schema.
+#
+# Order matters: migrate → deploy functions → smoke. A function that reads a new
+# column must not deploy ahead of the migration that adds it.
 #
 # Manual trigger: gh workflow run deploy-supabase-functions.yml --ref main
 #
 # Required repo secrets:
-#   SUPABASE_ACCESS_TOKEN  — supabase personal access token (deploy auth)
+#   SUPABASE_ACCESS_TOKEN  — supabase personal access token (deploy + migrate auth)
 #   SUPABASE_PROJECT_REF   — the project ref (e.g. gtjgsligllbjcisiyrah)
 #   SUPABASE_URL           — https://<ref>.supabase.co (smoke target)
 #   SUPABASE_ANON_KEY      — anon key (smoke apikey header)
@@ -26,8 +32,10 @@ on:
     branches: [main]
     paths:
       - 'supabase/functions/**'
+      - 'supabase/migrations/**'
       - 'agent-packs/**'
       - 'scripts/smoke-create-invoice-plans.ts'
+      - 'scripts/apply-migrations.mjs'
       - '.github/workflows/deploy-supabase-functions.yml'
   workflow_dispatch:
 
@@ -59,6 +67,17 @@ jobs:
         uses: supabase/setup-cli@v1
         with:
           version: latest
+
+      # Migrate BEFORE deploying functions: a function that reads a new column
+      # must not go live ahead of the migration that adds it. The applier is
+      # idempotent — it applies only migrations whose version is not yet
+      # recorded in supabase_migrations.schema_migrations, via the Management
+      # API (no DB password). A clean run prints "No pending migrations".
+      - name: Apply pending DB migrations (Management API)
+        env:
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: node scripts/apply-migrations.mjs
 
       - name: Deploy changed Edge Functions (or all)
         env:
