@@ -406,9 +406,7 @@
     function Navbar() {
       const links = [
         { label: 'Beranda', href: '#beranda' },
-        { label: 'Agent', href: '#agent' },
-        { label: 'Kerja', href: '#kerja' },
-        { label: 'Proses', href: '#proses' },
+        { label: 'Kerja', href: '#proses' },
         { label: 'Harga', href: '#pricing' },
         { label: 'FAQ', href: '#faq' },
       ];
@@ -424,13 +422,13 @@
               {links.map((l) => (
                 <a key={l.label} href={l.href} className="px-3 py-2 text-sm font-medium text-foreground/90 font-body hover:text-white transition-colors">{l.label}</a>
               ))}
-              <button className="bg-white text-black rounded-full px-3.5 py-1.5 text-sm font-medium flex items-center gap-1.5 ml-1">
+              <a href="#pricing" className="bg-white text-black rounded-full px-3.5 py-1.5 text-sm font-medium flex items-center gap-1.5 ml-1 no-underline">
                 Mulai <ArrowUpRight size={14} stroke={2.2} />
-              </button>
+              </a>
             </nav>
-            <button className="md:hidden nav-clean rounded-full px-3.5 py-1.5 text-xs font-medium text-white flex items-center gap-1.5 whitespace-nowrap">
+            <a href="#pricing" className="md:hidden nav-clean rounded-full px-3.5 py-1.5 text-xs font-medium text-white flex items-center gap-1.5 whitespace-nowrap no-underline">
               Mulai <ArrowUpRight size={12} stroke={2.2} />
-            </button>
+            </a>
           </div>
         </header>
       );
@@ -5148,99 +5146,6 @@
       );
     }
 
-    // ─────────────────────── TESTIMONIALS ───────────────────────
-    function Testimonials() {
-      // Build-in-public honesty block (founder-approved swap 2026-06-11).
-      // The previous three quotes were not from real customers — for this
-      // audience one sniffed-fake review poisons the whole page. Swap real
-      // testimonials in ONE BY ONE here as real customers agree to be
-      // quoted, then retire the candor card.
-      const proofs = [
-        { t: 'Counter pembeli di atas kebaca langsung dari data pembayaran — bukan angka hiasan.' },
-        { t: 'Refund policy tertulis, bisa kamu baca sebelum keluar uang.' },
-        { t: 'Founder-nya bisa kamu tanya-tanyai dulu lewat WhatsApp, sebelum memutuskan.' },
-      ];
-      return (
-        <section className="relative py-20 md:py-28 px-5 md:px-6 lg:px-16">
-          <div className="max-w-6xl mx-auto">
-            <div className="flex flex-col items-center text-center mb-14 md:mb-20">
-              <div className="liquid-glass rounded-full px-3.5 py-1 text-xs font-medium font-body text-white/90">
-                Jujur dari awal
-              </div>
-              <BlurText
-                as="h2"
-                text="Produk ini baru. Kami tidak pura-pura sebaliknya."
-                className="mt-5 md:mt-6 text-3xl md:text-5xl lg:text-6xl font-heading text-white tracking-tight leading-[1.0] md:leading-[0.95]"
-                style={{ letterSpacing: '-0.04em' }}
-                delay={70} />
-            </div>
-            <Mot.div
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: 0.3 }}
-              transition={{ duration: 0.7, ease: EASE }}
-              className="liquid-glass rounded-2xl p-7 md:p-10 max-w-3xl mx-auto">
-              <p className="text-white/85 font-body font-light text-sm md:text-base leading-relaxed text-center">
-                Belum ada seribu review bintang lima di sini — dan kami tidak akan menulis yang palsu.
-                Yang ada hari ini: bukti yang bisa kamu cek sendiri.
-              </p>
-              <div className="mt-7 md:mt-8 grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5">
-                {proofs.map((x, i) => (
-                  <div key={i} className="rounded-xl border border-white/10 p-4 md:p-5">
-                    <p className="text-white/70 font-body font-light text-xs md:text-sm leading-relaxed">{x.t}</p>
-                  </div>
-                ))}
-              </div>
-              <p className="mt-7 md:mt-8 text-center text-white/55 font-body font-light text-xs md:text-sm">
-                Kami tumbuh dari sini, bareng kamu. Review asli akan muncul di halaman ini satu per satu — dengan izin, bukan karangan.
-              </p>
-            </Mot.div>
-          </div>
-        </section>
-      );
-    }
-
-    // ─────────────────────── TECH SPECS (Di balik layar) ───────────────────────
-    // Real architecture, plain words. Every line here is true as shipped.
-    function TechSpecs() {
-      const specs = [
-        { t: 'Server kamu sendiri', d: 'Satu VPS di Singapore, khusus untuk kamu. Bukan akun ramai-ramai — data dan percakapan tinggal di mesin kamu.' },
-        { t: 'Model bahasa kelas frontier', d: 'Default DeepSeek — cepat dan hemat. Mau ganti otak ke model lain, tinggal pasang kunci kamu sendiri.' },
-        { t: 'Hidup di Telegram', d: 'Tanpa aplikasi baru. Ketik atau kirim voice note — transkripsi suara jalan otomatis di paket voice.' },
-        { t: 'Ingat lintas sesi', d: 'Cerita hari Senin, ditanyakan lagi hari Rabu — tanpa kamu mengulang konteks.' },
-      ];
-      return (
-        <section className="relative py-20 md:py-28 px-5 md:px-6 lg:px-16 bg-black">
-          <div className="max-w-6xl mx-auto">
-            <div className="flex flex-col items-center text-center mb-12 md:mb-16">
-              <div className="liquid-glass rounded-full px-3.5 py-1 text-xs font-medium font-body text-white/90">
-                Di balik layar
-              </div>
-              <BlurText
-                as="h2"
-                text="Teknologi serius. Pengalaman sederhana."
-                className="mt-5 md:mt-6 text-3xl md:text-5xl lg:text-6xl font-heading text-white tracking-tight leading-[1.0] md:leading-[0.95] max-w-3xl"
-                style={{ letterSpacing: '-0.04em' }}
-                delay={70} />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5 max-w-4xl mx-auto">
-              {specs.map((x, i) => (
-                <Mot.div key={x.t}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, amount: 0.3 }}
-                  transition={{ duration: 0.6, ease: EASE, delay: 0.06 * i }}
-                  className="liquid-glass rounded-2xl p-6 md:p-7">
-                  <div className="text-white font-body font-medium text-sm md:text-base">{x.t}</div>
-                  <p className="mt-2 text-white/60 font-body font-light text-xs md:text-sm leading-relaxed">{x.d}</p>
-                </Mot.div>
-              ))}
-            </div>
-          </div>
-        </section>
-      );
-    }
-
     // ─────────────────────── CTA + FOOTER ───────────────────────
     function CtaFooter() {
       return (
@@ -5314,11 +5219,9 @@
               <HangzhouEdge />
               <CostComparisonSection />
               <Pricing />
-              <TechSpecs />
               <CommunitySection />
               <FAQ />
               <Stats />
-              <Testimonials />
               <CtaFooter />
             </div>
           </div>
