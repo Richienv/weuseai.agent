@@ -184,3 +184,11 @@ verify_jwt = true
 # customer confirms — so the exposure here is an LLM call, not state.
 [functions.genesis-distill]
 verify_jwt = false
+
+# Dashboard chat relay (Phase 2, 2026-06-16): browser-facing relay for the
+# "chat dengan agent kamu" web UI. The browser carries no Supabase Auth JWT;
+# authz is the X-CID == customer_id gate + a durable per-cid rate/budget cap,
+# enforced in the handler. Ships DARK — AGENT_CHAT_ENABLED defaults false, so
+# every request 404s until the live throwaway-VPS spike validates the transport.
+[functions.agent-chat-relay]
+verify_jwt = false
