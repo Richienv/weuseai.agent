@@ -2727,6 +2727,11 @@
 
       return (
         <section id="beranda" className="db-section db-section--hero">
+          {/* Ambient dotted-red hero video — dimmed behind the dashboard mockup.
+              DottedVideo's IntersectionObserver pauses its rAF when scrolled away. */}
+          <DottedVideo src="/assets/new-hero.mp4" color="#E5322D" cellSize={7} className="db-hero-video" />
+          <div className="db-hero-dim" aria-hidden="true" />
+          <div className="db-hero-fade" aria-hidden="true" />
           <div className="db-eyebrow">
             <div className="db-eyebrow-pill">
               <span className="live-dot" />
@@ -5131,6 +5136,120 @@
       );
     }
 
+    // ─────────────────────── ORIGIN / FOUNDER EDGE ───────────────────────
+    // The previous video hero, demoted to a credibility section below the
+    // dashboard hero (rev 2026-06-16). NOT id="beranda" — the dashboard hero
+    // owns that. Entrance animates on scroll-in; section sizing, not hero.
+    function OriginSection() {
+      return (
+        <section id="asal-usul" className="origin-section">
+          <DottedVideo
+            src="/assets/new-hero.mp4"
+            color="#E5322D"
+            cellSize={6}
+            className="absolute inset-0 w-full h-full pointer-events-none"
+            style={{ zIndex: 0, background: '#000' }}
+          />
+          <div className="hero-grain" />
+          <div className="absolute inset-0 z-[1] pointer-events-none" style={{
+            background: 'linear-gradient(180deg, rgba(5,5,5,0.45) 0%, rgba(5,5,5,0.35) 45%, rgba(5,5,5,0.70) 100%)'
+          }} />
+          <div className="absolute top-0 left-0 right-0 z-[2] pointer-events-none"
+            style={{ height: 120, background: 'linear-gradient(to bottom, #050505, transparent)' }} />
+          <div className="absolute bottom-0 left-0 right-0 z-[2] pointer-events-none"
+            style={{ height: 180, background: 'linear-gradient(to bottom, transparent, #050505)' }} />
+
+          <div className="relative z-10 flex flex-col items-center text-center px-5 md:px-6 w-full">
+            <Mot.div
+              initial={{ filter: 'blur(10px)', opacity: 0, y: 20 }}
+              whileInView={{ filter: 'blur(0px)', opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.4 }}
+              transition={{ duration: 0.6, ease: EASE }}
+              className="rounded-full px-1 py-1 flex items-center gap-2 text-xs font-body"
+              style={{
+                background: 'rgba(255, 255, 255, 0.08)',
+                border: '1px solid rgba(255, 255, 255, 0.22)',
+                backdropFilter: 'blur(8px)'
+              }}>
+              <span style={{ background: '#E5322D', color: '#fff' }} className="rounded-full px-3 py-1 text-[10px] font-mono font-medium uppercase tracking-[0.18em]">Resep Hangzhou</span>
+              <span className="pr-3 font-mono uppercase tracking-[0.14em] text-[11px] text-white/85">Dirakit untuk Indonesia</span>
+            </Mot.div>
+
+            <BlurText
+              text="Resep kampus elite China. Tenaga satu tim penuh. Aktif dalam 8 menit."
+              className="mt-6 md:mt-8 text-[2rem] sm:text-4xl md:text-5xl lg:text-[3.75rem] font-heading leading-[1.02] md:leading-[0.98] max-w-[20ch] md:max-w-[24ch] text-white px-2"
+              style={{ letterSpacing: '-0.04em', fontStyle: 'normal' }}
+              delay={100} />
+
+            <Mot.p
+              initial={{ filter: 'blur(10px)', opacity: 0, y: 20 }}
+              whileInView={{ filter: 'blur(0px)', opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.4 }}
+              transition={{ duration: 0.6, ease: EASE, delay: 0.15 }}
+              className="mt-5 md:mt-6 max-w-[52ch] text-sm md:text-base font-body font-light leading-[1.5] text-white/85 px-2">
+              Satu tim agent AI di Telegram kamu — riset, surat, slide, laporan. Dipelajari langsung di Zhejiang University, Hangzhou, dibawa pulang untuk kamu. Bukan chatbot yang cuma jawab; tim yang mengerjakan.
+            </Mot.p>
+
+            <Mot.p
+              initial={{ filter: 'blur(10px)', opacity: 0, y: 20 }}
+              whileInView={{ filter: 'blur(0px)', opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.4 }}
+              transition={{ duration: 0.6, ease: EASE, delay: 0.25 }}
+              className="mt-4 font-mono uppercase tracking-[0.18em] text-[10px] md:text-[11px] text-white/55">
+              Setup 5 menit · bayar pakai QRIS · hosting Rp 99rb/bulan · berhenti kapan saja
+            </Mot.p>
+
+            <Mot.div
+              initial={{ filter: 'blur(10px)', opacity: 0, y: 20 }}
+              whileInView={{ filter: 'blur(0px)', opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.4 }}
+              transition={{ duration: 0.6, ease: EASE, delay: 0.35 }}
+              className="mt-8 flex flex-col items-center gap-3">
+              <div className="flex items-center gap-3 flex-wrap justify-center">
+                <a href="checkout.html" className="rounded-full px-5 py-2.5 min-h-[44px] text-sm font-medium flex items-center gap-2 no-underline"
+                  style={{ background: '#fff', color: '#0a0a0a', border: '1px solid #fff' }}>
+                  Aktifkan asisten kamu <ArrowUpRight size={14} stroke={2.2} />
+                </a>
+                <a href="https://cal.com/weuseai.agent/15min" target="_blank" rel="noopener" className="rounded-full px-5 py-2.5 min-h-[44px] text-sm font-medium flex items-center gap-2 no-underline text-white"
+                  style={{ background: 'rgba(255, 255, 255, 0.06)', border: '1px solid rgba(255, 255, 255, 0.22)', backdropFilter: 'blur(8px)' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2" />
+                    <line x1="16" y1="2" x2="16" y2="6" />
+                    <line x1="8" y1="2" x2="8" y2="6" />
+                    <line x1="3" y1="10" x2="21" y2="10" />
+                  </svg>
+                  Konsultasi gratis (15 menit)
+                </a>
+              </div>
+            </Mot.div>
+
+            <div className="mt-10 md:mt-12 w-full max-w-5xl mx-auto">
+              <div className="liquid-glass rounded-2xl md:rounded-3xl p-5 md:p-9 grid grid-cols-2 md:grid-cols-4 gap-5 md:gap-6 text-center">
+                {[
+                  { n: 8,   suffix: ' mnt', label: 'Dari bayar ke pesan pertama\n(diukur, bukan janji)' },
+                  { n: 10,  suffix: '',     label: 'Persona spesialis\ndi-engineer satu per satu' },
+                  { n: 190, suffix: '+',    label: 'Template Indonesia\nPPN · BPJS · KBLI · IDX' },
+                  { n: 24,  suffix: '',     label: 'Playbook multi-langkah\nbriefing pagi sampai laporan' },
+                ].map((it, i) => (
+                  <Mot.div key={it.label}
+                    initial={{ opacity: 0, y: 16 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, amount: 0.4 }}
+                    transition={{ duration: 0.6, ease: EASE, delay: 0.06 * i }}
+                    className="flex flex-col items-center">
+                    <div className="text-2xl md:text-4xl lg:text-5xl font-heading text-white leading-none" style={{ letterSpacing: '-0.04em' }}>
+                      <CountUp to={it.n} suffix={it.suffix} duration={1800} delay={150 + i * 120} />
+                    </div>
+                    <div className="mt-2 md:mt-2.5 text-white/55 font-body font-light italic text-[11px] md:text-[13px] leading-snug" style={{ whiteSpace: 'pre-line' }}>{it.label}</div>
+                  </Mot.div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+      );
+    }
+
     // ─────────────────────── APP ───────────────────────
     function App() {
       return (
@@ -5140,6 +5259,7 @@
             <DashboardDemo />
             <div className="bg-black">
               <IntegrationsSpine />
+              <OriginSection />
               <StartSection />
               <FeaturesChess />
               <VelvetSection />

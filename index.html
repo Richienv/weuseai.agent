@@ -256,6 +256,35 @@
     .db-section--hero { padding-top: 118px; }
     @media (min-width: 768px) { .db-section--hero { padding-top: 150px; } }
 
+    /* Ambient hero video — layered behind the dashboard mockup (rev 2026-06-16). */
+    .db-section--hero .db-hero-video {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      z-index: 0; pointer-events: none;
+      background: #050505;            /* matches section, masks first-frame flash */
+      opacity: 0.55;
+    }
+    .db-section--hero .db-hero-dim {
+      position: absolute; inset: 0; z-index: 1; pointer-events: none;
+      background:
+        radial-gradient(ellipse 80% 60% at 50% 32%, rgba(5,5,5,0.55), rgba(5,5,5,0.86) 72%),
+        linear-gradient(180deg, rgba(5,5,5,0.80) 0%, rgba(5,5,5,0.66) 42%, rgba(5,5,5,0.88) 100%);
+    }
+    .db-section--hero .db-hero-fade {
+      position: absolute; left: 0; right: 0; bottom: 0; height: 220px;
+      z-index: 1; pointer-events: none;
+      background: linear-gradient(to bottom, rgba(5,5,5,0), #050505);
+    }
+    /* Lift the otherwise-static hero content above the video + scrim. */
+    .db-section--hero .db-eyebrow { position: relative; z-index: 3; }
+    .db-section--hero .db-frame   { position: relative; z-index: 3; }
+    @media (prefers-reduced-motion: reduce) {
+      .db-section--hero .db-hero-video { opacity: 0.18; }
+    }
+
+    /* Origin / founder-edge — the demoted ex-hero (rev 2026-06-16). Section sizing, not hero. */
+    .origin-section { position: relative; overflow: hidden; background: #050505; padding: 96px 16px 104px; }
+    @media (min-width: 768px) { .origin-section { padding: 120px 24px 128px; } }
+
     /* ── Integrations spine — the 4-app centerpiece (Phase 3) ── */
     .is-section { position: relative; padding: 84px 16px 92px; background: #050505; overflow: hidden; }
     @media (min-width: 768px) { .is-section { padding: 116px 24px 124px; } }
