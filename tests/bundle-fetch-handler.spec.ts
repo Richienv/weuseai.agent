@@ -62,7 +62,9 @@ const buildDeps = (opts: {
   versionsThrows?: Error
   signOk?: boolean
   signError?: string
+  verifyToken?: (customerId: string, token: string) => Promise<boolean>
 }): BundleFetchDeps => ({
+  verifyToken: opts.verifyToken,
   customerLookup: async () => opts.customer === undefined ? customer() : opts.customer,
   listBundleVersions: async () => {
     if (opts.versionsThrows) throw opts.versionsThrows
@@ -409,4 +411,53 @@ test('unrecognized tier slug → 403 invalid_customer_tier (defense in depth)', 
     assert.equal(r.status, 403)
     assert.equal(r.error, 'invalid_customer_tier')
   }
+})
+
+// ─── HMAC instance-token gate (H2/H3, 2026-06-14) ──────────────────────
+
+test('auth gate: invalid/absent token → 401 (closes the IDOR)', async () => {
+  // verifyToken configured (server has HERMES_INSTANCE_HMAC_KEY) but the
+  // presented token doesn't match this customer_id — a UUID-knower without
+  // the victim's VPS token. Must reject before any signed URL is minted.
+  const r = await bundleFetchHandler(
+    { ...baseInput, bearer_token: 'forged-or-missing' },
+    buildDeps({ verifyToken: async () => false }),
+  )
+  assert.equal(r.ok, false)
+  if (!r.ok) {
+    assert.equal(r.status, 401)
+    assert.equal(r.error, 'unauthorized')
+  }
+})
+
+test('auth gate: valid token → proceeds to the normal flow', async () => {
+  const r = await bundleFetchHandler(
+    { ...baseInput, bearer_token: 'valid-token' },
+    buildDeps({ verifyToken: async () => true, versions: ['1.0.0.tar.gz'] }),
+  )
+  assert.equal(r.ok, true)
+})
+
+test('auth gate: verifyToken receives the request customer_id + presented token', async () => {
+  let seen: { cid: string; token: string } | null = null
+  await bundleFetchHandler(
+    { ...baseInput, customer_id: 'cust-1', bearer_token: 'tok-abc' },
+    buildDeps({
+      verifyToken: async (cid, token) => {
+        seen = { cid, token }
+        return true
+      },
+      versions: ['1.0.0.tar.gz'],
+    }),
+  )
+  assert.deepEqual(seen, { cid: 'cust-1', token: 'tok-abc' })
+})
+
+test('auth gate: unconfigured (verifyToken undefined) → fail-open, no regression', async () => {
+  // No HERMES_INSTANCE_HMAC_KEY → no verifier → prior behaviour preserved.
+  const r = await bundleFetchHandler(
+    baseInput,
+    buildDeps({ versions: ['1.0.0.tar.gz'] }),
+  )
+  assert.equal(r.ok, true)
 })
