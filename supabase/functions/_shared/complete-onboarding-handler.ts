@@ -95,6 +95,15 @@ export async function handleCompleteOnboarding(
   if (!subscription) {
     return json({ error: 'no_paid_subscription' }, 404)
   }
+  // Defense-in-depth (security finding C1, 2026-06-14): this handler mints a
+  // real LLM key and provisions a real VPS — it MUST NOT run for an unpaid
+  // subscription. The lookup above already excludes the pre-payment 'pending'
+  // status, so this is belt-and-suspenders: it pins the "paid only" invariant
+  // at the money-spending site itself, so a future change to the lookup can't
+  // silently re-open the free-provision hole.
+  if (subscription.status === 'pending') {
+    return json({ error: 'payment_not_confirmed' }, 402)
+  }
 
   // ─── 1b. Resolve + validate the chosen persona (2026-05-17) ───────
   // The onboarding picker submits agent_slug. It MUST be one of the

@@ -70,18 +70,23 @@ export function createOnboardingStore(opts: {
     },
 
     async findActiveOrPendingSubscriptionByCustomer(customerId) {
-      // Most recent subscription for this customer in a "billable" state.
-      // We accept pending too because xendit-webhook may not have flipped
-      // it yet — but in practice the onboarding page only renders after
-      // payment-success redirect, which means the webhook has already run
-      // OR is racing this read.
+      // Most recent subscription for this customer in a PAID state. We accept
+      // ONLY post-payment statuses — 'active' and 'pending_provision', both set
+      // by the xendit-webhook PAID handler. We MUST NOT accept the pre-payment
+      // 'pending' status: it is created by create-invoice BEFORE any money
+      // moves. Including it (the prior behaviour, rationalised by "the webhook
+      // may not have flipped it yet") let an unauthenticated caller who knows a
+      // customer_id drive the full onboarding flow — mint an LLM key and
+      // provision a real VPS — on a never-paid subscription. SECURITY finding
+      // C1 (2026-06-14). The function name's "Pending" means 'pending_provision'
+      // (a post-PAID state), NOT pre-payment 'pending'.
       const { data } = await supabase
         .from('subscriptions')
         .select(
           'id, customer_id, tier, status, xendit_invoice_id, always_on_enabled, hosting_active, next_billing_at',
         )
         .eq('customer_id', customerId)
-        .in('status', ['active', 'pending_provision', 'pending'])
+        .in('status', ['active', 'pending_provision'])
         .order('started_at', { ascending: false })
         .limit(1)
         .maybeSingle()

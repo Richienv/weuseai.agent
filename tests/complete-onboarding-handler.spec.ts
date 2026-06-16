@@ -1127,3 +1127,95 @@ test('persona: starter tier rejects a pro-only persona', async () => {
   )
   assert.equal(res.status, 403, 'starter cannot pick a pro-only persona')
 })
+
+// ─── security: C1 — never provision/mint on an unpaid subscription ───────
+
+test('C1 root: a pre-payment `pending` subscription is NOT billable → 404, no mint, no provision', async () => {
+  // The exploit: an unauthenticated caller who knows a customer_id drives
+  // complete-onboarding on a subscription still in the pre-payment `pending`
+  // state (created by create-invoice, never confirmed by the PAID webhook).
+  // The lookup must exclude `pending`, so the handler rejects BEFORE spending
+  // any money.
+  const db = new FakeOnboardingStore()
+  const minter = new MockLlmKeyMinter()
+  const provisioning = new FakeProvisioning()
+  const telegram = new FakeTelegram()
+
+  db.seedCustomer({
+    id: 'cust-1',
+    email: 'attacker@example.com',
+    display_name: 'Mallory',
+    telegram_chat_id: '987654321',
+    telegram_bot_username: TEST_BOT_USERNAME,
+    pairing_code: '123456',
+    pairing_code_expires_at: '2099-01-01T00:00:00.000Z',
+  })
+  void db.setBotTokenAndUsername('cust-1', TEST_BOT_TOKEN, TEST_BOT_USERNAME)
+  db.seedSubscription({
+    id: 'sub-1',
+    customer_id: 'cust-1',
+    tier: 'pro',
+    status: 'pending', // <-- never paid
+    always_on_enabled: false,
+  })
+
+  const res = await handleCompleteOnboarding(
+    buildReq({
+      customer_id: 'cust-1',
+      whatsapp: '0812 3456 7890',
+      expectations_text: 'Bantu briefing pagi dan ringkas berita.',
+    }),
+    { db, minter, provisioning, telegram, publicBase: PUBLIC_BASE },
+  )
+
+  assert.equal(res.status, 404, 'unpaid (pending) subscription must be rejected')
+  assert.equal(minter.minted.length, 0, 'must NOT mint an LLM key for an unpaid sub')
+  assert.equal(provisioning.calls.length, 0, 'must NOT provision a VPS for an unpaid sub')
+})
+
+test('C1 guard: even if a `pending` sub reaches the handler, it 402s before minting', async () => {
+  // Defense-in-depth: pin the "paid only" invariant at the money-spending
+  // handler. Override the lookup to (wrongly) return a pending sub — the
+  // explicit guard must still block provisioning + minting.
+  const db = new FakeOnboardingStore()
+  const minter = new MockLlmKeyMinter()
+  const provisioning = new FakeProvisioning()
+  const telegram = new FakeTelegram()
+
+  db.seedCustomer({
+    id: 'cust-1',
+    email: 'attacker@example.com',
+    display_name: 'Mallory',
+    telegram_chat_id: '987654321',
+    telegram_bot_username: TEST_BOT_USERNAME,
+    pairing_code: '123456',
+    pairing_code_expires_at: '2099-01-01T00:00:00.000Z',
+  })
+  void db.setBotTokenAndUsername('cust-1', TEST_BOT_TOKEN, TEST_BOT_USERNAME)
+  // Bypass the (now-fixed) lookup filter to prove the handler-level guard.
+  db.findActiveOrPendingSubscriptionByCustomer = async () => ({
+    id: 'sub-1',
+    customer_id: 'cust-1',
+    tier: 'pro',
+    status: 'pending',
+    xendit_invoice_id: null,
+    always_on_enabled: false,
+    hosting_active: false,
+    next_billing_at: null,
+  })
+
+  const res = await handleCompleteOnboarding(
+    buildReq({
+      customer_id: 'cust-1',
+      whatsapp: '0812 3456 7890',
+      expectations_text: 'Bantu briefing pagi dan ringkas berita.',
+    }),
+    { db, minter, provisioning, telegram, publicBase: PUBLIC_BASE },
+  )
+
+  assert.equal(res.status, 402, 'pending sub reaching the handler must 402')
+  const data = await readJson(res)
+  assert.equal(data.error, 'payment_not_confirmed')
+  assert.equal(minter.minted.length, 0, 'guard must block minting')
+  assert.equal(provisioning.calls.length, 0, 'guard must block provisioning')
+})
