@@ -4174,56 +4174,6 @@
     // part-time. Six rows lock in: Bahasa native, 10 agents, 24/7,
     // persistent memory, setup time, cost. weuseai column hits ✓ across
     // all + Rp 99rb/bulan at the foot.
-    // ─────────────── DARI HANGZHOU (founder edge — true story) ───────────────
-    // Every claim here is the founder's verifiable life: ZJU GMBA Hangzhou,
-    // firsthand study of China's agent-first daily workflows. This answers
-    // the skeptic's #1 question: kenapa bisa semurah dan sesiap ini.
-    function HangzhouEdge() {
-      const points = [
-        { t: 'Dipelajari di sumbernya', d: 'Founder kami kuliah GMBA di Zhejiang University, Hangzhou — jantungnya ekosistem AI China. Setup agent yang dipakai orang sana tiap hari, kami pelajari langsung, bukan dari thread internet.' },
-        { t: 'Di China, agent itu alat harian', d: 'Mahasiswa pakai agent buat tugas dan slide. Pemilik usaha pakai agent buat operasional. Bukan ChatGPT — agent yang lebih murah, lebih pribadi, dan benar-benar mengerjakan.' },
-        { t: 'Resep yang sama, untuk Indonesia', d: 'Arsitektur efisien yang kami pelajari di sana, kami bangun ulang untuk Bahasa dan konteks bisnis Indonesia. Itu kenapa harga kami serendah ini — resepnya hemat, bukan fiturnya yang dipotong.' },
-        { t: 'Bandingkan dengan bikin sendiri', d: 'Rakit sendiri berarti bakar token untuk eksperimen, debug tengah malam, dan hasil yang belum tentu stabil. Kami sudah bayar harga belajarnya — kamu tinggal pakai.' },
-      ];
-      return (
-        <section className="relative overflow-hidden py-24 md:py-36 px-5 md:px-6 lg:px-16 bg-black">
-          <FadeTop /> <FadeBottom />
-          <div className="relative z-10 max-w-7xl mx-auto">
-            <div className="flex flex-col items-center text-center mb-14 md:mb-20">
-              <div className="liquid-glass rounded-full px-3.5 py-1 text-xs font-medium font-body text-white/90" style={{ borderColor: 'rgba(229, 50, 45, 0.45)' }}>
-                Keunggulan kami
-              </div>
-              <BlurText
-                as="h2"
-                text="Resep ini kami pelajari di kampus elite China."
-                className="mt-5 md:mt-6 text-4xl md:text-6xl lg:text-7xl font-heading text-white tracking-tight leading-[1.0] md:leading-[0.95] max-w-4xl"
-                style={{ letterSpacing: '-0.04em' }}
-                delay={70} />
-              <p className="mt-6 max-w-2xl text-white/60 font-body font-light text-base md:text-lg leading-relaxed">
-                Dunia masih sibuk ngobrol sama chatbot. China sudah pindah ke agent — dan kami mempelajarinya dari dalam, di Zhejiang University, Hangzhou, lalu membawanya pulang.
-              </p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-7 max-w-5xl mx-auto">
-              {points.map((x, i) => (
-                <Mot.div key={x.t}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, amount: 0.3 }}
-                  transition={{ duration: 0.6, ease: EASE, delay: 0.06 * i }}
-                  className="liquid-glass rounded-3xl p-8 md:p-10">
-                  <div className="text-white font-heading text-xl md:text-2xl" style={{ letterSpacing: '-0.02em' }}>{x.t}</div>
-                  <p className="mt-3 text-white/65 font-body font-light text-sm md:text-base leading-relaxed">{x.d}</p>
-                </Mot.div>
-              ))}
-            </div>
-            <p className="mt-12 md:mt-16 text-center text-sm md:text-base text-white/50 font-body font-light max-w-2xl mx-auto leading-relaxed">
-              Kamu tidak perlu pindah ke Hangzhou untuk kerja seperti mereka. Cukup satu checkout.
-            </p>
-          </div>
-        </section>
-      );
-    }
-
     // ─────────────────────── COST COMPARISON ───────────────────────
     function CostComparisonSection() {
       const rows = [
@@ -5189,7 +5139,7 @@
               className="text-4xl md:text-6xl lg:text-7xl font-heading leading-[0.92] md:leading-[0.85] tracking-tight max-w-4xl"
               delay={90} />
             <p className="mt-6 md:mt-8 max-w-xl text-white/70 font-body font-light text-sm md:text-base px-2">
-              Atau besok pagi sama seperti pagi ini — kamu yang pilih. Resep dari Hangzhou, tim penuh di Telegram kamu, hosting Rp 99rb/bulan.
+              Atau besok pagi sama seperti pagi ini — kamu yang pilih. Tim penuh di Telegram kamu, terhubung ke app yang kamu pakai, hosting Rp 99rb/bulan.
             </p>
             <div className="mt-8 md:mt-10 flex items-center gap-3 md:gap-4 flex-wrap justify-center">
               <a href="checkout.html" className="bg-white text-black rounded-full px-5 md:px-6 py-3 text-sm font-medium flex items-center gap-2 no-underline">
@@ -5240,7 +5190,6 @@
               <VelvetSection />
               <FeaturesGrid />
               <ChatVsAgentSection />
-              <HangzhouEdge />
               <CostComparisonSection />
               <Pricing />
               <CommunitySection />
