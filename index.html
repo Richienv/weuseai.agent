@@ -63,6 +63,46 @@
                     0 0 110px -22px rgba(229,50,45,0.55);
       }
     }
+
+    /* ── Utility-meter: the Rp 99rb/bulan recurring line reads like a live
+          electricity meter ("bayar kayak listrik"). Legibility first;
+          the price text never moves. (Pricing rev 2026-06-16.) ── */
+    .utility-meter { display: inline-flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+    .utility-meter__label { letter-spacing: -0.01em; }
+    .utility-meter__track {
+      position: relative; display: block;
+      width: 88px; height: 5px; border-radius: 999px; overflow: hidden;
+      background: rgba(255,255,255,0.08);
+      box-shadow: inset 0 0 0 1px rgba(229,50,45,0.18);
+    }
+    .utility-meter__fill {
+      position: absolute; inset: 0;
+      background: linear-gradient(90deg, rgba(229,50,45,0) 0%, rgba(229,50,45,0.55) 40%, #E5322D 70%, rgba(255,170,160,0.95) 85%, #E5322D 100%);
+      transform-origin: left center;
+      animation: utilMeterDraw 2.6s cubic-bezier(0.4,0,0.2,1) infinite;
+    }
+    .utility-meter__fill::after {
+      content: ''; position: absolute; top: 0; bottom: 0; width: 26%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.85), transparent);
+      animation: utilMeterShimmer 2.6s linear infinite;
+    }
+    @keyframes utilMeterDraw { 0% { transform: scaleX(0.18); opacity: 0.65; } 55% { transform: scaleX(1); opacity: 1; } 100% { transform: scaleX(0.18); opacity: 0.65; } }
+    @keyframes utilMeterShimmer { 0% { left: -30%; } 100% { left: 110%; } }
+    #pricing .pc-card-featured .utility-meter__track { box-shadow: inset 0 0 0 1px rgba(229,50,45,0.4); }
+    @media (prefers-reduced-motion: reduce) {
+      .utility-meter__fill { animation: none; transform: scaleX(0.85); opacity: 1; }
+      .utility-meter__fill::after { display: none; }
+    }
+
+    /* Phase 4 — laptop full-viewport fit for the 4-card pricing grid.
+       Keyed by height so it targets laptops, not tall desktop monitors. */
+    @media (max-height: 820px) and (min-width: 1024px) {
+      #pricing .pc-section-head h2 { font-size: 2.5rem; }
+      #pricing .pc-price-month1 { font-size: 1.5rem; }
+      #pricing .pc-card { padding: 1.25rem 1.25rem; }
+      #pricing .pc-outcomes li { line-height: 1.4; }
+    }
+
     :root {
       --background: 0 0% 0%;
       --foreground: 0 0% 100%;

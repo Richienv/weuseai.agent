@@ -3745,7 +3745,7 @@
           whileHover={isDecoy ? { opacity: 0.92, scale: 0.97 } : undefined}
           viewport={{ once: true, amount: 0.25 }}
           transition={{ duration: 0.6, ease: EASE, delay: 0.05 * index }}
-          className={`rounded-2xl p-6 md:p-7 flex flex-col relative ${isFeatured ? '' : 'liquid-glass'}`}
+          className={`rounded-2xl p-6 md:p-7 flex flex-col relative pc-card ${isFeatured ? 'pc-card-featured' : 'liquid-glass'}`}
           style={
             isFeatured
               ? {
@@ -3810,15 +3810,20 @@
             {/* Bulan 1 total */}
             <div className="flex items-baseline justify-between gap-3">
               <span className="text-xs font-mono uppercase tracking-[0.10em] text-white/65">Bulan 1</span>
-              <span className="font-heading text-2xl md:text-3xl" style={{ letterSpacing: '-0.03em', color: '#E5322D' }}>
+              <span className="font-heading text-2xl md:text-3xl pc-price-month1" style={{ letterSpacing: '-0.03em', color: '#E5322D' }}>
                 {tier.month1Total}
               </span>
             </div>
-            {/* Recurring */}
+            {/* Recurring — rendered as a live "utility meter" (bayar kayak listrik). */}
             <div className="flex items-baseline justify-between gap-3">
               <span className="text-xs font-body font-light text-white/55">Bulan 2 dst</span>
-              <span className="text-sm font-body text-white/85">
-                {tier.recurringLabel || 'Rp 99rb/bulan'}
+              <span className="utility-meter" aria-label={`${tier.recurringLabel || 'Rp 99rb/bulan'}, dibayar seperti listrik`}>
+                <span className="utility-meter__track" aria-hidden="true">
+                  <span className="utility-meter__fill" />
+                </span>
+                <span className="utility-meter__label text-sm font-body text-white/90">
+                  {tier.recurringLabel || 'Rp 99rb/bulan'}
+                </span>
               </span>
             </div>
             <p className="mt-2 text-[10px] font-mono uppercase tracking-[0.12em] text-white/45">
@@ -3846,7 +3851,7 @@
                 Semua yang ada di {tier.inheritFrom}, plus:
               </p>
             )}
-            <ul className="space-y-2.5 list-none">
+            <ul className="space-y-2.5 list-none pc-outcomes">
               {tier.outcomes.map((o, oi) => (
                 <li key={oi} className="flex items-start gap-2.5 text-sm font-body font-light leading-relaxed">
                   <span
@@ -4439,8 +4444,15 @@
         },
       ];
 
+      // Bare Agent (decoy) is hidden from the live grid for now (founder
+      // revision 2026-06-16). It MUST stay in `tiers` above — the pricing-drift
+      // gate source-greps slug:'bare', setupIdr:99_000, priceLabel 'Rp 99rb',
+      // month1Total 'Rp 198rb'. Hiding the card keeps the gate green; deleting
+      // the object breaks it. 4 visible tiers: Solo / Voice / Library / Siap Pakai.
+      const visibleTiers = tiers.filter((t) => !t.decoy);
+
       return (
-        <section id="pricing" className="relative overflow-hidden py-20 md:py-32 px-5 md:px-6 lg:px-16 bg-black">
+        <section id="pricing" className="relative overflow-hidden py-16 md:py-20 lg:py-24 px-5 md:px-6 lg:px-10 bg-black">
           <DottedVideo
             src="/assets/pricing-furnace.mp4"
             color="#E5322D"
@@ -4449,8 +4461,8 @@
             style={{ zIndex: 1, background: '#000' }}
           />
           <FadeTop /> <FadeBottom />
-          <div className="relative z-10 max-w-6xl mx-auto">
-            <div className="flex flex-col items-center text-center mb-14 md:mb-20">
+          <div className="relative z-10 max-w-7xl mx-auto">
+            <div className="pc-section-head flex flex-col items-center text-center mb-10 md:mb-12">
               <div
                 className="liquid-glass rounded-full px-3.5 py-1 text-xs font-medium font-body text-white/90"
                 style={{ borderColor: 'rgba(229, 50, 45, 0.45)' }}
@@ -4464,7 +4476,7 @@
               <BlurText
                 as="h2"
                 text="Pilih ukuran tim kamu. Upgrade kapan saja."
-                className="mt-5 md:mt-6 text-3xl md:text-5xl lg:text-6xl font-heading text-white tracking-tight leading-[1.0] md:leading-[0.95] max-w-3xl"
+                className="mt-5 md:mt-6 text-3xl md:text-4xl lg:text-5xl font-heading text-white tracking-tight leading-[1.0] md:leading-[0.95] max-w-3xl"
                 style={{ letterSpacing: '-0.04em' }}
                 delay={70}
               />
@@ -4473,10 +4485,11 @@
               </p>
             </div>
 
-            {/* 5 tiers side by side — Bare (decoy) → Solo → Voice → Library
-                Lengkap (recommended, premium glow) → Siap Pakai. */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 md:gap-5 items-stretch">
-              {tiers.map((t, i) => (
+            {/* 4 visible tiers — Solo → Voice → Library Lengkap (recommended,
+                premium glow) → Siap Pakai. Bare is hidden but kept in the
+                catalog for the drift gate (see visibleTiers above). */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 md:gap-7 lg:gap-8 items-stretch">
+              {visibleTiers.map((t, i) => (
                 <PricingCard
                   key={t.name}
                   tier={t}
