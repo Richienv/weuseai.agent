@@ -176,7 +176,7 @@ Reframe hosting sebagai utility (kayak bayar listrik), bukan subscription tradis
 | Landing | Static HTML + React-via-CDN | `index.html`, `checkout.html`, `use-cases.html`, `welcome.html`, `onboarding.html` di root, deploy Vercel |
 | VPS | Vultr Singapore (primary) + DigitalOcean SGP1 (failover) | Plan `vc2-1c-1gb` ($5/mo). Cutover from IDCloudHost 2026-05-11 (PR #75); IDCH adapter retired 2026-05-13 (PR #90). Failover triggers on Vultr capacity-exhausted errors. |
 | Provisioning service | Fly.io `weuseai-provisioning` | Region `sin` (Singapore — closest Fly POP to Vultr SGP), shared-cpu-1x / 256MB. Auto-stop, min=0 max=1 machines. |
-| Agent runtime | NousResearch/hermes-agent (MIT OSS) | Pinned `v0.13.0` (2026-05-08 lock). Install via upstream `scripts/install.sh` as user `weuseai`, manage via systemd. Kita nggak fork, nggak build. |
+| Agent runtime | NousResearch/hermes-agent (MIT OSS) | Pinned `v2026.6.5` (real pin since 2026-06-14). Install via upstream `scripts/install.sh` as user `weuseai`, passing the ref to its `--branch` flag — NOT a `HERMES_VERSION` env (upstream ignores that; the old form silently cloned `main`). Manage via systemd. Kita nggak fork, nggak build. |
 | LLM (Starter) | DeepSeek V3 via Cloudflare Worker proxy | Pelanggan tier Starter pakai proxy kita, default model `deepseek-chat`. $3–5 onboarding credits via `credits` table. |
 | LLM (Pro/Studio BYOK) | DeepSeek / OpenRouter / OpenAI / Z.ai (GLM) | Pelanggan paste API key sendiri di onboarding. |
 | Payment | Xendit (currently TEST mode — see Production deploy section) | QRIS primary, e-wallet + cards supported. Webhook signed via `XENDIT_WEBHOOK_TOKEN`. `services/payment/` punya IPaymentProvider abstraction (mock + xendit). |
@@ -206,7 +206,7 @@ Kita pakai NousResearch/hermes-agent (https://github.com/NousResearch/hermes-age
 
 **Implikasi:**
 - Bug di agent core → upstream issue, bukan kita fix
-- Update Hermes = re-install di VPS pelanggan, bukan rebuild image. Currently pinned to `v0.13.0` (HERMES_VERSION env override pulls a different tag on next-provisioned VPS).
+- Update Hermes = re-install di VPS pelanggan, bukan rebuild image. Currently pinned to `v2026.6.5` via install.sh's `--branch` flag (`DEFAULT_HERMES_VERSION` in `setup-script.ts`). **CORRECTED 2026-06-14:** the prior "pinned v0.13.0 via HERMES_VERSION env" was FALSE — upstream `install.sh` never reads that env (confirmed by grepping the raw script), so every VPS silently cloned unpinned `main`. The override env still works but is now passed as `--branch` (so it actually takes effect); set it to a REAL git ref (tag/branch/SHA), not the non-existent `v0.13.0` tag. NOTE: `cloud-init.ts` is a SEPARATE provisioning path still deliberately tracking `main` (Phase 1 decision) — revisit if it's live.
 
 **LOCKED (2026-06-07) — Hermes config.yaml SHAPE can drift across versions.**
 The upstream `config.yaml` schema is NOT a stable contract: between installs the
@@ -222,10 +222,12 @@ Rules going forward:
    it parses with the Hermes venv pyyaml and asserts `model.default` is pinned
    to DeepSeek, failing the provision loudly. A future upstream shape change
    surfaces to US at provision time — never via a customer 402.
-3. **When bumping `HERMES_VERSION`,** re-verify the config.yaml shape on a
-   throwaway VPS before the new tag reaches customers; the drift gate
+3. **When bumping the Hermes pin** (`DEFAULT_HERMES_VERSION` / the `HERMES_VERSION`
+   override, now passed to install.sh's `--branch`), re-verify the config.yaml
+   shape on a throwaway VPS before the new ref reaches customers; the drift gate
    (`tests/setup-script-config-yaml-model.spec.ts`) only guards the shapes we
-   know about.
+   know about. The pin must be a real git ref — `v0.13.0` is not a tag (semver
+   `0.13.0` == date-tag `v2026.5.7`); release tags are date-stamped (`v2026.6.5`).
 4. Retroactive remediation for already-provisioned VPSes:
    `scripts/remediate-config-yaml-model.sh`.
 
