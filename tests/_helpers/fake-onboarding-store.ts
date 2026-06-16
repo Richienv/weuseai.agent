@@ -122,7 +122,8 @@ export class FakeOnboardingStore implements IOnboardingStore {
     for (const s of this.subscriptions.values()) {
       if (
         s.customer_id === customerId &&
-        (s.status === 'active' || s.status === 'pending_provision' || s.status === 'pending')
+        // Mirror the real store: pre-payment 'pending' is NOT billable (C1).
+        (s.status === 'active' || s.status === 'pending_provision')
       ) {
         return s
       }
