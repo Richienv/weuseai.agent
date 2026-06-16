@@ -37,18 +37,18 @@ test('parseSpinUpRequest: reads body fields correctly', () => {
     {
       customerId: 'cust-1',
       tier: 'pro',
-      customerTelegramBotToken: 'body-bot-token',
+      customerTelegramBotToken: '111111:body-bot-token',
       customerTelegramAllowedUserIds: '111,222',
       alwaysOnEnabled: true,
       useStarterCredits: false,
     },
-    { TELEGRAM_BOT_TOKEN: 'env-bot', DEFAULT_TELEGRAM_CHAT_ID: '999' },
+    { TELEGRAM_BOT_TOKEN: '222222:env-bot', DEFAULT_TELEGRAM_CHAT_ID: '999' },
   )
   assert.equal(r.ok, true)
   if (!r.ok) return
   assert.equal(r.opts.customerId, 'cust-1')
   assert.equal(r.opts.tier, 'pro')
-  assert.equal(r.opts.customerTelegramBotToken, 'body-bot-token')
+  assert.equal(r.opts.customerTelegramBotToken, '111111:body-bot-token')
   assert.equal(r.opts.customerTelegramAllowedUserIds, '111,222')
   assert.equal(r.opts.alwaysOnEnabled, true)
 })
@@ -82,17 +82,17 @@ test('parseSpinUpRequest: agentSlug undefined when absent or blank', () => {
 test('parseSpinUpRequest: falls back to env TELEGRAM_BOT_TOKEN when body omits it', () => {
   const r = parseSpinUpRequest(
     { customerId: 'cust-1', tier: 'pro' },
-    { TELEGRAM_BOT_TOKEN: 'env-bot-token', DEFAULT_TELEGRAM_CHAT_ID: '999' },
+    { TELEGRAM_BOT_TOKEN: '333333:env-bot-token', DEFAULT_TELEGRAM_CHAT_ID: '999' },
   )
   assert.equal(r.ok, true)
   if (!r.ok) return
-  assert.equal(r.opts.customerTelegramBotToken, 'env-bot-token')
+  assert.equal(r.opts.customerTelegramBotToken, '333333:env-bot-token')
 })
 
 test('parseSpinUpRequest: falls back to env DEFAULT_TELEGRAM_CHAT_ID when body omits it', () => {
   const r = parseSpinUpRequest(
     { customerId: 'cust-1', tier: 'pro' },
-    { TELEGRAM_BOT_TOKEN: 'env-bot', DEFAULT_TELEGRAM_CHAT_ID: '6805409051' },
+    { TELEGRAM_BOT_TOKEN: '222222:env-bot', DEFAULT_TELEGRAM_CHAT_ID: '6805409051' },
   )
   assert.equal(r.ok, true)
   if (!r.ok) return
@@ -104,15 +104,49 @@ test('parseSpinUpRequest: body wins when both body + env are set', () => {
     {
       customerId: 'cust-1',
       tier: 'pro',
-      customerTelegramBotToken: 'body-token',
-      customerTelegramAllowedUserIds: 'body-chat',
+      customerTelegramBotToken: '444444:body-token',
+      customerTelegramAllowedUserIds: '555',
     },
     { TELEGRAM_BOT_TOKEN: 'env-token', DEFAULT_TELEGRAM_CHAT_ID: 'env-chat' },
   )
   assert.equal(r.ok, true)
   if (!r.ok) return
-  assert.equal(r.opts.customerTelegramBotToken, 'body-token')
-  assert.equal(r.opts.customerTelegramAllowedUserIds, 'body-chat')
+  assert.equal(r.opts.customerTelegramBotToken, '444444:body-token')
+  assert.equal(r.opts.customerTelegramAllowedUserIds, '555')
+})
+
+// ─── L1: format-validate Telegram fields against shell injection ─────────
+
+test('parseSpinUpRequest: rejects a bot token with shell metacharacters (L1)', () => {
+  const r = parseSpinUpRequest(
+    { customerId: 'c', tier: 'pro', customerTelegramBotToken: "123:abc'; rm -rf / #" },
+    {},
+  )
+  assert.equal(r.ok, false)
+  if (!r.ok) assert.match(r.error, /customerTelegramBotToken/)
+})
+
+test('parseSpinUpRequest: rejects allowed-user-ids with non-numeric injection (L1)', () => {
+  const r = parseSpinUpRequest(
+    { customerId: 'c', tier: 'pro', customerTelegramAllowedUserIds: '111;curl evil' },
+    {},
+  )
+  assert.equal(r.ok, false)
+  if (!r.ok) assert.match(r.error, /customerTelegramAllowedUserIds/)
+})
+
+test('parseSpinUpRequest: accepts a realistic bot token + group/user chat ids (L1)', () => {
+  const r = parseSpinUpRequest(
+    {
+      customerId: 'c',
+      tier: 'pro',
+      customerTelegramBotToken: '8630424948:AAGmM1ND-test',
+      customerTelegramAllowedUserIds: '-1001234567890,6805409051',
+      telegramChatId: '6805409051',
+    },
+    {},
+  )
+  assert.equal(r.ok, true)
 })
 
 test('parseSpinUpRequest: rejects missing customerId', () => {
@@ -146,7 +180,7 @@ test('parseSpinUpRequest: never falls back when body sends empty string (not und
       customerTelegramBotToken: '',
       customerTelegramAllowedUserIds: '',
     },
-    { TELEGRAM_BOT_TOKEN: 'env-bot', DEFAULT_TELEGRAM_CHAT_ID: '999' },
+    { TELEGRAM_BOT_TOKEN: '222222:env-bot', DEFAULT_TELEGRAM_CHAT_ID: '999' },
   )
   assert.equal(r.ok, true)
   if (!r.ok) return

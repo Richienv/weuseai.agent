@@ -56,12 +56,51 @@ export function parseSpinUpRequest(
     ? (body.customerTelegramAllowedUserIds as string | undefined)
     : env.DEFAULT_TELEGRAM_CHAT_ID
 
+  const telegramChatId = body.telegramChatId as string | undefined
+
+  // L1 (security audit, 2026-06-14): format-validate the customer-supplied
+  // Telegram fields HERE, at the provisioning boundary, before they reach the
+  // setup-script, which interpolates them into shell (halo curl + .env writes).
+  // The allowed char sets — bot token `<digits>:<[A-Za-z0-9_-]>`, chat/user ids
+  // `<digits>` (optionally negative for group ids, comma-separated) — contain
+  // NO shell metacharacters (no quotes, $, ;, backticks, newlines), so a
+  // validated value cannot break out of the single-quoted shell context. This
+  // closes the latent command-injection seam (not exploitable via the current
+  // DB-validated callers, but parseSpinUpRequest itself did zero validation, so
+  // any future/misconfigured caller forwarding a raw value got injection). This
+  // is injection-safety by character set, not full token-validity (no length
+  // requirement, so short test fixtures still pass).
+  const BOT_TOKEN_RE = /^\d+:[A-Za-z0-9_-]+$/
+  const IDS_LIST_RE = /^-?\d+(,-?\d+)*$/
+  const SINGLE_ID_RE = /^-?\d+$/
+  if (
+    typeof customerTelegramBotToken === 'string' &&
+    customerTelegramBotToken.length > 0 &&
+    !BOT_TOKEN_RE.test(customerTelegramBotToken)
+  ) {
+    return { ok: false, error: 'invalid customerTelegramBotToken format' }
+  }
+  if (
+    typeof customerTelegramAllowedUserIds === 'string' &&
+    customerTelegramAllowedUserIds.length > 0 &&
+    !IDS_LIST_RE.test(customerTelegramAllowedUserIds)
+  ) {
+    return { ok: false, error: 'invalid customerTelegramAllowedUserIds format' }
+  }
+  if (
+    typeof telegramChatId === 'string' &&
+    telegramChatId.length > 0 &&
+    !SINGLE_ID_RE.test(telegramChatId)
+  ) {
+    return { ok: false, error: 'invalid telegramChatId format' }
+  }
+
   return {
     ok: true,
     opts: {
       customerId,
       tier: tier as ProvisionTier,
-      telegramChatId: body.telegramChatId as string | undefined,
+      telegramChatId,
       customerTelegramBotToken,
       customerTelegramAllowedUserIds,
       customerLlmApiKey: body.customerLlmApiKey as string | undefined,

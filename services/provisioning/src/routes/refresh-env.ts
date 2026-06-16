@@ -30,6 +30,7 @@ import { spawn } from 'node:child_process'
 import { mkdtempSync, writeFileSync, rmSync, chmodSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { randomBytes } from 'node:crypto'
 
 // ─── allowed env keys ──────────────────────────────────────────────
 
@@ -280,18 +281,28 @@ export function buildRefreshEnvCommand(
     })
     .join('\n\n')
 
-  // Optional SOUL.md write. Heredoc with random delimiter to avoid
-  // collisions if customer's persona contains common shell tokens.
-  // Per dry-run Stage 7: closes the gap where SOUL.md never reaches
-  // the VPS through the canonical xendit-webhook path.
+  // Optional SOUL.md write. The heredoc delimiter is randomised PER REQUEST
+  // (security audit M2, 2026-06-14). The prior delimiter was the HARDCODED
+  // constant WEUSEAI_SOUL_REFRESH_EOF (the "random delimiter" comment was a
+  // lie): caller-supplied soulMdContent flows from display_name + onboarding
+  // expectations, neither of which strips that token, so a customer who put a
+  // line equal to it in their display name could terminate the heredoc early
+  // and run the following lines as shell on their VPS (NOPASSWD sudo). A
+  // per-request 128-bit-random delimiter is unguessable, so the content can
+  // never close the heredoc. Defense-in-depth: if the content somehow contains
+  // the (random) delimiter, refuse the write rather than risk a partial one.
+  const soulDelim = `WEUSEAI_SOUL_${randomBytes(16).toString('hex')}_EOF`
+  if (opts.soulMdContent && opts.soulMdContent.includes(soulDelim)) {
+    throw new Error('refresh-env: SOUL.md content collided with the random heredoc delimiter')
+  }
   const soulBlock = opts.soulMdContent
     ? `
-# Write SOUL.md (caller-supplied persona content).
+# Write SOUL.md (caller-supplied persona content; randomised heredoc delimiter).
 SOUL_PATH=/home/weuseai/.hermes/SOUL.md
 sudo mkdir -p /home/weuseai/.hermes
-sudo tee "$SOUL_PATH" > /dev/null <<'WEUSEAI_SOUL_REFRESH_EOF'
+sudo tee "$SOUL_PATH" > /dev/null <<'${soulDelim}'
 ${opts.soulMdContent}
-WEUSEAI_SOUL_REFRESH_EOF
+${soulDelim}
 sudo chown weuseai:weuseai "$SOUL_PATH"
 sudo chmod 0644 "$SOUL_PATH"
 `
