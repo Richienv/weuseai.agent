@@ -1709,11 +1709,35 @@
     // off-screen.
     //
     // prefers-reduced-motion: video stays paused at first frame, no play().
-    function AgentVisual({ file }) {
+    // Brand glyph for poster cards (personas without a demo video yet).
+    // Signal-red stroke on dark — minimal, editorial.
+    function AgentGlyph({ kind }) {
+      const common = { viewBox: '0 0 48 48', fill: 'none', stroke: '#E5322D', strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': 'true' };
+      switch (kind) {
+        case 'slide':
+          return (
+            <svg {...common}><rect x="7" y="10" width="34" height="24" rx="2" /><line x1="13" y1="18" x2="28" y2="18" /><line x1="13" y1="24" x2="24" y2="24" /><line x1="24" y1="34" x2="24" y2="40" /><line x1="18" y1="40" x2="30" y2="40" /></svg>
+          );
+        case 'social':
+          return (
+            <svg {...common}><circle cx="16" cy="16" r="5" /><circle cx="33" cy="13" r="4" /><circle cx="30" cy="33" r="5" /><line x1="20" y1="18" x2="29" y2="14" /><line x1="19" y1="20" x2="27" y2="30" /></svg>
+          );
+        case 'video':
+          return (
+            <svg {...common}><rect x="8" y="13" width="22" height="22" rx="3" /><path d="M30 20l9-5v18l-9-5z" /><path d="M16 21l6 3-6 3z" fill="#E5322D" stroke="none" /></svg>
+          );
+        default:
+          return (
+            <svg {...common}><circle cx="24" cy="24" r="14" /><circle cx="24" cy="24" r="4" /></svg>
+          );
+      }
+    }
+
+    function AgentVisual({ file, glyph }) {
       const videoRef = useRef(null);
       useEffect(() => {
         const v = videoRef.current;
-        if (!v) return;
+        if (!v || !file) return;
         const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         const io = new IntersectionObserver(
           (entries) => {
@@ -1739,6 +1763,15 @@
         io.observe(v);
         return () => io.disconnect();
       }, [file]);
+      // Persona without a demo video yet → honest "Segera hadir" poster.
+      if (!file) {
+        return (
+          <div className="agent-poster" aria-hidden="true">
+            <AgentGlyph kind={glyph} />
+            <span className="agent-poster-tag">Segera hadir</span>
+          </div>
+        );
+      }
       return (
         <video
           ref={videoRef}
@@ -1755,153 +1788,204 @@
     }
 
     // ─────────────────────── AGENT PERSONA CAROUSEL ───────────────────────
-    // 9 agent specialist cards. Sits inside #proses ("The wave") below the
-    // CTA, on the same red-halftone canvas. Auto-rotates every 13s, hover-
-    // pause, prefers-reduced-motion respect.
+    // The 10 canonical library personas (single source of truth:
+    // assets/persona-details.js + supabase/functions/_shared/tier-personas.ts).
+    // Sits inside #proses below the CTA. Continuous butter-smooth rAF marquee
+    // (no dead-air pause — head meets tail seamlessly), hover/focus pause,
+    // click-next/prev, dots, swipe, prefers-reduced-motion respect.
     //
-    // 2026-05-09 lineup pivot: founder shipped 9 hand-built GIFs (one per
-    // persona) — these become the canonical 9 agents. Web Creator, Slide
-    // Master, Video Producer, Social Conductor (added in persona v2) are
-    // dropped from the carousel for now; bring them back if/when they get
-    // their own GIFs. App Builder, Email Manager, Calendar Agent take
-    // their slots on the carousel.
-    //
-    // `file` field maps to the founder's canonical mp4 name (assets/<file>.mp4).
+    // `file` = demo mp4 on disk (assets/<file>.mp4); null → "Segera hadir"
+    // poster + brand glyph (slide-master / social-conductor / video-producer
+    // have no video yet). `detail` = PERSONA_DETAILS slug → /persona?slug=,
+    // so EVERY card has a working button. (rev 2026-06-16)
     const AGENTS = [
-      { slug: 'pro',        file: 'the-pro',           name: 'The Pro',           desc: 'Briefing pagi, ingat percakapan lintas sesi, jadi pendamping yang ngerti gaya kamu.' },
-      { slug: 'researcher', file: 'deep-researcher',   name: 'Deep Researcher',   desc: 'Riset topik kompleks dari ratusan sumber, sintesis jadi laporan siap pakai.' },
-      { slug: 'builder',    file: 'app-builder',       name: 'App Builder',       desc: 'Bikin web app dari ide ke deploy — tanpa nulis kode dari nol.' },
-      { slug: 'doc',        file: 'doc-expert',        name: 'Doc Expert',        desc: 'Laporan, proposal, email, plus skripsi-thesis academic mode — siap kirim dalam menit, sesuai gaya kamu.' },
-      { slug: 'email',      file: 'email-manager',     name: 'Email Manager',     desc: 'Sortir 300+ email per hari, draft balasan dengan tone kamu, auto-handle yang gak penting.' },
-      { slug: 'calendar',   file: 'calendar-agent',    name: 'Calendar Agent',    desc: 'Atur jadwal, hindari bentrok, kasih saran reschedule — diplomatis sesuai konteks kamu.' },
-      { slug: 'trade',      file: 'trade-pro',         name: 'Trade Pro',         desc: 'Briefing pasar pagi, alert saham + crypto, kurs IDR-BI, ringkas laporan keuangan emiten, plus Bitget read-only sync.' },
-      { slug: 'project',    file: 'project-conductor', name: 'Project Conductor', desc: 'Kanban orchestration: pecah task, route ke specialist agent, monitor progress lintas hari.' },
-      { slug: 'business',   file: 'business-agent', name: 'Business Director', desc: 'Roadmap 5-tahap founder Indonesia (idea → setup → identity → build → sell). Surface PT/CV, OSS, BPJS, compliance reminder.' },
+      { slug: 'the-pro',          file: 'the-pro',           detail: 'the-pro',          name: 'The Pro',           glyph: 'pro',
+        desc: 'Briefing pagi, ingat percakapan lintas sesi, jadi pendamping yang ngerti gaya kamu.' },
+      { slug: 'deep-researcher',  file: 'deep-researcher',   detail: 'deep-researcher',  name: 'Deep Researcher',   glyph: 'research',
+        desc: 'Riset topik kompleks dari ratusan sumber, sintesis jadi laporan siap pakai.' },
+      { slug: 'doc-expert',       file: 'doc-expert',        detail: 'doc-expert',       name: 'Doc Expert',        glyph: 'doc',
+        desc: 'Laporan, proposal, surat, plus mode akademik untuk skripsi — siap kirim dalam menit, sesuai gaya kamu.' },
+      { slug: 'web-app-builder',  file: 'app-builder',       detail: 'web-app-builder',  name: 'Web Creator',       glyph: 'web',
+        desc: 'Bikin web app dari ide sampai deploy — tanpa nulis kode dari nol.' },
+      { slug: 'project-conductor',file: 'project-conductor', detail: 'project-conductor',name: 'Project Conductor', glyph: 'project',
+        desc: 'Pecah proyek jadi task, atur prioritas, pantau progres lintas hari di satu papan.' },
+      { slug: 'business-agent',   file: 'business-director', detail: 'business-agent',   name: 'Business Director', glyph: 'business',
+        desc: 'Roadmap lima tahap founder Indonesia — dari ide, setup, identitas, build, sampai jualan. Ingatkan soal PT/CV, OSS, BPJS.' },
+      { slug: 'trade-pro',        file: 'trade-pro',         detail: 'trade-pro',        name: 'Trade Pro',         glyph: 'trade',
+        desc: 'Briefing pasar pagi, pantau saham dan kripto, kurs IDR, plus ringkas laporan keuangan emiten.' },
+      { slug: 'slide-master',     file: null,                detail: 'slide-master',     name: 'Slide Master',      glyph: 'slide',
+        desc: 'Dari outline ke deck profesional — grafik, hierarki, dan catatan pembicara per slide.' },
+      { slug: 'social-conductor', file: null,                detail: 'social-conductor', name: 'Social Conductor',  glyph: 'social',
+        desc: 'Kalender konten, draf post lintas platform, dan catatan engagement — suara kamu tetap satu di semua channel.' },
+      { slug: 'video-producer',   file: null,                detail: 'video-producer',   name: 'Video Producer',    glyph: 'video',
+        desc: 'Skrip untuk TikTok dan Reels, riset hashtag, dan pantau tren sound buat tempo produksi tinggi.' },
     ];
 
     function AgentCarousel() {
       const trackRef = useRef(null);
       const rootRef = useRef(null);
-      // displayIndex is the position in the 12-slot track [sentinel_last,
-      // ...9 real, sentinel_first]. realIndex (the agent shown) is
-      // displayIndex - 1, clamped to 0-8. Sentinels at 0 and 10 are
-      // identical to last/first real cards — visible only during the
-      // wrap-around transition, then we silently snap back to the real
-      // copy with no transition. Result: seamless infinite carousel.
-      const [displayIndex, setDisplayIndex] = useState(1);
-      const realIndex = ((displayIndex - 1) + AGENTS.length) % AGENTS.length;
-      const [paused, setPaused] = useState(false);
+      // Continuous infinite marquee over a DOUBLED track ([...AGENTS, ...AGENTS]).
+      // The track drifts left at SPEED px/s via rAF; when the offset passes one
+      // full copy (halfRef) we subtract it — invisible because copy 2 is pixel-
+      // identical to copy 1. Result: head meets tail with zero dead-air. Click /
+      // dots / keyboard / swipe ride a short transitioned "snap" that never locks
+      // input. prefers-reduced-motion → static strip, instant jumps.
+      const SPEED = 42;                  // px/s — calm continuous drift
+      const SNAP_MS = 520;
+      const offsetRef = useRef(0);       // px translated (always normalized to [0, half) by drift)
+      const pitchRef = useRef(0);        // cardWidth + gap
+      const halfRef = useRef(0);         // AGENTS.length * pitch (one full copy)
+      const rafRef = useRef(0);
+      const lastTsRef = useRef(0);
+      const pausedRef = useRef(false);   // drift paused (hover/focus/drag/snap)
+      const pinnedRef = useRef(false);   // hovered or focused
+      const snapping = useRef(false);
+      const snapTimer = useRef(0);
       const reducedMotion = useRef(false);
-      const wrapping = useRef(false);
+      const activeRef = useRef(0);
+      const [active, setActive] = useState(0);
 
-      // Detect prefers-reduced-motion
-      useEffect(() => {
-        const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
-        reducedMotion.current = mq.matches;
-        const onChange = (e) => { reducedMotion.current = e.matches; };
-        mq.addEventListener?.('change', onChange);
-        return () => mq.removeEventListener?.('change', onChange);
-      }, []);
-
-      // Card pitch from live computed style (gap differs by viewport)
-      const getCardPitch = (track) => {
-        const cards = track.querySelectorAll('.agent-card');
-        if (!cards.length) return 0;
-        const cardW = cards[0].getBoundingClientRect().width;
-        const gap = parseFloat(getComputedStyle(track).columnGap) || 14;
-        return cardW + gap;
-      };
-
-      // Apply transform when displayIndex changes
-      useEffect(() => {
+      const measure = () => {
         const track = trackRef.current;
         if (!track) return;
-        const pitch = getCardPitch(track);
-        track.style.transform = `translate3d(-${displayIndex * pitch}px, 0, 0)`;
-      }, [displayIndex]);
+        const card = track.querySelector('.agent-card');
+        const cardW = card ? card.getBoundingClientRect().width : 0;
+        const gap = parseFloat(getComputedStyle(track).columnGap) || 18;
+        pitchRef.current = cardW + gap;
+        halfRef.current = pitchRef.current * AGENTS.length;
+      };
+      const apply = () => {
+        const t = trackRef.current;
+        if (t) t.style.transform = `translate3d(${-offsetRef.current}px,0,0)`;
+      };
+      const syncActive = () => {
+        if (!pitchRef.current) return;
+        const idx = ((Math.round(offsetRef.current / pitchRef.current) % AGENTS.length) + AGENTS.length) % AGENTS.length;
+        if (idx !== activeRef.current) { activeRef.current = idx; setActive(idx); }
+      };
+      const tick = (ts) => {
+        if (!halfRef.current) measure();
+        if (!lastTsRef.current) lastTsRef.current = ts;
+        const dt = Math.min((ts - lastTsRef.current) / 1000, 0.05); // clamp tab-switch jumps
+        lastTsRef.current = ts;
+        if (!pausedRef.current && !snapping.current && halfRef.current) {
+          offsetRef.current += SPEED * dt;
+          if (offsetRef.current >= halfRef.current) offsetRef.current -= halfRef.current;
+          apply();
+          syncActive();
+        }
+        rafRef.current = requestAnimationFrame(tick);
+      };
 
-      // Re-apply on resize
       useEffect(() => {
+        reducedMotion.current = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        measure();
+        apply();
+        if (reducedMotion.current) return;
+        rafRef.current = requestAnimationFrame(tick);
         const onResize = () => {
-          const track = trackRef.current;
-          if (!track) return;
-          const pitch = getCardPitch(track);
-          track.style.transform = `translate3d(-${displayIndex * pitch}px, 0, 0)`;
+          const old = halfRef.current;
+          measure();
+          if (old) offsetRef.current = (offsetRef.current / old) * halfRef.current;
+          apply();
         };
         window.addEventListener('resize', onResize);
-        return () => window.removeEventListener('resize', onResize);
-      }, [displayIndex]);
+        return () => {
+          cancelAnimationFrame(rafRef.current);
+          clearTimeout(snapTimer.current);
+          window.removeEventListener('resize', onResize);
+        };
+      }, []);
 
-      // Auto-advance every 13s
-      useEffect(() => {
-        if (paused || reducedMotion.current) return;
-        const id = setInterval(() => { goNext(); }, 13000);
-        return () => clearInterval(id);
-      }, [paused]);
+      const pin = () => { pinnedRef.current = true; pausedRef.current = true; };
+      const unpin = () => { pinnedRef.current = false; if (!snapping.current) { pausedRef.current = false; lastTsRef.current = 0; } };
 
-      // Snap-back after a wrap-around transition completes — disable the
-      // CSS transition, jump from sentinel slot to its real twin, then
-      // re-enable the transition next frame.
-      const snapTo = (newDisplayIdx) => {
+      // Shared: after a transitioned move, normalize offset into [0, half)
+      // WITHOUT a transition (the seamless wrap) and resume drift.
+      const scheduleNormalize = () => {
+        clearTimeout(snapTimer.current);
+        snapTimer.current = setTimeout(() => {
+          const track = trackRef.current;
+          if (track) track.style.transition = 'none';
+          if (halfRef.current) offsetRef.current = ((offsetRef.current % halfRef.current) + halfRef.current) % halfRef.current;
+          apply();
+          snapping.current = false;
+          pausedRef.current = pinnedRef.current;
+          lastTsRef.current = 0;
+        }, SNAP_MS + 40);
+      };
+
+      const moveTo = (rawTarget, instantIdx) => {
         const track = trackRef.current;
-        if (!track) return;
-        track.style.transition = 'none';
-        setDisplayIndex(newDisplayIdx);
-        // Wait two frames so the transform settles, then restore transition
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            if (track) track.style.transition = '';
-            wrapping.current = false;
-          });
-        });
-      };
-
-      const goNext = () => {
-        if (wrapping.current) return;
-        setDisplayIndex((d) => {
-          // Going past the last real card → animate to sentinel at 11
-          // (which renders AGENTS[0]), then snap to the real AGENTS[0] at slot 1.
-          if (d >= AGENTS.length) {
-            wrapping.current = true;
-            // After the standard 700ms slide animation, snap back
-            setTimeout(() => snapTo(1), 720);
-            return AGENTS.length + 1; // = 11
-          }
-          return d + 1;
-        });
-      };
-
-      const goPrev = () => {
-        if (wrapping.current) return;
-        setDisplayIndex((d) => {
-          // Going before the first real card → animate to sentinel at 0
-          // (which renders AGENTS[last]), then snap to the real AGENTS[last] at slot 10.
-          if (d <= 1) {
-            wrapping.current = true;
-            setTimeout(() => snapTo(AGENTS.length), 720);
-            return 0;
-          }
-          return d - 1;
-        });
-      };
-
-      const goTo = (i) => {
-        // Map a real index 0-9 to displayIndex 1-10. Doesn't wrap (jump-to dot).
-        const target = (((i % AGENTS.length) + AGENTS.length) % AGENTS.length) + 1;
-        setDisplayIndex(target);
-      };
-
-      // Touch swipe (mobile)
-      const touchStartX = useRef(null);
-      const onTouchStart = (e) => { touchStartX.current = e.touches[0]?.clientX ?? null; };
-      const onTouchEnd = (e) => {
-        if (touchStartX.current == null) return;
-        const dx = (e.changedTouches[0]?.clientX ?? touchStartX.current) - touchStartX.current;
-        touchStartX.current = null;
-        if (Math.abs(dx) > 40) {
-          if (dx < 0) goNext(); else goPrev();
+        if (!track || !halfRef.current) return;
+        offsetRef.current = rawTarget;             // may be <0 or >half; normalized after the slide
+        if (typeof instantIdx === 'number') { activeRef.current = instantIdx; setActive(instantIdx); }
+        if (reducedMotion.current) {
+          track.style.transition = 'none';
+          offsetRef.current = ((rawTarget % halfRef.current) + halfRef.current) % halfRef.current;
+          apply();
+          syncActive();
+          return;
         }
+        snapping.current = true;
+        pausedRef.current = true;
+        track.style.transition = `transform ${SNAP_MS}ms cubic-bezier(.22,.61,.36,1)`;
+        apply();
+        syncActive();
+        scheduleNormalize();
       };
+
+      // Next / prev advance exactly one pitch from the CURRENT position — the
+      // raw (un-normalized) target lets the slide cross the copy boundary
+      // smoothly, then scheduleNormalize() snaps back invisibly.
+      const goNext = () => moveTo(offsetRef.current + pitchRef.current);
+      const goPrev = () => moveTo(offsetRef.current - pitchRef.current);
+
+      // Dot: jump to card i, picking whichever equivalent copy is nearest the
+      // current offset so we never scroll the long way around.
+      const goTo = (i) => {
+        if (!pitchRef.current) return;
+        const cur = offsetRef.current;
+        const cands = [i * pitchRef.current, i * pitchRef.current + halfRef.current, i * pitchRef.current - halfRef.current];
+        let target = cands[0];
+        for (const c of cands) if (Math.abs(c - cur) < Math.abs(target - cur)) target = c;
+        moveTo(target, i);
+      };
+
+      // Keyboard on the region
+      const onKeyDown = (e) => {
+        if (e.key === 'ArrowRight') { e.preventDefault(); goNext(); }
+        else if (e.key === 'ArrowLeft') { e.preventDefault(); goPrev(); }
+      };
+
+      // Pointer drag / swipe (mouse + touch)
+      const dragRef = useRef(null);
+      const onPointerDown = (e) => {
+        if (e.target.closest && e.target.closest('a,button')) return;
+        dragRef.current = { startX: e.clientX, startOffset: offsetRef.current, moved: false };
+        pausedRef.current = true;
+        try { e.currentTarget.setPointerCapture(e.pointerId); } catch (err) {}
+      };
+      const onPointerMove = (e) => {
+        if (!dragRef.current || !halfRef.current) return;
+        const dx = e.clientX - dragRef.current.startX;
+        if (Math.abs(dx) > 3) dragRef.current.moved = true;
+        let o = dragRef.current.startOffset - dx;
+        o = ((o % halfRef.current) + halfRef.current) % halfRef.current;
+        offsetRef.current = o;
+        const t = trackRef.current;
+        if (t) t.style.transition = 'none';
+        apply();
+        syncActive();
+      };
+      const onPointerUp = () => {
+        if (!dragRef.current) return;
+        dragRef.current = null;
+        pausedRef.current = pinnedRef.current;
+        lastTsRef.current = 0;
+      };
+
+      const track2 = [...AGENTS, ...AGENTS];
 
       return (
         <div
@@ -1909,11 +1993,12 @@
           className="relative z-10 mt-16 md:mt-24 w-full"
           role="region"
           aria-roledescription="carousel"
-          aria-label="Agen yang tersedia"
-          onMouseEnter={() => setPaused(true)}
-          onMouseLeave={() => setPaused(false)}
-          onFocus={() => setPaused(true)}
-          onBlur={() => setPaused(false)}
+          aria-label="Agen spesialis"
+          onMouseEnter={pin}
+          onMouseLeave={unpin}
+          onFocusCapture={pin}
+          onBlurCapture={unpin}
+          onKeyDown={onKeyDown}
         >
           <div className="agent-fade-wrap">
             <button type="button" className="agent-nav agent-nav-prev" onClick={goPrev} aria-label="Agent sebelumnya">
@@ -1922,62 +2007,50 @@
             <button type="button" className="agent-nav agent-nav-next" onClick={goNext} aria-label="Agent berikutnya">
               <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="9 6 15 12 9 18" /></svg>
             </button>
-            <div className="agent-fade" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
-              <div ref={trackRef} className="agent-track" aria-live="polite">
-                {/* 11-slot track: [last-card-sentinel, ...9 real cards,
-                    first-card-sentinel]. Sentinels are dupes of the
-                    last/first real cards so the wrap-around slide has
-                    something to animate to. After the slide completes,
-                    we silently snap to the real twin (no transition). */}
-                {[AGENTS[AGENTS.length - 1], ...AGENTS, AGENTS[0]].map((a, i) => {
-                  const isSentinel = i === 0 || i === AGENTS.length + 1;
-                  const isActive = i === displayIndex;
-                  // The canonical slug lives on `a.file` (e.g. 'the-pro',
-                  // 'deep-researcher'). For the carousel-to-detail mapping,
-                  // 'app-builder' aliases to 'web-app-builder' in PERSONA_DETAILS;
-                  // 'email-manager' and 'calendar-agent' have no detail page.
-                  const detailSlugMap = { 'app-builder': 'web-app-builder' };
-                  const candidate = detailSlugMap[a.file] || a.file;
-                  const detailSlug = (typeof PERSONA_DETAILS !== 'undefined' &&
-                    PERSONA_DETAILS.some((p) => p.slug === candidate)) ? candidate : null;
-                  const detailHref = detailSlug ? `/persona?slug=${encodeURIComponent(detailSlug)}` : null;
-                  const onCardClick = detailHref && !isSentinel
-                    ? () => { window.location.href = detailHref; }
-                    : undefined;
+            <div
+              className="agent-fade"
+              onPointerDown={onPointerDown}
+              onPointerMove={onPointerMove}
+              onPointerUp={onPointerUp}
+              onPointerCancel={onPointerUp}
+            >
+              <div ref={trackRef} className="agent-track">
+                {/* Doubled track: [...10 real, ...10 clones]. Clones are aria-
+                    hidden + untabbable; they exist only so the seamless modulo
+                    reset has identical pixels to land on. */}
+                {track2.map((a, i) => {
+                  const isClone = i >= AGENTS.length;
+                  const detailSlug = (typeof PERSONA_DETAILS !== 'undefined' && PERSONA_DETAILS &&
+                    PERSONA_DETAILS.some((p) => p.slug === a.detail)) ? a.detail : null;
+                  const detailHref = detailSlug ? `/persona?slug=${encodeURIComponent(detailSlug)}` : '#pricing';
+                  const detailLabel = detailSlug ? 'Lihat detail' : 'Lihat paket';
                   return (
                     <article
                       key={`slot-${i}`}
-                      className={`agent-card${isActive ? ' is-active' : ''}`}
-                      aria-label={`Agent: ${a.name}${detailSlug ? ' — klik untuk detail' : ''}`}
-                      aria-hidden={isSentinel}
-                      data-active={isActive}
-                      role={onCardClick ? 'button' : undefined}
-                      tabIndex={onCardClick && isActive ? 0 : undefined}
-                      onClick={onCardClick}
-                      onKeyDown={onCardClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onCardClick(); } } : undefined}
-                      style={onCardClick ? { cursor: 'pointer' } : undefined}
+                      className="agent-card"
+                      aria-label={`Agent: ${a.name}`}
+                      aria-hidden={isClone}
                     >
                       <div className="agent-viz">
-                        <AgentVisual key={`${a.file}-${i}`} file={a.file} />
+                        <AgentVisual file={a.file} glyph={a.glyph} />
                       </div>
                       <div className="agent-body">
                         <div className="agent-name">{a.name}</div>
                         <div className="agent-desc">{a.desc}</div>
-                        {detailHref && !isSentinel && (
-                          <a
-                            className="agent-cta"
-                            href={detailHref}
-                            onClick={(e) => e.stopPropagation()}
-                            aria-label={`Lihat detail ${a.name}`}
-                          >
-                            <span>Lihat detail</span>
-                            {/* Northeast arrow — matches pricing-section CTA glyph for continuity */}
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                              <path d="M7 17 17 7" />
-                              <path d="M7 7h10v10" />
-                            </svg>
-                          </a>
-                        )}
+                        <a
+                          className="agent-cta"
+                          href={detailHref}
+                          tabIndex={isClone ? -1 : 0}
+                          aria-hidden={isClone}
+                          aria-label={`${detailLabel} ${a.name}`}
+                        >
+                          <span>{detailLabel}</span>
+                          {/* Northeast arrow — matches pricing-section CTA glyph for continuity */}
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <path d="M7 17 17 7" />
+                            <path d="M7 7h10v10" />
+                          </svg>
+                        </a>
                       </div>
                     </article>
                   );
@@ -1992,8 +2065,8 @@
                 key={a.slug}
                 type="button"
                 role="tab"
-                aria-label={`Slide ke kartu ${i + 1} — ${a.name}`}
-                aria-current={i === realIndex}
+                aria-label={`Ke kartu ${i + 1} — ${a.name}`}
+                aria-current={i === active}
                 className="agent-dot"
                 onClick={() => goTo(i)}
               />

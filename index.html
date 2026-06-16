@@ -1504,6 +1504,7 @@
     .agent-fade-wrap {
       position: relative;
       padding: 0 28px; /* room for nav buttons on each side */
+      touch-action: pan-y;
     }
     @media (min-width: 768px) {
       .agent-fade-wrap { padding: 0 36px; }
@@ -1511,16 +1512,19 @@
     .agent-fade {
       position: relative;
       overflow: hidden;
-      -webkit-mask-image: linear-gradient(to right, transparent 0, #000 28px, #000 calc(100% - 28px), transparent 100%);
-              mask-image: linear-gradient(to right, transparent 0, #000 28px, #000 calc(100% - 28px), transparent 100%);
+      -webkit-mask-image: linear-gradient(to right, transparent 0, #000 40px, #000 calc(100% - 40px), transparent 100%);
+              mask-image: linear-gradient(to right, transparent 0, #000 40px, #000 calc(100% - 40px), transparent 100%);
       padding: 4px 16px;
+      touch-action: pan-y;
     }
     @media (min-width: 768px) { .agent-fade { padding: 6px 24px; } }
     .agent-track {
       display: flex;
       gap: 14px;
       will-change: transform;
-      transition: transform 700ms cubic-bezier(0.22, 0.61, 0.36, 1);
+      /* Continuous drift is transitionless; the snap (click/dot) sets a
+         transition inline then clears it (rev 2026-06-16). */
+      transition: none;
     }
     @media (min-width: 768px) { .agent-track { gap: 18px; } }
 
@@ -1548,7 +1552,7 @@
       border: 1px solid rgba(255, 255, 255, 0.08);
       backdrop-filter: blur(18px) saturate(1.05);
       -webkit-backdrop-filter: blur(18px) saturate(1.05);
-      transition: border-color 240ms ease;
+      transition: border-color 240ms ease, transform 240ms ease, box-shadow 240ms ease;
     }
     /* Tablet (768-1024px): single card centered, no peek of neighbors —
        the carousel JS computes pitch from getBoundingClientRect so this
@@ -1565,6 +1569,11 @@
     }
     .agent-card:hover {
       border-color: rgba(229, 50, 45, 0.40);
+      transform: translateY(-4px);
+      box-shadow: 0 18px 40px -18px rgba(229, 50, 45, 0.35);
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .agent-card, .agent-card:hover { transition: none; transform: none; }
     }
 
     .agent-card .agent-viz {
@@ -1575,6 +1584,19 @@
       aspect-ratio: 16 / 9;
       background-color: #050505;
       overflow: hidden;
+      box-shadow: inset 0 -40px 60px -30px rgba(229, 50, 45, 0.25);
+    }
+
+    /* "Segera hadir" poster — personas without a demo video yet (rev 2026-06-16). */
+    .agent-poster {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+      background: radial-gradient(120% 120% at 50% 35%, rgba(229,50,45,0.12), #050505 70%);
+    }
+    .agent-poster svg { width: 30%; height: auto; opacity: 0.9; }
+    .agent-poster-tag {
+      font-family: 'Inter', sans-serif; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+      color: rgba(229,50,45,0.92); border: 1px solid rgba(229,50,45,0.4); border-radius: 999px; padding: 3px 11px;
     }
     /* Halftone background + vignette removed (2026-05-07 pivot): the
        chat bubble + action scenes need clean black so bubbles read as
@@ -2519,6 +2541,12 @@
       font-size: 11.5px;
       line-height: 1.45;
       color: rgba(245, 242, 234, 0.62);
+      /* 2-line clamp so all 10 cards share a uniform body height. */
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      min-height: 2.9em;
     }
     @media (min-width: 768px) { .agent-card .agent-desc { font-size: 13.5px; line-height: 1.5; } }
     .agent-card .agent-cta {
