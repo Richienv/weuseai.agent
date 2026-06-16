@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Chat dengan agent kamu — weuseai.agent</title>
+  <meta name="description" content="Ngobrol langsung dengan agent kamu di web." />
+  <meta name="robots" content="noindex,nofollow" />
+  <meta name="theme-color" content="#0a0a0a" />
+  <link rel="icon" type="image/svg+xml" href="assets/logo.svg" />
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png" />
+
+  <!-- Same font load as the funnel — visual continuity. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      color-scheme: dark;
+      --signal-red: #E5322D;
+      --signal-red-soft: rgba(229, 50, 45, 0.18);
+      --signal-red-glow: rgba(229, 50, 45, 0.45);
+      --bg: #0a0a0a;
+      --ink: #f5f5f5;
+      --muted: rgba(245, 245, 245, 0.55);
+      --faint: rgba(245, 245, 245, 0.40);
+      --line: rgba(255, 255, 255, 0.10);
+      --card-bg: rgba(20, 20, 20, 0.55);
+      --user-bg: rgba(229, 50, 45, 0.14);
+      --user-line: rgba(229, 50, 45, 0.32);
+      --agent-bg: rgba(20, 20, 20, 0.62);
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      background: var(--bg);
+      color: var(--ink);
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      font-weight: 300;
+      -webkit-font-smoothing: antialiased;
+      margin: 0;
+      line-height: 1.6;
+    }
+    body { height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
+    .serif { font-family: 'Instrument Serif', 'Times New Roman', serif; font-weight: 400; letter-spacing: -0.02em; }
+    .mono { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace; }
+
+    /* ─── State gating ─────────────────────────────────────────────
+       renderState() sets body[data-state]. The chat surface shows for the
+       conversational states; a centered status card shows for everything
+       else. Default (no state) = error-offline (FAIL CLOSED — never render a
+       raw upstream message or a composer we can't back). */
+    #chatSurface, #statusSurface { display: none; }
+    body[data-state="empty"]     #chatSurface,
+    body[data-state="sending"]   #chatSurface,
+    body[data-state="streaming"] #chatSurface,
+    body[data-state="slow"]      #chatSurface,
+    body[data-state="reconnect"] #chatSurface { display: flex; }
+    body[data-state="flag-off"]               #statusSurface,
+    body[data-state="error-offline"]          #statusSurface,
+    body[data-state="provisioning-not-ready"] #statusSurface,
+    body[data-state="error-suspended"]        #statusSurface,
+    body[data-state="error-rate"]             #statusSurface,
+    body[data-state="error-budget"]           #statusSurface,
+    body[data-state="error-auth"]             #statusSurface,
+    body:not([data-state])                    #statusSurface { display: flex; }
+
+    /* ─── Header ─────────────────────────────────────────────────── */
+    header.bar {
+      flex: 0 0 auto;
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 20px;
+      padding-top: max(14px, env(safe-area-inset-top));
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      background: rgba(10, 10, 10, 0.86);
+      backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    }
+    header.bar .ava {
+      width: 34px; height: 34px; flex: 0 0 auto; border-radius: 50%;
+      background: rgba(20, 20, 20, 0.8); border: 1px solid var(--signal-red-glow);
+      display: grid; place-items: center;
+      font-family: 'Instrument Serif', serif; font-size: 17px; color: var(--ink);
+    }
+    header.bar .who { min-width: 0; }
+    header.bar .who .name { font-size: 14px; font-weight: 500; letter-spacing: -0.01em; }
+    header.bar .who .sub { font-size: 11px; color: var(--faint); display: flex; align-items: center; gap: 6px; }
+    .livedot { width: 6px; height: 6px; border-radius: 50%; background: #3ad07a; box-shadow: 0 0 8px rgba(58,208,122,0.5); }
+    header.bar .spacer { flex: 1; }
+    header.bar a.exit { color: var(--faint); text-decoration: none; font-size: 12px; }
+    header.bar a.exit:hover { color: var(--ink); }
+
+    /* ─── Transcript ─────────────────────────────────────────────── */
+    #transcript {
+      flex: 1 1 auto; overflow-y: auto; -webkit-overflow-scrolling: touch;
+      padding: 22px 20px 8px;
+      display: flex; flex-direction: column; gap: 14px;
+    }
+    .wrap { width: 100%; max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .row { display: flex; }
+    .row.user { justify-content: flex-end; }
+    .row.agent { justify-content: flex-start; }
+    .bubble {
+      max-width: 84%; padding: 11px 15px; border-radius: 16px;
+      font-size: 15px; font-weight: 300; word-wrap: break-word; overflow-wrap: anywhere;
+    }
+    .row.user .bubble { background: var(--user-bg); border: 1px solid var(--user-line); border-bottom-right-radius: 5px; }
+    .row.agent .bubble { background: var(--agent-bg); border: 1px solid var(--line); border-bottom-left-radius: 5px; }
+    .bubble p { margin: 0 0 8px; } .bubble p:last-child { margin-bottom: 0; }
+    .bubble strong { font-weight: 600; color: var(--ink); }
+    .bubble code { font-family: 'JetBrains Mono', monospace; font-size: 13px; background: rgba(255,255,255,0.07); padding: 1px 5px; border-radius: 5px; }
+    .bubble pre { background: rgba(0,0,0,0.45); border: 1px solid var(--line); border-radius: 10px; padding: 11px 13px; overflow-x: auto; margin: 8px 0; }
+    .bubble pre code { background: none; padding: 0; font-size: 12.5px; line-height: 1.55; }
+    .bubble ul { margin: 6px 0; padding-left: 20px; } .bubble li { margin: 2px 0; }
+
+    /* Typing dots */
+    .typing { display: inline-flex; gap: 4px; padding: 4px 2px; }
+    .typing span { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); animation: blink 1.3s ease-in-out infinite; }
+    .typing span:nth-child(2) { animation-delay: 0.18s; } .typing span:nth-child(3) { animation-delay: 0.36s; }
+    @keyframes blink { 0%, 60%, 100% { opacity: 0.25; } 30% { opacity: 1; } }
+    .think-note { font-size: 12px; color: var(--faint); margin-top: 6px; }
+
+    /* Empty state */
+    .greeting { margin: 8px auto 4px; max-width: 720px; }
+    .greeting .hi { font-size: 21px; line-height: 1.35; }
+    .chips { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 16px; }
+    .chip {
+      background: rgba(20,20,20,0.6); border: 1px solid var(--line); color: var(--ink);
+      border-radius: 999px; padding: 9px 15px; font-size: 13px; cursor: pointer;
+      font-family: inherit; font-weight: 300; transition: border-color 180ms ease, background 180ms ease; min-height: 40px;
+    }
+    .chip:hover { border-color: var(--signal-red-glow); background: rgba(229,50,45,0.08); }
+
+    .newmsg {
+      position: absolute; left: 50%; transform: translateX(-50%); bottom: 92px;
+      background: rgba(20,20,20,0.92); border: 1px solid var(--line); color: var(--ink);
+      border-radius: 999px; padding: 7px 14px; font-size: 12px; cursor: pointer;
+      backdrop-filter: blur(8px); display: none; z-index: 4;
+    }
+    body.has-newmsg .newmsg { display: block; }
+
+    /* ─── Composer ───────────────────────────────────────────────── */
+    .composer {
+      flex: 0 0 auto; border-top: 1px solid rgba(255,255,255,0.06);
+      background: rgba(10,10,10,0.92); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+      padding: 12px 20px; padding-bottom: max(12px, env(safe-area-inset-bottom));
+    }
+    .composer .inner { max-width: 720px; margin: 0 auto; display: flex; gap: 10px; align-items: flex-end; }
+    textarea#input {
+      flex: 1; resize: none; max-height: 140px; min-height: 44px;
+      background: rgba(20,20,20,0.7); border: 1px solid var(--line); border-radius: 14px;
+      color: var(--ink); font-family: inherit; font-weight: 300; font-size: 16px; line-height: 1.5;
+      padding: 11px 14px; outline: none; transition: border-color 180ms ease;
+    }
+    textarea#input:focus { border-color: var(--signal-red-glow); }
+    textarea#input::placeholder { color: var(--faint); }
+    .sendbtn {
+      flex: 0 0 auto; width: 44px; height: 44px; border-radius: 13px; border: none; cursor: pointer;
+      background: var(--signal-red); color: #fff; display: grid; place-items: center; transition: opacity 160ms ease, transform 120ms ease;
+    }
+    .sendbtn:disabled { opacity: 0.4; cursor: default; }
+    .sendbtn:not(:disabled):active { transform: scale(0.94); }
+    .sendbtn svg { width: 19px; height: 19px; display: block; }
+
+    /* ─── Status card (non-chat states) ──────────────────────────── */
+    #statusSurface { flex: 1; align-items: center; justify-content: center; padding: 32px 24px; }
+    .status-card {
+      width: 100%; max-width: 460px; text-align: center;
+      background: var(--card-bg); border: 1px solid var(--line); border-radius: 18px;
+      backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); padding: 34px 28px;
+    }
+    .status-card .pill {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(20, 20, 20, 0.6); border: 1px solid var(--signal-red-glow);
+      border-radius: 999px; padding: 6px 14px; font-size: 12px; color: rgba(245,245,245,0.9); margin-bottom: 18px;
+    }
+    .status-card .pill .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--signal-red); box-shadow: 0 0 8px var(--signal-red-glow); }
+    .status-card h1 { font-size: 24px; font-weight: 400; margin: 0 0 10px; letter-spacing: -0.01em; }
+    .status-card p { color: var(--muted); font-size: 15px; margin: 0 auto 22px; max-width: 360px; }
+    .btn-primary {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      background: var(--signal-red); color: #fff; text-decoration: none; border: none; cursor: pointer;
+      border-radius: 12px; padding: 12px 22px; font-family: inherit; font-size: 14px; font-weight: 500; min-height: 44px;
+      transition: opacity 160ms ease;
+    }
+    .btn-primary:hover { opacity: 0.92; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .typing span { animation: none; opacity: 0.6; }
+      .sendbtn:active { transform: none; }
+    }
+    .visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); border: 0; }
+  </style>
+</head>
+<body>
+  <!-- ═══ Chat surface (conversational states) ═══ -->
+  <div id="chatSurface" style="flex:1; min-height:0; flex-direction:column; position:relative;">
+    <header class="bar">
+      <div class="ava" id="ava" aria-hidden="true">P</div>
+      <div class="who">
+        <div class="name" id="agentName">Agent kamu</div>
+        <div class="sub"><span class="livedot" aria-hidden="true"></span><span id="agentSub">aktif</span></div>
+      </div>
+      <div class="spacer"></div>
+      <a class="exit" href="/welcome" id="exitLink">Keluar</a>
+    </header>
+
+    <div id="transcript" role="log" aria-live="polite" aria-relevant="additions" aria-label="Percakapan dengan agent kamu">
+      <div class="wrap" id="msgs"></div>
+    </div>
+
+    <button class="newmsg" id="newMsgBtn" type="button">↓ pesan baru</button>
+
+    <div class="composer">
+      <div class="inner">
+        <label for="input" class="visually-hidden">Tulis pesan untuk agent kamu</label>
+        <textarea id="input" rows="1" placeholder="Tulis pesan…" autocomplete="off" autocapitalize="sentences"></textarea>
+        <button class="sendbtn" id="sendBtn" type="button" aria-label="Kirim" disabled>
+          <svg id="sendIcon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 12l16-8-6 8 6 8-16-8z" fill="currentColor"/></svg>
+          <svg id="stopIcon" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="display:none"><rect x="6.5" y="6.5" width="11" height="11" rx="2.5" fill="currentColor"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Status surface (everything else) ═══ -->
+  <div id="statusSurface">
+    <div class="status-card">
+      <span class="pill"><span class="dot"></span><span id="statusPill">weuseai.agent</span></span>
+      <h1 id="statusTitle">Memuat…</h1>
+      <p id="statusBody"></p>
+      <a class="btn-primary" id="statusCta" href="#">Lanjut</a>
+    </div>
+  </div>
+
+  <script>
+  (function () {
+    'use strict';
+
+    // ── Constants ──────────────────────────────────────────────────────
+    var SOFT_TIMEOUT_MS = 12000;  // first token slow → patient sub-line
+    var HARD_TIMEOUT_MS = 45000;  // first token never came → error
+    var PERSONA_META = {
+      'the-pro': 'The Pro', 'doc-expert': 'Doc Expert', 'slide-master': 'Slide Master',
+      'deep-researcher': 'Deep Researcher', 'trade-pro': 'Trade Pro', 'data-analyst': 'Data Analyst',
+      'web-app-builder': 'Web App Builder', 'business-agent': 'Business Agent',
+      'content-writer': 'Content Writer', 'voice-companion': 'Voice Companion'
+    };
+
+    var qs = new URLSearchParams(location.search);
+    var CID = qs.get('cid') || '';
+    // localhost-only dev escape so the UI can be exercised against a hard mock
+    // with ZERO network. Exact hostname match — NEVER substring (the prod apex
+    // weuseai-agent.vercel.app must not match).
+    var IS_LOCAL = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+    var FLAG_ON_DEV = IS_LOCAL && qs.get('flag') === 'on';
+
+    // ── DOM ────────────────────────────────────────────────────────────
+    var $ = function (id) { return document.getElementById(id); };
+    var body = document.body;
+    var msgs = $('msgs'), transcript = $('transcript'), input = $('input');
+    var sendBtn = $('sendBtn'), sendIcon = $('sendIcon'), stopIcon = $('stopIcon');
+    var newMsgBtn = $('newMsgBtn');
+
+    function setState(s) { body.setAttribute('data-state', s); }
+
+    // ── Markdown: ESCAPE FIRST, format SECOND. Never innerHTML += raw. ──
+    function esc(t) {
+      return t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+              .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+    function renderMarkdown(raw) {
+      var safe = esc(raw);
+      // fenced code blocks first (protect their contents from inline rules)
+      var blocks = [];
+      safe = safe.replace(/```([\s\S]*?)```/g, function (_m, code) {
+        blocks.push(code.replace(/^\n/, ''));
+        return ' B' + (blocks.length - 1) + ' ';
+      });
+      var lines = safe.split('\n');
+      var html = '', listOpen = false, para = [];
+      function flushPara() {
+        if (!para.length) return;
+        html += '<p>' + inline(para.join(' ')) + '</p>';
+        para = [];
+      }
+      function inline(s) {
+        return s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+                .replace(/`([^`]+)`/g, '<code>$1</code>');
+      }
+      for (var i = 0; i < lines.length; i++) {
+        var ln = lines[i];
+        var blk = ln.match(/^ B(\d+) $/);
+        if (blk) { flushPara(); if (listOpen) { html += '</ul>'; listOpen = false; }
+          html += '<pre><code>' + blocks[+blk[1]] + '</code></pre>'; continue; }
+        if (/^\s*[-*]\s+/.test(ln)) {
+          flushPara(); if (!listOpen) { html += '<ul>'; listOpen = true; }
+          html += '<li>' + inline(ln.replace(/^\s*[-*]\s+/, '')) + '</li>'; continue;
+        }
+        if (listOpen) { html += '</ul>'; listOpen = false; }
+        if (ln.trim() === '') flushPara(); else para.push(ln);
+      }
+      flushPara(); if (listOpen) html += '</ul>';
+      return html;
+    }
+
+    // ── Transcript helpers ─────────────────────────────────────────────
+    function nearBottom() { return transcript.scrollHeight - transcript.scrollTop - transcript.clientHeight < 80; }
+    function scrollDown(force) {
+      if (force || nearBottom()) { transcript.scrollTop = transcript.scrollHeight; body.classList.remove('has-newmsg'); }
+      else { body.classList.add('has-newmsg'); }
+    }
+    function addUser(text) {
+      var row = document.createElement('div'); row.className = 'row user';
+      var b = document.createElement('div'); b.className = 'bubble'; b.textContent = text;
+      row.appendChild(b); msgs.appendChild(row); scrollDown(true);
+    }
+    function addAgent() {
+      var row = document.createElement('div'); row.className = 'row agent';
+      var b = document.createElement('div'); b.className = 'bubble';
+      b.innerHTML = '<span class="typing" aria-hidden="true"><span></span><span></span><span></span></span>';
+      row.appendChild(b); msgs.appendChild(row); scrollDown(true);
+      return b;
+    }
+
+    // ── Mock relay (Phase 1 — NO network). Streams a canned reply. ──────
+    // Phases 2+ replace this with a fetch() to the agent-chat-relay edge fn.
+    var MOCK_REPLIES = {
+      'Ringkas dokumen': 'Tentu. Kirim dokumennya — bisa paste teksnya atau lampirkan filenya. Aku ringkas jadi **poin-poin inti**, lengkap dengan satu kalimat kesimpulan di akhir.\n\nMau format ringkasannya seperti apa:\n- Poin singkat (3–5 bullet)\n- Paragraf padat\n- Per-bagian (kalau dokumennya panjang)',
+      'Bantu balas email': 'Siap. Tempel email yang mau kamu balas, lalu kasih tahu aku nada yang kamu mau — formal, ramah, atau singkat. Aku susun draft balasannya, dan kamu tinggal sesuaikan sebelum kirim.',
+      'Rencanakan minggu ini': 'Ayo kita rapikan. Sebutkan 3–5 hal yang paling penting minggu ini, plus deadline-nya kalau ada. Aku susun jadi urutan prioritas harian, dan tandai mana yang sebaiknya kamu kerjakan lebih dulu.'
+    };
+    function mockStream(text, handlers, signal) {
+      var reply = MOCK_REPLIES[text] || ('Aku dengar kamu. Ini balasan contoh dari mode demo — nanti diganti jawaban asli dari agent kamu.\n\nKamu nulis: `' + text.slice(0, 80) + '`');
+      var tokens = reply.match(/\S+\s*/g) || [reply];
+      var i = 0, first = true;
+      function step() {
+        if (signal && signal.aborted) { handlers.onError && handlers.onError('aborted'); return; }
+        if (i >= tokens.length) { handlers.onDone && handlers.onDone(); return; }
+        if (first) { first = false; handlers.onFirst && handlers.onFirst(); }
+        handlers.onToken(tokens[i]); i++;
+        setTimeout(step, 22 + Math.floor(20 * ((i * 13) % 7) / 7)); // deterministic-ish cadence
+      }
+      setTimeout(step, 360); // simulate first-token latency
+    }
+
+    // ── Send flow ──────────────────────────────────────────────────────
+    var active = null; // { abort }
+    function setComposerSending(on) {
+      sendIcon.style.display = on ? 'none' : 'block';
+      stopIcon.style.display = on ? 'block' : 'none';
+      sendBtn.setAttribute('aria-label', on ? 'Hentikan' : 'Kirim');
+      sendBtn.disabled = on ? false : (input.value.trim() === '');
+    }
+
+    function send(text) {
+      text = (text || input.value).trim();
+      if (!text || active) return;
+      input.value = ''; autosize();
+      addUser(text);
+      setState('sending');
+      var bubble = addAgent();
+      var ac = new AbortController();
+      active = { abort: function () { ac.abort(); } };
+      setComposerSending(true);
+
+      var acc = '', started = false, rafQueued = false;
+      var soft = setTimeout(function () { if (!started) { var n = bubble.querySelector('.think-note') || (function(){var d=document.createElement('div'); d.className='think-note'; d.textContent='Agent kamu lagi mikir, sebentar ya.'; bubble.appendChild(d); return d;})(); setState('slow'); } }, SOFT_TIMEOUT_MS);
+      var hard = setTimeout(function () { if (!started) { ac.abort(); fail('error-offline'); } }, HARD_TIMEOUT_MS);
+
+      function flush() {
+        rafQueued = false;
+        bubble.innerHTML = renderMarkdown(acc);
+        scrollDown(false);
+      }
+      function fail(state) {
+        clearTimeout(soft); clearTimeout(hard); active = null; setComposerSending(false);
+        if (!acc) { var row = bubble.closest('.row'); if (row) row.remove(); }
+        setState(state);
+      }
+
+      mockStream(text, {
+        onFirst: function () { started = true; clearTimeout(soft); setState('streaming'); },
+        onToken: function (tok) { acc += tok; if (!rafQueued) { rafQueued = true; requestAnimationFrame(flush); } },
+        onDone: function () {
+          clearTimeout(soft); clearTimeout(hard); flush(); active = null; setComposerSending(false);
+          setState('streaming'); // stays on the chat surface (idle = streaming-class view)
+        },
+        onError: function (why) {
+          if (why === 'aborted') { clearTimeout(soft); clearTimeout(hard); flush(); active = null; setComposerSending(false); }
+          else fail('error-offline');
+        }
+      }, ac.signal);
+    }
+
+    // ── Composer wiring ────────────────────────────────────────────────
+    function autosize() { input.style.height = 'auto'; input.style.height = Math.min(input.scrollHeight, 140) + 'px'; }
+    input.addEventListener('input', function () { autosize(); if (!active) sendBtn.disabled = input.value.trim() === ''; });
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (!active && input.value.trim()) send(); }
+    });
+    sendBtn.addEventListener('click', function () { if (active) active.abort(); else if (input.value.trim()) send(); });
+    newMsgBtn.addEventListener('click', function () { scrollDown(true); });
+    transcript.addEventListener('scroll', function () { if (nearBottom()) body.classList.remove('has-newmsg'); });
+
+    // ── Status card rendering ──────────────────────────────────────────
+    var STATUS = {
+      'flag-off': { title: 'Chat lagi disiapkan', body: 'Fitur chat web masih kami rapikan. Untuk sekarang, agent kamu tetap aktif di Telegram.', cta: 'Buka panduan Telegram', href: '/welcome' },
+      'error-offline': { title: 'Agent kamu belum bisa dihubungi', body: 'Sambungan ke agent kamu lagi terputus. Coba lagi sebentar.', cta: 'Coba lagi', href: '#retry' },
+      'provisioning-not-ready': { title: 'Agent kamu lagi dibangun', body: 'Agent kamu belum selesai disiapkan. Kami kabari begitu siap.', cta: 'Cek status', href: '/welcome' },
+      'error-suspended': { title: 'Agent kamu lagi istirahat', body: 'Hosting agent kamu sedang dijeda. Aktifkan lagi dari dashboard untuk lanjut chat.', cta: 'Aktifkan agent', href: '/welcome' },
+      'error-rate': { title: 'Sebentar dulu ya', body: 'Kamu lagi cepat banget. Tunggu sebentar sebelum kirim lagi.', cta: 'Mengerti', href: '#retry' },
+      'error-budget': { title: 'Kuota chat kamu sudah penuh', body: 'Pemakaian agent kamu sudah mencapai batas paket. Tambah kuota atau tunggu siklus berikutnya.', cta: 'Lihat paket', href: '/#harga' },
+      'error-auth': { title: 'Tautan ini sudah tidak berlaku', body: 'Buka chat lewat tautan terbaru dari halaman setup kamu.', cta: 'Ke halaman setup', href: '/welcome' }
+    };
+    function showStatus(state, extra) {
+      var s = STATUS[state] || STATUS['error-offline'];
+      $('statusTitle').textContent = s.title;
+      $('statusBody').textContent = (extra && extra.body) || s.body;
+      var cta = $('statusCta'); cta.textContent = s.cta; cta.setAttribute('href', s.href);
+      setState(STATUS[state] ? state : 'error-offline');
+    }
+    $('statusCta').addEventListener('click', function (e) {
+      var href = this.getAttribute('href');
+      if (href === '#retry') { e.preventDefault(); boot(); }
+    });
+
+    // ── Boot ───────────────────────────────────────────────────────────
+    function startChat(meta) {
+      var slug = (meta && meta.persona) || 'the-pro';
+      var name = (meta && meta.agent_name) || PERSONA_META[slug] || 'Agent kamu';
+      $('agentName').textContent = name;
+      $('ava').textContent = (name.trim()[0] || 'A').toUpperCase();
+      // empty-state greeting + suggestion chips
+      msgs.innerHTML = '';
+      var g = document.createElement('div'); g.className = 'greeting';
+      g.innerHTML = '<div class="hi serif">Halo, aku agent kamu. Mau mulai dari mana?</div>' +
+        '<div class="chips">' +
+        ['Ringkas dokumen', 'Bantu balas email', 'Rencanakan minggu ini']
+          .map(function (c) { return '<button class="chip" type="button">' + esc(c) + '</button>'; }).join('') +
+        '</div>';
+      msgs.appendChild(g);
+      Array.prototype.forEach.call(g.querySelectorAll('.chip'), function (ch) {
+        ch.addEventListener('click', function () { send(ch.textContent); });
+      });
+      setState('empty');
+      sendBtn.disabled = true;
+      setTimeout(function () { input.focus(); }, 60);
+    }
+
+    function boot() {
+      // Phase 1: the relay/feature flag is OFF in prod. The UI is exercised
+      // ONLY against the hard mock on localhost with ?flag=on. Default-closed:
+      // absence/false/any error → flag-off (never probe the network).
+      if (FLAG_ON_DEV) {
+        startChat({ persona: 'the-pro', agent_name: 'The Pro', chat_enabled: true });
+        return;
+      }
+      // No CID at all → the link is stale.
+      if (!CID && !IS_LOCAL) { showStatus('error-auth'); return; }
+      // Prod / no dev-flag: feature is dark.
+      showStatus('flag-off');
+    }
+
+    boot();
+  })();
+  </script>
+</body>
+</html>
