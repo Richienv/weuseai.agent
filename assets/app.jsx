@@ -1768,7 +1768,7 @@
         return (
           <div className="agent-poster" aria-hidden="true">
             <AgentGlyph kind={glyph} />
-            <span className="agent-poster-tag">Segera hadir</span>
+            <span className="agent-poster-tag">Demo menyusul</span>
           </div>
         );
       }
@@ -1819,6 +1819,13 @@
         desc: 'Kalender konten, draf post lintas platform, dan catatan engagement — suara kamu tetap satu di semua channel.' },
       { slug: 'video-producer',   file: null,                detail: 'video-producer',   name: 'Video Producer',    glyph: 'video',
         desc: 'Skrip untuk TikTok dan Reels, riset hashtag, dan pantau tren sound buat tempo produksi tinggi.' },
+      // ── Sedang dibangun — terhubung lewat Gmail/Sekolah (founder: "we'll build it",
+      //    2026-06-17). Video preview + "Segera hadir" chip; tombol -> #integrasi.
+      //    detail:null (belum ada halaman); status:'segera' marks them coming. ──
+      { slug: 'email-manager',    file: 'email-manager',     detail: null,               name: 'Email Manager',     glyph: 'default', status: 'segera',
+        desc: 'Rapikan kotak masuk, draf balasan dengan gaya kamu, dan tandai yang penting.' },
+      { slug: 'calendar-agent',   file: 'calendar-agent',    detail: null,               name: 'Calendar Agent',    glyph: 'default', status: 'segera',
+        desc: 'Atur jadwal, hindari bentrok, dan kasih saran reschedule sesuai konteks kamu.' },
     ];
 
     function AgentCarousel() {
@@ -2020,19 +2027,24 @@
                     reset has identical pixels to land on. */}
                 {track2.map((a, i) => {
                   const isClone = i >= AGENTS.length;
+                  const isSegera = a.status === 'segera';
                   const detailSlug = (typeof PERSONA_DETAILS !== 'undefined' && PERSONA_DETAILS &&
                     PERSONA_DETAILS.some((p) => p.slug === a.detail)) ? a.detail : null;
-                  const detailHref = detailSlug ? `/persona?slug=${encodeURIComponent(detailSlug)}` : '#pricing';
-                  const detailLabel = detailSlug ? 'Lihat detail' : 'Lihat paket';
+                  // Live persona -> its /persona page. "Segera" specialist (email/
+                  // calendar, coming via Gmail) -> the integrations centerpiece where
+                  // it's honestly marked Segera. Anything else -> pricing.
+                  const detailHref = isSegera ? '#integrasi' : (detailSlug ? `/persona?slug=${encodeURIComponent(detailSlug)}` : '#pricing');
+                  const detailLabel = isSegera ? 'Lihat integrasi' : (detailSlug ? 'Lihat detail' : 'Lihat paket');
                   return (
                     <article
                       key={`slot-${i}`}
                       className="agent-card"
-                      aria-label={`Agent: ${a.name}`}
+                      aria-label={`Agent: ${a.name}${isSegera ? ' (segera hadir)' : ''}`}
                       aria-hidden={isClone}
                     >
                       <div className="agent-viz">
                         <AgentVisual file={a.file} glyph={a.glyph} />
+                        {isSegera && <span className="agent-viz-chip" aria-hidden="true">Segera hadir</span>}
                       </div>
                       <div className="agent-body">
                         <div className="agent-name">{a.name}</div>
@@ -2670,7 +2682,7 @@
             </div>
             <BlurText
               as="h2"
-              text="Sepuluh spesialis. Satu tim. Satu chat."
+              text="Spesialis untuk tiap pekerjaan. Satu tim. Satu chat."
               className="mt-8 text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-heading tracking-tight leading-[1.05] md:leading-[0.9] max-w-3xl"
               style={{ letterSpacing: '-0.03em' }}
               delay={80} />
