@@ -278,8 +278,21 @@ async function recordAndAlert(alert: SentinelAlert): Promise<void> {
     detail: alert.detail,
   })
   if (error) {
-    // Unique-violation = already alerted this bucket; benign, skip the DM.
-    return
+    // 23505 = unique_violation = the dedup index already recorded this bucket
+    // → benign, skip the DM so the founder isn't double-pinged.
+    if ((error as { code?: string }).code === '23505') {
+      return
+    }
+    // ANY OTHER insert error (transient DB, RLS/schema drift, the kind CHECK
+    // rejecting a new alert kind) must NOT be silently swallowed as if it were
+    // a dedup hit — the sentinel's entire job is to make failures loud (runaway
+    // spend, dead agents, drained credit). Log it and STILL attempt the DM so a
+    // real alert is never masked. Security audit L4 (2026-06-14).
+    console.error(
+      `[fleet-sentinel] fleet_alerts insert failed ` +
+        `(code=${(error as { code?: string }).code ?? '?'}, kind=${alert.kind}, ` +
+        `cid=${alert.customer_id}): ${error.message} — sending DM anyway`,
+    )
   }
   if (FOUNDER_BOT_TOKEN && FOUNDER_CHAT_ID) {
     try {
