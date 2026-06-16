@@ -255,6 +255,47 @@
     /* When DashboardDemo is the top hero (Phase 2 swap), clear the floating navbar. */
     .db-section--hero { padding-top: 118px; }
     @media (min-width: 768px) { .db-section--hero { padding-top: 150px; } }
+
+    /* ── Integrations spine — the 4-app centerpiece (Phase 3) ── */
+    .is-section { position: relative; padding: 84px 16px 92px; background: #050505; overflow: hidden; }
+    @media (min-width: 768px) { .is-section { padding: 116px 24px 124px; } }
+    .is-wrap { max-width: 1120px; margin: 0 auto; text-align: center; }
+    .is-eyebrow { display: inline-flex; align-items: center; gap: 8px; background: rgba(20,20,20,0.6); border: 1px solid rgba(229,50,45,0.45); border-radius: 999px; padding: 6px 14px; font-size: 11px; color: rgba(245,245,245,0.9); font-family: 'Inter', sans-serif; }
+    .is-headline { margin: 22px 0 0; font-family: 'Instrument Serif', serif; font-weight: 400; letter-spacing: -0.03em; line-height: 1.0; color: #f5f5f5; font-size: clamp(2.4rem, 6vw, 4.5rem); }
+    .is-sub { margin: 18px auto 0; max-width: 60ch; color: rgba(245,245,245,0.6); font-family: 'Inter', sans-serif; font-weight: 300; font-size: 15px; line-height: 1.6; }
+    .is-hub { display: inline-flex; align-items: center; gap: 8px; margin: 30px 0 4px; padding: 7px 16px; border-radius: 999px; background: rgba(229,50,45,0.10); border: 1px solid rgba(229,50,45,0.45); color: #f5f5f5; font-size: 11px; font-family: 'JetBrains Mono', monospace; text-transform: uppercase; letter-spacing: 0.16em; }
+    .is-grid { margin-top: 32px; display: grid; grid-template-columns: 1fr; gap: 16px; }
+    @media (min-width: 640px) { .is-grid { grid-template-columns: 1fr 1fr; } }
+    @media (min-width: 1024px) { .is-grid { grid-template-columns: repeat(4, 1fr); gap: 18px; } }
+    .is-tile { position: relative; text-align: left; background: rgba(18,18,18,0.6); border: 1px solid rgba(255,255,255,0.10); border-radius: 18px; padding: 20px; overflow: hidden; transition: border-color 220ms ease, transform 220ms ease; }
+    .is-tile::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; }
+    .is-tile--live::before { background: linear-gradient(90deg, transparent, #E5322D, transparent); background-size: 200% 100%; animation: isFlow 2.6s linear infinite; }
+    .is-tile--segera::before { background: repeating-linear-gradient(90deg, rgba(255,255,255,0.16) 0 6px, transparent 6px 12px); }
+    .is-tile--live { box-shadow: 0 8px 44px -26px rgba(229,50,45,0.7); }
+    .is-tile--segera { opacity: 0.82; }
+    .is-tile:hover { transform: translateY(-3px); border-color: rgba(229,50,45,0.4); }
+    .is-viz { display: flex; align-items: flex-end; gap: 5px; height: 36px; margin-bottom: 14px; }
+    .is-viz span { width: 9px; border-radius: 3px; background: rgba(229,50,45,0.5); }
+    .is-viz span:nth-child(1){ height: 45%; } .is-viz span:nth-child(2){ height: 80%; } .is-viz span:nth-child(3){ height: 60%; } .is-viz span:nth-child(4){ height: 95%; }
+    .is-tile--live .is-viz span { animation: isBar 2.8s ease-in-out infinite; }
+    .is-tile--live .is-viz span:nth-child(2){ animation-delay: .2s; } .is-tile--live .is-viz span:nth-child(3){ animation-delay: .4s; } .is-tile--live .is-viz span:nth-child(4){ animation-delay: .6s; }
+    .is-tile--segera .is-viz span { background: rgba(255,255,255,0.18); }
+    .is-tile-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .is-tile-name { font-family: 'Instrument Serif', serif; font-size: 22px; color: #f5f5f5; letter-spacing: -0.01em; }
+    .is-chip { display: inline-flex; align-items: center; gap: 6px; font-family: 'JetBrains Mono', monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+    .is-chip--live { color: #ff7a76; background: rgba(229,50,45,0.12); border: 1px solid rgba(229,50,45,0.4); }
+    .is-chip--segera { color: rgba(245,245,245,0.5); background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.14); }
+    .is-chip-dot { width: 6px; height: 6px; border-radius: 50%; background: #E5322D; box-shadow: 0 0 8px rgba(229,50,45,0.6); animation: isPulse 1.6s ease-in-out infinite; }
+    .is-tile-line { margin: 12px 0 0; color: rgba(245,245,245,0.68); font-family: 'Inter', sans-serif; font-weight: 300; font-size: 13.5px; line-height: 1.55; }
+    .is-tile-micro { margin-top: 12px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: rgba(245,245,245,0.42); }
+    .is-foot { margin: 34px auto 0; color: rgba(245,245,245,0.55); font-family: 'Inter', sans-serif; font-weight: 300; font-size: 14px; }
+    .is-foot strong { color: #f5f5f5; font-weight: 500; }
+    @keyframes isFlow { 0% { background-position: 150% 0; } 100% { background-position: -150% 0; } }
+    @keyframes isBar { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+    @keyframes isPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+    @media (prefers-reduced-motion: reduce) {
+      .is-tile--live::before, .is-tile--live .is-viz span, .is-chip-dot { animation: none; }
+    }
     .db-section::before {
       content: ''; position: absolute; inset: 0; pointer-events: none;
       background: radial-gradient(ellipse 60% 50% at 50% 30%, rgba(229, 50, 45, 0.08), transparent 70%);

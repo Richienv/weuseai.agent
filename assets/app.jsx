@@ -5074,6 +5074,63 @@
       );
     }
 
+    // ─────────────── INTEGRATIONS SPINE (the centerpiece) ───────────────
+    // The #1 value prop: the agent works INSIDE real apps. R2 Content / R2 Fit /
+    // R2 Finance are LIVE (founder-confirmed, operated outside this repo) → tiles
+    // pulse "Aktif". Gmail/Sekolah is "Segera" (dashed, future-tense, "siapkan
+    // tugas" = prepares, never "kerjakan"). An Aktif chip only ever pulses for a
+    // genuinely-live tile (no animated lie). Copy is the founder's confirmed-LIVE
+    // claim; refine the exact value-prop lines anytime (data-driven below).
+    function IntegrationsSpine() {
+      const apps = [
+        { key: 'content', name: 'R2 Content', status: 'live',
+          line: 'Agen kamu menyusun dan menjadwalkan konten di R2 Content — dari kalender posting sampai draf caption.',
+          micro: '7 post terjadwal minggu ini' },
+        { key: 'fit', name: 'R2 Fit', status: 'live',
+          line: 'Agen kamu menata program latihan dan mencatat progres di R2 Fit, jadi kamu tinggal jalan.',
+          micro: 'Streak 12 hari berjalan' },
+        { key: 'finance', name: 'R2 Finance', status: 'live',
+          line: 'Agen kamu merapikan pemasukan dan pengeluaran di R2 Finance, lalu kasih ringkasan yang kamu mengerti.',
+          micro: 'Ringkasan cashflow tiap minggu' },
+        { key: 'school', name: 'Gmail / Sekolah', status: 'segera',
+          line: 'Agen kamu baca email dan portal sekolah kamu, rangkum yang penting, lalu siapkan tugas sebelum tenggat.',
+          micro: 'Email · portal · tenggat' },
+      ];
+      return (
+        <section id="integrasi" className="is-section">
+          <div className="is-wrap">
+            <div className="is-eyebrow"><span className="live-dot" /><span>Agen kamu nggak cuma menjawab</span></div>
+            <BlurText as="h2" text="Dia kerja di app beneran." className="is-headline" delay={70} />
+            <p className="is-sub">Bukan cuma jawaban di chat. Agen kamu masuk ke aplikasi yang kamu pakai tiap hari, lalu mengerjakan — bukan menyuruh kamu mengerjakan.</p>
+            <div className="is-hub" aria-hidden="true"><span className="live-dot" /><span>Satu agen</span></div>
+            <div className="is-grid">
+              {apps.map((a, i) => (
+                <Mot.div key={a.key}
+                  initial={{ opacity: 0, y: 18 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, amount: 0.3 }}
+                  transition={{ duration: 0.5, ease: EASE, delay: 0.06 * i }}
+                  className={`is-tile is-tile--${a.status}`}>
+                  <div className={`is-viz is-viz--${a.key}`} aria-hidden="true">
+                    <span /><span /><span /><span />
+                  </div>
+                  <div className="is-tile-head">
+                    <span className="is-tile-name">{a.name}</span>
+                    <span className={`is-chip is-chip--${a.status}`}>
+                      {a.status === 'live' ? <><span className="is-chip-dot" />Aktif</> : 'Segera'}
+                    </span>
+                  </div>
+                  <p className="is-tile-line">{a.line}</p>
+                  <div className="is-tile-micro">{a.micro}</div>
+                </Mot.div>
+              ))}
+            </div>
+            <p className="is-foot">Empat app. Satu agen. Hosting <strong>Rp 99rb/bulan</strong>.</p>
+          </div>
+        </section>
+      );
+    }
+
     // ─────────────────────── APP ───────────────────────
     function App() {
       return (
@@ -5082,6 +5139,7 @@
             <Navbar />
             <DashboardDemo />
             <div className="bg-black">
+              <IntegrationsSpine />
               <StartSection />
               <FeaturesChess />
               <VelvetSection />
