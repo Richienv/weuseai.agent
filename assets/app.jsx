@@ -435,121 +435,6 @@
     }
 
     // ─────────────────────── HERO ───────────────────────
-    function Hero() {
-      return (
-        <section id="beranda" className="relative overflow-hidden min-h-[760px] md:min-h-[920px]" style={{ height: 'auto', background: '#000' }}>
-          <DottedVideo
-            src="assets/new-hero.mp4"
-            color="#E5322D"
-            cellSize={6}
-            className="absolute inset-0 w-full h-full pointer-events-none"
-            style={{ zIndex: 0, background: '#000' }}
-          />
-          <div className="hero-grain" />
-          <div className="absolute inset-0 z-[1] pointer-events-none" style={{
-            background: 'linear-gradient(180deg, rgba(0,0,0,0.28) 0%, rgba(0,0,0,0.18) 45%, rgba(0,0,0,0.55) 100%)'
-          }} />
-          <div className="absolute bottom-0 left-0 right-0 z-[2] pointer-events-none"
-            style={{ height: 240, background: 'linear-gradient(to bottom, transparent, #000)' }} />
-
-          <div className="relative z-10 flex flex-col items-center text-center px-5 md:px-6 w-full pt-[120px] md:pt-[160px] pb-10">
-            <Mot.div
-              initial={{ filter: 'blur(10px)', opacity: 0, y: 20 }}
-              animate={{ filter: 'blur(0px)', opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, ease: EASE, delay: 0.2 }}
-              className="rounded-full px-1 py-1 flex items-center gap-2 text-xs font-body"
-              style={{
-                background: 'rgba(255, 255, 255, 0.08)',
-                border: '1px solid rgba(255, 255, 255, 0.22)',
-                backdropFilter: 'blur(8px)'
-              }}>
-              <span style={{ background: '#E5322D', color: '#fff' }} className="rounded-full px-3 py-1 text-[10px] font-mono font-medium uppercase tracking-[0.18em]">Resep Hangzhou</span>
-              <span className="pr-3 font-mono uppercase tracking-[0.14em] text-[11px] text-white/85">Dirakit untuk Indonesia</span>
-            </Mot.div>
-
-            <BlurText
-              text="Resep kampus elite China. Tenaga satu tim penuh. Aktif dalam 8 menit."
-              className="mt-7 md:mt-10 text-[2.5rem] sm:text-5xl md:text-6xl lg:text-[5.5rem] xl:text-[6.5rem] font-heading leading-[0.96] md:leading-[0.94] max-w-[18ch] md:max-w-[22ch] lg:max-w-[26ch] xl:max-w-[28ch] text-white px-2"
-              style={{ letterSpacing: '-0.045em', fontStyle: 'normal' }}
-              delay={100} />
-
-            <Mot.p
-              initial={{ filter: 'blur(10px)', opacity: 0, y: 20 }}
-              animate={{ filter: 'blur(0px)', opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, ease: EASE, delay: 0.8 }}
-              className="mt-6 md:mt-8 max-w-[52ch] text-sm md:text-lg font-body font-light leading-[1.5] text-white/85 px-2">
-              Satu tim agent AI di Telegram kamu — riset, surat, slide, laporan. Dipelajari langsung di Zhejiang University, Hangzhou, dibawa pulang untuk kamu. Bukan chatbot yang cuma jawab; tim yang mengerjakan.
-            </Mot.p>
-
-            <Mot.p
-              initial={{ filter: 'blur(10px)', opacity: 0, y: 20 }}
-              animate={{ filter: 'blur(0px)', opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, ease: EASE, delay: 0.95 }}
-              className="mt-5 font-mono uppercase tracking-[0.18em] text-[10px] md:text-[11px] text-white/55">
-              Setup 5 menit · bayar pakai QRIS · hosting Rp 99rb/bulan · berhenti kapan saja
-            </Mot.p>
-
-            <Mot.div
-              initial={{ filter: 'blur(10px)', opacity: 0, y: 20 }}
-              animate={{ filter: 'blur(0px)', opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, ease: EASE, delay: 1.1 }}
-              className="mt-10 flex flex-col items-center gap-3">
-              <div className="flex items-center gap-3 flex-wrap justify-center">
-                <a href="checkout.html" className="rounded-full px-5 py-2.5 min-h-[44px] text-sm font-medium flex items-center gap-2 no-underline"
-                  style={{ background: '#fff', color: '#0a0a0a', border: '1px solid #fff' }}>
-                  Aktifkan asisten kamu <ArrowUpRight size={14} stroke={2.2} />
-                </a>
-                <a href="https://cal.com/weuseai.agent/15min" target="_blank" rel="noopener" className="rounded-full px-5 py-2.5 min-h-[44px] text-sm font-medium flex items-center gap-2 no-underline text-white"
-                  style={{ background: 'rgba(255, 255, 255, 0.06)', border: '1px solid rgba(255, 255, 255, 0.22)', backdropFilter: 'blur(8px)' }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="4" width="18" height="18" rx="2" />
-                    <line x1="16" y1="2" x2="16" y2="6" />
-                    <line x1="8" y1="2" x2="8" y2="6" />
-                    <line x1="3" y1="10" x2="21" y2="10" />
-                  </svg>
-                  Konsultasi gratis (15 menit)
-                </a>
-              </div>
-            </Mot.div>
-
-            <div className="mt-12 md:mt-auto pb-6 md:pb-12 pt-12 md:pt-20 w-full max-w-5xl mx-auto">
-              <div className="liquid-glass rounded-2xl md:rounded-3xl p-5 md:p-10 grid grid-cols-2 md:grid-cols-4 gap-5 md:gap-6 text-center">
-                {[
-                  { kind: 'plain', n: 8,   suffix: ' mnt', label: 'Dari bayar ke pesan pertama\n(diukur, bukan janji)' },
-                  { kind: 'plain', n: 10,  suffix: '',  label: 'Persona spesialis\ndi-engineer satu per satu' },
-                  { kind: 'plain', n: 190, suffix: '+', label: 'Template Indonesia\nPPN · BPJS · KBLI · IDX' },
-                  { kind: 'plain', n: 24,  suffix: '',  label: 'Playbook multi-langkah\nbriefing pagi sampai laporan' },
-                ].map((it, i) => (
-                  <Mot.div key={it.label}
-                    initial={{ opacity: 0, y: 16 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true, amount: 0.4 }}
-                    transition={{ duration: 0.6, ease: EASE, delay: 0.06 * i }}
-                    className="flex flex-col items-center"
-                  >
-                    <div className="text-2xl md:text-4xl lg:text-5xl font-heading text-white leading-none" style={{ letterSpacing: '-0.04em' }}>
-                      {it.kind === 'ratio' ? (
-                        <>
-                          <CountUp to={it.a} duration={1800} delay={150} />
-                          <span className="text-white/35"> / </span>
-                          <CountUp to={it.b} duration={2200} delay={150} />
-                        </>
-                      ) : it.kind === 'text' ? (
-                        <span style={{ color: '#E5322D' }}>{it.text}</span>
-                      ) : (
-                        <CountUp to={it.n} suffix={it.suffix} duration={1800} delay={150 + i * 120} />
-                      )}
-                    </div>
-                    <div className="mt-2 md:mt-2.5 text-white/55 font-body font-light italic text-[11px] md:text-[13px] leading-snug" style={{ whiteSpace: 'pre-line' }}>{it.label}</div>
-                  </Mot.div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-      );
-    }
-
     // ─────────────────────── CREATURE SPRITES ───────────────────────
     // Each agent card hosts a unique creature animation (10 creatures × 3-5
     // frames each, dot-pattern silhouettes in Signal Red). SVG inline + CSS
@@ -2841,7 +2726,7 @@
       };
 
       return (
-        <section className="db-section">
+        <section id="beranda" className="db-section db-section--hero">
           <div className="db-eyebrow">
             <div className="db-eyebrow-pill">
               <span className="live-dot" />
@@ -2849,6 +2734,19 @@
             </div>
             <h2 className="db-headline">Satu super-agent. Growing skills.<br className="hidden md:inline" /> Create Anything You Want.</h2>
             <p className="db-sub">Dia yang menyapa kamu duluan — briefing pagi masuk sebelum diminta. Ilustrasi pengalaman; integrasi email dan kalender menyusul bertahap.</p>
+            <div className="mt-7 flex flex-col items-center gap-3">
+              <div className="flex items-center gap-3 flex-wrap justify-center">
+                <a href="checkout.html" className="rounded-full px-5 py-2.5 min-h-[44px] text-sm font-medium flex items-center gap-2 no-underline" style={{ background: '#fff', color: '#0a0a0a', border: '1px solid #fff' }}>
+                  Aktifkan asisten kamu <ArrowUpRight size={14} stroke={2.2} />
+                </a>
+                <a href="https://cal.com/weuseai.agent/15min" target="_blank" rel="noopener" className="rounded-full px-5 py-2.5 min-h-[44px] text-sm font-medium flex items-center gap-2 no-underline text-white" style={{ background: 'rgba(255, 255, 255, 0.06)', border: '1px solid rgba(255, 255, 255, 0.22)', backdropFilter: 'blur(8px)' }}>
+                  Konsultasi gratis (15 menit)
+                </a>
+              </div>
+              <p className="mt-1 font-mono uppercase tracking-[0.18em] text-[10px] md:text-[11px] text-white/55">
+                Setup 5 menit · bayar pakai QRIS · hosting Rp 99rb/bulan · berhenti kapan saja
+              </p>
+            </div>
           </div>
 
           <div className="db-frame">
@@ -5182,10 +5080,9 @@
         <div className="bg-black">
           <div className="relative z-10">
             <Navbar />
-            <Hero />
+            <DashboardDemo />
             <div className="bg-black">
               <StartSection />
-              <DashboardDemo />
               <FeaturesChess />
               <VelvetSection />
               <FeaturesGrid />

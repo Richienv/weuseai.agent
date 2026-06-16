@@ -252,6 +252,9 @@
       background: #050505;
       overflow: hidden;
     }
+    /* When DashboardDemo is the top hero (Phase 2 swap), clear the floating navbar. */
+    .db-section--hero { padding-top: 118px; }
+    @media (min-width: 768px) { .db-section--hero { padding-top: 150px; } }
     .db-section::before {
       content: ''; position: absolute; inset: 0; pointer-events: none;
       background: radial-gradient(ellipse 60% 50% at 50% 30%, rgba(229, 50, 45, 0.08), transparent 70%);
