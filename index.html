@@ -2938,8 +2938,12 @@
       26%, 100% { box-shadow: none; }
     }
     /* progress line filling across the 4 badges */
+    /* Bigger 4-step mock box (rev 2026-06-16) — replaces the inline 168px height. */
+    .how-mockbox { min-height: 240px; padding: 28px; }
+    @media (max-width: 1024px) { .how-mockbox { min-height: 200px; padding: 20px; } }
+
     .how-cycle .how-line {
-      position: absolute; top: 28px; left: 12.5%; right: 12.5%; height: 1px;
+      position: absolute; top: 32px; left: 12.5%; right: 12.5%; height: 1px;
       background: rgba(255,255,255,0.08); z-index: 0; overflow: hidden;
     }
     .how-cycle .how-line::after {
@@ -2968,24 +2972,24 @@
     }
 
     /* MOCK 2 — Form fields lighting up sequentially */
-    .howmock-form { padding: 6px 4px; display: flex; flex-direction: column; gap: 6px; height: 100%; justify-content: center; }
+    .howmock-form { padding: 6px 4px; display: flex; flex-direction: column; gap: 8px; height: 100%; justify-content: center; }
     .howmock-form .field {
-      display: flex; align-items: center; gap: 8px; padding: 5px 9px;
+      display: flex; align-items: center; gap: 8px; padding: 8px 12px;
       border: 1px solid rgba(255,255,255,0.10);
-      border-radius: 5px; background: rgba(0,0,0,0.25);
+      border-radius: 6px; background: rgba(0,0,0,0.25);
       animation: howFormFlash 16s ease-in-out infinite;
     }
     .howmock-form .field:nth-child(1) { animation-delay: 4.0s; }
     .howmock-form .field:nth-child(2) { animation-delay: 4.7s; }
     .howmock-form .field:nth-child(3) { animation-delay: 5.4s; }
     .howmock-form .field .label {
-      color: rgba(255,255,255,0.45); width: 64px; flex-shrink: 0;
+      color: rgba(255,255,255,0.45); width: 74px; flex-shrink: 0;
       text-transform: uppercase; letter-spacing: 0.08em;
-      font-family: 'JetBrains Mono', monospace; font-size: 7.5px;
+      font-family: 'JetBrains Mono', monospace; font-size: 9px;
     }
     .howmock-form .field .value {
       color: rgba(255,255,255,0.78); flex: 1;
-      font-family: 'JetBrains Mono', monospace; font-size: 9px;
+      font-family: 'JetBrains Mono', monospace; font-size: 11px;
     }
     @keyframes howFormFlash {
       0%, 1%   { border-color: #E5322D; background: rgba(229,50,45,0.10); box-shadow: 0 0 10px rgba(229,50,45,0.30); }
@@ -2993,8 +2997,8 @@
     }
 
     /* MOCK 3 — Setup progress + tasks checking */
-    .howmock-setup { padding: 6px 4px; display: flex; flex-direction: column; gap: 7px; height: 100%; justify-content: center; }
-    .howmock-setup .bar { height: 4px; border-radius: 2px; background: rgba(255,255,255,0.08); overflow: hidden; }
+    .howmock-setup { padding: 6px 4px; display: flex; flex-direction: column; gap: 9px; height: 100%; justify-content: center; }
+    .howmock-setup .bar { height: 6px; border-radius: 3px; background: rgba(255,255,255,0.08); overflow: hidden; }
     .howmock-setup .bar .fill {
       height: 100%; width: 0;
       background: linear-gradient(to right, rgba(229,50,45,0.55), #E5322D);
@@ -3007,12 +3011,12 @@
       25%, 100% { width: 100%; }
     }
     .howmock-setup .task {
-      font-family: 'JetBrains Mono', monospace; font-size: 8.5px;
+      font-family: 'JetBrains Mono', monospace; font-size: 10.5px;
       color: rgba(255,255,255,0.55);
-      display: flex; align-items: center; gap: 6px;
+      display: flex; align-items: center; gap: 7px;
     }
     .howmock-setup .task .check {
-      color: #6FA08F; width: 9px; opacity: 0; font-weight: bold;
+      color: #6FA08F; width: 11px; opacity: 0; font-weight: bold;
       animation: howCheckPop 16s ease-in-out infinite;
     }
     .howmock-setup .task:nth-of-type(1) .check { animation-delay: 8.6s; }
@@ -3029,14 +3033,14 @@
 
     .howmock-chat .bubble {
       position: absolute;
-      padding: 5px 9px; border-radius: 10px;
-      font-family: 'Inter', sans-serif; font-size: 9px;
+      padding: 7px 11px; border-radius: 11px;
+      font-family: 'Inter', sans-serif; font-size: 11px;
       line-height: 1.3; opacity: 0;
       white-space: nowrap;
     }
     /* User question — top right */
     .howmock-chat .bubble.user {
-      top: 2px; right: 2px;
+      top: 8px; right: 2px;
       background: #E5322D; color: #fff;
       max-width: 78%;
       animation: howChat-user 16s ease-out infinite;
@@ -3049,7 +3053,7 @@
 
     /* Typing dots — center-left, brief */
     .howmock-chat .bubble.dots {
-      top: 30px; left: 2px;
+      top: 48px; left: 2px;
       background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.85);
       border: 1px solid rgba(255,255,255,0.12);
       display: flex; gap: 3px; align-items: center; padding: 7px 9px;
@@ -3073,7 +3077,7 @@
 
     /* Reply bubble — replaces dots */
     .howmock-chat .bubble.reply {
-      top: 30px; left: 2px;
+      top: 48px; left: 2px;
       background: rgba(255,255,255,0.10); color: rgba(255,255,255,0.92);
       border: 1px solid rgba(255,255,255,0.12);
       max-width: 88%;
@@ -3087,22 +3091,22 @@
 
     /* PDF attachment chip — below reply */
     .howmock-chat .pdf-chip {
-      position: absolute; left: 2px; top: 64px;
-      display: flex; align-items: center; gap: 6px;
-      padding: 4px 7px 4px 4px; border-radius: 7px;
+      position: absolute; left: 2px; top: 96px;
+      display: flex; align-items: center; gap: 7px;
+      padding: 5px 9px 5px 5px; border-radius: 8px;
       background: rgba(229,50,45,0.10);
       border: 1px solid rgba(229,50,45,0.45);
       opacity: 0;
       animation: howChat-pdf 16s ease-out infinite;
     }
     .howmock-chat .pdf-chip .ic {
-      font-family: 'JetBrains Mono', monospace; font-size: 7.5px; font-weight: 600;
+      font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 600;
       color: #fff; background: #E5322D;
-      padding: 2px 5px; border-radius: 3px;
+      padding: 3px 6px; border-radius: 3px;
       letter-spacing: 0.06em;
     }
     .howmock-chat .pdf-chip .nm {
-      font-family: 'JetBrains Mono', monospace; font-size: 8.5px;
+      font-family: 'JetBrains Mono', monospace; font-size: 10px;
       color: rgba(255,255,255,0.92); letter-spacing: 0.01em;
     }
     @keyframes howChat-pdf {
@@ -3113,9 +3117,9 @@
 
     /* Email-sent toast — bottom right, slides in */
     .howmock-chat .email-toast {
-      position: absolute; bottom: 2px; right: 2px;
-      padding: 3px 7px; border-radius: 5px;
-      font-family: 'JetBrains Mono', monospace; font-size: 8px;
+      position: absolute; bottom: 4px; right: 2px;
+      padding: 4px 9px; border-radius: 6px;
+      font-family: 'JetBrains Mono', monospace; font-size: 9.5px;
       color: #6FA08F;
       background: rgba(111,160,143,0.10);
       border: 1px solid rgba(111,160,143,0.4);

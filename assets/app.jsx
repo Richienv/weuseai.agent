@@ -3493,9 +3493,9 @@
         if (kind === 'plan') {
           return (
             <svg viewBox="0 0 200 110" className="howmock-plan" preserveAspectRatio="xMidYMid meet">
-              <rect x="40" y="20" width="120" height="70" rx="8" fill="none" stroke="#E5322D" strokeWidth="1.4" strokeDasharray="4 4" />
-              <circle cx="100" cy="55" r="14" fill="none" stroke="#E5322D" strokeWidth="1.4" />
-              <path className="check" d="M93 55 L99 61 L108 50" fill="none" stroke="#E5322D" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+              <rect x="40" y="20" width="120" height="70" rx="8" fill="none" stroke="#E5322D" strokeWidth="1.8" strokeDasharray="4 4" />
+              <circle cx="100" cy="55" r="14" fill="none" stroke="#E5322D" strokeWidth="1.8" />
+              <path className="check" d="M93 55 L99 61 L108 50" fill="none" stroke="#E5322D" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           );
         }
@@ -3546,7 +3546,7 @@
             style={{ zIndex: 0, background: '#000', opacity: 0.55 }}
           />
           <FadeTop /> <FadeBottom />
-          <div className="relative z-10 max-w-6xl mx-auto">
+          <div className="relative z-10 max-w-7xl mx-auto">
             <div className="flex flex-col items-center text-center mb-14 md:mb-20">
               <div className="liquid-glass rounded-full px-3.5 py-1 text-xs font-medium font-body text-white/90">
                 Cara kerjanya
@@ -3560,7 +3560,7 @@
               />
             </div>
 
-            <div className="how-cycle grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 md:gap-10 relative">
+            <div className="how-cycle grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12 relative">
               {/* progress line behind badges (lg only) */}
               <div className="hidden lg:block how-line" />
 
@@ -3574,23 +3574,20 @@
                   className="flex flex-col items-center text-center relative z-10"
                 >
                   <div
-                    className="badge w-14 h-14 rounded-full flex items-center justify-center text-2xl font-heading"
+                    className="badge w-16 h-16 rounded-full flex items-center justify-center text-3xl font-heading"
                     style={{ letterSpacing: '-0.02em' }}
                   >
                     {s.n}
                   </div>
 
-                  <div
-                    className="liquid-glass card-glow mt-6 md:mt-7 w-full rounded-2xl flex items-center justify-center"
-                    style={{ height: 168, padding: 18 }}
-                  >
-                    <div style={{ width: '88%', maxHeight: 140, height: '100%' }}>
+                  <div className="how-mockbox liquid-glass card-glow mt-6 md:mt-8 w-full rounded-2xl flex items-center justify-center">
+                    <div style={{ width: '92%', maxHeight: 200, height: '100%' }}>
                       <Mock kind={s.mock} />
                     </div>
                   </div>
 
-                  <h3 className="mt-6 md:mt-7 text-lg md:text-xl font-heading text-white leading-tight" style={{ letterSpacing: '-0.02em' }}>{s.title}</h3>
-                  <p className="mt-2 md:mt-3 text-sm text-white/55 font-body font-light leading-relaxed max-w-[28ch]">{s.body}</p>
+                  <h3 className="mt-6 md:mt-7 text-xl md:text-2xl font-heading text-white leading-tight" style={{ letterSpacing: '-0.02em' }}>{s.title}</h3>
+                  <p className="mt-2 md:mt-3 text-[15px] md:text-base text-white/60 font-body font-light leading-relaxed max-w-none md:max-w-[34ch]">{s.body}</p>
                 </Mot.div>
               ))}
             </div>
