@@ -94,7 +94,27 @@ export async function handleCreateInvoice(
   const consentValidation = validateConsent(body, now)
   if (consentValidation) return json({ error: consentValidation }, 400)
 
-  const { email, plan, alwaysOn, methodId } = body
+  const { email, alwaysOn, methodId } = body
+  // L3 (security audit, 2026-06-14): normalize a deprecated plan slug to its
+  // canonical equivalent BEFORE pricing — the SAME mapping checkout.html
+  // applies client-side (LEGACY_PLAN_ALIAS), now enforced server-side too. The
+  // PLANS table still carries the old v1.2 legacy entries (starter/pro/studio)
+  // at their stale prices, so without this a direct create-invoice call with
+  // plan=pro would charge the legacy 1,290,000 instead of the canonical
+  // done-for-you 1,299,000 (and plan=studio the stale 5,900,000 instead of
+  // library-full's 799,000). The live checkout never sends a legacy slug — it
+  // already aliases — so real customers are unaffected; this closes the
+  // direct-API price drift. The legacy slug set is frozen (expand-then-contract),
+  // so this 3-entry map cannot drift.
+  const LEGACY_PLAN_ALIAS: Record<string, string> = {
+    starter: 'voice-starter',
+    pro: 'done-for-you',
+    studio: 'library-full',
+  }
+  // Cast back to the plan type: a legacy slug maps to a canonical slug, both of
+  // which are valid members of the plan union; an already-canonical slug is
+  // returned unchanged.
+  const plan = (LEGACY_PLAN_ALIAS[body.plan] ?? body.plan) as typeof body.plan
   const displayName = body.displayName?.trim() || undefined
 
   // Find or create customer

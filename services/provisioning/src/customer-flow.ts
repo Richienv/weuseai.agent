@@ -25,6 +25,7 @@ import type { ILlmKeyMinter } from './llm-key-minter.js'
 import { readFileSync } from 'node:fs'
 import { resolve as pathResolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { randomInt } from 'node:crypto'
 
 import { buildSetupScript, type Tier, type ProvisionTier } from './setup-script.js'
 import { personasForTier, DEFAULT_PERSONA } from '../../../supabase/functions/_shared/tier-personas.js'
@@ -761,13 +762,14 @@ async function defaultWaitForSshOpen(
 }
 
 function cryptoRandomPassword(): string {
-  // IDCloudHost requires upper+lower+digit, 8+ chars.
+  // Upper+lower+digit, 8+ chars (a legacy IDCloudHost requirement). DEAD for
+  // the current key-only Vultr/DO fleet, but kept so the helper matches its
+  // name if password auth ever returns. Uses crypto.randomInt — a CSPRNG — NOT
+  // Math.random, which is not cryptographically secure (security audit L2,
+  // 2026-06-14).
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789'
   return (
     'Aa1' +
-    Array.from(
-      { length: 21 },
-      () => chars[Math.floor(Math.random() * chars.length)],
-    ).join('')
+    Array.from({ length: 21 }, () => chars[randomInt(chars.length)]).join('')
   )
 }
