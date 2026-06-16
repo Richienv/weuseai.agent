@@ -187,7 +187,11 @@ const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1'
 // tiers. Customer can swap via dashboard (Phase 3+). DeepSeek v4-pro at
 // ~$0.27/M output is ~1/55th of Claude Sonnet; quality "good enough" for
 // 80%+ of agent tasks per Hermes community validation.
-const OPENROUTER_DEFAULT_MODEL = 'deepseek/deepseek-v4-pro'
+// Exported so the dashboard relay's Opus force-pin guardrail
+// (routes/agent-chat-model-guard.ts) imports the SAME pinned model rather than
+// re-typing it — a drift-gate test asserts they're identical, so the chat path
+// can never diverge from the provisioned model.default.
+export const OPENROUTER_DEFAULT_MODEL = 'deepseek/deepseek-v4-pro'
 
 /**
  * Pin the customer agent model to DeepSeek v4-pro in config.yaml — ROBUST to

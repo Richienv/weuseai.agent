@@ -57,6 +57,8 @@ import {
   type ReadinessProbeRequest,
 } from './routes/customer-readiness-probe.js'
 import { createRefreshEnvStore } from './stores/refresh-env-supabase-store.js'
+import { handleAgentChat, type AgentChatDeps } from './routes/agent-chat.js'
+import { createSshApiServerCaller } from './tunnel/tunnel.js'
 
 const PORT = Number(process.env.PORT ?? 8080)
 const AUTH_TOKEN = process.env.PROVISIONING_AUTH_TOKEN
@@ -471,6 +473,36 @@ app.post('/customer-readiness-probe', async (req, res) => {
     const msg = e instanceof Error ? e.message : String(e)
     console.error('customer-readiness-probe failed:', msg)
     res.status(500).json({ ok: false, error: 'internal', detail: msg })
+  }
+})
+
+// Dashboard chat relay (Phase 3) — DARK by default. AGENT_CHAT_ENABLED off →
+// the handler 404s BEFORE it ever opens a tunnel. Buffered only; SSE streaming
+// + the vps_id-keyed tunnel pool are Phase 5. Already inside the Bearer
+// middleware (an unauthenticated caller 401s before this runs). The edge relay
+// is the only legitimate caller; it carries PROVISIONING_AUTH_TOKEN.
+const agentChatDeps: AgentChatDeps = {
+  enabled: process.env.AGENT_CHAT_ENABLED === 'true',
+  callApiServer: createSshApiServerCaller({
+    fleetSshPrivateKey: FLEET_SSH_PRIVATE_KEY,
+    user: process.env.AGENT_CHAT_SSH_USER ?? 'weuseai',
+  }),
+}
+app.post('/agent-chat', async (req, res) => {
+  // G6 — inbound close aborts the outbound 8642 fetch so a closed tab can't
+  // bill the cap into a dead socket.
+  const ac = new AbortController()
+  req.on('close', () => ac.abort())
+  try {
+    const result = await handleAgentChat(
+      (req.body ?? {}) as Record<string, unknown>,
+      agentChatDeps,
+      ac.signal,
+    )
+    // NOTE: never log req.body — it holds the plaintext api_server_key + VPS IP.
+    res.status(result.status).json(result.body)
+  } catch {
+    res.status(502).json({ ok: false, error: 'upstream_unavailable' })
   }
 })
 
