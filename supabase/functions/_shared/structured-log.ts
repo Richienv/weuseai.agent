@@ -64,6 +64,24 @@ export function slog(
     event,
     ...fields,
   }
+  // Logging must NEVER throw (it sits on catch/failure paths — a throw here
+  // would escape the caller's catch and lose the original error). JSON.stringify
+  // throws on a BigInt or a circular reference, so serialize defensively: a
+  // BigInt-safe replacer + a fallback that keeps the event/level signal even if
+  // a field can't be serialised. Security audit L5 (2026-06-14).
+  let serialized: string
+  try {
+    serialized = JSON.stringify(line, (_k, v) =>
+      typeof v === 'bigint' ? v.toString() : v,
+    )
+  } catch {
+    serialized = JSON.stringify({
+      ts: line.ts,
+      level,
+      event,
+      _slog_error: 'fields_not_serialisable',
+    })
+  }
   // console.{info,warn,error} all exist in Deno and Node ≥18.
-  console[level](JSON.stringify(line))
+  console[level](serialized)
 }
