@@ -38,7 +38,7 @@ test('Hermes install: wrapped in `timeout 600` (10 min hard cap)', () => {
   // before the su -c block.
   assert.match(
     s,
-    /timeout\s+600\s+(\\\n\s+)?su - weuseai -c .* curl -fsSL --max-time \d+ https:\/\/raw\.githubusercontent\.com\/NousResearch\/hermes-agent/,
+    /timeout\s+600\s+(\\\n\s+)?su - weuseai -c ['"].*curl -fsSL --max-time \d+ https:\/\/raw\.githubusercontent\.com\/NousResearch\/hermes-agent/,
     'Hermes install must be wrapped in timeout 600',
   )
 })

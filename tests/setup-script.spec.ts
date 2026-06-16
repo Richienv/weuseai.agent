@@ -97,22 +97,25 @@ test('script: writes daily-news skill SKILL.md', () => {
   assert.match(s, /Selamat pagi/, 'greeting')
 })
 
-test('script: runs Hermes install.sh as weuseai (pinned via HERMES_VERSION env)', () => {
+test('script: runs Hermes install.sh as weuseai (pinned via install.sh --branch)', () => {
   const s = buildSetupScript(baseParams)
-  // Phase 2E-3: install.sh is invoked under `su - weuseai -c ...` with
-  // HERMES_VERSION env-prefixed on BOTH curl and bash so upstream picks
-  // up the pin if the install.sh script honours it. The default lock is
-  // v0.13.0 (founder Q7).
+  // CORRECTED 2026-06-14: the pin is passed to install.sh's OWN --branch flag
+  // (`bash -s -- --branch <ref>`), NOT a HERMES_VERSION env var — upstream
+  // install.sh ignores that env entirely, so the old form was a silent no-op
+  // that cloned unpinned `main` on every VPS. The default ref is the canonical
+  // release tag v2026.6.5 (see DEFAULT_HERMES_VERSION in setup-script.ts).
   //
   // HF-2 (2026-05-12 founder Q3 lock): the install.sh invocation is
-  // now wrapped in `timeout 600` + the inner curl has --max-time 30.
-  // Regex allows both pre- and post-HF-2 layouts; the HF-2-specific
+  // wrapped in `timeout 600` + the inner curl has --max-time 30. The HF-2
   // hardening is pinned by tests/setup-script-hang-hardening.spec.ts.
   assert.match(
     s,
-    /su - weuseai -c ['"]HERMES_VERSION=v0\.13\.0 curl -fsSL (?:--max-time \d+ )?https:\/\/raw\.githubusercontent\.com\/NousResearch\/hermes-agent\/main\/scripts\/install\.sh \| HERMES_VERSION=v0\.13\.0 bash/,
-    'install.sh pinned via HERMES_VERSION env',
+    /su - weuseai -c ['"]curl -fsSL (?:--max-time \d+ )?https:\/\/raw\.githubusercontent\.com\/NousResearch\/hermes-agent\/main\/scripts\/install\.sh \| bash -s -- --branch v2026\.6\.5/,
+    'install.sh pinned via --branch <ref>',
   )
+  // Regression guard: the ignored-env form must never come back (it silently
+  // cloned unpinned main for weeks before 2026-06-14).
+  assert.doesNotMatch(s, /HERMES_VERSION=/, 'must NOT use the upstream-ignored HERMES_VERSION env')
 })
 
 test('script: gateway install + start fail FATAL (HF-2 — was best-effort pre-2026-05-12)', () => {
@@ -388,20 +391,30 @@ test('script (2E-2): Telegram still wires correctly with bundle present', () => 
 
 // ─── Phase 2E-3 ──────────────────────────────────────────────────────────
 
-test('script (2E-3): pins Hermes to v0.13.0 by default', () => {
+test('script (2E-3): pins Hermes to the canonical release tag via --branch', () => {
   const s = buildSetupScript({ ...baseParams })
-  // Both env-prefix forms present (belt + suspenders for upstream
-  // honour — see comment block in setup-script.ts at the install step).
-  assert.match(s, /HERMES_VERSION=v0\.13\.0 curl/)
-  assert.match(s, /HERMES_VERSION=v0\.13\.0 bash/)
-  assert.match(s, /pinned to v0\.13\.0/)
+  // The pin reaches install.sh via its real --branch flag (the only thing
+  // upstream honours); the canonical default ref is v2026.6.5.
+  assert.match(s, /\| bash -s -- --branch v2026\.6\.5/)
+  assert.match(s, /pinned to v2026\.6\.5/)
 })
 
-test('script (2E-3): hermesVersion override propagates to install command', () => {
-  const s = buildSetupScript({ ...baseParams, hermesVersion: 'v0.14.0' })
-  assert.match(s, /HERMES_VERSION=v0\.14\.0 curl/)
-  assert.match(s, /HERMES_VERSION=v0\.14\.0 bash/)
-  assert.doesNotMatch(s, /HERMES_VERSION=v0\.13\.0/)
+test('script (2E-3): legacy HERMES_VERSION=v0.13.0 maps to the canonical ref', () => {
+  // v0.13.0 is NOT a real git tag, so a stale HERMES_VERSION=v0.13.0 on the Fly
+  // service must resolve to the canonical default rather than 404 the --branch.
+  const s = buildSetupScript({ ...baseParams, hermesVersion: 'v0.13.0' })
+  assert.match(s, /--branch v2026\.6\.5/)
+  assert.doesNotMatch(s, /--branch v0\.13\.0/)
+})
+
+
+test('script (2E-3): a real-ref hermesVersion override propagates to --branch', () => {
+  // An explicit real git ref (e.g. an older release tag) flows straight to
+  // install.sh's --branch, overriding the default. v2026.5.16 is a real tag.
+  const s = buildSetupScript({ ...baseParams, hermesVersion: 'v2026.5.16' })
+  assert.match(s, /\| bash -s -- --branch v2026\.5\.16/)
+  assert.doesNotMatch(s, /--branch v2026\.6\.5/)
+  assert.doesNotMatch(s, /HERMES_VERSION=/)
 })
 
 test('script (2E-3): installs fleet SSH pubkey when provided (idempotency-guarded)', () => {

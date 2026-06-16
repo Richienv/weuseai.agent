@@ -246,10 +246,29 @@ export function configYamlValidateShellBlock(): string {
   fi`
 }
 
-// Phase 2E-3 lock (Q7, founder 2026-05-08): default Hermes version pinned
-// to a known-good upstream tag. Override via HERMES_VERSION env at
-// provision time. See docs/runbooks/hermes-upgrade-test.md.
-const DEFAULT_HERMES_VERSION = 'v0.13.0'
+// Hermes pin (Q7 founder lock 2026-05-08; CORRECTED 2026-06-14). The upstream
+// install.sh does NOT read a HERMES_VERSION env var — confirmed by grepping the
+// raw 2744-line script (zero hits). It pins ONLY via its own --branch / --commit
+// flags. So the old `HERMES_VERSION=v0.13.0 ... | bash` form was a silent no-op:
+// every VPS cloned `--branch main` (unpinned, ever-moving). We now pass the pin
+// as a real `--branch` ARG so it actually takes effect.
+//
+// The value must be a real git ref. `v0.13.0` is NOT a git tag (semver 0.13.0 ==
+// the date-tag v2026.5.7); we pin to the latest release tag carrying the
+// features we rely on. Override via the HERMES_VERSION env (→ p.hermesVersion);
+// it must be a valid git ref (tag / branch / SHA). When changing it, re-verify
+// config.yaml shape — see CLAUDE.md "config.yaml SHAPE" rules.
+const DEFAULT_HERMES_VERSION = 'v2026.6.5'
+
+// Map the legacy label `v0.13.0` (and the empty string) to the canonical ref:
+// `v0.13.0` was never a real git tag, so passing it to `--branch` would 404 and
+// fail the provision. This keeps a stale HERMES_VERSION=v0.13.0 on the Fly
+// service (or in test fixtures) resolving to the real default instead of
+// breaking. Any other value is taken as a literal git ref.
+function resolveHermesRef(v?: string): string {
+  if (!v || v === 'v0.13.0' || v === '0.13.0') return DEFAULT_HERMES_VERSION
+  return v
+}
 
 // ─── Phase B: native Hermes voice-input (STT) config ────────────────────
 //
@@ -911,7 +930,7 @@ fi
 `
     : ''
 
-  const pinnedHermesVersion = p.hermesVersion ?? DEFAULT_HERMES_VERSION
+  const pinnedHermesVersion = resolveHermesRef(p.hermesVersion)
 
   // ─── Phase B: voice/stt config.yaml block (tier-gated) ────────────────
   // Appended inside step 7c (the existing config.yaml tweak block), after
@@ -1078,12 +1097,13 @@ ${bikinPersonaSkillBlock}chown -R weuseai:weuseai /home/weuseai/.hermes
 ${bundleInstallBlock}${bundlePullInstallBlock}${fleetSshPubkeyBlock}
 
 # ─── 7. Hermes install (slow — 3-6 min, HF-2 timeout 10 min) ────────────
-# Phase 2E-3 Q7 lock: pin to ${pinnedHermesVersion} by default; the install.sh
-# script reads the HERMES_VERSION env var if present. When the override
-# isn't honoured by upstream, the install pulls main — at the time of
-# locking (2026-05-08), main IS v0.13.0+ so the default still gets us
-# v0.13.0 features. Override flow: set HERMES_VERSION on the
-# provisioning service to test a new tag on the next provisioned VPS.
+# Pin to ${pinnedHermesVersion}. We pass the ref to install.sh's OWN --branch
+# flag (via bash -s -- --branch <ref>) — NOT a HERMES_VERSION env var, which the
+# upstream script ignores entirely (grepped: zero references). A --branch that
+# names a tag makes "git clone --depth 1 --branch <tag>" fetch exactly that
+# release. Before 2026-06-14 we set the ignored env var and passed no flag, so
+# every VPS silently cloned main (unpinned). The curl still fetches install.sh
+# from main — that is the INSTALLER; the ref it INSTALLS is the pinned tag.
 #
 # HF-2 (2026-05-12 founder Q3 lock): hard timeout 600 sec (10 min).
 # Pre-HF-2 the install had no timeout — pip stalls on PyPI from SGP
@@ -1092,7 +1112,7 @@ ${bundleInstallBlock}${bundlePullInstallBlock}${fleetSshPubkeyBlock}
 # fails fast at network layer.
 log "Installing Hermes (pinned to ${pinnedHermesVersion}; this takes 3-6 min, timeout 10 min)..."
 if ! timeout 600 \\
-  su - weuseai -c 'HERMES_VERSION=${pinnedHermesVersion} curl -fsSL --max-time 30 https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | HERMES_VERSION=${pinnedHermesVersion} bash' \\
+  su - weuseai -c 'curl -fsSL --max-time 30 https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash -s -- --branch ${pinnedHermesVersion}' \\
   >> "$LOG" 2>&1
 then
   log "✗ Hermes install timed out or failed after 600 sec"
