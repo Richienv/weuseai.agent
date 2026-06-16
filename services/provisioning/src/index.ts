@@ -373,8 +373,12 @@ app.post('/restart-hermes', async (req, res) => {
         fleetSshPrivateKey: FLEET_SSH_PRIVATE_KEY,
         store: {
           findVpsByCustomerId: async (customerId: string) => {
-            // Reuse refresh-env's existing query — only one row per customer
-            // by design (vps_instances.customer_id is unique post-PR #75 hardening).
+            // Reuse refresh-env's existing query. One active row per customer is
+            // now enforced by the partial unique index
+            // vps_instances_one_active_per_customer (migration 20260614010000) —
+            // NOT by "PR #75 hardening" (that index never existed; the prior
+            // claim here was false, security audit H4/M1 2026-06-14).
+            // findActiveVPSByCustomer reads the most-recent active row safely.
             return await refreshEnvStore.findActiveVPSByCustomer(customerId)
           },
         },
