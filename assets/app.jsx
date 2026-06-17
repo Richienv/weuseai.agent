@@ -4988,71 +4988,22 @@
     // ─────────────────────── FAQ ───────────────────────
     function FAQ() {
       const items = [
-        {
-          q: 'Saya gak tech-savvy, bisa pakai?',
-          a: 'Bisa. Setup otomatis — gak install apapun, gak perlu tau coding atau VPS. Cukup chat di Telegram seperti chat sama temen. Agent yang ngerjain.',
-        },
-        {
-          q: 'Bahasa apa support? Bisa pure Bahasa Indonesia?',
-          a: 'Default Bahasa Indonesia. English fully supported. Mixed chat (Bahasa + English) juga jalan natural.',
-        },
-        {
-          q: 'Aman buat data bisnis saya?',
-          a: 'Agent jalan di server VPS pribadi kamu, bukan share dengan customer lain. Memory chat gak shared dengan kami, gak training data. Customer-grown templates stay di server kamu.',
-        },
-        {
-          q: 'Bisa pakai metode pembayaran apa?',
-          a: 'Bank transfer (semua bank Indonesia), GoPay, OVO, DANA, ShopeePay, kartu kredit/debit. Lewat Xendit (gateway pembayaran Indonesia).',
-        },
-        {
-          q: 'Apa beda dengan subscription biasa?',
-          a: 'Setup-nya beneran sekali bayar — kamu beli engineering work yang sudah kami lakukan. Hosting Rp 99rb/bulan transparan: itu biaya server yang real, kayak bayar listrik. Berhenti kapan saja — tagihan berhenti, setup tetap kamu punya.',
-        },
-        {
-          q: 'Kenapa harus bayar hosting kalau setup-nya sudah bayar?',
-          a: 'Setup itu kerja kami sekali (konfigurasi VPS, install agent, tune ke voice kamu). Hosting itu cost VPS yang jalan terus 24/7. Server butuh listrik dan resource yang real. Kami nggak mau pretend itu gratis — lebih jujur kalau transparent.',
-        },
-        {
-          q: 'Kalau nggak cocok atau mau berhenti?',
-          a: 'Berhenti kapan saja — tagihan hosting berhenti, setup tetap milik kamu. Refund policy tertulis, link-nya di footer. Mau lanjut lagi nanti, tinggal bilang.',
-        },
-        {
-          q: 'Berapa lama proses setup sampai agent saya jalan?',
-          a: 'Sekitar 8 menit setelah bayar — angka yang kami ukur, bukan janji. Agent makin nyambung setelah beberapa hari dipakai, karena dia ingat percakapan dan menyesuaikan gaya kamu.',
-        },
-        {
-          q: 'Berapa biaya LLM-nya?',
-          a: 'Kredit perkenalan sudah termasuk di setup — cukup untuk ratusan pesan pertama. Setelah itu kamu pakai kunci API sendiri (DeepSeek mulai dari puluhan ribu rupiah per bulan untuk pemakaian normal) — kami bantu pasang, dan biayanya transparan langsung ke penyedia, tanpa markup dari kami.',
-        },
-        {
-          q: 'Apa beda dengan ChatGPT atau Claude biasa?',
-          a: 'ChatGPT nunggu kamu tanya. Agent ini ngerjain duluan: briefing pagi jam 7, ringkasan sore, draft dokumen dan caption dari template Indonesia, riset web, dan playbook multi-langkah — sambil ingat percakapan kamu lintas hari. ChatGPT bantu kamu mikir. Agent ini bantu kamu kerja.',
-        },
-        {
-          q: 'Kalau saya cancel di tengah jalan, uang setup balik?',
-          a: 'Setup nggak refundable karena itu engineering work yang udah kami selesaikan untuk kamu. Tapi 14 hari pertama setelah onboarding — kalau ada masalah teknis dari sisi kami yang bikin agent nggak bisa dipakai, kami tanggung: fix gratis atau full refund setup. Hosting bulanan tinggal stop kapan saja, no commitment.',
-        },
-        {
-          q: 'Saya nggak punya background tech, apakah bisa pakai?',
-          a: 'Bisa. Setup-nya kami yang ngerjain — kamu cuma kasih konteks (preferensi, workflow, tools yang sering dipakai) lewat form atau video call. Setelah live, agent diakses lewat Telegram atau Discord — sama persis kayak chat ke teman. Nggak perlu nulis prompt panjang, nggak perlu ngerti API, nggak perlu setting server.',
-        },
-        {
-          q: 'Data dan percakapan saya disimpan di mana? Aman dari kebocoran?',
-          a: 'Server kamu ada di Singapore — paling dekat dan paling stabil untuk Indonesia. Data percakapan disimpan lokal di server kamu sendiri, bukan di server bersama. Kunci API dienkripsi at-rest. Kami tidak mengakses isi percakapan kamu kecuali kamu minta bantuan support dan kasih izin eksplisit.',
-        },
-        {
-          q: 'Always-On vs hosting biasa, kapan saya butuh yang Always-On?',
-          a: 'Untuk pemakaian harian — chat, briefing pagi, draft dokumen — hosting default sudah cukup. Always-On menjamin server kamu menyala 24/7 nonstop dengan prioritas penuh, untuk kamu yang menjadikan agent bagian kritis dari operasional harian.',
-        },
-        {
-          q: 'Bisa lihat demo atau ngobrol dulu sebelum bayar?',
-          a: 'Bisa. Booking 30 menit lewat tombol "Jadwalkan panggilan" di footer — kami tunjukkan agent live, jawab pertanyaan teknis, dan kamu bisa lihat workflow yang sebenarnya. Tanpa hard sell. Kalau nggak cocok, kami nggak follow up.',
-        },
-        {
-          q: 'Kalau ada masalah teknis, gimana cara dapat support?',
-          a: '24/7 support lewat Telegram langsung ke tim engineering kami. Median response time 12 menit untuk Pro dan Studio, 4 jam untuk Starter. Setiap pelanggan dapat dedicated channel — bukan chatbot, bukan ticketing yang antri panjang.',
-        },
+        { q: 'Gak tech-savvy, bisa pakai?',
+          a: 'Bisa. Setup otomatis, gak install apa-apa — cukup chat di Telegram, agent yang ngerjain.' },
+        { q: 'Aman buat data bisnis?',
+          a: 'Agent jalan di VPS pribadi kamu, bukan shared. Kami gak baca isi chat kecuali kamu minta bantuan dan kasih izin.' },
+        { q: 'Beda sama subscription biasa?',
+          a: 'Setup sekali bayar. Hosting Rp 99rb transparan kayak bayar listrik, stop kapan saja.' },
+        { q: 'Berapa biaya LLM-nya?',
+          a: 'Kredit perkenalan termasuk. Lanjut pakai kunci sendiri — transparan langsung ke penyedia, tanpa markup.' },
+        { q: 'Kalau mau berhenti?',
+          a: 'Stop kapan saja, tagihan hosting berhenti, setup tetap kamu punya.' },
+        { q: 'Bisa demo dulu?',
+          a: 'Bisa. Booking 15 menit lewat footer, kami tunjukkan agent live.' },
+        { q: 'Kok resepnya dari China?',
+          a: 'Tim agent ini dipelajari di Zhejiang University, Hangzhou, lalu dirakit untuk Indonesia.' },
       ];
+
       const [openIdx, setOpenIdx] = useState(0);
 
       return (
@@ -5070,7 +5021,7 @@
                 delay={70}
               />
               <p className="mt-5 max-w-xl text-white/55 font-body font-light text-sm md:text-base leading-relaxed">
-                Hal-hal yang biasanya bikin orang ragu sebelum mulai. Jawaban jujur, sebelum kamu klik bayar.
+                Jawaban jujur, sebelum kamu klik bayar.
               </p>
             </div>
 

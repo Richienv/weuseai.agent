@@ -28,5 +28,6 @@ Orchestrated by Opus 4.8 in a self-paced `/loop`, using ultracode workflows for 
 - `253ac16` [#271] Hero circuit-flow bg + minimal color-split copy.
 - `0e39045` [#271] Centerpiece + origin copy slashed to one-liners.
 - `f254482` [#271] How-it-works: 4 step bodies → one-liners + alternating slide-in motion.
-- _(next)_ [#271] Carousel: 12 descs → 2-4-word capability tags (cleaner cards).
+- `d169cf1` [#271] Carousel: 12 descs → 2-4-word capability tags (cleaner cards).
+- _(next)_ [#271] FAQ: 17 → 7 tightened Q&As + leaner sub-line (the ~10 cut rows pending the /faq page, backlog #4).
 - _(loop appends below as it ships)_
