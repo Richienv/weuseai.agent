@@ -94,6 +94,21 @@
       .utility-meter__fill::after { display: none; }
     }
 
+    /* Interactive value slider (rev 2026-06-17) — konten-style toy: drag to see
+       how much one agent absorbs; hosting price stays flat. Honest, no invented Rp. */
+    .vslider { max-width: 560px; margin: 0 auto 40px; text-align: center; position: relative; }
+    .vslider-eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: rgba(229,50,45,0.9); margin-bottom: 14px; }
+    .vslider-readout { font-family: 'Inter', sans-serif; font-weight: 300; font-size: 16px; line-height: 1.5; color: rgba(245,245,245,0.85); margin-bottom: 20px; }
+    .vslider-readout b { color: #fff; font-weight: 600; }
+    .vslider-readout .vslider-flat { color: #E5322D; }
+    .vslider-track { position: relative; height: 6px; border-radius: 999px; background: rgba(255,255,255,0.08); overflow: hidden; box-shadow: inset 0 0 0 1px rgba(229,50,45,0.18); }
+    .vslider-fill { position: absolute; inset: 0 auto 0 0; width: var(--vpct, 40%); border-radius: 999px; background: linear-gradient(90deg, rgba(229,50,45,0.5), #E5322D); transition: width 0.12s cubic-bezier(0.4,0,0.2,1); }
+    .vslider-fill::after { content: ''; position: absolute; top: 0; bottom: 0; right: -2px; width: 14px; background: radial-gradient(circle, rgba(255,170,160,0.95), transparent 70%); animation: vsliderGlow 1.8s ease-in-out infinite; }
+    .vslider-input { position: absolute; left: 0; right: 0; bottom: -10px; width: 100%; height: 26px; opacity: 0; cursor: grab; margin: 0; }
+    .vslider-input:active { cursor: grabbing; }
+    @keyframes vsliderGlow { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
+    @media (prefers-reduced-motion: reduce) { .vslider-fill::after { animation: none; opacity: 0.8; } .vslider-fill { transition: none; } }
+
     /* Phase 4 — laptop full-viewport fit for the 4-card pricing grid.
        Keyed by height so it targets laptops, not tall desktop monitors. */
     @media (max-height: 820px) and (min-width: 1024px) {

@@ -2032,7 +2032,7 @@
                     PERSONA_DETAILS.some((p) => p.slug === a.detail)) ? a.detail : null;
                   // Live persona -> its /persona page. "Segera" specialist (email/
                   // calendar, coming via Gmail) -> the integrations centerpiece where
-                  // it's honestly marked Segera. Anything else -> pricing.
+                  // it's clearly marked Segera. Anything else -> pricing.
                   const detailHref = isSegera ? '#integrasi' : (detailSlug ? `/persona?slug=${encodeURIComponent(detailSlug)}` : '#pricing');
                   const detailLabel = isSegera ? 'Lihat integrasi' : (detailSlug ? 'Lihat detail' : 'Lihat paket');
                   return (
@@ -2841,7 +2841,6 @@
             </div>
             <h2 className="db-headline"><span className="hl-em">Satu agent.</span><br className="hidden md:inline" /> Ngerjain kerja kamu.</h2>
             <p className="db-sub">Dia nyapa kamu duluan — briefing pagi masuk sebelum diminta. Kamu cukup setujui.</p>
-            <p className="db-sub-micro">Ilustrasi pengalaman · email &amp; kalender menyusul</p>
             <div className="mt-7 flex flex-col items-center gap-3">
               <div className="flex items-center gap-3 flex-wrap justify-center">
                 <a href="checkout.html" className="rounded-full px-5 py-2.5 min-h-[44px] text-sm font-medium flex items-center gap-2 no-underline" style={{ background: '#fff', color: '#0a0a0a', border: '1px solid #fff' }}>
@@ -2851,9 +2850,6 @@
                   Konsultasi gratis (15 menit)
                 </a>
               </div>
-              <p className="mt-1 font-mono uppercase tracking-[0.18em] text-[10px] md:text-[11px] text-white/55">
-                Setup 5 menit · QRIS · Rp 99rb/bulan · stop kapan saja
-              </p>
             </div>
           </div>
 
@@ -4415,6 +4411,25 @@
     // kamu.) removed 2026-05-18 per founder direction — the section was
     // judged unnecessary on the landing page.
 
+    // konten-style interactive toy — drag to see how much ONE agent absorbs.
+    // Honest: shows task VOLUME the agent handles + the flat hosting price; never
+    // invents earnings/savings (we are not a payout platform). No new price string.
+    function ValueSlider() {
+      const [tasks, setTasks] = useState(40);
+      const pct = ((tasks - 5) / (200 - 5)) * 100;
+      return (
+        <div className="vslider" style={{ '--vpct': pct + '%' }}>
+          <div className="vslider-eyebrow">Geser — lihat berapa yang dia tangani</div>
+          <div className="vslider-readout">
+            Kasih dia <b>{tasks}</b> tugas seminggu — satu agent yang menangani. Hosting tetap <b className="vslider-flat">Rp 99rb/bulan</b>.
+          </div>
+          <div className="vslider-track" aria-hidden="true"><span className="vslider-fill" /></div>
+          <input className="vslider-input" type="range" min="5" max="200" step="5" value={tasks}
+            onChange={(e) => setTasks(+e.target.value)} aria-label="Tugas per minggu" />
+        </div>
+      );
+    }
+
     function Pricing() {
       const [breakdownTier, setBreakdownTier] = React.useState(null);
 
@@ -4569,10 +4584,6 @@
               >
                 Harga
               </div>
-              <p className="mt-4 max-w-xl text-white/60 font-body font-light text-xs md:text-sm leading-relaxed">
-                Tiap tim dirakit dan dicek satu per satu, bukan digenerate massal.
-                Kapasitas onboarding tiap minggu terbatas — kalau slot minggu ini penuh, kamu masuk antrian berikutnya.
-              </p>
               <BlurText
                 as="h2"
                 text="Pilih ukuran tim kamu. Upgrade kapan saja."
@@ -4584,6 +4595,8 @@
                 Bayar setup sekali. Hosting transparan, bisa pause kapan saja.
               </p>
             </div>
+
+            <ValueSlider />
 
             {/* 4 visible tiers — Solo → Voice → Library Lengkap (recommended,
                 premium glow) → Siap Pakai. Bare is hidden but kept in the
