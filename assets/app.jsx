@@ -3982,7 +3982,7 @@
             href={tier.ctaHref}
             target={/^https?:|^mailto:/.test(tier.ctaHref) ? '_blank' : undefined}
             rel={/^https?:/.test(tier.ctaHref) ? 'noopener' : undefined}
-            className="mt-7 md:mt-8 rounded-full px-5 py-3 text-sm font-medium flex items-center justify-center gap-2 no-underline"
+            className={`mt-7 md:mt-8 rounded-full px-5 py-3 text-sm font-medium flex items-center justify-center gap-2 no-underline${isFeatured ? ' cta-pulse' : ''}`}
             style={
               isFeatured
                 ? { background: '#E5322D', color: '#fff', border: '1px solid #E5322D' }
