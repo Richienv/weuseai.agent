@@ -373,7 +373,7 @@
     }
 
     // ─────────────────────── BLUR TEXT ───────────────────────
-    function BlurText({ text, className = '', by = 'word', delay = 100, as: Tag = 'h1', style = {} }) {
+    function BlurText({ text, className = '', by = 'word', delay = 100, as: Tag = 'h2', style = {} }) {
       const parts = by === 'word' ? text.split(' ') : text.split('');
       const [inView, setInView] = useState(false);
       const ref = useRef(null);
@@ -2839,7 +2839,7 @@
               <span className="live-dot" />
               <span>Agen kamu bekerja</span>
             </div>
-            <h2 className="db-headline"><span className="hl-em">Satu agent.</span><br className="hidden md:inline" /> Ngerjain kerja kamu.</h2>
+            <h1 className="db-headline"><span className="hl-em">Satu agent.</span><br className="hidden md:inline" /> Ngerjain kerja kamu.</h1>
             <p className="db-sub">Dia nyapa kamu duluan — briefing pagi masuk sebelum diminta. Kamu cukup setujui.</p>
             <div className="mt-7 flex flex-col items-center gap-3">
               <div className="flex items-center gap-3 flex-wrap justify-center">
@@ -2864,17 +2864,17 @@
             {/* Body: sidebar + main */}
             <div className="db-body">
               <aside className="db-sidebar">
-                <button className="db-nav active">
+                <button className="db-nav active" tabIndex={-1} aria-hidden="true">
                   <div className="db-agent-avatar a">A</div>
                   <span className="db-agent-name">Agent A</span>
                   <span className="db-agent-badge">3</span>
                 </button>
-                <button className="db-nav">
+                <button className="db-nav" tabIndex={-1} aria-hidden="true">
                   <div className="db-agent-avatar b">B</div>
                   <span className="db-agent-name">Agent B</span>
                   <span className="db-agent-badge">1</span>
                 </button>
-                <button className="db-nav">
+                <button className="db-nav" tabIndex={-1} aria-hidden="true">
                   <div className="db-agent-avatar c">C</div>
                   <span className="db-agent-name">Agent C</span>
                 </button>
@@ -2907,7 +2907,8 @@
               </div>
               <button
                 type="button"
-                aria-label="Kirim pesan"
+                tabIndex={-1}
+                aria-hidden="true"
                 className={`db-send ${phase === 'user-click' ? 'db-send-clicked' : ''}`}>
                 <ArrowUpRight size={18} stroke={2.4} />
               </button>
@@ -4666,7 +4667,7 @@
       const skillCards = [
         {
           handle: '@weuseaibot',
-          tagline: 'agen lo',
+          tagline: 'agen kamu',
           timestamp: 'jam 7:00 WIB',
           body: [
             'Selamat pagi.',
@@ -4678,7 +4679,7 @@
         },
         {
           handle: '@weuseaibot',
-          tagline: 'agen lo',
+          tagline: 'agen kamu',
           timestamp: 'jam 6:45 WIB',
           body: [
             'Cuaca Jakarta 27° cerah, sore mulai mendung.',
@@ -4690,7 +4691,7 @@
         },
         {
           handle: '@weuseaibot',
-          tagline: 'agen lo',
+          tagline: 'agen kamu',
           timestamp: 'jam 23:14 WIB',
           body: [
             'Semalam: 50 lowongan dari Glints, LinkedIn, Kalibrr dipantau.',
@@ -4702,7 +4703,7 @@
         },
         {
           handle: '@weuseaibot',
-          tagline: 'agen lo',
+          tagline: 'agen kamu',
           timestamp: 'jam 4 sore',
           body: [
             'Topik "cara mulai bisnis F&B" diolah dari 12 sumber.',
@@ -4714,7 +4715,7 @@
         },
         {
           handle: '@weuseaibot',
-          tagline: 'agen lo',
+          tagline: 'agen kamu',
           timestamp: 'jam 8:30 WIB',
           body: [
             '247 email pasca-cuti diurutkan.',
@@ -4726,7 +4727,7 @@
         },
         {
           handle: '@weuseaibot',
-          tagline: 'agen lo',
+          tagline: 'agen kamu',
           timestamp: 'jam 10:00 WIB',
           body: [
             '5 invoice telat bayar di-check ulang.',
@@ -4738,7 +4739,7 @@
         },
         {
           handle: '@weuseaibot',
-          tagline: 'agen lo',
+          tagline: 'agen kamu',
           timestamp: 'jam 14:00 WIB',
           body: [
             '12 kompetitor harga + listing dipantau hari ini.',
@@ -4750,7 +4751,7 @@
         },
         {
           handle: '@weuseaibot',
-          tagline: 'agen lo',
+          tagline: 'agen kamu',
           timestamp: 'jam 12:30 WIB',
           body: [
             '23 DM Instagram masuk semalam.',
@@ -4762,7 +4763,7 @@
         },
         {
           handle: '@weuseaibot',
-          tagline: 'agen lo',
+          tagline: 'agen kamu',
           timestamp: 'jam 9:00 WIB',
           body: [
             'Watchlist crypto + saham di-scan tiap 5 menit.',
@@ -4774,7 +4775,7 @@
         },
         {
           handle: '@weuseaibot',
-          tagline: 'agen lo',
+          tagline: 'agen kamu',
           timestamp: 'semalam',
           body: [
             '50 hotel di Bali dipantau. 12 dengan rating 4.5+ tapi foto listing buruk.',
@@ -4786,7 +4787,7 @@
         },
         {
           handle: '@weuseaibot',
-          tagline: 'agen lo',
+          tagline: 'agen kamu',
           timestamp: 'jam 19:00 WIB',
           body: [
             'Foto 12 struk hari ini diproses.',
@@ -4798,7 +4799,7 @@
         },
         {
           handle: '@weuseaibot',
-          tagline: 'agen lo',
+          tagline: 'agen kamu',
           timestamp: 'jam 11:30 WIB',
           body: [
             'Recording meeting product strategy 47 menit selesai diolah.',
@@ -4810,7 +4811,7 @@
         },
         {
           handle: '@weuseaibot',
-          tagline: 'agen lo',
+          tagline: 'agen kamu',
           timestamp: 'jam 17:30 WIB',
           body: [
             'Bahan kulkas: 3 telur, ayam fillet, brokoli, bawang putih, nasi.',
@@ -4822,7 +4823,7 @@
         },
         {
           handle: '@weuseaibot',
-          tagline: 'agen lo',
+          tagline: 'agen kamu',
           timestamp: 'jam 6:00 WIB',
           body: [
             '4 emiten watchlist dianalisa: BBCA, BBRI, ASII, TLKM.',
@@ -4834,7 +4835,7 @@
         },
         {
           handle: '@weuseaibot',
-          tagline: 'agen lo',
+          tagline: 'agen kamu',
           timestamp: 'jam 21:00 WIB',
           body: [
             '3 destinasi wishlist dipantau: Tokyo, Seoul, Bangkok.',
@@ -4939,13 +4940,13 @@
               </div>
               <BlurText
                 as="h2"
-                text="Skill yang sudah hidup di tim kamu."
+                text="Skill yang terus kami tambah."
                 className="mt-5 md:mt-6 text-3xl md:text-5xl lg:text-6xl font-heading text-white tracking-tight leading-[1.0] md:leading-[0.95] max-w-3xl"
                 style={{ letterSpacing: '-0.04em' }}
                 delay={70}
               />
               <p className="mt-5 md:mt-6 max-w-xl text-white/55 font-body font-light text-sm md:text-base leading-relaxed">
-                Bawaan, siap dipakai hari pertama. Plus apa yang lagi dikerjain agent lain di komunitas.
+                Sebagian sudah jalan, sebagian lagi kami siapkan bareng komunitas.
               </p>
             </div>
 
@@ -5175,11 +5176,11 @@
           ask: 'Rapikan keuangan bulan ini',
           msg: 'Pemasukan dan pengeluaran kamu aku rapikan di R2 Finance — ini ringkasan minggu ini.',
           shots: ['/assets/r2-finance-1.png', '/assets/r2-finance-2.png', '/assets/r2-finance-3.png'] },
-        { key: 'school', name: 'School Expert', status: 'live',
+        { key: 'school', name: 'School Expert', status: 'segera',
           line: 'Pantau tugas & tenggat sekolah.',
           micro: 'Mata kuliah · checklist · tenggat',
           ask: 'Bantu siapin tugas minggu ini',
-          msg: 'Tugas dari portal sekolah kamu sudah aku rapikan — checklist dan tenggat siap.',
+          msg: 'Nanti aku bantu rangkum tugas dari portal sekolah kamu — checklist dan tenggat siap sebelum deadline.',
           shots: ['/assets/r2-school-1.png', '/assets/r2-school-2.png', '/assets/r2-school-3.png'] },
       ];
       return (
