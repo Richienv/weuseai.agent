@@ -2696,6 +2696,22 @@
     }
 
     // ─────────────────────── DASHBOARD DEMO ───────────────────────
+    // Animated signal-red circuit flowing into a hub — konten-style hero motion,
+    // pure SVG (stroke-dashoffset), sits behind the dim so it never fights the mockup.
+    function HeroCircuit() {
+      return (
+        <svg className="hero-circuit" viewBox="0 0 1200 600" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+          <path className="hc-wire" d="M-20 140 C 300 140, 360 300, 600 300" />
+          <path className="hc-wire" d="M-20 300 C 280 300, 340 300, 600 300" />
+          <path className="hc-wire" d="M-20 460 C 300 460, 360 300, 600 300" />
+          <path className="hc-wire hc-wire--r" d="M1220 140 C 900 140, 840 300, 600 300" />
+          <path className="hc-wire hc-wire--r" d="M1220 460 C 900 460, 840 300, 600 300" />
+          <circle className="hc-hub" cx="600" cy="300" r="26" />
+          <circle className="hc-hub-ring" cx="600" cy="300" r="26" />
+        </svg>
+      );
+    }
+
     function DashboardDemo() {
       // Conversation: each event has type 'system' | 'user' | 'agent'
       // user: text shown as typewriter in input then sent as bubble
@@ -2815,6 +2831,7 @@
           {/* Ambient dotted-red hero video — dimmed behind the dashboard mockup.
               DottedVideo's IntersectionObserver pauses its rAF when scrolled away. */}
           <DottedVideo src="/assets/new-hero.mp4" color="#E5322D" cellSize={7} className="db-hero-video" />
+          <HeroCircuit />
           <div className="db-hero-dim" aria-hidden="true" />
           <div className="db-hero-fade" aria-hidden="true" />
           <div className="db-eyebrow">
@@ -2822,8 +2839,9 @@
               <span className="live-dot" />
               <span>Agen kamu bekerja</span>
             </div>
-            <h2 className="db-headline">Satu super-agent. Growing skills.<br className="hidden md:inline" /> Create Anything You Want.</h2>
-            <p className="db-sub">Dia yang menyapa kamu duluan — briefing pagi masuk sebelum diminta. Ilustrasi pengalaman; integrasi email dan kalender menyusul bertahap.</p>
+            <h2 className="db-headline"><span className="hl-em">Satu agent.</span><br className="hidden md:inline" /> Ngerjain kerja kamu.</h2>
+            <p className="db-sub">Dia nyapa kamu duluan — briefing pagi masuk sebelum diminta. Kamu cukup setujui.</p>
+            <p className="db-sub-micro">Ilustrasi pengalaman · email &amp; kalender menyusul</p>
             <div className="mt-7 flex flex-col items-center gap-3">
               <div className="flex items-center gap-3 flex-wrap justify-center">
                 <a href="checkout.html" className="rounded-full px-5 py-2.5 min-h-[44px] text-sm font-medium flex items-center gap-2 no-underline" style={{ background: '#fff', color: '#0a0a0a', border: '1px solid #fff' }}>
@@ -2834,7 +2852,7 @@
                 </a>
               </div>
               <p className="mt-1 font-mono uppercase tracking-[0.18em] text-[10px] md:text-[11px] text-white/55">
-                Setup 5 menit · bayar pakai QRIS · hosting Rp 99rb/bulan · berhenti kapan saja
+                Setup 5 menit · QRIS · Rp 99rb/bulan · stop kapan saja
               </p>
             </div>
           </div>

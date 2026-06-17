@@ -296,6 +296,29 @@
     .db-section--hero { padding-top: 118px; }
     @media (min-width: 768px) { .db-section--hero { padding-top: 150px; } }
 
+    /* Headline color-split + a tiny honest micro-line under the hero sub. */
+    .hl-em { color: #E5322D; }
+    .db-sub-micro { margin-top: 6px; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(245,245,245,0.4); }
+
+    /* Hero circuit-flow background (rev 2026-06-17) — konten-style nodes flowing into
+       a hub, signal-red, SVG stroke-dashoffset only. Sits behind .db-hero-dim. */
+    .hero-circuit { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none; opacity: 0.8; }
+    .hero-circuit .hc-wire { fill: none; stroke: rgba(229,50,45,0.75); stroke-width: 1.8; stroke-dasharray: 16 200; filter: drop-shadow(0 0 4px rgba(229,50,45,0.5)); animation: hcFlow 3.2s linear infinite; }
+    .hero-circuit .hc-wire:nth-child(2) { animation-delay: -0.9s; }
+    .hero-circuit .hc-wire:nth-child(3) { animation-delay: -1.8s; }
+    .hero-circuit .hc-wire--r { animation-direction: reverse; opacity: 0.7; }
+    .hero-circuit .hc-hub { fill: rgba(229,50,45,0.18); stroke: #E5322D; stroke-width: 1.5; transform-box: fill-box; transform-origin: center; animation: hcHub 2.6s ease-in-out infinite; }
+    .hero-circuit .hc-hub-ring { fill: none; stroke: #E5322D; stroke-width: 1.2; transform-box: fill-box; transform-origin: center; animation: hcRing 2.6s ease-out infinite; }
+    @keyframes hcFlow { to { stroke-dashoffset: -234; } }
+    @keyframes hcHub  { 0%,100% { opacity: 0.85; } 50% { opacity: 1; transform: scale(1.06); } }
+    @keyframes hcRing { 0% { opacity: 0.6; transform: scale(1); } 100% { opacity: 0; transform: scale(2.4); } }
+    @media (max-width: 767px) { .hero-circuit { opacity: 0.32; } }
+    @media (prefers-reduced-motion: reduce) {
+      .hero-circuit .hc-wire, .hero-circuit .hc-hub, .hero-circuit .hc-hub-ring { animation: none; }
+      .hero-circuit .hc-wire { stroke-dasharray: none; opacity: 0.4; }
+      .hero-circuit .hc-hub-ring { display: none; }
+    }
+
     /* Ambient hero video — layered behind the dashboard mockup (rev 2026-06-16). */
     .db-section--hero .db-hero-video {
       position: absolute; inset: 0; width: 100%; height: 100%;
