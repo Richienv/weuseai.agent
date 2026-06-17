@@ -5186,22 +5186,26 @@
         { key: 'content', name: 'R2 Content', status: 'live',
           line: 'Agen kamu menyusun dan menjadwalkan konten di R2 Content — dari kalender posting sampai draf caption.',
           micro: '7 post terjadwal minggu ini',
+          ask: 'Atur konten minggu ini dong',
           msg: 'Sudah aku susun 7 post minggu ini di R2 Content, lengkap dengan draf caption gaya kamu.',
           shots: ['/assets/r2-content-1.png', '/assets/r2-content-2.png', '/assets/r2-content-3.png'] },
         { key: 'fit', name: 'R2 Fit', status: 'live',
           line: 'Agen kamu menata program latihan dan mencatat progres di R2 Fit, jadi kamu tinggal jalan.',
           micro: 'Streak 12 hari berjalan',
+          ask: 'Susun program latihanku',
           msg: 'Program latihan kamu aku tata di R2 Fit, dan progres hari ini sudah tercatat.',
           shots: ['/assets/r2-fit-1.png', '/assets/r2-fit-2.png', '/assets/r2-fit-3.png'] },
         { key: 'finance', name: 'R2 Finance', status: 'live',
           line: 'Agen kamu merapikan pemasukan dan pengeluaran di R2 Finance, lalu kasih ringkasan yang kamu mengerti.',
           micro: 'Ringkasan cashflow tiap minggu',
+          ask: 'Rapikan keuangan bulan ini',
           msg: 'Pemasukan dan pengeluaran kamu aku rapikan di R2 Finance — ini ringkasan minggu ini.',
           shots: ['/assets/r2-finance-1.png', '/assets/r2-finance-2.png', '/assets/r2-finance-3.png'] },
-        { key: 'school', name: 'Gmail / Sekolah', status: 'segera',
-          line: 'Agen kamu baca email dan portal sekolah kamu, rangkum yang penting, lalu siapkan tugas sebelum tenggat.',
-          micro: 'Email · portal · tenggat',
-          msg: 'Sebentar lagi aku bisa baca email dan portal sekolah kamu, lalu siapkan tugas sebelum tenggat.',
+        { key: 'school', name: 'School Expert', status: 'live',
+          line: 'Agen kamu pantau mata kuliah dan tenggat di portal sekolah, rangkum materinya, lalu siapkan checklist tugas sebelum deadline.',
+          micro: 'Mata kuliah · checklist · tenggat',
+          ask: 'Bantu siapin tugas minggu ini',
+          msg: 'Tugas dari portal sekolah kamu sudah aku rapikan — checklist dan tenggat siap.',
           shots: ['/assets/r2-school-1.png', '/assets/r2-school-2.png', '/assets/r2-school-3.png'] },
       ];
       return (
@@ -5218,36 +5222,43 @@
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, amount: 0.3 }}
                   transition={{ duration: 0.5, ease: EASE, delay: 0.06 * i }}
-                  className={`is-tile is-tile--${a.status}`}>
-                  {/* ROW 1 — agent chat message (the agent reporting it did the work) */}
-                  <div className="is-msg-row">
-                    <div className="is-msg-avatar" aria-hidden="true">●</div>
-                    <div className="is-msg-bubble">{a.msg}</div>
-                  </div>
-
-                  <div className="is-tile-head">
-                    <span className="is-tile-name">{a.name}</span>
+                  className={`is-item is-item--${a.status}`}>
+                  {/* Title + desc live OUTSIDE the box for a cleaner, lighter look */}
+                  <div className="is-item-head">
+                    <span className="is-item-name">{a.name}</span>
                     <span className={`is-chip is-chip--${a.status}`}>
                       {a.status === 'live' ? <><span className="is-chip-dot" />Aktif</> : 'Segera'}
                     </span>
                   </div>
-                  <p className="is-tile-line">{a.line}</p>
+                  <p className="is-item-desc">{a.line}</p>
 
-                  {/* ROW 2 — iPhone portrait frame with a slow cross-fading slideshow
-                      of REAL app screenshots (3 per app). Each img is absolute-fill
-                      object-fit:cover so the iPhone geometry never moves. */}
-                  <div className="is-phone" aria-hidden="true">
-                    <div className="is-phone-island" />
-                    <div className="is-phone-screen">
-                      {a.shots.map((src, n) => (
-                        <img key={src} className="is-shot-media is-shot-slide" src={src} alt=""
-                          loading="lazy" style={{ animationDelay: `${n * 4}s` }} />
-                      ))}
-                      {a.status === 'segera' && <span className="is-phone-badge">Segera</span>}
+                  {/* The box: chat flow (mirrors the hero) · divider · app screenshot */}
+                  <div className={`is-tile is-tile--${a.status}`}>
+                    <div className="is-flow">
+                      <div className="is-flow-user">{a.ask}</div>
+                      <div className="is-flow-agent">
+                        <div className="is-flow-avatar" aria-hidden="true">●</div>
+                        <div className="is-flow-bubble">{a.msg}</div>
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="is-tile-micro">{a.micro}</div>
+                    <div className="is-tile-divider" aria-hidden="true" />
+
+                    {/* iPhone portrait frame — slow cross-fading slideshow of the
+                        3 real app screenshots (absolute-fill object-fit:cover). */}
+                    <div className="is-phone" aria-hidden="true">
+                      <div className="is-phone-island" />
+                      <div className="is-phone-screen">
+                        {a.shots.map((src, n) => (
+                          <img key={src} className="is-shot-media is-shot-slide" src={src} alt=""
+                            loading="lazy" style={{ animationDelay: `${n * 4}s` }} />
+                        ))}
+                        {a.status === 'segera' && <span className="is-phone-badge">Segera</span>}
+                      </div>
+                    </div>
+
+                    <div className="is-tile-micro">{a.micro}</div>
+                  </div>
                 </Mot.div>
               ))}
             </div>
@@ -5264,20 +5275,23 @@
     function OriginSection() {
       return (
         <section id="asal-usul" className="origin-section">
-          {/* Distinct bg from the hero (rev 2026-06-17): different source +
-              denser dots + deeper oxblood hue + low-anchored light map. */}
+          {/* Same red-dot halftone language as the hero (rev 2026-06-17): brand red
+              dotted video + a clearly-visible CSS halftone grid so it isn't flat. */}
           <DottedVideo
             src="/assets/trade-pro.mp4"
-            color="#B81F1B"
-            cellSize={5}
+            color="#E5322D"
+            cellSize={6}
             threshold={0.05}
             className="absolute inset-0 w-full h-full pointer-events-none origin-dots"
-            style={{ zIndex: 0, background: '#000', opacity: 0.6 }}
+            style={{ zIndex: 0, background: '#000', opacity: 0.7 }}
           />
           <div className="hero-grain" />
           <div className="absolute inset-0 z-[1] pointer-events-none" style={{
-            background: 'radial-gradient(ellipse 90% 70% at 50% 78%, rgba(5,5,5,0.18), rgba(5,5,5,0.62) 72%), linear-gradient(180deg, rgba(5,5,5,0.62) 0%, rgba(5,5,5,0.34) 50%, rgba(5,5,5,0.66) 100%)'
+            background: 'radial-gradient(ellipse 90% 70% at 50% 78%, rgba(5,5,5,0.12), rgba(5,5,5,0.55) 72%), linear-gradient(180deg, rgba(5,5,5,0.55) 0%, rgba(5,5,5,0.28) 50%, rgba(5,5,5,0.6) 100%)'
           }} />
+          {/* Visible brand-red halftone dot grid, masked to a soft pool — keeps the
+              section from reading flat while staying on-brand (matches the hero dots). */}
+          <div className="origin-halftone" aria-hidden="true" />
           <div className="absolute top-0 left-0 right-0 z-[2] pointer-events-none"
             style={{ height: 120, background: 'linear-gradient(to bottom, #050505, transparent)' }} />
           <div className="absolute bottom-0 left-0 right-0 z-[2] pointer-events-none"

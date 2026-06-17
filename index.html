@@ -326,6 +326,18 @@
     /* Origin / founder-edge — the demoted ex-hero (rev 2026-06-16). Section sizing, not hero. */
     .origin-section { position: relative; overflow: hidden; background: #050505; padding: 96px 16px 104px; }
     @media (min-width: 768px) { .origin-section { padding: 120px 24px 128px; } }
+    /* Brand-red halftone dot grid for the origin/resep section (rev 2026-06-17) — the
+       same dotted-red language as the hero, masked to a soft lower-center pool so the
+       section reads textured, not flat. Sits above the dim scrim (z-2), below content. */
+    .origin-halftone {
+      position: absolute; inset: 0; z-index: 2; pointer-events: none;
+      background-image: radial-gradient(rgba(229,50,45,0.55) 1.1px, transparent 1.6px);
+      background-size: 15px 15px;
+      -webkit-mask-image: radial-gradient(ellipse 92% 78% at 50% 72%, #000 22%, transparent 78%);
+      mask-image: radial-gradient(ellipse 92% 78% at 50% 72%, #000 22%, transparent 78%);
+      opacity: 0.5;
+    }
+    @media (prefers-reduced-motion: reduce) { .origin-halftone { opacity: 0.5; } }
 
     /* ── Integrations spine — the 4-app centerpiece (Phase 3) ── */
     .is-section { position: relative; padding: 84px 16px 92px; background: #050505; overflow: hidden; }
@@ -335,41 +347,57 @@
     .is-headline { margin: 22px 0 0; font-family: 'Instrument Serif', serif; font-weight: 400; letter-spacing: -0.03em; line-height: 1.0; color: #f5f5f5; font-size: clamp(2.4rem, 6vw, 4.5rem); }
     .is-sub { margin: 18px auto 0; max-width: 60ch; color: rgba(245,245,245,0.6); font-family: 'Inter', sans-serif; font-weight: 300; font-size: 15px; line-height: 1.6; }
     .is-hub { display: inline-flex; align-items: center; gap: 8px; margin: 30px 0 4px; padding: 7px 16px; border-radius: 999px; background: rgba(229,50,45,0.10); border: 1px solid rgba(229,50,45,0.45); color: #f5f5f5; font-size: 11px; font-family: 'JetBrains Mono', monospace; text-transform: uppercase; letter-spacing: 0.16em; }
-    .is-grid { margin-top: 32px; display: grid; grid-template-columns: 1fr; gap: 16px; }
-    @media (min-width: 640px) { .is-grid { grid-template-columns: 1fr 1fr; } }
-    @media (min-width: 1024px) { .is-grid { grid-template-columns: repeat(4, 1fr); gap: 18px; } }
-    .is-tile { position: relative; display: flex; flex-direction: column; text-align: left; background: rgba(18,18,18,0.6); border: 1px solid rgba(255,255,255,0.10); border-radius: 18px; padding: 18px; overflow: hidden; transition: border-color 220ms ease, transform 220ms ease; }
+    .is-grid { margin-top: 36px; display: grid; grid-template-columns: 1fr; gap: 20px; align-items: start; }
+    @media (min-width: 640px) { .is-grid { grid-template-columns: 1fr 1fr; gap: 24px; } }
+    @media (min-width: 1024px) { .is-grid { grid-template-columns: repeat(4, 1fr); gap: 26px; } }
+
+    /* Column item: title + desc OUTSIDE the box (cleaner), then the media box. */
+    .is-item { display: flex; flex-direction: column; text-align: left; }
+    .is-item--segera { opacity: 0.92; }
+    .is-item-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .is-item-name { font-family: 'Instrument Serif', serif; font-size: 23px; color: #f5f5f5; letter-spacing: -0.01em; }
+    .is-item-desc {
+      margin: 8px 0 14px; color: rgba(245,245,245,0.6);
+      font-family: 'Inter', sans-serif; font-weight: 300; font-size: 13px; line-height: 1.5; min-height: 3.8em;
+      display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+    }
+
+    /* The box holds: chat flow · middle divider · app screenshot · micro. */
+    .is-tile { position: relative; display: flex; flex-direction: column; text-align: left; background: rgba(14,14,14,0.6); border: 1px solid rgba(255,255,255,0.09); border-radius: 18px; padding: 16px 16px 18px; overflow: hidden; transition: border-color 220ms ease, transform 220ms ease, box-shadow 220ms ease; }
     .is-tile::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; }
     .is-tile--live::before { background: linear-gradient(90deg, transparent, #E5322D, transparent); background-size: 200% 100%; animation: isFlow 2.6s linear infinite; }
     .is-tile--segera::before { background: repeating-linear-gradient(90deg, rgba(255,255,255,0.16) 0 6px, transparent 6px 12px); }
-    .is-tile--live { box-shadow: 0 8px 44px -26px rgba(229,50,45,0.7); }
-    .is-tile--segera { opacity: 0.82; }
-    .is-tile:hover { transform: translateY(-3px); border-color: rgba(229,50,45,0.4); }
-    .is-tile-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-    .is-tile-name { font-family: 'Instrument Serif', serif; font-size: 22px; color: #f5f5f5; letter-spacing: -0.01em; }
+    .is-tile--live { box-shadow: 0 8px 44px -26px rgba(229,50,45,0.55); }
+    .is-item:hover .is-tile { transform: translateY(-3px); border-color: rgba(229,50,45,0.4); }
     .is-chip { display: inline-flex; align-items: center; gap: 6px; font-family: 'JetBrains Mono', monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
     .is-chip--live { color: #ff7a76; background: rgba(229,50,45,0.12); border: 1px solid rgba(229,50,45,0.4); }
     .is-chip--segera { color: rgba(245,245,245,0.5); background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.14); }
     .is-chip-dot { width: 6px; height: 6px; border-radius: 50%; background: #E5322D; box-shadow: 0 0 8px rgba(229,50,45,0.6); animation: isPulse 1.6s ease-in-out infinite; }
-    .is-tile-line { margin: 12px 0 0; color: rgba(245,245,245,0.68); font-family: 'Inter', sans-serif; font-weight: 300; font-size: 13.5px; line-height: 1.55; }
-    .is-tile-micro { margin-top: 12px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: rgba(245,245,245,0.42); }
+    .is-tile-micro { margin-top: 14px; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: rgba(245,245,245,0.42); }
 
-    /* ── ROW 1: agent message bubble (mirrors the DashboardDemo chat language) ── */
-    .is-msg-row { display: flex; gap: 9px; align-items: flex-start; margin-bottom: 16px; }
-    .is-msg-avatar {
-      width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0;
+    /* ── Chat flow inside the box — mirrors the hero's .db-msg-user / .db-bubble ── */
+    .is-flow { display: flex; flex-direction: column; gap: 8px; }
+    .is-flow-user {
+      align-self: flex-end; max-width: 84%;
+      padding: 7px 11px; border-radius: 12px 12px 4px 12px;
+      background: rgba(229,50,45,0.12); border: 1px solid rgba(229,50,45,0.32);
+      font-family: 'Inter', sans-serif; font-size: 11.5px; line-height: 1.4; color: #fff;
+    }
+    .is-flow-agent { display: flex; gap: 8px; align-items: flex-start; max-width: 96%; }
+    .is-flow-avatar {
+      width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0; margin-top: 1px;
       background: linear-gradient(135deg, #E5322D, #8B1410);
-      display: flex; align-items: center; justify-content: center;
-      color: #fff; font-size: 9px; line-height: 1; margin-top: 1px;
+      display: flex; align-items: center; justify-content: center; color: #fff; font-size: 8px; line-height: 1;
     }
-    .is-msg-bubble {
-      flex: 1; padding: 9px 12px; border-radius: 4px 13px 13px 13px;
+    .is-flow-bubble {
+      flex: 1; padding: 8px 11px; border-radius: 4px 12px 12px 12px;
       background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
-      font-family: 'Inter', sans-serif; font-weight: 300; font-size: 12.5px; line-height: 1.45;
-      color: rgba(255,255,255,0.9);
+      font-family: 'Inter', sans-serif; font-weight: 300; font-size: 11.5px; line-height: 1.45; color: rgba(255,255,255,0.9);
     }
-    .is-tile--segera .is-msg-avatar { background: linear-gradient(135deg, rgba(255,255,255,0.30), rgba(255,255,255,0.12)); }
-    .is-tile--segera .is-msg-bubble { color: rgba(245,245,245,0.62); }
+    .is-tile--segera .is-flow-avatar { background: linear-gradient(135deg, rgba(255,255,255,0.30), rgba(255,255,255,0.12)); }
+
+    /* The "middle" divider that separates the chat flow from the screenshot. */
+    .is-tile-divider { height: 1px; margin: 14px 0; background: linear-gradient(90deg, transparent, rgba(229,50,45,0.28), transparent); }
 
     /* ── ROW 2: CSS-drawn iPhone portrait frame (placeholder for a real screen-record) ── */
     .is-phone {
