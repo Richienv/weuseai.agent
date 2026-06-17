@@ -5202,25 +5202,25 @@
     function IntegrationsSpine() {
       const apps = [
         { key: 'content', name: 'R2 Content', status: 'live',
-          line: 'Agen kamu menyusun dan menjadwalkan konten di R2 Content — dari kalender posting sampai draf caption.',
+          line: 'Susun & jadwalkan konten kamu.',
           micro: '7 post terjadwal minggu ini',
           ask: 'Atur konten minggu ini dong',
           msg: 'Sudah aku susun 7 post minggu ini di R2 Content, lengkap dengan draf caption gaya kamu.',
           shots: ['/assets/r2-content-1.png', '/assets/r2-content-2.png', '/assets/r2-content-3.png'] },
         { key: 'fit', name: 'R2 Fit', status: 'live',
-          line: 'Agen kamu menata program latihan dan mencatat progres di R2 Fit, jadi kamu tinggal jalan.',
+          line: 'Atur program latihan, catat progres.',
           micro: 'Streak 12 hari berjalan',
           ask: 'Susun program latihanku',
           msg: 'Program latihan kamu aku tata di R2 Fit, dan progres hari ini sudah tercatat.',
           shots: ['/assets/r2-fit-1.png', '/assets/r2-fit-2.png', '/assets/r2-fit-3.png'] },
         { key: 'finance', name: 'R2 Finance', status: 'live',
-          line: 'Agen kamu merapikan pemasukan dan pengeluaran di R2 Finance, lalu kasih ringkasan yang kamu mengerti.',
+          line: 'Rapikan cashflow, kasih ringkasan.',
           micro: 'Ringkasan cashflow tiap minggu',
           ask: 'Rapikan keuangan bulan ini',
           msg: 'Pemasukan dan pengeluaran kamu aku rapikan di R2 Finance — ini ringkasan minggu ini.',
           shots: ['/assets/r2-finance-1.png', '/assets/r2-finance-2.png', '/assets/r2-finance-3.png'] },
         { key: 'school', name: 'School Expert', status: 'live',
-          line: 'Agen kamu pantau mata kuliah dan tenggat di portal sekolah, rangkum materinya, lalu siapkan checklist tugas sebelum deadline.',
+          line: 'Pantau tugas & tenggat sekolah.',
           micro: 'Mata kuliah · checklist · tenggat',
           ask: 'Bantu siapin tugas minggu ini',
           msg: 'Tugas dari portal sekolah kamu sudah aku rapikan — checklist dan tenggat siap.',
@@ -5231,7 +5231,7 @@
           <div className="is-wrap">
             <div className="is-eyebrow"><span className="live-dot" /><span>Agen kamu nggak cuma menjawab</span></div>
             <BlurText as="h2" text="Dia kerja di app beneran." className="is-headline" delay={70} />
-            <p className="is-sub">Bukan cuma jawaban di chat. Agen kamu masuk ke aplikasi yang kamu pakai tiap hari, lalu mengerjakan — bukan menyuruh kamu mengerjakan.</p>
+            <p className="is-sub">Bukan jawab di chat — dia kerja di app kamu.</p>
             <div className="is-hub" aria-hidden="true"><span className="live-dot" /><span>Satu agen</span></div>
             <div className="is-grid">
               {apps.map((a, i) => (
@@ -5280,7 +5280,7 @@
                 </Mot.div>
               ))}
             </div>
-            <p className="is-foot">Empat app. Satu agen. Hosting <strong>Rp 99rb/bulan</strong>.</p>
+            <p className="is-foot">Empat app. Satu agen. <strong>Rp 99rb/bulan</strong>.</p>
           </div>
         </section>
       );
@@ -5332,7 +5332,7 @@
             </Mot.div>
 
             <BlurText
-              text="Resep kampus elite China. Tenaga satu tim penuh. Aktif dalam 8 menit."
+              text="Resep kampus elite China. Aktif 8 menit."
               className="mt-6 md:mt-8 text-[2rem] sm:text-4xl md:text-5xl lg:text-[3.75rem] font-heading leading-[1.02] md:leading-[0.98] max-w-[20ch] md:max-w-[24ch] text-white px-2"
               style={{ letterSpacing: '-0.04em', fontStyle: 'normal' }}
               delay={100} />
@@ -5343,7 +5343,7 @@
               viewport={{ once: true, amount: 0.4 }}
               transition={{ duration: 0.6, ease: EASE, delay: 0.15 }}
               className="mt-5 md:mt-6 max-w-[52ch] text-sm md:text-base font-body font-light leading-[1.5] text-white/85 px-2">
-              Satu tim agent AI di Telegram kamu — riset, surat, slide, laporan. Dipelajari langsung di Zhejiang University, Hangzhou, dibawa pulang untuk kamu. Bukan chatbot yang cuma jawab; tim yang mengerjakan.
+              Satu tim agent di Telegram kamu — riset, surat, slide, laporan. Dirakit di Zhejiang University, dibawa pulang buat kamu.
             </Mot.p>
 
             <Mot.p
