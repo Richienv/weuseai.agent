@@ -37,9 +37,11 @@
 
 
   <!-- React production builds — faster runtime, smaller payload than dev builds. -->
-  <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin defer></script>
-  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin defer></script>
-  <script src="https://unpkg.com/framer-motion@11.11.17/dist/framer-motion.js" defer></script>
+  <!-- Self-hosted vendor (rev 2026-06-17): no unpkg dependency — avoids a white
+       screen if the CDN is blocked/slow (China-targeted) + one fewer DNS/TLS hop. -->
+  <script src="/assets/vendor/react.production.min.js" defer></script>
+  <script src="/assets/vendor/react-dom.production.min.js" defer></script>
+  <script src="/assets/vendor/framer-motion.js" defer></script>
   <link rel="stylesheet" href="/assets/tw.css">
 
   <!-- Persona detail content (shared between landing + /persona dedicated page) -->

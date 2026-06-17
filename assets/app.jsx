@@ -1,6 +1,16 @@
     const { useEffect, useRef, useState } = React;
     const M = window.Motion || window.motion || {};
-    const Mot = M.motion;
+    // Mot = framer's motion factory; if framer failed to load (e.g. CDN blocked),
+    // fall back to a passthrough that renders plain elements (sans animation props)
+    // so the page still works instead of throwing on the first <Mot.div>.
+    const Mot = M.motion || new Proxy({}, {
+      get: (_t, tag) => (props = {}) => {
+        const { initial, animate, exit, whileInView, whileHover, whileTap, whileFocus,
+          whileDrag, transition, viewport, variants, custom, onViewportEnter, onViewportLeave,
+          layout, layoutId, layoutDependency, drag, dragConstraints, style, children, ...rest } = props;
+        return React.createElement(typeof tag === 'string' ? tag : 'div', { style, ...rest }, children);
+      },
+    });
 
     const HERO_VIDEO = "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260307_083826_e938b29f-a43a-41ec-a153-3d4730578ab8.mp4";
     const HLS_STATS = "https://stream.mux.com/NcU3HlHeF7CUL86azTTzpy3Tlb00d6iF3BmCdFslMJYM.m3u8";
@@ -5395,4 +5405,21 @@
       );
     }
 
-    ReactDOM.createRoot(document.getElementById('app')).render(<App />);
+    // Catch any render error so a single bad component degrades gracefully
+    // instead of white-screening the whole page.
+    class ErrorBoundary extends React.Component {
+      constructor(p) { super(p); this.state = { failed: false }; }
+      static getDerivedStateFromError() { return { failed: true }; }
+      componentDidCatch(err) { try { console.error('Landing render error:', err); } catch (e) {} }
+      render() {
+        if (this.state.failed) {
+          return React.createElement('div', { style: { minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '40px', color: '#f5f5f5', fontFamily: 'Inter, sans-serif' } },
+            React.createElement('div', null,
+              React.createElement('p', { style: { fontSize: '18px', marginBottom: '16px' } }, 'Lagi ada kendala memuat halaman.'),
+              React.createElement('a', { href: 'checkout.html', style: { color: '#E5322D', textDecoration: 'underline' } }, 'Lanjut ke checkout →')));
+        }
+        return this.props.children;
+      }
+    }
+
+    ReactDOM.createRoot(document.getElementById('app')).render(<ErrorBoundary><App /></ErrorBoundary>);
