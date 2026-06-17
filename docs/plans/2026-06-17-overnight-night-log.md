@@ -32,4 +32,7 @@ Orchestrated by Opus 4.8 in a self-paced `/loop`, using ultracode workflows for 
 - `330d019` [#271] FAQ: 17 → 7 tightened Q&As + leaner sub-line (the ~10 cut rows pending the /faq page, backlog #4).
 - `f39a165` [#271] Pricing cards: outcomes trimmed to 3 short bullets each (prices/slugs untouched, drift gate green). LLM-credit detail now lives in the FAQ.
 - _(next)_ [#271] Global gloss: hover-lift + red rim on cards, glossy sheen-sweep `.cta-pulse` on the featured pricing CTA (navbar Mulai intentionally left un-pulsed — a perpetual sticky-header glow would nag). **Backlog #1 (flashy-minimal landing) COMPLETE.**
+- `ebfd21d` [#271] Global gloss: hover-lift + red rim on cards, sheen-sweep on the featured CTA. **Backlog #1 (flashy-minimal landing) COMPLETE.**
+- **Item 2 (optimizer description) — RESOLVED, no change.** Read the optimizer result: its `best_description` (held-out 4/8) was the *original conditional* wording ("Read this BEFORE… non-trivial work"); later iterations overfit train. But #273 already carries the *aggressive* variant ("Use this skill for ANY work… including small routine UI edits… Fire it the instant a request mentions weuseai"), which serves the founder's explicit "always use it" directive better than the optimizer's pick on a noisy 4/8 eval. Kept the aggressive description; no downgrade committed.
+- _(next)_ Launched ultracode QA + IG-conversion audit (item 3) — parallel agents auditing the flashy landing; findings → fixed in subsequent iterations.
 - _(loop appends below as it ships)_
