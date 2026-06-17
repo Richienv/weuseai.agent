@@ -45,4 +45,6 @@ Orchestrated by Opus 4.8 in a self-paced `/loop`, using ultracode workflows for 
 - **QA P0 render order / OriginSection**: audit recommends compressing OriginSection to a slim strip + moving Pricing earlier (hero→apps→price). NOT done — you explicitly wanted OriginSection restored as a full section; reordering is a real conversion experiment for you to approve.
 - `12eea3e` [#271] QA P0 batch (honesty + a11y, see above).
 - _(next)_ [#271] **QA P1 reduced-motion batch:** one hardened global RM reset (`prefers-reduced-motion: reduce` → animation 0.01ms / iteration 1 / **fill-mode forwards** / transition 0.01ms) that neutralizes all ~109 perpetual decorative loops (pulses, grain, marquees, radar, caret/typing, carousel scenes, how/pv/cap/uc) in one safe block — verified both modes render ALL content (fill-mode:forwards prevents hidden mount-ins). Gates 10/10.
-- _(loop continues: contrast → aria → perf batches, then /faq page, use-cases, final QA)_
+- `23f5c4e` [#271] QA P1a: hardened global reduced-motion reset.
+- _(next)_ [#271] **QA P1b contrast:** eyebrow red `#E5322D`→`#FF6B66` (.db-eyebrow-pill + .vslider-eyebrow), .db-sub-micro + .is-tile-micro rgba .4/.42→.62, strikethrough anchor price white/35→white/55, community meta white/40→white/55. Decorative separators left muted. Gates 10/10.
+- _(loop continues: aria → perf batches, /faq page, use-cases redesign, then FRESH ultracode QA round-2 → fix → polish, looping until 2 clean passes — founder reinforced "make it bigger, keep ultracode running")_

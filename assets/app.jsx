@@ -3789,7 +3789,7 @@
                 </div>
               </div>
 
-              <p className="mt-4 text-xs italic text-white/40 leading-relaxed">
+              <p className="mt-4 text-xs italic text-white/55 leading-relaxed">
                 Tidak ada biaya tersembunyi. Pause dan stop kapan saja.
               </p>
             </div>
@@ -3888,7 +3888,7 @@
               <span className="text-xs font-body font-light text-white/55">Setup (sekali bayar)</span>
               <span className="font-heading text-white text-base md:text-lg" style={{ letterSpacing: '-0.02em' }}>
                 {tier.priceStrike && (
-                  <span className="text-xs font-body font-light text-white/35 line-through mr-2" style={{ textDecorationColor: 'rgba(229,50,45,0.75)' }}>
+                  <span className="text-xs font-body font-light text-white/55 line-through mr-2" style={{ textDecorationColor: 'rgba(229,50,45,0.75)' }}>
                     {tier.priceStrike}
                   </span>
                 )}
@@ -4903,15 +4903,15 @@
           <div className="flex items-center gap-2 text-[12px] font-mono text-white/65">
             <Avatar handle={card.handle} />
             <span className="text-white/85">{card.handle}</span>
-            {card.tagline && <span className="text-white/40">· {card.tagline}</span>}
-            <span className="text-white/40">· {card.timestamp}</span>
+            {card.tagline && <span className="text-white/55">· {card.tagline}</span>}
+            <span className="text-white/55">· {card.timestamp}</span>
           </div>
           <div className="mt-3 text-sm text-white/85 font-body font-light leading-relaxed space-y-1">
             {card.body.map((line, li) => (
               <p key={li}>{line}</p>
             ))}
           </div>
-          <div className="mt-4 pt-3 border-t border-white/[0.07] text-[10px] font-mono uppercase tracking-[0.18em] text-white/40">
+          <div className="mt-4 pt-3 border-t border-white/[0.07] text-[10px] font-mono uppercase tracking-[0.18em] text-white/55">
             {isCommunity ? (
               <a
                 href={card.sourceUrl}
