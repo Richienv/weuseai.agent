@@ -1,17 +1,18 @@
 ---
 name: weuseai-shipping
 description: >-
-  Read this BEFORE doing any non-trivial work in the weuseai.agent / velorah repo
-  (/Volumes/Extreme SSD/Projects/weuseai.agent/velorah). Triggers: editing the marketing
-  landing (index.html, assets/app.jsx, assets/app.js, assets/tw.css, persona-details.js,
-  checkout.html, welcome.html, onboarding.html, or anything called "the landing / React
-  landing / hero / pricing section"); running or reasoning about scripts/build-landing.mjs
-  or the landing build/freshness gate; touching anything under supabase/functions/ — edge
-  functions, _shared/cors.ts, CORS, verify_jwt, deploying a function; debugging
-  payment / checkout / Xendit / "checkout is broken" / a payment outage; running
-  scripts/deploy-all.sh or any deploy; or planning/building a non-trivial feature here.
-  This skill encodes how to ship one-shot without breaking production. If you are about to
-  touch these files or claim a ship is done, you are under-prepared without it.
+  Use this skill for ANY work on the weuseai product — the weuseai.id marketing landing and
+  its weuseai.agent / velorah repo — including small, routine UI edits, not just deploys. Fire
+  it the instant a request mentions weuseai or weuseai.id, or names one of its parts: the
+  landing, hero, pricing cards, persona carousel, testimonials, integrations tiles,
+  checkout/welcome/onboarding pages, or the files app.jsx, app.js, tw.css, index.html,
+  tier-personas.ts, persona-details.js. Also use it for: rebuilding the landing or a
+  stale-app.js / freshness-gate test failure; pricing or persona drift between the landing
+  and tier-personas.ts; adding a section or onboarding/Telegram-pairing step; editing
+  supabase/functions or _shared/cors.ts; or Xendit checkout/payment work. Widening a card,
+  adding a testimonials block, tweaking hero copy — all count. Only skip it for generic
+  how-to questions about CORS, Tailwind, Playwright, Supabase, or auth in some other,
+  unrelated codebase.
 ---
 
 # weuseai-shipping
