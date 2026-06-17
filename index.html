@@ -4237,6 +4237,25 @@
       margin-top: 12px;
     }
     .pd-bento-deliv-caption strong { color: #f5f5f5; font-weight: 500; }
+
+    /* ── Global reduced-motion reset (rev 2026-06-17, QA P1) ──────────────────
+       Hardened version of the standard snippet: collapses every animation +
+       transition to instant, runs once, and pins fill-mode:forwards so any
+       entrance/typewriter/mount animation jumps to its VISIBLE end state and
+       stays (never reverts to a hidden base). This neutralizes all 100+ perpetual
+       decorative loops (pulses, grain, marquees, radar sweep, caret/typing,
+       carousel scenes, how/pv/cap/uc systems) for users who ask for less motion,
+       without breaking any layout that an animation reveals. Specific guards
+       elsewhere remain as belt-and-suspenders. */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        animation-fill-mode: forwards !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+    }
   </style>
 </head>
 <body class="bg-black text-white">

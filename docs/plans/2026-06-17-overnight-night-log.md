@@ -43,4 +43,6 @@ Orchestrated by Opus 4.8 in a self-paced `/loop`, using ultracode workflows for 
 - **QA P0 hero-circuit z-index**: audit wants `z-1` (behind dim) but founder explicitly wanted the circuit *noticeable* — KEPT at `z-2` (headline+frame at z-3 stay legible). Revert to z-1 if you prefer it subtler.
 - **QA P0 two above-fold hero CTAs**: audit says collapse to one + demote consult to a text link. Left as-is (both buttons) — your call on conversion.
 - **QA P0 render order / OriginSection**: audit recommends compressing OriginSection to a slim strip + moving Pricing earlier (hero→apps→price). NOT done — you explicitly wanted OriginSection restored as a full section; reordering is a real conversion experiment for you to approve.
-- _(loop continues with P1 a11y/contrast/perf batches below)_
+- `12eea3e` [#271] QA P0 batch (honesty + a11y, see above).
+- _(next)_ [#271] **QA P1 reduced-motion batch:** one hardened global RM reset (`prefers-reduced-motion: reduce` → animation 0.01ms / iteration 1 / **fill-mode forwards** / transition 0.01ms) that neutralizes all ~109 perpetual decorative loops (pulses, grain, marquees, radar, caret/typing, carousel scenes, how/pv/cap/uc) in one safe block — verified both modes render ALL content (fill-mode:forwards prevents hidden mount-ins). Gates 10/10.
+- _(loop continues: contrast → aria → perf batches, then /faq page, use-cases, final QA)_
