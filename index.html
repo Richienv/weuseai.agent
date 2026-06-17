@@ -471,12 +471,12 @@
     /* Cross-fading slideshow of the 3 real app screenshots per phone. Each .is-shot-slide
        is absolute-fill (via .is-shot-media); staggered animationDelay (0/4/8s, set inline)
        gives a continuous crossfade with no black gap across the 12s loop. */
-    .is-shot-slide { opacity: 0; animation: isShotFade 12s ease-in-out infinite; }
+    .is-shot-slide { opacity: 0; animation: isShotFade 6s ease-in-out infinite; }
     @keyframes isShotFade {
       0%   { opacity: 0; }
-      6%   { opacity: 1; }
-      33%  { opacity: 1; }
-      39%  { opacity: 0; }
+      4%   { opacity: 1; }   /* fast fade-in */
+      33%  { opacity: 1; }   /* hold through its 1/3 */
+      42%  { opacity: 0; }   /* fade-out overlaps the next slide's fade-in — no black seam */
       100% { opacity: 0; }
     }
     /* Segera (Gmail/Sekolah): the app preview is real, but the agent's Gmail connection is

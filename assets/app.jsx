@@ -1779,7 +1779,7 @@
           loop
           muted
           playsInline
-          preload="metadata"
+          preload="none"
           aria-hidden="true"
           className="absolute inset-0 w-full h-full"
           style={{ objectFit: 'cover', display: 'block', background: '#000' }}
@@ -5229,7 +5229,7 @@
                       <div className="is-phone-screen">
                         {a.shots.map((src, n) => (
                           <img key={src} className="is-shot-media is-shot-slide" src={src} alt=""
-                            loading="lazy" style={{ animationDelay: `${n * 4}s` }} />
+                            loading="lazy" style={{ animationDelay: `${n * 2}s` }} />
                         ))}
                         {a.status === 'segera' && <span className="is-phone-badge">Segera</span>}
                       </div>
