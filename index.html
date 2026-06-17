@@ -391,38 +391,30 @@
     /* SWAP TARGET — a real <img>/<video> drops in here with no geometry change. */
     .is-shot-media { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 
-    /* Placeholder app "screen" (illustrative — not a captured screenshot) */
-    .is-shot {
-      position: absolute; inset: 0; display: flex; flex-direction: column;
-      padding: 26px 12px 14px; gap: 10px;
-      background:
-        radial-gradient(120% 60% at 50% -10%, rgba(229,50,45,0.22), transparent 60%),
-        linear-gradient(180deg, #131313, #0a0a0a);
+    /* Cross-fading slideshow of the 3 real app screenshots per phone. Each .is-shot-slide
+       is absolute-fill (via .is-shot-media); staggered animationDelay (0/4/8s, set inline)
+       gives a continuous crossfade with no black gap across the 12s loop. */
+    .is-shot-slide { opacity: 0; animation: isShotFade 12s ease-in-out infinite; }
+    @keyframes isShotFade {
+      0%   { opacity: 0; }
+      6%   { opacity: 1; }
+      33%  { opacity: 1; }
+      39%  { opacity: 0; }
+      100% { opacity: 0; }
     }
-    .is-shot-top { display: flex; flex-direction: column; gap: 4px; }
-    .is-shot-app { font-family: 'Instrument Serif', serif; font-size: 15px; color: #f5f5f5; letter-spacing: -0.01em; }
-    .is-shot-tag {
-      align-self: flex-start; font-family: 'JetBrains Mono', monospace; font-size: 7.5px;
-      letter-spacing: 0.14em; text-transform: uppercase; padding: 2px 6px; border-radius: 999px;
-      color: #ff8a86; background: rgba(229,50,45,0.14); border: 1px solid rgba(229,50,45,0.4);
+    /* Segera (Gmail/Sekolah): the app preview is real, but the agent's Gmail connection is
+       still coming — so the phone stays dashed + a dimming scrim + a "Segera" badge. */
+    .is-tile--segera .is-phone { border-style: dashed; border-color: rgba(255,255,255,0.18); }
+    .is-tile--segera .is-phone-screen::after {
+      content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+      background: linear-gradient(180deg, rgba(5,5,5,0.34), rgba(5,5,5,0.56));
     }
-    .is-shot-body { flex: 1; display: flex; flex-direction: column; gap: 7px; justify-content: center; }
-    .is-shot-bar { height: 9px; border-radius: 4px; background: rgba(255,255,255,0.10); }
-    .is-shot-bar:nth-child(1) { width: 86%; background: rgba(229,50,45,0.55); }
-    .is-shot-bar:nth-child(2) { width: 64%; }
-    .is-shot-bar:nth-child(3) { width: 92%; }
-    .is-shot-bar:nth-child(4) { width: 48%; }
-    .is-tile--live .is-shot-bar:nth-child(1) { animation: isBar 2.8s ease-in-out infinite; }
-    .is-shot-foot { display: flex; flex-direction: column; gap: 3px; }
-    .is-shot-cap { font-family: 'Inter', sans-serif; font-weight: 300; font-size: 9.5px; color: rgba(245,245,245,0.62); }
-    .is-shot-metric { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: rgba(245,245,245,0.4); }
-
-    /* Segera: dimmed + dashed phone, coming-soon screen — honest, no captured-data claim */
-    .is-tile--segera .is-phone { border-style: dashed; border-color: rgba(255,255,255,0.18); opacity: 0.9; }
-    .is-tile--segera .is-shot { background: linear-gradient(180deg, #101010, #070707); }
-    .is-tile--segera .is-shot-tag { color: rgba(245,245,245,0.55); background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.14); }
-    .is-tile--segera .is-shot-bar { background: rgba(255,255,255,0.07); }
-    .is-tile--segera .is-shot-bar:nth-child(1) { background: rgba(255,255,255,0.16); animation: none; }
+    .is-phone-badge {
+      position: absolute; top: 9px; left: 50%; transform: translateX(-50%); z-index: 3;
+      font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 0.16em;
+      text-transform: uppercase; color: #fff; padding: 3px 9px; border-radius: 999px;
+      background: rgba(229,50,45,0.92); box-shadow: 0 4px 14px -4px rgba(229,50,45,0.7);
+    }
 
     /* Phone size cap on mobile so a 1-up tile doesn't get a giant phone */
     @media (max-width: 639px) { .is-phone { max-width: 150px; } }
@@ -433,7 +425,9 @@
     @keyframes isBar { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
     @keyframes isPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
     @media (prefers-reduced-motion: reduce) {
-      .is-tile--live::before, .is-tile--live .is-shot-bar, .is-chip-dot { animation: none; }
+      .is-tile--live::before, .is-chip-dot { animation: none; }
+      .is-shot-slide { animation: none; opacity: 0; }
+      .is-shot-slide:first-child { opacity: 1; }
     }
     .db-section::before {
       content: ''; position: absolute; inset: 0; pointer-events: none;

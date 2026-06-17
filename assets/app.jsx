@@ -5187,22 +5187,22 @@
           line: 'Agen kamu menyusun dan menjadwalkan konten di R2 Content — dari kalender posting sampai draf caption.',
           micro: '7 post terjadwal minggu ini',
           msg: 'Sudah aku susun 7 post minggu ini di R2 Content, lengkap dengan draf caption gaya kamu.',
-          shot: { src: '/assets/r2-content.png', title: 'R2 Content', caption: 'Kalender konten', metric: '7 post · 3 pilar' } },
+          shots: ['/assets/r2-content-1.png', '/assets/r2-content-2.png', '/assets/r2-content-3.png'] },
         { key: 'fit', name: 'R2 Fit', status: 'live',
           line: 'Agen kamu menata program latihan dan mencatat progres di R2 Fit, jadi kamu tinggal jalan.',
           micro: 'Streak 12 hari berjalan',
           msg: 'Program latihan kamu aku tata di R2 Fit, dan progres hari ini sudah tercatat.',
-          shot: { src: '/assets/r2-fit.png', title: 'R2 Fit', caption: 'Program & progres', metric: 'Streak 12 hari' } },
+          shots: ['/assets/r2-fit-1.png', '/assets/r2-fit-2.png', '/assets/r2-fit-3.png'] },
         { key: 'finance', name: 'R2 Finance', status: 'live',
           line: 'Agen kamu merapikan pemasukan dan pengeluaran di R2 Finance, lalu kasih ringkasan yang kamu mengerti.',
           micro: 'Ringkasan cashflow tiap minggu',
           msg: 'Pemasukan dan pengeluaran kamu aku rapikan di R2 Finance — ini ringkasan minggu ini.',
-          shot: { src: '/assets/r2-finance.png', title: 'R2 Finance', caption: 'Ringkasan cashflow', metric: 'Mingguan · rapi' } },
+          shots: ['/assets/r2-finance-1.png', '/assets/r2-finance-2.png', '/assets/r2-finance-3.png'] },
         { key: 'school', name: 'Gmail / Sekolah', status: 'segera',
           line: 'Agen kamu baca email dan portal sekolah kamu, rangkum yang penting, lalu siapkan tugas sebelum tenggat.',
           micro: 'Email · portal · tenggat',
           msg: 'Sebentar lagi aku bisa baca email dan portal sekolah kamu, lalu siapkan tugas sebelum tenggat.',
-          shot: { src: '/assets/r2-school.png', title: 'Gmail / Sekolah', caption: 'Email · portal · tenggat', metric: 'Segera hadir' } },
+          shots: ['/assets/r2-school-1.png', '/assets/r2-school-2.png', '/assets/r2-school-3.png'] },
       ];
       return (
         <section id="integrasi" className="is-section">
@@ -5233,30 +5233,17 @@
                   </div>
                   <p className="is-tile-line">{a.line}</p>
 
-                  {/* ROW 2 — iPhone portrait frame. SWAP POINT: replace the inner
-                      <div className="is-shot ...">…</div> with
-                      <img className="is-shot-media" src={a.shot.src} alt="" /> (or a
-                      <video className="is-shot-media" muted loop playsInline autoPlay />)
-                      when a real screen-record exists — .is-shot-media is pre-styled
-                      object-fit:cover so iPhone geometry never moves. */}
+                  {/* ROW 2 — iPhone portrait frame with a slow cross-fading slideshow
+                      of REAL app screenshots (3 per app). Each img is absolute-fill
+                      object-fit:cover so the iPhone geometry never moves. */}
                   <div className="is-phone" aria-hidden="true">
                     <div className="is-phone-island" />
                     <div className="is-phone-screen">
-                      {/* PLACEHOLDER — illustrative, not a captured screenshot. */}
-                      <div className={`is-shot is-shot--${a.key}`}>
-                        <div className="is-shot-top">
-                          <span className="is-shot-app">{a.shot.title}</span>
-                          <span className="is-shot-tag">{a.status === 'live' ? 'Pratinjau app' : 'Segera hadir'}</span>
-                        </div>
-                        <div className="is-shot-body">
-                          <span className="is-shot-bar" /><span className="is-shot-bar" />
-                          <span className="is-shot-bar" /><span className="is-shot-bar" />
-                        </div>
-                        <div className="is-shot-foot">
-                          <span className="is-shot-cap">{a.shot.caption}</span>
-                          <span className="is-shot-metric">{a.shot.metric}</span>
-                        </div>
-                      </div>
+                      {a.shots.map((src, n) => (
+                        <img key={src} className="is-shot-media is-shot-slide" src={src} alt=""
+                          loading="lazy" style={{ animationDelay: `${n * 4}s` }} />
+                      ))}
+                      {a.status === 'segera' && <span className="is-phone-badge">Segera</span>}
                     </div>
                   </div>
 
