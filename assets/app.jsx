@@ -2687,7 +2687,7 @@
               style={{ letterSpacing: '-0.03em' }}
               delay={80} />
             <p className="mt-5 md:mt-6 max-w-2xl text-white/65 font-body font-light text-[13px] md:text-base leading-relaxed">
-              Setiap persona di-engineer dan diuji satu per satu — bukan prompt kosong yang harus kamu latih sendiri. Kamu terima tim yang sudah tahu pekerjaannya, hari pertama.
+              Tiap persona di-engineer dan diuji satu per satu — siap kerja hari pertama.
             </p>
             <AgentCarousel />
           </div>
@@ -5115,7 +5115,7 @@
               className="text-4xl md:text-6xl lg:text-7xl font-heading leading-[0.92] md:leading-[0.85] tracking-tight max-w-4xl"
               delay={90} />
             <p className="mt-6 md:mt-8 max-w-xl text-white/70 font-body font-light text-sm md:text-base px-2">
-              Atau besok pagi sama seperti pagi ini — kamu yang pilih. Tim penuh di Telegram kamu, terhubung ke app yang kamu pakai, hosting Rp 99rb/bulan.
+              Atau besok sama seperti hari ini. Kamu yang pilih.
             </p>
             <div className="mt-8 md:mt-10 flex items-center gap-3 md:gap-4 flex-wrap justify-center">
               <a href="checkout.html" className="bg-white text-black rounded-full px-5 md:px-6 py-3 text-sm font-medium flex items-center gap-2 no-underline">
