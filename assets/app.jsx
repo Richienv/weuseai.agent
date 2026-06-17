@@ -3509,10 +3509,10 @@
     // ─────────────────────── HOW IT WORKS ───────────────────────
     function FeaturesGrid() {
       const steps = [
-        { n: 1, title: 'Pilih plan kamu',     body: 'Ambil plan yang paling pas. Semua sudah termasuk satu instance weuseai.agent dedicated.', mock: 'plan' },
-        { n: 2, title: 'Isi informasi',       body: 'Pilih channel komunikasi (Telegram/Discord). Hand-picked best AI brain buat kamu — pastiin price-to-value paling worth it dan terupdate. Bot token opsional kalau pakai bot custom.', mock: 'form' },
-        { n: 3, title: 'Sistem auto-setup',   body: 'Kamu terima beres. Kami siapkan server kamu, pasang persona dan template library-nya, dan tune ke gaya kamu — tanpa kamu ngapa-ngapain.', mock: 'setup' },
-        { n: 4, title: 'Mulai pakai',         body: 'Buka Telegram, kirim pesan, biarkan ia bekerja. Nggak ada langkah setup. Nggak ada checklist.', mock: 'chat' },
+        { n: 1, title: 'Pilih plan kamu',     body: 'Satu instance dedicated, langsung termasuk.', mock: 'plan' },
+        { n: 2, title: 'Isi informasi',       body: 'Pilih channel. AI brain kami yang pilihkan.', mock: 'form' },
+        { n: 3, title: 'Sistem auto-setup',   body: 'Server, persona, template — kami siapkan.', mock: 'setup' },
+        { n: 4, title: 'Mulai pakai',         body: 'Buka Telegram, kirim pesan, beres.', mock: 'chat' },
       ];
 
       const Mock = ({ kind }) => {
@@ -3593,10 +3593,10 @@
               {steps.map((s, i) => (
                 <Mot.div key={s.n}
                   data-i={s.n}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
+                  initial={{ opacity: 0, x: i % 2 ? 36 : -36, y: 24 }}
+                  whileInView={{ opacity: 1, x: 0, y: 0 }}
                   viewport={{ once: true, amount: 0.3 }}
-                  transition={{ duration: 0.7, ease: EASE, delay: 0.1 * i }}
+                  transition={{ duration: 0.7, ease: EASE, delay: 0.12 * i }}
                   className="flex flex-col items-center text-center relative z-10"
                 >
                   <div
