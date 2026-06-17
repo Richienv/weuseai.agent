@@ -5238,16 +5238,19 @@
     function OriginSection() {
       return (
         <section id="asal-usul" className="origin-section">
+          {/* Distinct bg from the hero (rev 2026-06-17): different source +
+              denser dots + deeper oxblood hue + low-anchored light map. */}
           <DottedVideo
-            src="/assets/new-hero.mp4"
-            color="#E5322D"
-            cellSize={6}
-            className="absolute inset-0 w-full h-full pointer-events-none"
-            style={{ zIndex: 0, background: '#000' }}
+            src="/assets/trade-pro.mp4"
+            color="#B81F1B"
+            cellSize={5}
+            threshold={0.05}
+            className="absolute inset-0 w-full h-full pointer-events-none origin-dots"
+            style={{ zIndex: 0, background: '#000', opacity: 0.6 }}
           />
           <div className="hero-grain" />
           <div className="absolute inset-0 z-[1] pointer-events-none" style={{
-            background: 'linear-gradient(180deg, rgba(5,5,5,0.45) 0%, rgba(5,5,5,0.35) 45%, rgba(5,5,5,0.70) 100%)'
+            background: 'radial-gradient(ellipse 90% 70% at 50% 78%, rgba(5,5,5,0.18), rgba(5,5,5,0.62) 72%), linear-gradient(180deg, rgba(5,5,5,0.62) 0%, rgba(5,5,5,0.34) 50%, rgba(5,5,5,0.66) 100%)'
           }} />
           <div className="absolute top-0 left-0 right-0 z-[2] pointer-events-none"
             style={{ height: 120, background: 'linear-gradient(to bottom, #050505, transparent)' }} />

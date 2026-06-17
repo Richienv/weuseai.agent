@@ -301,13 +301,15 @@
       position: absolute; inset: 0; width: 100%; height: 100%;
       z-index: 0; pointer-events: none;
       background: #050505;            /* matches section, masks first-frame flash */
-      opacity: 0.55;
+      opacity: 0.72;                  /* rev 2026-06-17: noticeable (was 0.55) */
     }
     .db-section--hero .db-hero-dim {
       position: absolute; inset: 0; z-index: 1; pointer-events: none;
+      /* Lighter scrim (rev 2026-06-17) — dots read clearly while a soft dark
+         pool under the eyebrow+headline keeps text contrast. */
       background:
-        radial-gradient(ellipse 80% 60% at 50% 32%, rgba(5,5,5,0.55), rgba(5,5,5,0.86) 72%),
-        linear-gradient(180deg, rgba(5,5,5,0.80) 0%, rgba(5,5,5,0.66) 42%, rgba(5,5,5,0.88) 100%);
+        radial-gradient(ellipse 86% 64% at 50% 30%, rgba(5,5,5,0.30), rgba(5,5,5,0.66) 74%),
+        linear-gradient(180deg, rgba(5,5,5,0.52) 0%, rgba(5,5,5,0.30) 44%, rgba(5,5,5,0.80) 100%);
     }
     .db-section--hero .db-hero-fade {
       position: absolute; left: 0; right: 0; bottom: 0; height: 220px;
@@ -318,7 +320,7 @@
     .db-section--hero .db-eyebrow { position: relative; z-index: 3; }
     .db-section--hero .db-frame   { position: relative; z-index: 3; }
     @media (prefers-reduced-motion: reduce) {
-      .db-section--hero .db-hero-video { opacity: 0.18; }
+      .db-section--hero .db-hero-video { opacity: 0.32; }
     }
 
     /* Origin / founder-edge — the demoted ex-hero (rev 2026-06-16). Section sizing, not hero. */
