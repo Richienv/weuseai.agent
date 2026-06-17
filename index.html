@@ -2742,16 +2742,22 @@
     }
 
     /* Dot indicators */
-    .agent-dots { display: flex; justify-content: center; gap: 6px; margin-top: 18px; }
+    .agent-dots { display: flex; justify-content: center; gap: 0; margin-top: 14px; }
+    /* 24x24 touch target (WCAG 2.5.8) with the visual dot rendered centered via
+       ::before, so the dots look identical but are comfortably tappable. */
     .agent-dot {
+      width: 24px; height: 24px; border-radius: 999px;
+      background: transparent; border: none; padding: 0; cursor: pointer;
+      position: relative;
+    }
+    .agent-dot::before {
+      content: ''; position: absolute; top: 50%; left: 50%;
       width: 6px; height: 6px; border-radius: 999px;
       background: rgba(255, 255, 255, 0.20);
-      border: none;
-      padding: 0;
-      cursor: pointer;
+      transform: translate(-50%, -50%);
       transition: background 240ms ease, width 240ms ease;
     }
-    .agent-dot[aria-current="true"] { background: #E5322D; width: 18px; }
+    .agent-dot[aria-current="true"]::before { background: #E5322D; width: 18px; }
 
     /* Tier tie-in sub-text */
     .agent-tier-line {

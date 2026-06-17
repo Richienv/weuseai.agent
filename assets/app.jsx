@@ -415,7 +415,7 @@
           <div className="flex items-center justify-between gap-3">
             <a href="/" aria-label="weuseai.agent — beranda" className="flex items-center gap-2">
               <span className="rounded-full nav-clean grid place-items-center px-4 py-2 md:px-5 md:py-2.5">
-                <img src="assets/logo.svg" alt="weuseai.agent" className="block h-4 md:h-5 w-auto" />
+                <img src="assets/logo.svg" alt="" className="block h-4 md:h-5 w-auto" />
               </span>
             </a>
             <nav className="hidden md:flex nav-clean rounded-full px-1.5 py-1 items-center gap-0">
@@ -2884,7 +2884,7 @@
                 </div>
               </aside>
 
-              <main className="db-main">
+              <div className="db-main" role="presentation">
                 <div className="db-thread">
                   <div className="db-thread-content">
                     {visible.map(renderBubble)}
@@ -2895,7 +2895,7 @@
                     )}
                   </div>
                 </div>
-              </main>
+              </div>
             </div>
 
             {/* Input area — typewriter shows next user prompt */}
@@ -4421,12 +4421,13 @@
       return (
         <div className="vslider" style={{ '--vpct': pct + '%' }}>
           <div className="vslider-eyebrow">Geser — lihat berapa yang dia tangani</div>
-          <div className="vslider-readout">
+          <div className="vslider-readout" aria-live="polite">
             Kasih dia <b>{tasks}</b> tugas seminggu — satu agent yang menangani. Hosting tetap <b className="vslider-flat">Rp 99rb/bulan</b>.
           </div>
           <div className="vslider-track" aria-hidden="true"><span className="vslider-fill" /></div>
           <input className="vslider-input" type="range" min="5" max="200" step="5" value={tasks}
-            onChange={(e) => setTasks(+e.target.value)} aria-label="Tugas per minggu" />
+            onChange={(e) => setTasks(+e.target.value)} aria-label="Tugas per minggu"
+            aria-valuetext={`${tasks} tugas per minggu`} />
         </div>
       );
     }
@@ -5029,7 +5030,9 @@
                   <button
                     type="button"
                     className="faq-trigger"
+                    id={`faq-q-${i}`}
                     aria-expanded={openIdx === i}
+                    aria-controls={`faq-a-${i}`}
                     onClick={() => setOpenIdx(openIdx === i ? -1 : i)}
                   >
                     <span>{it.q}</span>
@@ -5037,7 +5040,7 @@
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                     </span>
                   </button>
-                  <div className="faq-body">
+                  <div className="faq-body" id={`faq-a-${i}`} role="region" aria-labelledby={`faq-q-${i}`} aria-hidden={openIdx !== i}>
                     <div className="faq-body-inner">{it.a}</div>
                   </div>
                 </div>
@@ -5096,7 +5099,7 @@
     // ─────────────────────── CTA + FOOTER ───────────────────────
     function CtaFooter() {
       return (
-        <section className="relative overflow-hidden bg-black" style={{ minHeight: 620 }}>
+        <footer className="relative overflow-hidden bg-black" style={{ minHeight: 620 }}>
           <DottedVideo
             src="/assets/ascii-wave.mp4"
             color="#E5322D"
@@ -5145,7 +5148,7 @@
               </p>
             </div>
           </div>
-        </section>
+        </footer>
       );
     }
 
@@ -5369,22 +5372,24 @@
         <div className="bg-black">
           <div className="relative z-10">
             <Navbar />
-            <DashboardDemo />
-            <div className="bg-black">
-              <IntegrationsSpine />
-              <OriginSection />
-              <StartSection />
-              <FeaturesChess />
-              <VelvetSection />
-              <FeaturesGrid />
-              <ChatVsAgentSection />
-              <CostComparisonSection />
-              <Pricing />
-              <CommunitySection />
-              <FAQ />
-              <Stats />
-              <CtaFooter />
-            </div>
+            <main>
+              <DashboardDemo />
+              <div className="bg-black">
+                <IntegrationsSpine />
+                <OriginSection />
+                <StartSection />
+                <FeaturesChess />
+                <VelvetSection />
+                <FeaturesGrid />
+                <ChatVsAgentSection />
+                <CostComparisonSection />
+                <Pricing />
+                <CommunitySection />
+                <FAQ />
+                <Stats />
+              </div>
+            </main>
+            <CtaFooter />
           </div>
         </div>
       );
