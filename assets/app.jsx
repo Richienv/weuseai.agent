@@ -3238,12 +3238,12 @@
         { kind: 'knowledge', title: 'Pengetahuan',     body: 'Membangun memori dari setiap catatan, percakapan, dan tugas. Ia mengingat semua yang kamu kerjakan.' },
         { kind: 'memory',    title: 'Memori',          body: 'Ingat segalanya lintas sesi. Memori permanen dengan pencarian 10ms untuk 10.000+ entri — nggak perlu jelasin konteks dari awal lagi.' },
         { kind: 'schedule',  title: 'Jadwal',          body: 'Otomasi jadwal pakai bahasa biasa. Tulis "setiap Senin jam 8, lakukan X" — tanpa coding, tanpa batas harian.' },
-        { kind: 'browse',    title: 'Browsing',        body: 'Browsing internet secara mandiri. Scraping, search, dan otomasi browser via Firecrawl.' },
+        { kind: 'browse',    title: 'Browsing',        body: 'Browsing internet secara mandiri. Scraping, search, dan otomasi browser.' },
         { kind: 'platforms', title: 'Multi-platform',  body: 'Runtime-nya mendukung 15+ kanal — Telegram, Discord, Slack, dan lainnya. Kamu mulai di Telegram; kanal lain menyusul.' },
         { kind: 'subagent',  title: 'Sub-agen',        body: 'Mendelegasikan tugas paralel ke 5 sub-agen spesialis sekaligus — tiap satu fokus di domain-nya.' },
         { kind: 'skill',     title: 'Skill mandiri',   body: 'Menulis skill sendiri secara otomatis. Setelah tugas kompleks, ia mendokumentasi metodologinya — biar nggak perlu mikir ulang.' },
-        { kind: 'home',      title: 'Smart Home',      body: 'Kontrol rumah pintar. Integrasi native Home Assistant dengan perintah suara biasa.' },
-        { kind: 'files',     title: 'File Management', body: 'Beresin Google Docs yang berantakan. File chaos jadi rapih — dia yang nyusun.' },
+        { kind: 'home',      title: 'Smart Home',      body: 'Kontrol rumah pintar lewat perintah biasa.' },
+        { kind: 'files',     title: 'File Management', body: 'Beresin dokumen yang berantakan. File chaos jadi rapih — dia yang nyusun.' },
       ];
 
       const UseCaseViz = ({ kind }) => {
