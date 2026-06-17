@@ -25,19 +25,38 @@ const ALLOWED_HEADERS =
 const ALLOWED_METHODS = 'POST, OPTIONS'
 const MAX_AGE = '86400'
 
-// Tight pattern: only our Vercel project hosts are allowed.
-// Examples that match:
-//   https://weuseai-agent.vercel.app
+// Exact production / custom-domain origins (both apexes auto-track main).
+// Extend this set when a real custom domain (e.g. weuseai.id) lands.
+const ALLOWED_EXACT_ORIGINS = new Set<string>([
+  'https://weuseai-agent.vercel.app',
+  'https://velorah-nu.vercel.app',
+])
+
+// Vercel preview deploys for THIS project + scope only. Preview hosts are
+// <project>-<hash-or-git-branch>-<scope-slug>.vercel.app — e.g.
 //   https://weuseai-agent-ibbxfduv4-richies-projects-6f212435.vercel.app
-const PROJECT_ORIGIN_RE =
-  /^https:\/\/weuseai-agent(?:-[a-z0-9]+(?:-[a-z0-9-]+)?)?\.vercel\.app$/i
+//   https://weuseai-agent-git-landing-…-richies-projects-6f212435.vercel.app
+// We require BOTH the project prefix AND the trusted scope suffix, so a third
+// party cannot register "weuseai-agent-evil.vercel.app" under THEIR own scope
+// and pass (the old greedy regex would have allowed that). The middle segment
+// must be Vercel's slug charset only.
+const PREVIEW_PREFIX = 'https://weuseai-agent-'
+const PREVIEW_SUFFIX = '-richies-projects-6f212435.vercel.app'
+
+function isAllowedOrigin(origin: string): boolean {
+  if (ALLOWED_EXACT_ORIGINS.has(origin)) return true
+  if (origin.startsWith(PREVIEW_PREFIX) && origin.endsWith(PREVIEW_SUFFIX)) {
+    const middle = origin.slice(PREVIEW_PREFIX.length, origin.length - PREVIEW_SUFFIX.length)
+    return /^[a-z0-9-]+$/i.test(middle)
+  }
+  return false
+}
 
 function pickAllowedOrigin(req: Request): string {
   const origin = req.headers.get('origin') ?? ''
-  if (PROJECT_ORIGIN_RE.test(origin)) return origin
-  // Fallback to the canonical production origin. Browsers will reject
-  // the response if their actual origin doesn't match, which is the
-  // safe behavior — better to fail closed than silently allow.
+  if (isAllowedOrigin(origin)) return origin
+  // Fail closed: echo the canonical production origin so an unknown origin is
+  // rejected by the browser rather than silently allowed. Never wildcard.
   return 'https://weuseai-agent.vercel.app'
 }
 

@@ -27,10 +27,18 @@ echo "── 1/4 Migrations"
 supabase db push --project-ref "$REF"
 
 # ── 2. Edge Functions (everything in supabase/functions/) ─────────────
+# IMPORTANT: _shared/cors.ts is bundled per-function at deploy time — there is
+# no shared runtime module. So a CORS change (e.g. adding an allowed origin)
+# only takes effect for functions that are RE-DEPLOYED here. Every
+# browser-callable function (the checkout + onboarding/welcome funnel) must be
+# in this loop or it keeps serving stale CORS and rejects preview/new origins.
 echo "── 2/4 Edge Functions"
 for fn in fleet-sentinel persona-genesis genesis-distill library-refine library-proposal-apply \
           bundle-fetch create-invoice complete-onboarding xendit-webhook \
-          retry-pending-provisions customer-tier-bump restart-hermes; do
+          retry-pending-provisions customer-tier-bump restart-hermes \
+          customer-progress-proxy customer-readiness rotate-pairing-code \
+          validate-bot-token save-onboarding-profile reset-bot-pairing \
+          agent-chat-relay; do
   if [ -d "supabase/functions/$fn" ]; then
     echo "   deploy $fn"
     supabase functions deploy "$fn" --project-ref "$REF"
