@@ -27,4 +27,6 @@ Orchestrated by Opus 4.8 in a self-paced `/loop`, using ultracode workflows for 
 - `75fd81e` [#271] Pricing ValueSlider (interactive, honest) + hero trim — verified, gates 10/10.
 - `253ac16` [#271] Hero circuit-flow bg + minimal color-split copy.
 - `0e39045` [#271] Centerpiece + origin copy slashed to one-liners.
+- `f254482` [#271] How-it-works: 4 step bodies → one-liners + alternating slide-in motion.
+- _(next)_ [#271] Carousel: 12 descs → 2-4-word capability tags (cleaner cards).
 - _(loop appends below as it ships)_
