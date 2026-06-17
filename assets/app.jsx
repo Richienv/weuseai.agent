@@ -387,6 +387,11 @@
       const parts = by === 'word' ? text.split(' ') : text.split('');
       const [inView, setInView] = useState(false);
       const ref = useRef(null);
+      // The CSS reduced-motion reset can't reach framer's JS-driven reveal, so
+      // gate it here: motion-sensitive users get the headline already settled.
+      const reduced = typeof window !== 'undefined' && window.matchMedia
+        && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const settled = { filter: 'blur(0px)', opacity: 1, y: 0 };
       useEffect(() => {
         const el = ref.current; if (!el) return;
         const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setInView(true); io.unobserve(el); } }, { threshold: 0.15 });
@@ -402,9 +407,9 @@
                 display: 'inline-block',
                 marginRight: by === 'word' && i < parts.length - 1 ? '0.28em' : 0
               }}
-              initial={{ filter: 'blur(10px)', opacity: 0, y: 50 }}
-              animate={inView ? { filter: 'blur(0px)', opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.7, ease: EASE, delay: i * delay / 1000 }}>
+              initial={reduced ? settled : { filter: 'blur(10px)', opacity: 0, y: 50 }}
+              animate={reduced ? settled : (inView ? settled : {})}
+              transition={reduced ? { duration: 0 } : { duration: 0.7, ease: EASE, delay: i * delay / 1000 }}>
               {p}
             </Mot.span>
           ))}
@@ -5201,7 +5206,7 @@
           <div className="is-wrap">
             <div className="is-eyebrow"><span className="live-dot" /><span>Agen kamu nggak cuma menjawab</span></div>
             <BlurText as="h2" text="Dia kerja di app beneran." className="is-headline" delay={70} />
-            <p className="is-sub">Bukan jawab di chat — dia kerja di app kamu.</p>
+            <p className="is-sub">Konten, keuangan, latihan — dikerjakan langsung di app-nya, bukan cuma diketik balik.</p>
             <div className="is-hub" aria-hidden="true"><span className="live-dot" /><span>Satu agen</span></div>
             <div className="is-grid">
               {apps.map((a, i) => (

@@ -58,4 +58,7 @@ Orchestrated by Opus 4.8 in a self-paced `/loop`, using ultracode workflows for 
 
 ### ⚑ NEW flag for founder (round-2):
 - **8 vs 5 menit:** OriginSection shows "Aktif 8 menit" (headline) + "Setup 5 menit" (sub) in one viewport; meta/og + FeaturesGrid say 8. These are arguably DISTINCT metrics (setup 5 min, fully active 8 min — you've shipped both together before in the original hero), so I did NOT auto-change a number. If you want them unified, say which is canonical and I'll align all references; or I can reword to "Setup 5 menit, aktif penuh 8 menit" to disambiguate.
-- _(loop continues: CDN self-host robustness (China white-screen risk) → remaining round-2 P1s → /faq → use-cases → round-3 audit)_
+- `bfed144` [#271] round-2 P0: VelvetSection honesty over-claims fixed.
+- `20bb301` [#271] round-2 P0: self-hosted React/ReactDOM/framer-motion under assets/vendor/ + ErrorBoundary + Mot passthrough fallback (China white-screen robustness). Verified app mounts + framer works from self-host.
+- _(next)_ [#271] **round-2 P1a:** dropped dead render-blocking Noto Serif SC from the Google Fonts URL (no font-hanzi usage); IntegrationsSpine sub now specific ("Konten, keuangan, latihan — dikerjakan langsung di app-nya…"); BlurText reduced-motion gate (headlines render settled — the CSS RM reset can't reach framer JS). Both motion modes verified, gates 10/10.
+- _(loop continues: round-2 P1b (hero-video defer, modal focus-trap) → P2 cluster → /faq → use-cases → round-3 audit, wind down after a clean pass)_
