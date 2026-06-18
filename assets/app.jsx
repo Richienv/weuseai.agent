@@ -2930,7 +2930,7 @@
             </div>
 
             {/* Animated mouse cursor — moves to send button when user message is ready */}
-            <div className={`db-cursor cur-${phase}`}>
+            <div className={`db-cursor cur-${phase}`} aria-hidden="true">
               <svg viewBox="0 0 18 22">
                 <path d="M2 2 L2 17 L6.5 13 L9 18 L11.5 17 L8.8 12 L14 12 Z" fill="#fff" stroke="#000" strokeWidth="0.7" strokeLinejoin="round" />
               </svg>
@@ -4056,7 +4056,7 @@
           ariaLabel: 'Perbandingan AI agent biasa',
         },
         {
-          name: 'weuseai.agent Pro',
+          name: 'weuseai.agent',
           subtitle: 'Agent AI',
           subtitleAside: 'multi-agent paralel, milik kamu',
           featured: true,
@@ -4074,7 +4074,7 @@
             { have: true, text: 'Jalan 24/7 di server milik kamu sendiri' },
             { have: true, text: 'Di-tune ke gaya nulis dan pekerjaan kamu, satu per satu' },
           ],
-          ariaLabel: 'Perbandingan weuseai.agent Pro (paket kami)',
+          ariaLabel: 'Perbandingan weuseai.agent (paket kami)',
         },
         {
           name: 'Claude Pro',
@@ -4882,7 +4882,7 @@
           handle: '@hermes_agent',
           timestamp: '3 hari lalu',
           body: [
-            '"Hermes Agent sekarang punya multi-agent via Kanban, baru di v0.12.0. Beberapa agent ngambil task dari papan, kerja paralel, dan hand-off saat ada yang stuck. Kamu pantau progress dan unblock dari satu view, bukan juggling banyak terminal."',
+            '"Hermes Agent sekarang punya multi-agent via Kanban. Beberapa agent ngambil task dari papan, kerja paralel, dan hand-off saat ada yang stuck. Kamu pantau progress dan unblock dari satu view, bukan juggling banyak terminal."',
           ],
           sourceLabel: 'github.com/NousResearch/hermes-agent',
           sourceUrl: 'https://github.com/NousResearch/hermes-agent',
@@ -5012,9 +5012,9 @@
     function FAQ() {
       const items = [
         { q: 'Gak tech-savvy, bisa pakai?',
-          a: 'Bisa. Setup otomatis, gak install apa-apa — cukup chat di Telegram, agent yang ngerjain.' },
+          a: 'Bisa. Setup otomatis, nggak install apa-apa — cukup chat di Telegram, agent yang ngerjain.' },
         { q: 'Aman buat data bisnis?',
-          a: 'Agent jalan di VPS pribadi kamu, bukan shared. Kami gak baca isi chat kecuali kamu minta bantuan dan kasih izin.' },
+          a: 'Agent jalan di VPS pribadi kamu, bukan shared. Kami nggak baca isi chat kecuali kamu minta bantuan dan kasih izin.' },
         { q: 'Beda sama subscription biasa?',
           a: 'Setup sekali bayar. Hosting Rp 99rb transparan kayak bayar listrik, stop kapan saja.' },
         { q: 'Berapa biaya LLM-nya?',
