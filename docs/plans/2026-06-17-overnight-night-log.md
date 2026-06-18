@@ -61,4 +61,6 @@ Orchestrated by Opus 4.8 in a self-paced `/loop`, using ultracode workflows for 
 - `bfed144` [#271] round-2 P0: VelvetSection honesty over-claims fixed.
 - `20bb301` [#271] round-2 P0: self-hosted React/ReactDOM/framer-motion under assets/vendor/ + ErrorBoundary + Mot passthrough fallback (China white-screen robustness). Verified app mounts + framer works from self-host.
 - _(next)_ [#271] **round-2 P1a:** dropped dead render-blocking Noto Serif SC from the Google Fonts URL (no font-hanzi usage); IntegrationsSpine sub now specific ("Konten, keuangan, latihan — dikerjakan langsung di app-nya…"); BlurText reduced-motion gate (headlines render settled — the CSS RM reset can't reach framer JS). Both motion modes verified, gates 10/10.
-- _(loop continues: round-2 P1b (hero-video defer, modal focus-trap) → P2 cluster → /faq → use-cases → round-3 audit, wind down after a clean pass)_
+- `f78e546` [#271] round-2 P1a: dead font + spine sub + BlurText reduced-motion.
+- _(next)_ [#271] **round-2 P1b:** PriceBreakdownModal focus trap (Tab cycles within the dialog, focus restored to trigger on close) + verified modal opens with focus inside, 0 JS errors. **Hero-video defer NOT done — flagged:** DottedVideo is a shared component (used in ~6 sections); a global rAF-defer would regress them, and a hero-only prop is fiddly for a modest gain (it already has an IntersectionObserver + mobile throttling). Left as-is.
+- _(loop continues: round-2 P2 cluster → /faq → use-cases → round-3 audit; wind down after a clean pass)_

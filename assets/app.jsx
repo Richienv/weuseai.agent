@@ -3699,7 +3699,19 @@
 
       React.useEffect(() => {
         if (!open) return;
-        const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+        const prevFocus = document.activeElement;
+        const onKey = (e) => {
+          if (e.key === 'Escape') { onClose(); return; }
+          if (e.key === 'Tab') {
+            // Focus trap (WCAG 2.4.3/2.1.2): keep Tab inside the dialog.
+            const sel = 'a[href],button:not([disabled]),input,select,textarea,[tabindex]:not([tabindex="-1"])';
+            const list = Array.from(dialogRef.current?.querySelectorAll(sel) || []).filter((el) => el.offsetParent !== null);
+            if (!list.length) return;
+            const first = list[0], last = list[list.length - 1];
+            if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+            else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+          }
+        };
         document.addEventListener('keydown', onKey);
         const prev = document.body.style.overflow;
         document.body.style.overflow = 'hidden';
@@ -3710,6 +3722,8 @@
         return () => {
           document.removeEventListener('keydown', onKey);
           document.body.style.overflow = prev;
+          // Restore focus to whatever opened the dialog.
+          if (prevFocus && typeof prevFocus.focus === 'function') prevFocus.focus();
         };
       }, [open, onClose]);
 
