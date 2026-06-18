@@ -2857,7 +2857,7 @@
             <p className="db-sub">Dia nyapa kamu duluan — briefing pagi masuk sebelum diminta. Kamu cukup setujui.</p>
             <div className="mt-7 flex flex-col items-center gap-3">
               <div className="flex items-center gap-3 flex-wrap justify-center">
-                <a href="checkout.html" className="rounded-full px-5 py-2.5 min-h-[44px] text-sm font-medium flex items-center gap-2 no-underline" style={{ background: '#fff', color: '#0a0a0a', border: '1px solid #fff' }}>
+                <a href="#pricing" className="rounded-full px-5 py-2.5 min-h-[44px] text-sm font-medium flex items-center gap-2 no-underline" style={{ background: '#fff', color: '#0a0a0a', border: '1px solid #fff' }}>
                   Aktifkan asisten kamu <ArrowUpRight size={14} stroke={2.2} />
                 </a>
                 <a href="https://cal.com/weuseai.agent/15min" target="_blank" rel="noopener" className="rounded-full px-5 py-2.5 min-h-[44px] text-sm font-medium flex items-center gap-2 no-underline text-white" style={{ background: 'rgba(255, 255, 255, 0.06)', border: '1px solid rgba(255, 255, 255, 0.22)', backdropFilter: 'blur(8px)' }}>
@@ -5153,7 +5153,7 @@
               Atau besok sama seperti hari ini. Kamu yang pilih.
             </p>
             <div className="mt-8 md:mt-10 flex items-center gap-3 md:gap-4 flex-wrap justify-center">
-              <a href="checkout.html" className="bg-white text-black rounded-full px-5 md:px-6 py-3 text-sm font-medium flex items-center gap-2 no-underline">
+              <a href="#pricing" className="bg-white text-black rounded-full px-5 md:px-6 py-3 text-sm font-medium flex items-center gap-2 no-underline">
                 Aktifkan asisten kamu <ArrowUpRight size={14} stroke={2.2} />
               </a>
               <a href="https://cal.com/weuseai.agent/15min" target="_blank" rel="noopener" className="liquid-glass-strong rounded-full px-5 md:px-6 py-3 text-sm font-medium no-underline text-white">
@@ -5357,7 +5357,7 @@
               transition={{ duration: 0.6, ease: EASE, delay: 0.35 }}
               className="mt-8 flex flex-col items-center gap-3">
               <div className="flex items-center gap-3 flex-wrap justify-center">
-                <a href="checkout.html" className="rounded-full px-5 py-2.5 min-h-[44px] text-sm font-medium flex items-center gap-2 no-underline"
+                <a href="#pricing" className="rounded-full px-5 py-2.5 min-h-[44px] text-sm font-medium flex items-center gap-2 no-underline"
                   style={{ background: '#fff', color: '#0a0a0a', border: '1px solid #fff' }}>
                   Aktifkan asisten kamu <ArrowUpRight size={14} stroke={2.2} />
                 </a>
