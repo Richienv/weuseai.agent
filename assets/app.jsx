@@ -12,7 +12,6 @@
       },
     });
 
-    const HERO_VIDEO = "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260307_083826_e938b29f-a43a-41ec-a153-3d4730578ab8.mp4";
     const HLS_STATS = "https://stream.mux.com/NcU3HlHeF7CUL86azTTzpy3Tlb00d6iF3BmCdFslMJYM.m3u8";
 
     const EASE = [0.16, 1, 0.3, 1];
@@ -190,7 +189,7 @@
             ref={videoRef}
             src={src}
             loop muted playsInline
-            preload="metadata"
+            preload="none"
             crossOrigin="anonymous"
             aria-hidden="true"
             style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none' }}

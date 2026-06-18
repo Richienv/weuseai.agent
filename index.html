@@ -35,6 +35,10 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
+  <!-- Warm DNS+TLS for the Stats Mux HLS stream + hls.js CDN (non-Safari path loads both on hydration). -->
+  <link rel="preconnect" href="https://stream.mux.com" crossorigin>
+  <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+
 
   <!-- React production builds — faster runtime, smaller payload than dev builds. -->
   <!-- Self-hosted vendor (rev 2026-06-17): no unpkg dependency — avoids a white
