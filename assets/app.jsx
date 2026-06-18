@@ -3899,14 +3899,11 @@
             </div>
           )}
 
-          {/* 1. Tier name + tagline */}
+          {/* 1. Tier name */}
           <div>
-            <h3 className="text-lg md:text-xl font-heading text-white" style={{ letterSpacing: '-0.02em' }}>
+            <h3 className="text-2xl md:text-3xl font-heading text-white" style={{ letterSpacing: '-0.03em' }}>
               {tier.name}
             </h3>
-            <p className="mt-1 text-sm italic text-white/65 font-body font-light leading-snug">
-              {tier.tagline}
-            </p>
           </div>
 
           {/* 2. Price breakdown — setup + hosting + Bulan 1 total + recurring */}
@@ -3939,36 +3936,11 @@
                 {tier.month1Total}
               </span>
             </div>
-            {/* Recurring — rendered as a live "utility meter" (bayar kayak listrik). */}
-            <div className="flex items-baseline justify-between gap-3">
-              <span className="text-xs font-body font-light text-white/55">Bulan 2 dst</span>
-              <span className="utility-meter" aria-label={`${tier.recurringLabel || 'Rp 99rb/bulan'}, dibayar seperti listrik`}>
-                <span className="utility-meter__track" aria-hidden="true">
-                  <span className="utility-meter__fill" />
-                </span>
-                <span className="utility-meter__label text-sm font-body text-white/90">
-                  {tier.recurringLabel || 'Rp 99rb/bulan'}
-                </span>
-              </span>
-            </div>
-            <p className="mt-2 text-[10px] font-mono uppercase tracking-[0.12em] text-white/45">
-              Diskon launch · Cancel kapan aja
-            </p>
           </div>
 
-          {/* 3. Untuk siapa */}
-          <div className="mt-6">
-            <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-white/45 mb-2">
-              Untuk siapa
-            </div>
-            <p className="text-sm text-white/75 font-body font-light leading-relaxed">
-              {tier.persona}
-            </p>
-          </div>
-
-          {/* 4. Yang kamu dapat (outcomes) */}
-          <div className="mt-6">
-            <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-white/45 mb-2">
+          {/* 3. Yang kamu dapat (outcomes) — the main focus of the card */}
+          <div className="mt-7">
+            <div className="text-[11px] font-mono uppercase tracking-[0.18em] text-white/60 mb-3">
               Yang kamu dapat
             </div>
             {tier.inheritFrom && (
@@ -3976,15 +3948,15 @@
                 Semua yang ada di {tier.inheritFrom}, plus:
               </p>
             )}
-            <ul className="space-y-2.5 list-none pc-outcomes">
+            <ul className="space-y-3 list-none pc-outcomes">
               {tier.outcomes.map((o, oi) => (
-                <li key={oi} className="flex items-start gap-2.5 text-sm font-body font-light leading-relaxed">
+                <li key={oi} className="flex items-start gap-3 text-[15px] md:text-base font-body leading-relaxed">
                   <span
                     aria-hidden="true"
-                    className="mt-[7px] block w-1 h-1 flex-shrink-0 rounded-full"
-                    style={{ background: isFeatured ? '#E5322D' : 'rgba(255,255,255,0.4)' }}
+                    className="mt-[8px] block w-1.5 h-1.5 flex-shrink-0 rounded-full"
+                    style={{ background: isFeatured ? '#E5322D' : 'rgba(229,50,45,0.6)' }}
                   />
-                  <span className="text-white/85">{o}</span>
+                  <span className="text-white/90">{o}</span>
                 </li>
               ))}
             </ul>
@@ -4001,12 +3973,10 @@
           <div className="flex-1" />
 
           {/* 6. CTA + 7. breakdown link.
-              Phase A: pricing CTAs route to the manual-onboarding path
-              (WhatsApp, tier prefilled) — founder provisions via the admin
-              form after contact. Self-serve checkout for the new tier slugs
-              is a deferred follow-up bundled with the Xendit prod-mode
-              rotation (checkout.html + create-invoice still speak the old
-              slugs only). External wa.me / mailto links open in a new tab. */}
+              Pricing CTAs route to self-serve checkout with the tier
+              pre-selected (checkout.html?plan=<slug>); checkout.html PLANS +
+              create-invoice both speak the v1.4 slugs. Same-tab internal nav;
+              the target/rel test below only fires for any http/mailto href. */}
           <a
             href={tier.ctaHref}
             target={/^https?:|^mailto:/.test(tier.ctaHref) ? '_blank' : undefined}
@@ -4488,7 +4458,7 @@
           apps: ['Telegram'],
           appsTotal: 1,
           cta: 'Mulai Bare Agent',
-          ctaHref: 'https://wa.me/6282154902561?text=Halo%2C%20saya%20mau%20mulai%20paket%20Bare%20Agent%20di%20weuseai.agent',
+          ctaHref: 'checkout.html?plan=bare',
           featured: false,
         },
         {
@@ -4510,7 +4480,7 @@
           apps: ['Telegram', 'Web'],
           appsTotal: 2,
           cta: 'Mulai Solo Starter',
-          ctaHref: 'https://wa.me/6282154902561?text=Halo%2C%20saya%20mau%20mulai%20paket%20Solo%20Starter%20di%20weuseai.agent',
+          ctaHref: 'checkout.html?plan=solo',
           featured: false,
         },
         {
@@ -4532,7 +4502,7 @@
           apps: ['Telegram', 'Voice note', 'Web'],
           appsTotal: 3,
           cta: 'Mulai Voice Starter',
-          ctaHref: 'https://wa.me/6282154902561?text=Halo%2C%20saya%20mau%20mulai%20paket%20Voice%20Starter%20di%20weuseai.agent',
+          ctaHref: 'checkout.html?plan=voice-starter',
           featured: false,
         },
         {
@@ -4554,7 +4524,7 @@
           apps: ['Telegram', 'Voice note', 'Web'],
           appsTotal: 3,
           cta: 'Ambil Library Lengkap',
-          ctaHref: 'https://wa.me/6282154902561?text=Halo%2C%20saya%20mau%20ambil%20paket%20Library%20Lengkap%20di%20weuseai.agent',
+          ctaHref: 'checkout.html?plan=library-full',
           featured: true,
         },
         {
@@ -4576,7 +4546,7 @@
           apps: ['Telegram', 'Voice note', 'Web app'],
           appsTotal: 4,
           cta: 'Ambil Siap Pakai',
-          ctaHref: 'https://wa.me/6282154902561?text=Halo%2C%20saya%20mau%20ambil%20paket%20Siap%20Pakai%20di%20weuseai.agent',
+          ctaHref: 'checkout.html?plan=done-for-you',
           featured: false,
         },
       ];
