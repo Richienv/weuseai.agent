@@ -5075,6 +5075,13 @@
                 </div>
               ))}
             </Mot.div>
+
+            <div className="mt-9 text-center">
+              <a href="/faq" className="faq-all-link">
+                Lihat semua pertanyaan
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+              </a>
+            </div>
           </div>
         </section>
       );

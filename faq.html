@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FAQ — weuseai.id</title>
+  <meta name="description" content="Pertanyaan yang sering muncul soal weuseai.agent — setup, keamanan data, biaya, dan cara kerjanya. Jawaban jujur sebelum kamu mulai.">
+  <link rel="canonical" href="https://weuseai.id/faq">
+  <link rel="icon" href="/assets/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root { --bg: #0a0a0a; --bg2: #050505; --ink: #f5f5f5; --red: #E5322D; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { background: var(--bg); color: var(--ink); font-family: 'Inter', system-ui, sans-serif; font-weight: 300; -webkit-font-smoothing: antialiased; min-height: 100vh; }
+    a { color: inherit; }
+
+    .wrap { max-width: 760px; margin: 0 auto; padding: 0 20px; }
+
+    /* Header */
+    header { position: sticky; top: 0; z-index: 10; backdrop-filter: blur(10px); background: rgba(10,10,10,0.72); border-bottom: 1px solid rgba(255,255,255,0.06); }
+    .nav { display: flex; align-items: center; justify-content: space-between; height: 60px; }
+    .brand { font-family: 'Instrument Serif', serif; font-size: 20px; letter-spacing: -0.01em; text-decoration: none; color: var(--ink); }
+    .brand b { color: var(--red); font-weight: 400; }
+    .home-link { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(245,245,245,0.7); text-decoration: none; padding: 8px 14px; border: 1px solid rgba(255,255,255,0.16); border-radius: 999px; transition: border-color 220ms ease, color 220ms ease; }
+    .home-link:hover { border-color: rgba(229,50,45,0.5); color: var(--ink); }
+
+    /* Hero */
+    .hero { text-align: center; padding: 72px 0 40px; position: relative; overflow: hidden; }
+    .hero::before { content: ''; position: absolute; inset: -40% 0 auto 0; height: 320px; background: radial-gradient(ellipse 60% 100% at 50% 0%, rgba(229,50,45,0.16), transparent 70%); pointer-events: none; }
+    .pill { display: inline-flex; align-items: center; gap: 8px; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: #FF6B66; background: rgba(229,50,45,0.10); border: 1px solid rgba(229,50,45,0.4); padding: 5px 14px; border-radius: 999px; position: relative; }
+    .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--red); display: inline-block; }
+    h1 { font-family: 'Instrument Serif', serif; font-weight: 400; font-size: clamp(2.2rem, 6vw, 3.6rem); line-height: 1.02; letter-spacing: -0.03em; margin-top: 20px; }
+    h1 .em { color: var(--red); }
+    .sub { margin-top: 18px; max-width: 30ch; margin-left: auto; margin-right: auto; color: rgba(245,245,245,0.6); font-size: 15px; line-height: 1.5; }
+
+    /* Accordion */
+    .faq { padding: 8px 0 64px; }
+    details { border-bottom: 1px solid rgba(255,255,255,0.08); }
+    details[open] { background: linear-gradient(180deg, rgba(229,50,45,0.04), transparent); }
+    summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 22px 4px; font-size: 16px; font-weight: 400; color: var(--ink); transition: color 200ms ease; }
+    summary::-webkit-details-marker { display: none; }
+    summary:hover { color: #fff; }
+    summary:focus-visible { outline: 2px solid rgba(229,50,45,0.6); outline-offset: 4px; border-radius: 6px; }
+    .icon { flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.18); display: grid; place-items: center; color: rgba(245,245,245,0.7); transition: transform 240ms ease, border-color 240ms ease, color 240ms ease; }
+    details[open] .icon { transform: rotate(45deg); border-color: rgba(229,50,45,0.55); color: var(--red); }
+    .answer { padding: 0 4px 24px; color: rgba(245,245,245,0.66); font-size: 15px; line-height: 1.6; max-width: 64ch; }
+
+    /* CTA + footer */
+    .cta { text-align: center; padding: 28px 0 56px; }
+    .cta p { color: rgba(245,245,245,0.6); font-size: 15px; margin-bottom: 18px; }
+    .btn { display: inline-flex; align-items: center; gap: 8px; background: #fff; color: #0a0a0a; text-decoration: none; font-weight: 500; font-size: 14px; padding: 12px 22px; border-radius: 999px; transition: transform 200ms ease; }
+    .btn:hover { transform: translateY(-2px); }
+    footer { border-top: 1px solid rgba(255,255,255,0.06); background: var(--bg2); padding: 32px 0; }
+    .foot-links { display: flex; flex-wrap: wrap; gap: 8px 16px; justify-content: center; font-size: 13px; }
+    .foot-links a { color: rgba(245,245,245,0.6); text-decoration: none; }
+    .foot-links a:hover { color: var(--ink); }
+    .foot-note { text-align: center; margin-top: 16px; color: rgba(245,245,245,0.45); font-size: 12.5px; line-height: 1.6; }
+    .foot-note a { color: rgba(245,245,245,0.8); }
+
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { transition: none !important; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap nav">
+      <a class="brand" href="/">weuse<b>ai</b></a>
+      <a class="home-link" href="/">← Beranda</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="wrap">
+        <span class="pill"><span class="dot"></span>FAQ</span>
+        <h1>Pertanyaan yang <span class="em">sering muncul</span>.</h1>
+        <p class="sub">Jawaban jujur, sebelum kamu mulai.</p>
+      </div>
+    </section>
+
+    <section class="faq">
+      <div class="wrap">
+        <details open>
+          <summary>Saya gak tech-savvy, bisa pakai?<span class="icon" aria-hidden="true">+</span></summary>
+          <div class="answer">Bisa. Setup otomatis — nggak install apa pun, nggak perlu tau coding atau VPS. Cukup chat di Telegram seperti chat sama temen. Agent yang ngerjain.</div>
+        </details>
+        <details>
+          <summary>Bahasa apa yang didukung? Bisa pure Bahasa Indonesia?<span class="icon" aria-hidden="true">+</span></summary>
+          <div class="answer">Default Bahasa Indonesia. English juga didukung penuh. Chat campuran (Bahasa + English) jalan natural.</div>
+        </details>
+        <details>
+          <summary>Aman buat data bisnis saya?<span class="icon" aria-hidden="true">+</span></summary>
+          <div class="answer">Agent jalan di server VPS pribadi kamu, bukan dibagi dengan customer lain. Memori chat nggak dibagi ke kami, bukan data training. Template yang kamu bangun tetap di server kamu.</div>
+        </details>
+        <details>
+          <summary>Bisa pakai metode pembayaran apa?<span class="icon" aria-hidden="true">+</span></summary>
+          <div class="answer">Bank transfer (semua bank Indonesia), GoPay, OVO, DANA, ShopeePay, kartu kredit/debit. Lewat Xendit (gateway pembayaran Indonesia).</div>
+        </details>
+        <details>
+          <summary>Apa beda dengan subscription biasa?<span class="icon" aria-hidden="true">+</span></summary>
+          <div class="answer">Setup-nya beneran sekali bayar — kamu beli kerja engineering yang sudah kami lakukan. Hosting Rp 99rb/bulan transparan: itu biaya server yang real, kayak bayar listrik. Berhenti kapan saja — tagihan berhenti, setup tetap kamu punya.</div>
+        </details>
+        <details>
+          <summary>Kenapa harus bayar hosting kalau setup sudah dibayar?<span class="icon" aria-hidden="true">+</span></summary>
+          <div class="answer">Setup itu kerja kami sekali (konfigurasi VPS, install agent, tune ke gaya kamu). Hosting itu biaya VPS yang jalan terus 24/7 — server butuh listrik dan resource yang real. Kami nggak mau pura-pura itu gratis; lebih jujur kalau transparan.</div>
+        </details>
+        <details>
+          <summary>Kalau nggak cocok atau mau berhenti?<span class="icon" aria-hidden="true">+</span></summary>
+          <div class="answer">Berhenti kapan saja — tagihan hosting berhenti, setup tetap milik kamu. Kebijakan refund tertulis, link-nya di footer. Mau lanjut lagi nanti, tinggal bilang.</div>
+        </details>
+        <details>
+          <summary>Berapa lama proses setup sampai agent saya jalan?<span class="icon" aria-hidden="true">+</span></summary>
+          <div class="answer">Sekitar 8 menit setelah bayar — angka yang kami ukur, bukan janji. Agent makin nyambung setelah beberapa hari dipakai, karena dia ingat percakapan dan menyesuaikan gaya kamu.</div>
+        </details>
+        <details>
+          <summary>Berapa biaya LLM-nya?<span class="icon" aria-hidden="true">+</span></summary>
+          <div class="answer">Kredit perkenalan sudah termasuk di setup — cukup untuk ratusan pesan pertama. Setelah itu kamu pakai kunci API sendiri (DeepSeek mulai dari puluhan ribu rupiah per bulan untuk pemakaian normal). Kami bantu pasang, dan biayanya transparan langsung ke penyedia, tanpa markup dari kami.</div>
+        </details>
+        <details>
+          <summary>Apa beda dengan ChatGPT atau Claude biasa?<span class="icon" aria-hidden="true">+</span></summary>
+          <div class="answer">ChatGPT nunggu kamu tanya. Agent ini ngerjain duluan: briefing pagi, ringkasan sore, draf dokumen dan caption dari template Indonesia, riset web, dan playbook multi-langkah — sambil ingat percakapan kamu lintas hari. ChatGPT bantu kamu mikir; agent ini bantu kamu kerja.</div>
+        </details>
+        <details>
+          <summary>Kalau saya cancel di tengah jalan, uang setup balik?<span class="icon" aria-hidden="true">+</span></summary>
+          <div class="answer">Setup nggak bisa di-refund karena itu kerja engineering yang sudah kami selesaikan untuk kamu. Tapi 14 hari pertama setelah onboarding — kalau ada masalah teknis dari sisi kami yang bikin agent nggak bisa dipakai, kami tanggung: fix gratis atau refund penuh setup. Hosting bulanan tinggal stop kapan saja, tanpa komitmen.</div>
+        </details>
+        <details>
+          <summary>Data dan percakapan saya disimpan di mana? Aman dari kebocoran?<span class="icon" aria-hidden="true">+</span></summary>
+          <div class="answer">Server kamu ada di Singapore — paling dekat dan stabil untuk Indonesia. Data percakapan disimpan lokal di server kamu sendiri, bukan di server bersama. Kunci API dienkripsi at-rest. Kami nggak mengakses isi percakapan kamu kecuali kamu minta bantuan dan kasih izin eksplisit.</div>
+        </details>
+        <details>
+          <summary>Always-On vs hosting biasa — kapan saya butuh Always-On?<span class="icon" aria-hidden="true">+</span></summary>
+          <div class="answer">Untuk pemakaian harian — chat, briefing pagi, draf dokumen — hosting default sudah cukup. Always-On menjamin server kamu menyala 24/7 nonstop dengan prioritas penuh, untuk kamu yang menjadikan agent bagian kritis dari operasional harian.</div>
+        </details>
+        <details>
+          <summary>Bisa lihat demo atau ngobrol dulu sebelum bayar?<span class="icon" aria-hidden="true">+</span></summary>
+          <div class="answer">Bisa. Booking 15 menit lewat tombol "Konsultasi gratis" — kami tunjukkan agent live, jawab pertanyaan teknis, dan kamu bisa lihat workflow yang sebenarnya. Tanpa hard sell. Kalau nggak cocok, kami nggak follow up.</div>
+        </details>
+        <details>
+          <summary>Kalau ada masalah teknis, gimana cara dapat support?<span class="icon" aria-hidden="true">+</span></summary>
+          <div class="answer">Support lewat Telegram langsung ke tim kami. Tiap pelanggan dapat channel khusus — bukan chatbot, bukan antrian tiket yang panjang.</div>
+        </details>
+        <details>
+          <summary>Kok resepnya dari China?<span class="icon" aria-hidden="true">+</span></summary>
+          <div class="answer">Tim agent ini dipelajari di Zhejiang University, Hangzhou, lalu dirakit untuk Indonesia — template pajak, BPJS, KBLI, dan gaya bahasa lokal.</div>
+        </details>
+      </div>
+    </section>
+
+    <section class="cta">
+      <div class="wrap">
+        <p>Masih ada pertanyaan? Ngobrol langsung sama kami.</p>
+        <a class="btn" href="https://cal.com/weuseai.agent/15min" target="_blank" rel="noopener">Konsultasi gratis (15 menit) →</a>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <div class="foot-links">
+        <a href="/">Beranda</a>
+        <span style="color:rgba(255,255,255,0.2)">·</span>
+        <a href="/terms">syarat</a>
+        <span style="color:rgba(255,255,255,0.2)">·</span>
+        <a href="/privacy">privasi</a>
+        <span style="color:rgba(255,255,255,0.2)">·</span>
+        <a href="/refund-policy">pengembalian</a>
+        <span style="color:rgba(255,255,255,0.2)">·</span>
+        <a href="/contact">kontak</a>
+      </div>
+      <p class="foot-note">Dioperasikan oleh Richie Kidnovell, berbasis di Jakarta. Kontak: <a href="mailto:support@weuseai.agent">support@weuseai.agent</a>.</p>
+    </div>
+  </footer>
+</body>
+</html>

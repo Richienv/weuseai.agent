@@ -312,6 +312,17 @@
       max-width: 64ch;
     }
     @media (min-width: 768px) { .faq-body-inner { font-size: 15px; } }
+    .faq-all-link {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: 'Inter', sans-serif; font-weight: 500; font-size: 14px;
+      color: rgba(255,255,255,0.7); text-decoration: none;
+      padding: 11px 20px; border: 1px solid rgba(255,255,255,0.16);
+      border-radius: 999px;
+      transition: color 0.24s ease, border-color 0.24s ease, transform 0.24s ease;
+    }
+    .faq-all-link:hover { color: #fff; border-color: rgba(229,50,45,0.5); transform: translateY(-2px); }
+    .faq-all-link svg { transition: transform 0.24s ease; }
+    .faq-all-link:hover svg { transform: translateX(3px); }
 
     /* ─── DASHBOARD DEMO (12-scene cycle, 72s total) ─── */
     .db-section {
