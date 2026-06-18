@@ -85,3 +85,28 @@ Orchestrated by Opus 4.8 in a self-paced `/loop`, using ultracode workflows for 
 - **CTA funnel split (P0/P1):** hero + footer + mobile-sticky CTAs link to bare `checkout.html` (no `?plan=`) → checkout defaults to the priciest tier (Siap Pakai Rp 1.299jt); meanwhile pricing-card CTAs go to WhatsApp. Two funnels for one product, and checkout.html flashes stale v1.2 prices (Rp 2.500.000→1.290.000) pre-JS. Fix is a revenue-funnel + checkout.html decision (off-limits) → your call: point hero CTAs at `#pricing`, or pin `?plan=library-full`; plus fix checkout.html's stale pre-JS prices + the stale comment at app.jsx:4004-4010.
 - **No risk-reversal at the pay CTA (P2):** nothing near the buy button reduces perceived risk on the upfront setup fee — could echo the already-true "Setup tetap kamu punya kalau berhenti". Marketing/conversion call.
 - **Sitewide canonical sweep (out of scope):** checkout/welcome/contact/privacy/terms/onboarding/refund-policy.html still carry vercel.app canonical/OG URLs (only index+faq+use-cases on weuseai.id now).
+- **Independent re-verification (`w5s2gw8ql`, 4 agents) → shipReady=TRUE.** All 18 round-3 fixes confirmed verbatim in current source; 0 regressions, 0 new P0/P1, 0 brand-lock violations; `node --check assets/app.js` parses (build in sync); prices match v1.4 catalog exactly; no Anda/lo/gue, no body exclamations, no banned words across all 4 files. **Loop wound down here.**
+
+---
+
+## ☀️ FINAL SUMMARY — morning review (loop complete)
+
+**Bottom line:** the weuseai.id landing is redesigned (flashy-minimal, IG-ready), a new **/faq** page shipped, **use-cases** cleaned, and the page survived **three** QA rounds (2 prior + this round-3) plus an independent re-verification that returned **ship-ready**. Everything is on branch `landing/phase-1-domain-china` (**PR #271**) — gates 10/10, zero exclamation/banned words, no pricing drift. Nothing merged, nothing deployed, no backend/payments touched.
+
+### What shipped this session (high level)
+1. **Flashy-minimal landing redesign** (konten.com-style): hero circuit + color-split copy, slashed centerpiece/origin copy, how-it-works motion, carousel→capability tags, FAQ 17→7, pricing ValueSlider + 3-bullet cards, global gloss/hover/CTA sheen, real R2 app screenshots in iPhone frames, restored OriginSection + video hero bg, dropped Bare from the pricing display.
+2. **/faq page** (`faq.html`) — standalone zero-JS `<details>` accordion, all 16 Q&As, brand-styled; landing "Lihat semua pertanyaan" link.
+3. **use-cases.html** — off-brand `lo/gue`→`kamu/aku` (147 swaps), weuseai.id canonical/OG, 2 copy tightenings.
+4. **QA round 1 + 2** — honesty (School Expert, VelvetSection), self-hosted React/framer vendor (China white-screen), reduced-motion reset, contrast/aria/landmarks, perf (lazy carousel videos), focus trap.
+5. **QA round 3** (this session) — favicon 404, base-tier "24/7" honesty ×4, OG/Twitter meta, AA contrast, carousel ARIA, BlurText aria-label, mobile input no-wrap, DottedVideo lazy-load, Mux preconnect, dead-const cleanup.
+
+### ⚑ Needs YOUR decision (I deliberately did NOT touch these)
+- **A. CTA funnel split — highest-impact item.** Hero + footer + mobile-sticky CTAs go to bare `checkout.html` (no `?plan=`) → defaults to the priciest tier (Siap Pakai Rp 1.299jt); pricing-card CTAs go to WhatsApp instead. Two funnels for one product. And `checkout.html` flashes **stale v1.2 prices** (Rp 2.500.000→1.290.000, "Pro plan") before JS loads. Pick a direction and I'll do the landing side in minutes (point hero CTAs at `#pricing`, or pin `?plan=library-full`); the `checkout.html` stale-price fix needs you (off-limits to me).
+- **B. Risk-reversal at the pay CTA** — nothing near the buy button reduces perceived risk on the upfront setup fee. Could echo the already-true "Setup tetap kamu punya kalau berhenti". Marketing call.
+- **C. Sitewide canonical sweep** — checkout/welcome/contact/privacy/terms/onboarding/refund-policy.html still on vercel.app. Off-limits funnel/legal pages → separate task.
+- **D. Earlier conversion/design flags (still open):** hero-circuit z-index (kept at 2 per your "noticeable"), two above-fold hero CTAs, OriginSection-not-reordered, "8 vs 5 menit" metric, hero-video-not-deferred, use-cases.html cdn.tailwindcss.com.
+
+### What remains
+- Merge #271 when you're happy (I never merge/deploy).
+- Decide A–D above; A is the one I'd act on first for conversion.
+- Optional: a sitewide canonical-domain sweep + the checkout.html stale-price fix (both need your go-ahead).
