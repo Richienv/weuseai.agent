@@ -399,10 +399,11 @@
         return () => io.disconnect();
       }, []);
       return (
-        <Tag ref={ref} className={className} style={style}>
+        <Tag ref={ref} className={className} style={style} aria-label={text}>
           {parts.map((p, i) => (
             <Mot.span
               key={`bt-${i}`}
+              aria-hidden="true"
               style={{
                 display: 'inline-block',
                 marginRight: by === 'word' && i < parts.length - 1 ? '0.28em' : 0
@@ -2086,14 +2087,13 @@
             </div>
           </div>
 
-          <div className="agent-dots" role="tablist" aria-label="Pilih agent">
+          <div className="agent-dots" role="group" aria-label="Pilih agent">
             {AGENTS.map((a, i) => (
               <button
                 key={a.slug}
                 type="button"
-                role="tab"
                 aria-label={`Ke kartu ${i + 1} — ${a.name}`}
-                aria-current={i === active}
+                aria-current={i === active ? 'true' : undefined}
                 className="agent-dot"
                 onClick={() => goTo(i)}
               />
@@ -4071,7 +4071,7 @@
             { have: true, text: '190+ template Indonesia — PPN, BPJS, KBLI, IDX, siap isi' },
             { have: true, text: 'Kirim voice note, terima kerjaan jadi' },
             { have: true, text: 'Ingat lintas hari — kamu tidak pernah mengulang konteks' },
-            { have: true, text: 'Jalan 24/7 di server milik kamu sendiri' },
+            { have: true, text: 'Jalan di server pribadi kamu, bukan shared' },
             { have: true, text: 'Di-tune ke gaya nulis dan pekerjaan kamu, satu per satu' },
           ],
           ariaLabel: 'Perbandingan weuseai.agent (paket kami)',
@@ -4184,7 +4184,7 @@
               })}
             </div>
 
-            <p className="mt-10 md:mt-14 text-center text-xs md:text-sm italic text-white/45 font-body font-light max-w-2xl mx-auto leading-relaxed">
+            <p className="mt-10 md:mt-14 text-center text-xs md:text-sm italic text-white/55 font-body font-light max-w-2xl mx-auto leading-relaxed">
               Chat AI berhenti kerja saat kamu berhenti ngetik. Agent AI baru mulai — multi-agent paralel, scrape, schedule, deploy, sambil kamu tidur.
             </p>
 
@@ -4419,7 +4419,7 @@
               ))}
             </div>
 
-            <p className="mt-10 md:mt-14 text-center text-xs md:text-sm italic text-white/45 font-body font-light max-w-2xl mx-auto leading-relaxed">
+            <p className="mt-10 md:mt-14 text-center text-xs md:text-sm italic text-white/55 font-body font-light max-w-2xl mx-auto leading-relaxed">
               Setup sekali bayar. Hosting Rp 99rb/bulan. Bisa pause kapan saja dari dashboard.
             </p>
 
@@ -4549,7 +4549,7 @@
           persona: 'Buat kamu yang mau semua persona tanpa kompromi.',
           outcomes: [
             '10 persona, pakai suara',
-            'VPS dedicated 24/7',
+            'VPS dedicated, bukan shared',
             'Support antre paling depan',
           ],
           apps: ['Telegram', 'Voice note', 'Web'],
@@ -4568,7 +4568,7 @@
           hostingMonth: 'Rp 99rb',
           month1Total: 'Rp 1,398jt',
           recurringLabel: 'Rp 99rb/bulan',
-          persona: 'Buat freelancer, founder, creator yang butuh agent kerja 24/7.',
+          persona: 'Buat freelancer, founder, creator yang mau agent kerja tiap hari.',
           outcomes: [
             '8 persona + web app sendiri',
             'Dashboard di subdomain kamu',
@@ -4982,7 +4982,7 @@
 
             {/* Panel A — sample skills we ship */}
             <div className="mb-12 md:mb-16">
-              <div className="text-[11px] font-mono uppercase tracking-[0.18em] text-white/45 mb-4 md:mb-6">
+              <div className="text-[11px] font-mono uppercase tracking-[0.18em] text-white/55 mb-4 md:mb-6">
                 Skill bawaan
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
@@ -4994,7 +4994,7 @@
 
             {/* Panel B — real community quotes */}
             <div>
-              <div className="text-[11px] font-mono uppercase tracking-[0.18em] text-white/45 mb-4 md:mb-6">
+              <div className="text-[11px] font-mono uppercase tracking-[0.18em] text-white/55 mb-4 md:mb-6">
                 Dari komunitas agent
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5">
@@ -5161,7 +5161,7 @@
                 Konsultasi gratis (15 menit)
               </a>
             </div>
-            <p className="mt-6 text-xs text-white/45 font-body font-light max-w-md mx-auto leading-relaxed">
+            <p className="mt-6 text-xs text-white/55 font-body font-light max-w-md mx-auto leading-relaxed">
               Butuh setup custom atau enterprise? Ngobrol dulu —{' '}
               <a href="https://cal.com/weuseai.agent/15min" target="_blank" rel="noopener" className="text-white/75 hover:text-white underline-offset-2 hover:underline">Jadwalkan panggilan</a>
             </p>
