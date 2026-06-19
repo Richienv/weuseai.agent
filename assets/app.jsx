@@ -4525,7 +4525,7 @@
           appsTotal: 3,
           cta: 'Ambil Library Lengkap',
           ctaHref: 'checkout.html?plan=library-full',
-          featured: true,
+          featured: false,
         },
         {
           name: 'Siap Pakai',
@@ -4539,15 +4539,15 @@
           recurringLabel: 'Rp 99rb/bulan',
           persona: 'Buat freelancer, founder, creator yang mau agent kerja tiap hari.',
           outcomes: [
-            '8 persona + web app sendiri',
-            'Dashboard di subdomain kamu',
-            'Support privat 24/7',
+            'Web app + dashboard sendiri',
+            '8 persona kerja inti, pakai suara',
+            'Support privat paling depan',
           ],
           apps: ['Telegram', 'Voice note', 'Web app'],
           appsTotal: 4,
           cta: 'Ambil Siap Pakai',
           ctaHref: 'checkout.html?plan=done-for-you',
-          featured: false,
+          featured: true,
         },
       ];
 
