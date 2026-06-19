@@ -110,3 +110,20 @@ Orchestrated by Opus 4.8 in a self-paced `/loop`, using ultracode workflows for 
 - Merge #271 when you're happy (I never merge/deploy).
 - Decide A–D above; A is the one I'd act on first for conversion.
 - Optional: a sitewide canonical-domain sweep + the checkout.html stale-price fix (both need your go-ahead).
+
+---
+
+## 🌤️ Post-loop — founder morning session (2026-06-18, interactive)
+
+Founder reviewed the live cards and directed several changes. Shipped to #271:
+- `551832d` — flag A resolved on the landing side: hero/footer/sticky CTAs → `#pricing` (cold traffic chooses a tier before any payment screen; unifies the funnel).
+- `afc828b` — pricing CTAs now go to **self-serve checkout** (`checkout.html?plan=<slug>`, tier pre-selected) instead of WhatsApp; decluttered each card (dropped the italic tagline, the "Untuk siapa" block, the "Bulan 2 dst" row, the "Diskon launch" micro-label; bigger titles; "Yang kamu dapat" outcomes emphasized). Verified "Ambil Library Lengkap" → `/checkout.html?plan=library-full`.
+- `63aae2d` — **Siap Pakai is now the flagship** ("Rekomendasi kami" badge + glow + pulse moved off Library Lengkap), led by its web-app differentiator ("Web app + dashboard sendiri" first).
+
+### ⚑ Persona re-tier — INVESTIGATED, then deliberately NOT done (founder chose reframe)
+Founder initially wanted Library Lengkap → 6 personas and Siap Pakai → 10 (to make the pricier tier the best). I mapped the full blast radius (workflow `wxqgxwtx9`, **61 touchpoints**) before touching anything and surfaced three blockers:
+1. **P0 "shell" personas:** moving `web-app-builder` + `business-agent` into Siap Pakai (spec-class `pro`) ships them with **11 of 13 skills stripped** (those skills are gated to spec-class `studio` in their agent-pack manifests; `bundle-pull-script.ts` skips them). Same class as the #226 P0, and `bundle-pull-tier-filter.spec.ts` stays green so the suite wouldn't catch it. Avoiding it needs either upsizing every Siap Pakai VPS to 16GB/$30-cap (real per-customer infra cost) or relaxing the skill gates.
+2. **Value incoherence:** at 6 personas / no web_app / no genesis, library-full becomes *strictly dominated* by done-for-you on every axis except price — no reason to pick it.
+3. **61 touchpoints** incl. the bundle-fetch **security contract**, ~18 tests, both catalog mirrors, the legacy-alias re-grading (pro→10/studio→6), already-provisioned-customer drift, and off-limits `checkout.html` + `onboarding.html`.
+
+**Decision (founder):** keep the catalog exactly as-is (library-full=10/no-web-app, done-for-you=8/web-app — the deliberate v1.4 matrix) and make Siap Pakai read as flagship via **positioning** instead (`63aae2d`). Zero backend risk, zero cost. The catalog matrix is intentional; re-tiering is a genuine multi-day backend project, not a card tweak — revisit only with the spec-class cost decision made up front.
