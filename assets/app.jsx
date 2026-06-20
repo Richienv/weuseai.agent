@@ -1,8 +1,17 @@
     const { useEffect, useRef, useState } = React;
     const M = window.Motion || window.motion || {};
-    const Mot = M.motion;
+    // Mot = framer's motion factory; if framer failed to load (e.g. CDN blocked),
+    // fall back to a passthrough that renders plain elements (sans animation props)
+    // so the page still works instead of throwing on the first <Mot.div>.
+    const Mot = M.motion || new Proxy({}, {
+      get: (_t, tag) => (props = {}) => {
+        const { initial, animate, exit, whileInView, whileHover, whileTap, whileFocus,
+          whileDrag, transition, viewport, variants, custom, onViewportEnter, onViewportLeave,
+          layout, layoutId, layoutDependency, drag, dragConstraints, style, children, ...rest } = props;
+        return React.createElement(typeof tag === 'string' ? tag : 'div', { style, ...rest }, children);
+      },
+    });
 
-    const HERO_VIDEO = "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260307_083826_e938b29f-a43a-41ec-a153-3d4730578ab8.mp4";
     const HLS_STATS = "https://stream.mux.com/NcU3HlHeF7CUL86azTTzpy3Tlb00d6iF3BmCdFslMJYM.m3u8";
 
     const EASE = [0.16, 1, 0.3, 1];
@@ -180,7 +189,7 @@
             ref={videoRef}
             src={src}
             loop muted playsInline
-            preload="metadata"
+            preload="none"
             crossOrigin="anonymous"
             aria-hidden="true"
             style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none' }}
@@ -373,10 +382,15 @@
     }
 
     // ─────────────────────── BLUR TEXT ───────────────────────
-    function BlurText({ text, className = '', by = 'word', delay = 100, as: Tag = 'h1', style = {} }) {
+    function BlurText({ text, className = '', by = 'word', delay = 100, as: Tag = 'h2', style = {} }) {
       const parts = by === 'word' ? text.split(' ') : text.split('');
       const [inView, setInView] = useState(false);
       const ref = useRef(null);
+      // The CSS reduced-motion reset can't reach framer's JS-driven reveal, so
+      // gate it here: motion-sensitive users get the headline already settled.
+      const reduced = typeof window !== 'undefined' && window.matchMedia
+        && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const settled = { filter: 'blur(0px)', opacity: 1, y: 0 };
       useEffect(() => {
         const el = ref.current; if (!el) return;
         const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setInView(true); io.unobserve(el); } }, { threshold: 0.15 });
@@ -384,17 +398,18 @@
         return () => io.disconnect();
       }, []);
       return (
-        <Tag ref={ref} className={className} style={style}>
+        <Tag ref={ref} className={className} style={style} aria-label={text}>
           {parts.map((p, i) => (
             <Mot.span
               key={`bt-${i}`}
+              aria-hidden="true"
               style={{
                 display: 'inline-block',
                 marginRight: by === 'word' && i < parts.length - 1 ? '0.28em' : 0
               }}
-              initial={{ filter: 'blur(10px)', opacity: 0, y: 50 }}
-              animate={inView ? { filter: 'blur(0px)', opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.7, ease: EASE, delay: i * delay / 1000 }}>
+              initial={reduced ? settled : { filter: 'blur(10px)', opacity: 0, y: 50 }}
+              animate={reduced ? settled : (inView ? settled : {})}
+              transition={reduced ? { duration: 0 } : { duration: 0.7, ease: EASE, delay: i * delay / 1000 }}>
               {p}
             </Mot.span>
           ))}
@@ -415,7 +430,7 @@
           <div className="flex items-center justify-between gap-3">
             <a href="/" aria-label="weuseai.agent — beranda" className="flex items-center gap-2">
               <span className="rounded-full nav-clean grid place-items-center px-4 py-2 md:px-5 md:py-2.5">
-                <img src="assets/logo.svg" alt="weuseai.agent" className="block h-4 md:h-5 w-auto" />
+                <img src="assets/logo.svg" alt="" className="block h-4 md:h-5 w-auto" />
               </span>
             </a>
             <nav className="hidden md:flex nav-clean rounded-full px-1.5 py-1 items-center gap-0">
@@ -435,121 +450,6 @@
     }
 
     // ─────────────────────── HERO ───────────────────────
-    function Hero() {
-      return (
-        <section id="beranda" className="relative overflow-hidden min-h-[760px] md:min-h-[920px]" style={{ height: 'auto', background: '#000' }}>
-          <DottedVideo
-            src="assets/new-hero.mp4"
-            color="#E5322D"
-            cellSize={6}
-            className="absolute inset-0 w-full h-full pointer-events-none"
-            style={{ zIndex: 0, background: '#000' }}
-          />
-          <div className="hero-grain" />
-          <div className="absolute inset-0 z-[1] pointer-events-none" style={{
-            background: 'linear-gradient(180deg, rgba(0,0,0,0.28) 0%, rgba(0,0,0,0.18) 45%, rgba(0,0,0,0.55) 100%)'
-          }} />
-          <div className="absolute bottom-0 left-0 right-0 z-[2] pointer-events-none"
-            style={{ height: 240, background: 'linear-gradient(to bottom, transparent, #000)' }} />
-
-          <div className="relative z-10 flex flex-col items-center text-center px-5 md:px-6 w-full pt-[120px] md:pt-[160px] pb-10">
-            <Mot.div
-              initial={{ filter: 'blur(10px)', opacity: 0, y: 20 }}
-              animate={{ filter: 'blur(0px)', opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, ease: EASE, delay: 0.2 }}
-              className="rounded-full px-1 py-1 flex items-center gap-2 text-xs font-body"
-              style={{
-                background: 'rgba(255, 255, 255, 0.08)',
-                border: '1px solid rgba(255, 255, 255, 0.22)',
-                backdropFilter: 'blur(8px)'
-              }}>
-              <span style={{ background: '#E5322D', color: '#fff' }} className="rounded-full px-3 py-1 text-[10px] font-mono font-medium uppercase tracking-[0.18em]">Resep Hangzhou</span>
-              <span className="pr-3 font-mono uppercase tracking-[0.14em] text-[11px] text-white/85">Dirakit untuk Indonesia</span>
-            </Mot.div>
-
-            <BlurText
-              text="Resep kampus elite China. Tenaga satu tim penuh. Aktif dalam 8 menit."
-              className="mt-7 md:mt-10 text-[2.5rem] sm:text-5xl md:text-6xl lg:text-[5.5rem] xl:text-[6.5rem] font-heading leading-[0.96] md:leading-[0.94] max-w-[18ch] md:max-w-[22ch] lg:max-w-[26ch] xl:max-w-[28ch] text-white px-2"
-              style={{ letterSpacing: '-0.045em', fontStyle: 'normal' }}
-              delay={100} />
-
-            <Mot.p
-              initial={{ filter: 'blur(10px)', opacity: 0, y: 20 }}
-              animate={{ filter: 'blur(0px)', opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, ease: EASE, delay: 0.8 }}
-              className="mt-6 md:mt-8 max-w-[52ch] text-sm md:text-lg font-body font-light leading-[1.5] text-white/85 px-2">
-              Satu tim agent AI di Telegram kamu — riset, surat, slide, laporan. Dipelajari langsung di Zhejiang University, Hangzhou, dibawa pulang untuk kamu. Bukan chatbot yang cuma jawab; tim yang mengerjakan.
-            </Mot.p>
-
-            <Mot.p
-              initial={{ filter: 'blur(10px)', opacity: 0, y: 20 }}
-              animate={{ filter: 'blur(0px)', opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, ease: EASE, delay: 0.95 }}
-              className="mt-5 font-mono uppercase tracking-[0.18em] text-[10px] md:text-[11px] text-white/55">
-              Setup 5 menit · bayar pakai QRIS · hosting Rp 99rb/bulan · berhenti kapan saja
-            </Mot.p>
-
-            <Mot.div
-              initial={{ filter: 'blur(10px)', opacity: 0, y: 20 }}
-              animate={{ filter: 'blur(0px)', opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, ease: EASE, delay: 1.1 }}
-              className="mt-10 flex flex-col items-center gap-3">
-              <div className="flex items-center gap-3 flex-wrap justify-center">
-                <a href="checkout.html" className="rounded-full px-5 py-2.5 min-h-[44px] text-sm font-medium flex items-center gap-2 no-underline"
-                  style={{ background: '#fff', color: '#0a0a0a', border: '1px solid #fff' }}>
-                  Aktifkan asisten kamu <ArrowUpRight size={14} stroke={2.2} />
-                </a>
-                <a href="https://cal.com/weuseai.agent/15min" target="_blank" rel="noopener" className="rounded-full px-5 py-2.5 min-h-[44px] text-sm font-medium flex items-center gap-2 no-underline text-white"
-                  style={{ background: 'rgba(255, 255, 255, 0.06)', border: '1px solid rgba(255, 255, 255, 0.22)', backdropFilter: 'blur(8px)' }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="4" width="18" height="18" rx="2" />
-                    <line x1="16" y1="2" x2="16" y2="6" />
-                    <line x1="8" y1="2" x2="8" y2="6" />
-                    <line x1="3" y1="10" x2="21" y2="10" />
-                  </svg>
-                  Konsultasi gratis (15 menit)
-                </a>
-              </div>
-            </Mot.div>
-
-            <div className="mt-12 md:mt-auto pb-6 md:pb-12 pt-12 md:pt-20 w-full max-w-5xl mx-auto">
-              <div className="liquid-glass rounded-2xl md:rounded-3xl p-5 md:p-10 grid grid-cols-2 md:grid-cols-4 gap-5 md:gap-6 text-center">
-                {[
-                  { kind: 'plain', n: 8,   suffix: ' mnt', label: 'Dari bayar ke pesan pertama\n(diukur, bukan janji)' },
-                  { kind: 'plain', n: 10,  suffix: '',  label: 'Persona spesialis\ndi-engineer satu per satu' },
-                  { kind: 'plain', n: 190, suffix: '+', label: 'Template Indonesia\nPPN · BPJS · KBLI · IDX' },
-                  { kind: 'plain', n: 24,  suffix: '',  label: 'Playbook multi-langkah\nbriefing pagi sampai laporan' },
-                ].map((it, i) => (
-                  <Mot.div key={it.label}
-                    initial={{ opacity: 0, y: 16 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true, amount: 0.4 }}
-                    transition={{ duration: 0.6, ease: EASE, delay: 0.06 * i }}
-                    className="flex flex-col items-center"
-                  >
-                    <div className="text-2xl md:text-4xl lg:text-5xl font-heading text-white leading-none" style={{ letterSpacing: '-0.04em' }}>
-                      {it.kind === 'ratio' ? (
-                        <>
-                          <CountUp to={it.a} duration={1800} delay={150} />
-                          <span className="text-white/35"> / </span>
-                          <CountUp to={it.b} duration={2200} delay={150} />
-                        </>
-                      ) : it.kind === 'text' ? (
-                        <span style={{ color: '#E5322D' }}>{it.text}</span>
-                      ) : (
-                        <CountUp to={it.n} suffix={it.suffix} duration={1800} delay={150 + i * 120} />
-                      )}
-                    </div>
-                    <div className="mt-2 md:mt-2.5 text-white/55 font-body font-light italic text-[11px] md:text-[13px] leading-snug" style={{ whiteSpace: 'pre-line' }}>{it.label}</div>
-                  </Mot.div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-      );
-    }
-
     // ─────────────────────── CREATURE SPRITES ───────────────────────
     // Each agent card hosts a unique creature animation (10 creatures × 3-5
     // frames each, dot-pattern silhouettes in Signal Red). SVG inline + CSS
@@ -1824,11 +1724,35 @@
     // off-screen.
     //
     // prefers-reduced-motion: video stays paused at first frame, no play().
-    function AgentVisual({ file }) {
+    // Brand glyph for poster cards (personas without a demo video yet).
+    // Signal-red stroke on dark — minimal, editorial.
+    function AgentGlyph({ kind }) {
+      const common = { viewBox: '0 0 48 48', fill: 'none', stroke: '#E5322D', strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': 'true' };
+      switch (kind) {
+        case 'slide':
+          return (
+            <svg {...common}><rect x="7" y="10" width="34" height="24" rx="2" /><line x1="13" y1="18" x2="28" y2="18" /><line x1="13" y1="24" x2="24" y2="24" /><line x1="24" y1="34" x2="24" y2="40" /><line x1="18" y1="40" x2="30" y2="40" /></svg>
+          );
+        case 'social':
+          return (
+            <svg {...common}><circle cx="16" cy="16" r="5" /><circle cx="33" cy="13" r="4" /><circle cx="30" cy="33" r="5" /><line x1="20" y1="18" x2="29" y2="14" /><line x1="19" y1="20" x2="27" y2="30" /></svg>
+          );
+        case 'video':
+          return (
+            <svg {...common}><rect x="8" y="13" width="22" height="22" rx="3" /><path d="M30 20l9-5v18l-9-5z" /><path d="M16 21l6 3-6 3z" fill="#E5322D" stroke="none" /></svg>
+          );
+        default:
+          return (
+            <svg {...common}><circle cx="24" cy="24" r="14" /><circle cx="24" cy="24" r="4" /></svg>
+          );
+      }
+    }
+
+    function AgentVisual({ file, glyph }) {
       const videoRef = useRef(null);
       useEffect(() => {
         const v = videoRef.current;
-        if (!v) return;
+        if (!v || !file) return;
         const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         const io = new IntersectionObserver(
           (entries) => {
@@ -1854,6 +1778,15 @@
         io.observe(v);
         return () => io.disconnect();
       }, [file]);
+      // Persona without a demo video yet → honest "Segera hadir" poster.
+      if (!file) {
+        return (
+          <div className="agent-poster" aria-hidden="true">
+            <AgentGlyph kind={glyph} />
+            <span className="agent-poster-tag">Demo menyusul</span>
+          </div>
+        );
+      }
       return (
         <video
           ref={videoRef}
@@ -1861,7 +1794,7 @@
           loop
           muted
           playsInline
-          preload="metadata"
+          preload="none"
           aria-hidden="true"
           className="absolute inset-0 w-full h-full"
           style={{ objectFit: 'cover', display: 'block', background: '#000' }}
@@ -1870,153 +1803,211 @@
     }
 
     // ─────────────────────── AGENT PERSONA CAROUSEL ───────────────────────
-    // 9 agent specialist cards. Sits inside #proses ("The wave") below the
-    // CTA, on the same red-halftone canvas. Auto-rotates every 13s, hover-
-    // pause, prefers-reduced-motion respect.
+    // The 10 canonical library personas (single source of truth:
+    // assets/persona-details.js + supabase/functions/_shared/tier-personas.ts).
+    // Sits inside #proses below the CTA. Continuous butter-smooth rAF marquee
+    // (no dead-air pause — head meets tail seamlessly), hover/focus pause,
+    // click-next/prev, dots, swipe, prefers-reduced-motion respect.
     //
-    // 2026-05-09 lineup pivot: founder shipped 9 hand-built GIFs (one per
-    // persona) — these become the canonical 9 agents. Web Creator, Slide
-    // Master, Video Producer, Social Conductor (added in persona v2) are
-    // dropped from the carousel for now; bring them back if/when they get
-    // their own GIFs. App Builder, Email Manager, Calendar Agent take
-    // their slots on the carousel.
-    //
-    // `file` field maps to the founder's canonical mp4 name (assets/<file>.mp4).
+    // `file` = demo mp4 on disk (assets/<file>.mp4); null → "Segera hadir"
+    // poster + brand glyph (slide-master / social-conductor / video-producer
+    // have no video yet). `detail` = PERSONA_DETAILS slug → /persona?slug=,
+    // so EVERY card has a working button. (rev 2026-06-16)
     const AGENTS = [
-      { slug: 'pro',        file: 'the-pro',           name: 'The Pro',           desc: 'Briefing pagi, ingat percakapan lintas sesi, jadi pendamping yang ngerti gaya kamu.' },
-      { slug: 'researcher', file: 'deep-researcher',   name: 'Deep Researcher',   desc: 'Riset topik kompleks dari ratusan sumber, sintesis jadi laporan siap pakai.' },
-      { slug: 'builder',    file: 'app-builder',       name: 'App Builder',       desc: 'Bikin web app dari ide ke deploy — tanpa nulis kode dari nol.' },
-      { slug: 'doc',        file: 'doc-expert',        name: 'Doc Expert',        desc: 'Laporan, proposal, email, plus skripsi-thesis academic mode — siap kirim dalam menit, sesuai gaya kamu.' },
-      { slug: 'email',      file: 'email-manager',     name: 'Email Manager',     desc: 'Sortir 300+ email per hari, draft balasan dengan tone kamu, auto-handle yang gak penting.' },
-      { slug: 'calendar',   file: 'calendar-agent',    name: 'Calendar Agent',    desc: 'Atur jadwal, hindari bentrok, kasih saran reschedule — diplomatis sesuai konteks kamu.' },
-      { slug: 'trade',      file: 'trade-pro',         name: 'Trade Pro',         desc: 'Briefing pasar pagi, alert saham + crypto, kurs IDR-BI, ringkas laporan keuangan emiten, plus Bitget read-only sync.' },
-      { slug: 'project',    file: 'project-conductor', name: 'Project Conductor', desc: 'Kanban orchestration: pecah task, route ke specialist agent, monitor progress lintas hari.' },
-      { slug: 'business',   file: 'business-agent', name: 'Business Director', desc: 'Roadmap 5-tahap founder Indonesia (idea → setup → identity → build → sell). Surface PT/CV, OSS, BPJS, compliance reminder.' },
+      { slug: 'the-pro',          file: 'the-pro',           detail: 'the-pro',          name: 'The Pro',           glyph: 'pro',
+        desc: 'Briefing pagi & ingatan lintas sesi.' },
+      { slug: 'deep-researcher',  file: 'deep-researcher',   detail: 'deep-researcher',  name: 'Deep Researcher',   glyph: 'research',
+        desc: 'Riset jadi laporan siap pakai.' },
+      { slug: 'doc-expert',       file: 'doc-expert',        detail: 'doc-expert',       name: 'Doc Expert',        glyph: 'doc',
+        desc: 'Surat, proposal, skripsi.' },
+      { slug: 'web-app-builder',  file: 'app-builder',       detail: 'web-app-builder',  name: 'Web Creator',       glyph: 'web',
+        desc: 'Ide jadi web app.' },
+      { slug: 'project-conductor',file: 'project-conductor', detail: 'project-conductor',name: 'Project Conductor', glyph: 'project',
+        desc: 'Proyek jadi task board.' },
+      { slug: 'business-agent',   file: 'business-director', detail: 'business-agent',   name: 'Business Director', glyph: 'business',
+        desc: 'Roadmap founder Indonesia.' },
+      { slug: 'trade-pro',        file: 'trade-pro',         detail: 'trade-pro',        name: 'Trade Pro',         glyph: 'trade',
+        desc: 'Briefing pasar & emiten.' },
+      { slug: 'slide-master',     file: null,                detail: 'slide-master',     name: 'Slide Master',      glyph: 'slide',
+        desc: 'Outline jadi deck.' },
+      { slug: 'social-conductor', file: null,                detail: 'social-conductor', name: 'Social Conductor',  glyph: 'social',
+        desc: 'Kalender & draf konten.' },
+      { slug: 'video-producer',   file: null,                detail: 'video-producer',   name: 'Video Producer',    glyph: 'video',
+        desc: 'Skrip TikTok & Reels.' },
+      // ── Sedang dibangun — terhubung lewat Gmail/Sekolah (founder: "we'll build it",
+      //    2026-06-17). Video preview + "Segera hadir" chip; tombol -> #integrasi.
+      //    detail:null (belum ada halaman); status:'segera' marks them coming. ──
+      { slug: 'email-manager',    file: 'email-manager',     detail: null,               name: 'Email Manager',     glyph: 'default', status: 'segera',
+        desc: 'Rapikan kotak masuk.' },
+      { slug: 'calendar-agent',   file: 'calendar-agent',    detail: null,               name: 'Calendar Agent',    glyph: 'default', status: 'segera',
+        desc: 'Atur jadwal kamu.' },
     ];
 
     function AgentCarousel() {
       const trackRef = useRef(null);
       const rootRef = useRef(null);
-      // displayIndex is the position in the 12-slot track [sentinel_last,
-      // ...9 real, sentinel_first]. realIndex (the agent shown) is
-      // displayIndex - 1, clamped to 0-8. Sentinels at 0 and 10 are
-      // identical to last/first real cards — visible only during the
-      // wrap-around transition, then we silently snap back to the real
-      // copy with no transition. Result: seamless infinite carousel.
-      const [displayIndex, setDisplayIndex] = useState(1);
-      const realIndex = ((displayIndex - 1) + AGENTS.length) % AGENTS.length;
-      const [paused, setPaused] = useState(false);
+      // Continuous infinite marquee over a DOUBLED track ([...AGENTS, ...AGENTS]).
+      // The track drifts left at SPEED px/s via rAF; when the offset passes one
+      // full copy (halfRef) we subtract it — invisible because copy 2 is pixel-
+      // identical to copy 1. Result: head meets tail with zero dead-air. Click /
+      // dots / keyboard / swipe ride a short transitioned "snap" that never locks
+      // input. prefers-reduced-motion → static strip, instant jumps.
+      const SPEED = 42;                  // px/s — calm continuous drift
+      const SNAP_MS = 520;
+      const offsetRef = useRef(0);       // px translated (always normalized to [0, half) by drift)
+      const pitchRef = useRef(0);        // cardWidth + gap
+      const halfRef = useRef(0);         // AGENTS.length * pitch (one full copy)
+      const rafRef = useRef(0);
+      const lastTsRef = useRef(0);
+      const pausedRef = useRef(false);   // drift paused (hover/focus/drag/snap)
+      const pinnedRef = useRef(false);   // hovered or focused
+      const snapping = useRef(false);
+      const snapTimer = useRef(0);
       const reducedMotion = useRef(false);
-      const wrapping = useRef(false);
+      const activeRef = useRef(0);
+      const [active, setActive] = useState(0);
 
-      // Detect prefers-reduced-motion
-      useEffect(() => {
-        const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
-        reducedMotion.current = mq.matches;
-        const onChange = (e) => { reducedMotion.current = e.matches; };
-        mq.addEventListener?.('change', onChange);
-        return () => mq.removeEventListener?.('change', onChange);
-      }, []);
-
-      // Card pitch from live computed style (gap differs by viewport)
-      const getCardPitch = (track) => {
-        const cards = track.querySelectorAll('.agent-card');
-        if (!cards.length) return 0;
-        const cardW = cards[0].getBoundingClientRect().width;
-        const gap = parseFloat(getComputedStyle(track).columnGap) || 14;
-        return cardW + gap;
-      };
-
-      // Apply transform when displayIndex changes
-      useEffect(() => {
+      const measure = () => {
         const track = trackRef.current;
         if (!track) return;
-        const pitch = getCardPitch(track);
-        track.style.transform = `translate3d(-${displayIndex * pitch}px, 0, 0)`;
-      }, [displayIndex]);
+        const card = track.querySelector('.agent-card');
+        const cardW = card ? card.getBoundingClientRect().width : 0;
+        const gap = parseFloat(getComputedStyle(track).columnGap) || 18;
+        pitchRef.current = cardW + gap;
+        halfRef.current = pitchRef.current * AGENTS.length;
+      };
+      const apply = () => {
+        const t = trackRef.current;
+        if (t) t.style.transform = `translate3d(${-offsetRef.current}px,0,0)`;
+      };
+      const syncActive = () => {
+        if (!pitchRef.current) return;
+        const idx = ((Math.round(offsetRef.current / pitchRef.current) % AGENTS.length) + AGENTS.length) % AGENTS.length;
+        if (idx !== activeRef.current) { activeRef.current = idx; setActive(idx); }
+      };
+      const tick = (ts) => {
+        if (!halfRef.current) measure();
+        if (!lastTsRef.current) lastTsRef.current = ts;
+        const dt = Math.min((ts - lastTsRef.current) / 1000, 0.05); // clamp tab-switch jumps
+        lastTsRef.current = ts;
+        if (!pausedRef.current && !snapping.current && halfRef.current) {
+          offsetRef.current += SPEED * dt;
+          if (offsetRef.current >= halfRef.current) offsetRef.current -= halfRef.current;
+          apply();
+          syncActive();
+        }
+        rafRef.current = requestAnimationFrame(tick);
+      };
 
-      // Re-apply on resize
       useEffect(() => {
+        reducedMotion.current = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        measure();
+        apply();
+        if (reducedMotion.current) return;
+        rafRef.current = requestAnimationFrame(tick);
         const onResize = () => {
-          const track = trackRef.current;
-          if (!track) return;
-          const pitch = getCardPitch(track);
-          track.style.transform = `translate3d(-${displayIndex * pitch}px, 0, 0)`;
+          const old = halfRef.current;
+          measure();
+          if (old) offsetRef.current = (offsetRef.current / old) * halfRef.current;
+          apply();
         };
         window.addEventListener('resize', onResize);
-        return () => window.removeEventListener('resize', onResize);
-      }, [displayIndex]);
+        return () => {
+          cancelAnimationFrame(rafRef.current);
+          clearTimeout(snapTimer.current);
+          window.removeEventListener('resize', onResize);
+        };
+      }, []);
 
-      // Auto-advance every 13s
-      useEffect(() => {
-        if (paused || reducedMotion.current) return;
-        const id = setInterval(() => { goNext(); }, 13000);
-        return () => clearInterval(id);
-      }, [paused]);
+      const pin = () => { pinnedRef.current = true; pausedRef.current = true; };
+      const unpin = () => { pinnedRef.current = false; if (!snapping.current) { pausedRef.current = false; lastTsRef.current = 0; } };
 
-      // Snap-back after a wrap-around transition completes — disable the
-      // CSS transition, jump from sentinel slot to its real twin, then
-      // re-enable the transition next frame.
-      const snapTo = (newDisplayIdx) => {
+      // Shared: after a transitioned move, normalize offset into [0, half)
+      // WITHOUT a transition (the seamless wrap) and resume drift.
+      const scheduleNormalize = () => {
+        clearTimeout(snapTimer.current);
+        snapTimer.current = setTimeout(() => {
+          const track = trackRef.current;
+          if (track) track.style.transition = 'none';
+          if (halfRef.current) offsetRef.current = ((offsetRef.current % halfRef.current) + halfRef.current) % halfRef.current;
+          apply();
+          snapping.current = false;
+          pausedRef.current = pinnedRef.current;
+          lastTsRef.current = 0;
+        }, SNAP_MS + 40);
+      };
+
+      const moveTo = (rawTarget, instantIdx) => {
         const track = trackRef.current;
-        if (!track) return;
-        track.style.transition = 'none';
-        setDisplayIndex(newDisplayIdx);
-        // Wait two frames so the transform settles, then restore transition
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            if (track) track.style.transition = '';
-            wrapping.current = false;
-          });
-        });
-      };
-
-      const goNext = () => {
-        if (wrapping.current) return;
-        setDisplayIndex((d) => {
-          // Going past the last real card → animate to sentinel at 11
-          // (which renders AGENTS[0]), then snap to the real AGENTS[0] at slot 1.
-          if (d >= AGENTS.length) {
-            wrapping.current = true;
-            // After the standard 700ms slide animation, snap back
-            setTimeout(() => snapTo(1), 720);
-            return AGENTS.length + 1; // = 11
-          }
-          return d + 1;
-        });
-      };
-
-      const goPrev = () => {
-        if (wrapping.current) return;
-        setDisplayIndex((d) => {
-          // Going before the first real card → animate to sentinel at 0
-          // (which renders AGENTS[last]), then snap to the real AGENTS[last] at slot 10.
-          if (d <= 1) {
-            wrapping.current = true;
-            setTimeout(() => snapTo(AGENTS.length), 720);
-            return 0;
-          }
-          return d - 1;
-        });
-      };
-
-      const goTo = (i) => {
-        // Map a real index 0-9 to displayIndex 1-10. Doesn't wrap (jump-to dot).
-        const target = (((i % AGENTS.length) + AGENTS.length) % AGENTS.length) + 1;
-        setDisplayIndex(target);
-      };
-
-      // Touch swipe (mobile)
-      const touchStartX = useRef(null);
-      const onTouchStart = (e) => { touchStartX.current = e.touches[0]?.clientX ?? null; };
-      const onTouchEnd = (e) => {
-        if (touchStartX.current == null) return;
-        const dx = (e.changedTouches[0]?.clientX ?? touchStartX.current) - touchStartX.current;
-        touchStartX.current = null;
-        if (Math.abs(dx) > 40) {
-          if (dx < 0) goNext(); else goPrev();
+        if (!track || !halfRef.current) return;
+        offsetRef.current = rawTarget;             // may be <0 or >half; normalized after the slide
+        if (typeof instantIdx === 'number') { activeRef.current = instantIdx; setActive(instantIdx); }
+        if (reducedMotion.current) {
+          track.style.transition = 'none';
+          offsetRef.current = ((rawTarget % halfRef.current) + halfRef.current) % halfRef.current;
+          apply();
+          syncActive();
+          return;
         }
+        snapping.current = true;
+        pausedRef.current = true;
+        track.style.transition = `transform ${SNAP_MS}ms cubic-bezier(.22,.61,.36,1)`;
+        apply();
+        syncActive();
+        scheduleNormalize();
       };
+
+      // Next / prev advance exactly one pitch from the CURRENT position — the
+      // raw (un-normalized) target lets the slide cross the copy boundary
+      // smoothly, then scheduleNormalize() snaps back invisibly.
+      const goNext = () => moveTo(offsetRef.current + pitchRef.current);
+      const goPrev = () => moveTo(offsetRef.current - pitchRef.current);
+
+      // Dot: jump to card i, picking whichever equivalent copy is nearest the
+      // current offset so we never scroll the long way around.
+      const goTo = (i) => {
+        if (!pitchRef.current) return;
+        const cur = offsetRef.current;
+        const cands = [i * pitchRef.current, i * pitchRef.current + halfRef.current, i * pitchRef.current - halfRef.current];
+        let target = cands[0];
+        for (const c of cands) if (Math.abs(c - cur) < Math.abs(target - cur)) target = c;
+        moveTo(target, i);
+      };
+
+      // Keyboard on the region
+      const onKeyDown = (e) => {
+        if (e.key === 'ArrowRight') { e.preventDefault(); goNext(); }
+        else if (e.key === 'ArrowLeft') { e.preventDefault(); goPrev(); }
+      };
+
+      // Pointer drag / swipe (mouse + touch)
+      const dragRef = useRef(null);
+      const onPointerDown = (e) => {
+        if (e.target.closest && e.target.closest('a,button')) return;
+        dragRef.current = { startX: e.clientX, startOffset: offsetRef.current, moved: false };
+        pausedRef.current = true;
+        try { e.currentTarget.setPointerCapture(e.pointerId); } catch (err) {}
+      };
+      const onPointerMove = (e) => {
+        if (!dragRef.current || !halfRef.current) return;
+        const dx = e.clientX - dragRef.current.startX;
+        if (Math.abs(dx) > 3) dragRef.current.moved = true;
+        let o = dragRef.current.startOffset - dx;
+        o = ((o % halfRef.current) + halfRef.current) % halfRef.current;
+        offsetRef.current = o;
+        const t = trackRef.current;
+        if (t) t.style.transition = 'none';
+        apply();
+        syncActive();
+      };
+      const onPointerUp = () => {
+        if (!dragRef.current) return;
+        dragRef.current = null;
+        pausedRef.current = pinnedRef.current;
+        lastTsRef.current = 0;
+      };
+
+      const track2 = [...AGENTS, ...AGENTS];
 
       return (
         <div
@@ -2024,11 +2015,12 @@
           className="relative z-10 mt-16 md:mt-24 w-full"
           role="region"
           aria-roledescription="carousel"
-          aria-label="Agen yang tersedia"
-          onMouseEnter={() => setPaused(true)}
-          onMouseLeave={() => setPaused(false)}
-          onFocus={() => setPaused(true)}
-          onBlur={() => setPaused(false)}
+          aria-label="Agen spesialis"
+          onMouseEnter={pin}
+          onMouseLeave={unpin}
+          onFocusCapture={pin}
+          onBlurCapture={unpin}
+          onKeyDown={onKeyDown}
         >
           <div className="agent-fade-wrap">
             <button type="button" className="agent-nav agent-nav-prev" onClick={goPrev} aria-label="Agent sebelumnya">
@@ -2037,62 +2029,55 @@
             <button type="button" className="agent-nav agent-nav-next" onClick={goNext} aria-label="Agent berikutnya">
               <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="9 6 15 12 9 18" /></svg>
             </button>
-            <div className="agent-fade" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
-              <div ref={trackRef} className="agent-track" aria-live="polite">
-                {/* 11-slot track: [last-card-sentinel, ...9 real cards,
-                    first-card-sentinel]. Sentinels are dupes of the
-                    last/first real cards so the wrap-around slide has
-                    something to animate to. After the slide completes,
-                    we silently snap to the real twin (no transition). */}
-                {[AGENTS[AGENTS.length - 1], ...AGENTS, AGENTS[0]].map((a, i) => {
-                  const isSentinel = i === 0 || i === AGENTS.length + 1;
-                  const isActive = i === displayIndex;
-                  // The canonical slug lives on `a.file` (e.g. 'the-pro',
-                  // 'deep-researcher'). For the carousel-to-detail mapping,
-                  // 'app-builder' aliases to 'web-app-builder' in PERSONA_DETAILS;
-                  // 'email-manager' and 'calendar-agent' have no detail page.
-                  const detailSlugMap = { 'app-builder': 'web-app-builder' };
-                  const candidate = detailSlugMap[a.file] || a.file;
-                  const detailSlug = (typeof PERSONA_DETAILS !== 'undefined' &&
-                    PERSONA_DETAILS.some((p) => p.slug === candidate)) ? candidate : null;
-                  const detailHref = detailSlug ? `/persona?slug=${encodeURIComponent(detailSlug)}` : null;
-                  const onCardClick = detailHref && !isSentinel
-                    ? () => { window.location.href = detailHref; }
-                    : undefined;
+            <div
+              className="agent-fade"
+              onPointerDown={onPointerDown}
+              onPointerMove={onPointerMove}
+              onPointerUp={onPointerUp}
+              onPointerCancel={onPointerUp}
+            >
+              <div ref={trackRef} className="agent-track">
+                {/* Doubled track: [...10 real, ...10 clones]. Clones are aria-
+                    hidden + untabbable; they exist only so the seamless modulo
+                    reset has identical pixels to land on. */}
+                {track2.map((a, i) => {
+                  const isClone = i >= AGENTS.length;
+                  const isSegera = a.status === 'segera';
+                  const detailSlug = (typeof PERSONA_DETAILS !== 'undefined' && PERSONA_DETAILS &&
+                    PERSONA_DETAILS.some((p) => p.slug === a.detail)) ? a.detail : null;
+                  // Live persona -> its /persona page. "Segera" specialist (email/
+                  // calendar, coming via Gmail) -> the integrations centerpiece where
+                  // it's clearly marked Segera. Anything else -> pricing.
+                  const detailHref = isSegera ? '#integrasi' : (detailSlug ? `/persona?slug=${encodeURIComponent(detailSlug)}` : '#pricing');
+                  const detailLabel = isSegera ? 'Lihat integrasi' : (detailSlug ? 'Lihat detail' : 'Lihat paket');
                   return (
                     <article
                       key={`slot-${i}`}
-                      className={`agent-card${isActive ? ' is-active' : ''}`}
-                      aria-label={`Agent: ${a.name}${detailSlug ? ' — klik untuk detail' : ''}`}
-                      aria-hidden={isSentinel}
-                      data-active={isActive}
-                      role={onCardClick ? 'button' : undefined}
-                      tabIndex={onCardClick && isActive ? 0 : undefined}
-                      onClick={onCardClick}
-                      onKeyDown={onCardClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onCardClick(); } } : undefined}
-                      style={onCardClick ? { cursor: 'pointer' } : undefined}
+                      className="agent-card"
+                      aria-label={`Agent: ${a.name}${isSegera ? ' (segera hadir)' : ''}`}
+                      aria-hidden={isClone}
                     >
                       <div className="agent-viz">
-                        <AgentVisual key={`${a.file}-${i}`} file={a.file} />
+                        <AgentVisual file={a.file} glyph={a.glyph} />
+                        {isSegera && <span className="agent-viz-chip" aria-hidden="true">Segera hadir</span>}
                       </div>
                       <div className="agent-body">
                         <div className="agent-name">{a.name}</div>
                         <div className="agent-desc">{a.desc}</div>
-                        {detailHref && !isSentinel && (
-                          <a
-                            className="agent-cta"
-                            href={detailHref}
-                            onClick={(e) => e.stopPropagation()}
-                            aria-label={`Lihat detail ${a.name}`}
-                          >
-                            <span>Lihat detail</span>
-                            {/* Northeast arrow — matches pricing-section CTA glyph for continuity */}
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                              <path d="M7 17 17 7" />
-                              <path d="M7 7h10v10" />
-                            </svg>
-                          </a>
-                        )}
+                        <a
+                          className="agent-cta"
+                          href={detailHref}
+                          tabIndex={isClone ? -1 : 0}
+                          aria-hidden={isClone}
+                          aria-label={`${detailLabel} ${a.name}`}
+                        >
+                          <span>{detailLabel}</span>
+                          {/* Northeast arrow — matches pricing-section CTA glyph for continuity */}
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <path d="M7 17 17 7" />
+                            <path d="M7 7h10v10" />
+                          </svg>
+                        </a>
                       </div>
                     </article>
                   );
@@ -2101,14 +2086,13 @@
             </div>
           </div>
 
-          <div className="agent-dots" role="tablist" aria-label="Pilih agent">
+          <div className="agent-dots" role="group" aria-label="Pilih agent">
             {AGENTS.map((a, i) => (
               <button
                 key={a.slug}
                 type="button"
-                role="tab"
-                aria-label={`Slide ke kartu ${i + 1} — ${a.name}`}
-                aria-current={i === realIndex}
+                aria-label={`Ke kartu ${i + 1} — ${a.name}`}
+                aria-current={i === active ? 'true' : undefined}
                 className="agent-dot"
                 onClick={() => goTo(i)}
               />
@@ -2712,12 +2696,12 @@
             </div>
             <BlurText
               as="h2"
-              text="Sepuluh spesialis. Satu tim. Satu chat."
+              text="Spesialis untuk tiap pekerjaan. Satu tim. Satu chat."
               className="mt-8 text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-heading tracking-tight leading-[1.05] md:leading-[0.9] max-w-3xl"
               style={{ letterSpacing: '-0.03em' }}
               delay={80} />
             <p className="mt-5 md:mt-6 max-w-2xl text-white/65 font-body font-light text-[13px] md:text-base leading-relaxed">
-              Setiap persona di-engineer dan diuji satu per satu — bukan prompt kosong yang harus kamu latih sendiri. Kamu terima tim yang sudah tahu pekerjaannya, hari pertama.
+              Tiap persona di-engineer dan diuji satu per satu — siap kerja hari pertama.
             </p>
             <AgentCarousel />
           </div>
@@ -2726,6 +2710,22 @@
     }
 
     // ─────────────────────── DASHBOARD DEMO ───────────────────────
+    // Animated signal-red circuit flowing into a hub — konten-style hero motion,
+    // pure SVG (stroke-dashoffset), sits behind the dim so it never fights the mockup.
+    function HeroCircuit() {
+      // Premium "living aurora" hero background (styles in index.html). CSS-only
+      // drifting light pools + conic sheen + grain — see .hero-aurora.
+      return (
+        <div className="hero-aurora" aria-hidden="true">
+          <div className="ha-pool ha-1" />
+          <div className="ha-pool ha-2" />
+          <div className="ha-pool ha-3" />
+          <div className="ha-sheen" />
+          <div className="ha-grain" />
+        </div>
+      );
+    }
+
     function DashboardDemo() {
       // Conversation: each event has type 'system' | 'user' | 'agent'
       // user: text shown as typewriter in input then sent as bubble
@@ -2841,14 +2841,30 @@
       };
 
       return (
-        <section className="db-section">
+        <section id="beranda" className="db-section db-section--hero">
+          {/* Ambient dotted-red hero video — dimmed behind the dashboard mockup.
+              DottedVideo's IntersectionObserver pauses its rAF when scrolled away. */}
+          <DottedVideo src="/assets/new-hero.mp4" color="#E5322D" cellSize={7} className="db-hero-video" />
+          <HeroCircuit />
+          <div className="db-hero-dim" aria-hidden="true" />
+          <div className="db-hero-fade" aria-hidden="true" />
           <div className="db-eyebrow">
             <div className="db-eyebrow-pill">
               <span className="live-dot" />
               <span>Agen kamu bekerja</span>
             </div>
-            <h2 className="db-headline">Satu super-agent. Growing skills.<br className="hidden md:inline" /> Create Anything You Want.</h2>
-            <p className="db-sub">Dia yang menyapa kamu duluan — briefing pagi masuk sebelum diminta. Ilustrasi pengalaman; integrasi email dan kalender menyusul bertahap.</p>
+            <h1 className="db-headline"><span className="hl-em">Satu agent.</span><br className="hidden md:inline" /> Ngerjain kerja kamu.</h1>
+            <p className="db-sub">Dia nyapa kamu duluan — briefing pagi masuk sebelum diminta. Kamu cukup setujui.</p>
+            <div className="mt-7 flex flex-col items-center gap-3">
+              <div className="flex items-center gap-3 flex-wrap justify-center">
+                <a href="#pricing" className="rounded-full px-5 py-2.5 min-h-[44px] text-sm font-medium flex items-center gap-2 no-underline" style={{ background: '#fff', color: '#0a0a0a', border: '1px solid #fff' }}>
+                  Aktifkan asisten kamu <ArrowUpRight size={14} stroke={2.2} />
+                </a>
+                <a href="https://cal.com/weuseai.agent/15min" target="_blank" rel="noopener" className="rounded-full px-5 py-2.5 min-h-[44px] text-sm font-medium flex items-center gap-2 no-underline text-white" style={{ background: 'rgba(255, 255, 255, 0.06)', border: '1px solid rgba(255, 255, 255, 0.22)', backdropFilter: 'blur(8px)' }}>
+                  Konsultasi gratis (15 menit)
+                </a>
+              </div>
+            </div>
           </div>
 
           <div className="db-frame">
@@ -2862,17 +2878,17 @@
             {/* Body: sidebar + main */}
             <div className="db-body">
               <aside className="db-sidebar">
-                <button className="db-nav active">
+                <button className="db-nav active" tabIndex={-1} aria-hidden="true">
                   <div className="db-agent-avatar a">A</div>
                   <span className="db-agent-name">Agent A</span>
                   <span className="db-agent-badge">3</span>
                 </button>
-                <button className="db-nav">
+                <button className="db-nav" tabIndex={-1} aria-hidden="true">
                   <div className="db-agent-avatar b">B</div>
                   <span className="db-agent-name">Agent B</span>
                   <span className="db-agent-badge">1</span>
                 </button>
-                <button className="db-nav">
+                <button className="db-nav" tabIndex={-1} aria-hidden="true">
                   <div className="db-agent-avatar c">C</div>
                   <span className="db-agent-name">Agent C</span>
                 </button>
@@ -2882,7 +2898,7 @@
                 </div>
               </aside>
 
-              <main className="db-main">
+              <div className="db-main" role="presentation">
                 <div className="db-thread">
                   <div className="db-thread-content">
                     {visible.map(renderBubble)}
@@ -2893,7 +2909,7 @@
                     )}
                   </div>
                 </div>
-              </main>
+              </div>
             </div>
 
             {/* Input area — typewriter shows next user prompt */}
@@ -2905,14 +2921,15 @@
               </div>
               <button
                 type="button"
-                aria-label="Kirim pesan"
+                tabIndex={-1}
+                aria-hidden="true"
                 className={`db-send ${phase === 'user-click' ? 'db-send-clicked' : ''}`}>
                 <ArrowUpRight size={18} stroke={2.4} />
               </button>
             </div>
 
             {/* Animated mouse cursor — moves to send button when user message is ready */}
-            <div className={`db-cursor cur-${phase}`}>
+            <div className={`db-cursor cur-${phase}`} aria-hidden="true">
               <svg viewBox="0 0 18 22">
                 <path d="M2 2 L2 17 L6.5 13 L9 18 L11.5 17 L8.8 12 L14 12 Z" fill="#fff" stroke="#000" strokeWidth="0.7" strokeLinejoin="round" />
               </svg>
@@ -3235,12 +3252,12 @@
         { kind: 'knowledge', title: 'Pengetahuan',     body: 'Membangun memori dari setiap catatan, percakapan, dan tugas. Ia mengingat semua yang kamu kerjakan.' },
         { kind: 'memory',    title: 'Memori',          body: 'Ingat segalanya lintas sesi. Memori permanen dengan pencarian 10ms untuk 10.000+ entri — nggak perlu jelasin konteks dari awal lagi.' },
         { kind: 'schedule',  title: 'Jadwal',          body: 'Otomasi jadwal pakai bahasa biasa. Tulis "setiap Senin jam 8, lakukan X" — tanpa coding, tanpa batas harian.' },
-        { kind: 'browse',    title: 'Browsing',        body: 'Browsing internet secara mandiri. Scraping, search, dan otomasi browser via Firecrawl.' },
+        { kind: 'browse',    title: 'Browsing',        body: 'Browsing internet secara mandiri. Scraping, search, dan otomasi browser.' },
         { kind: 'platforms', title: 'Multi-platform',  body: 'Runtime-nya mendukung 15+ kanal — Telegram, Discord, Slack, dan lainnya. Kamu mulai di Telegram; kanal lain menyusul.' },
         { kind: 'subagent',  title: 'Sub-agen',        body: 'Mendelegasikan tugas paralel ke 5 sub-agen spesialis sekaligus — tiap satu fokus di domain-nya.' },
         { kind: 'skill',     title: 'Skill mandiri',   body: 'Menulis skill sendiri secara otomatis. Setelah tugas kompleks, ia mendokumentasi metodologinya — biar nggak perlu mikir ulang.' },
-        { kind: 'home',      title: 'Smart Home',      body: 'Kontrol rumah pintar. Integrasi native Home Assistant dengan perintah suara biasa.' },
-        { kind: 'files',     title: 'File Management', body: 'Beresin Google Docs yang berantakan. File chaos jadi rapih — dia yang nyusun.' },
+        { kind: 'home',      title: 'Smart Home',      body: 'Kontrol rumah pintar lewat perintah biasa.' },
+        { kind: 'files',     title: 'File Management', body: 'Beresin dokumen yang berantakan. File chaos jadi rapih — dia yang nyusun.' },
       ];
 
       const UseCaseViz = ({ kind }) => {
@@ -3507,19 +3524,19 @@
     // ─────────────────────── HOW IT WORKS ───────────────────────
     function FeaturesGrid() {
       const steps = [
-        { n: 1, title: 'Pilih plan kamu',     body: 'Ambil plan yang paling pas. Semua sudah termasuk satu instance weuseai.agent dedicated.', mock: 'plan' },
-        { n: 2, title: 'Isi informasi',       body: 'Pilih channel komunikasi (Telegram/Discord). Hand-picked best AI brain buat kamu — pastiin price-to-value paling worth it dan terupdate. Bot token opsional kalau pakai bot custom.', mock: 'form' },
-        { n: 3, title: 'Sistem auto-setup',   body: 'Kamu terima beres. Kami siapkan server kamu, pasang persona dan template library-nya, dan tune ke gaya kamu — tanpa kamu ngapa-ngapain.', mock: 'setup' },
-        { n: 4, title: 'Mulai pakai',         body: 'Buka Telegram, kirim pesan, biarkan ia bekerja. Nggak ada langkah setup. Nggak ada checklist.', mock: 'chat' },
+        { n: 1, title: 'Pilih plan kamu',     body: 'Satu instance dedicated, langsung termasuk.', mock: 'plan' },
+        { n: 2, title: 'Isi informasi',       body: 'Pilih channel. AI brain kami yang pilihkan.', mock: 'form' },
+        { n: 3, title: 'Sistem auto-setup',   body: 'Server, persona, template — kami siapkan.', mock: 'setup' },
+        { n: 4, title: 'Mulai pakai',         body: 'Buka Telegram, kirim pesan, beres.', mock: 'chat' },
       ];
 
       const Mock = ({ kind }) => {
         if (kind === 'plan') {
           return (
             <svg viewBox="0 0 200 110" className="howmock-plan" preserveAspectRatio="xMidYMid meet">
-              <rect x="40" y="20" width="120" height="70" rx="8" fill="none" stroke="#E5322D" strokeWidth="1.4" strokeDasharray="4 4" />
-              <circle cx="100" cy="55" r="14" fill="none" stroke="#E5322D" strokeWidth="1.4" />
-              <path className="check" d="M93 55 L99 61 L108 50" fill="none" stroke="#E5322D" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+              <rect x="40" y="20" width="120" height="70" rx="8" fill="none" stroke="#E5322D" strokeWidth="1.8" strokeDasharray="4 4" />
+              <circle cx="100" cy="55" r="14" fill="none" stroke="#E5322D" strokeWidth="1.8" />
+              <path className="check" d="M93 55 L99 61 L108 50" fill="none" stroke="#E5322D" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           );
         }
@@ -3570,7 +3587,7 @@
             style={{ zIndex: 0, background: '#000', opacity: 0.55 }}
           />
           <FadeTop /> <FadeBottom />
-          <div className="relative z-10 max-w-6xl mx-auto">
+          <div className="relative z-10 max-w-7xl mx-auto">
             <div className="flex flex-col items-center text-center mb-14 md:mb-20">
               <div className="liquid-glass rounded-full px-3.5 py-1 text-xs font-medium font-body text-white/90">
                 Cara kerjanya
@@ -3584,37 +3601,34 @@
               />
             </div>
 
-            <div className="how-cycle grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 md:gap-10 relative">
+            <div className="how-cycle grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12 relative">
               {/* progress line behind badges (lg only) */}
               <div className="hidden lg:block how-line" />
 
               {steps.map((s, i) => (
                 <Mot.div key={s.n}
                   data-i={s.n}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
+                  initial={{ opacity: 0, x: i % 2 ? 36 : -36, y: 24 }}
+                  whileInView={{ opacity: 1, x: 0, y: 0 }}
                   viewport={{ once: true, amount: 0.3 }}
-                  transition={{ duration: 0.7, ease: EASE, delay: 0.1 * i }}
+                  transition={{ duration: 0.7, ease: EASE, delay: 0.12 * i }}
                   className="flex flex-col items-center text-center relative z-10"
                 >
                   <div
-                    className="badge w-14 h-14 rounded-full flex items-center justify-center text-2xl font-heading"
+                    className="badge w-16 h-16 rounded-full flex items-center justify-center text-3xl font-heading"
                     style={{ letterSpacing: '-0.02em' }}
                   >
                     {s.n}
                   </div>
 
-                  <div
-                    className="liquid-glass card-glow mt-6 md:mt-7 w-full rounded-2xl flex items-center justify-center"
-                    style={{ height: 168, padding: 18 }}
-                  >
-                    <div style={{ width: '88%', maxHeight: 140, height: '100%' }}>
+                  <div className="how-mockbox liquid-glass card-glow mt-6 md:mt-8 w-full rounded-2xl flex items-center justify-center">
+                    <div style={{ width: '92%', maxHeight: 200, height: '100%' }}>
                       <Mock kind={s.mock} />
                     </div>
                   </div>
 
-                  <h3 className="mt-6 md:mt-7 text-lg md:text-xl font-heading text-white leading-tight" style={{ letterSpacing: '-0.02em' }}>{s.title}</h3>
-                  <p className="mt-2 md:mt-3 text-sm text-white/55 font-body font-light leading-relaxed max-w-[28ch]">{s.body}</p>
+                  <h3 className="mt-6 md:mt-7 text-xl md:text-2xl font-heading text-white leading-tight" style={{ letterSpacing: '-0.02em' }}>{s.title}</h3>
+                  <p className="mt-2 md:mt-3 text-[15px] md:text-base text-white/60 font-body font-light leading-relaxed max-w-none md:max-w-[34ch]">{s.body}</p>
                 </Mot.div>
               ))}
             </div>
@@ -3661,13 +3675,16 @@
           className="liquid-glass seats-banner"
         >
           <div className="seats-stack">
-            <p className="seats-caption">Hanya 1.000 seat untuk launch ini.</p>
-            <div className="seats-num-big">
-              {remaining.toLocaleString('id-ID')}
+            <p className="seats-caption">Harga launch — batch pertama 1.000 pelanggan.</p>
+            <div className="seats-num-big pulse" aria-label={`${remaining.toLocaleString('id-ID')} dari 1.000 seat tersisa`}>
+              <CountUp to={remaining} duration={1600} delay={120} />
             </div>
-            <p className="seats-sub">dari 1.000 seat tersisa</p>
+            <p className="seats-sub">dari 1.000 seat tersisa di harga launch</p>
             <div className="seats-bar">
               <div className="seats-fill" style={{ width: `${pct}%` }} />
+            </div>
+            <div className="seats-rise">
+              Setelah 1.000 pertama, setup Library Lengkap naik dari Rp 799rb ke <strong>Rp 999rb</strong>.
             </div>
             <div className="seats-foot">
               Counter terhubung ke data pembayaran. Update tiap beberapa menit.
@@ -3684,7 +3701,19 @@
 
       React.useEffect(() => {
         if (!open) return;
-        const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+        const prevFocus = document.activeElement;
+        const onKey = (e) => {
+          if (e.key === 'Escape') { onClose(); return; }
+          if (e.key === 'Tab') {
+            // Focus trap (WCAG 2.4.3/2.1.2): keep Tab inside the dialog.
+            const sel = 'a[href],button:not([disabled]),input,select,textarea,[tabindex]:not([tabindex="-1"])';
+            const list = Array.from(dialogRef.current?.querySelectorAll(sel) || []).filter((el) => el.offsetParent !== null);
+            if (!list.length) return;
+            const first = list[0], last = list[list.length - 1];
+            if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+            else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+          }
+        };
         document.addEventListener('keydown', onKey);
         const prev = document.body.style.overflow;
         document.body.style.overflow = 'hidden';
@@ -3695,6 +3724,8 @@
         return () => {
           document.removeEventListener('keydown', onKey);
           document.body.style.overflow = prev;
+          // Restore focus to whatever opened the dialog.
+          if (prevFocus && typeof prevFocus.focus === 'function') prevFocus.focus();
         };
       }, [open, onClose]);
 
@@ -3789,7 +3820,7 @@
                 </div>
               </div>
 
-              <p className="mt-4 text-xs italic text-white/40 leading-relaxed">
+              <p className="mt-4 text-xs italic text-white/55 leading-relaxed">
                 Tidak ada biaya tersembunyi. Pause dan stop kapan saja.
               </p>
             </div>
@@ -3842,7 +3873,7 @@
           whileHover={isDecoy ? { opacity: 0.92, scale: 0.97 } : undefined}
           viewport={{ once: true, amount: 0.25 }}
           transition={{ duration: 0.6, ease: EASE, delay: 0.05 * index }}
-          className={`rounded-2xl p-6 md:p-7 flex flex-col relative ${isFeatured ? '' : 'liquid-glass'}`}
+          className={`rounded-2xl p-6 md:p-7 flex flex-col relative pc-card ${isFeatured ? 'pc-card-featured' : 'liquid-glass'}`}
           style={
             isFeatured
               ? {
@@ -3871,14 +3902,11 @@
             </div>
           )}
 
-          {/* 1. Tier name + tagline */}
+          {/* 1. Tier name */}
           <div>
-            <h3 className="text-lg md:text-xl font-heading text-white" style={{ letterSpacing: '-0.02em' }}>
+            <h3 className="text-2xl md:text-3xl font-heading text-white" style={{ letterSpacing: '-0.03em' }}>
               {tier.name}
             </h3>
-            <p className="mt-1 text-sm italic text-white/65 font-body font-light leading-snug">
-              {tier.tagline}
-            </p>
           </div>
 
           {/* 2. Price breakdown — setup + hosting + Bulan 1 total + recurring */}
@@ -3888,7 +3916,7 @@
               <span className="text-xs font-body font-light text-white/55">Setup (sekali bayar)</span>
               <span className="font-heading text-white text-base md:text-lg" style={{ letterSpacing: '-0.02em' }}>
                 {tier.priceStrike && (
-                  <span className="text-xs font-body font-light text-white/35 line-through mr-2" style={{ textDecorationColor: 'rgba(229,50,45,0.75)' }}>
+                  <span className="text-xs font-body font-light text-white/55 line-through mr-2" style={{ textDecorationColor: 'rgba(229,50,45,0.75)' }}>
                     {tier.priceStrike}
                   </span>
                 )}
@@ -3907,35 +3935,15 @@
             {/* Bulan 1 total */}
             <div className="flex items-baseline justify-between gap-3">
               <span className="text-xs font-mono uppercase tracking-[0.10em] text-white/65">Bulan 1</span>
-              <span className="font-heading text-2xl md:text-3xl" style={{ letterSpacing: '-0.03em', color: '#E5322D' }}>
+              <span className="font-heading text-2xl md:text-3xl pc-price-month1" style={{ letterSpacing: '-0.03em', color: '#E5322D' }}>
                 {tier.month1Total}
               </span>
             </div>
-            {/* Recurring */}
-            <div className="flex items-baseline justify-between gap-3">
-              <span className="text-xs font-body font-light text-white/55">Bulan 2 dst</span>
-              <span className="text-sm font-body text-white/85">
-                {tier.recurringLabel || 'Rp 99rb/bulan'}
-              </span>
-            </div>
-            <p className="mt-2 text-[10px] font-mono uppercase tracking-[0.12em] text-white/45">
-              Diskon launch · Cancel kapan aja
-            </p>
           </div>
 
-          {/* 3. Untuk siapa */}
-          <div className="mt-6">
-            <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-white/45 mb-2">
-              Untuk siapa
-            </div>
-            <p className="text-sm text-white/75 font-body font-light leading-relaxed">
-              {tier.persona}
-            </p>
-          </div>
-
-          {/* 4. Yang kamu dapat (outcomes) */}
-          <div className="mt-6">
-            <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-white/45 mb-2">
+          {/* 3. Yang kamu dapat (outcomes) — the main focus of the card */}
+          <div className="mt-7">
+            <div className="text-[11px] font-mono uppercase tracking-[0.18em] text-white/60 mb-3">
               Yang kamu dapat
             </div>
             {tier.inheritFrom && (
@@ -3943,15 +3951,15 @@
                 Semua yang ada di {tier.inheritFrom}, plus:
               </p>
             )}
-            <ul className="space-y-2.5 list-none">
+            <ul className="space-y-3 list-none pc-outcomes">
               {tier.outcomes.map((o, oi) => (
-                <li key={oi} className="flex items-start gap-2.5 text-sm font-body font-light leading-relaxed">
+                <li key={oi} className="flex items-start gap-3 text-[15px] md:text-base font-body leading-relaxed">
                   <span
                     aria-hidden="true"
-                    className="mt-[7px] block w-1 h-1 flex-shrink-0 rounded-full"
-                    style={{ background: isFeatured ? '#E5322D' : 'rgba(255,255,255,0.4)' }}
+                    className="mt-[8px] block w-1.5 h-1.5 flex-shrink-0 rounded-full"
+                    style={{ background: isFeatured ? '#E5322D' : 'rgba(229,50,45,0.6)' }}
                   />
-                  <span className="text-white/85">{o}</span>
+                  <span className="text-white/90">{o}</span>
                 </li>
               ))}
             </ul>
@@ -3968,17 +3976,15 @@
           <div className="flex-1" />
 
           {/* 6. CTA + 7. breakdown link.
-              Phase A: pricing CTAs route to the manual-onboarding path
-              (WhatsApp, tier prefilled) — founder provisions via the admin
-              form after contact. Self-serve checkout for the new tier slugs
-              is a deferred follow-up bundled with the Xendit prod-mode
-              rotation (checkout.html + create-invoice still speak the old
-              slugs only). External wa.me / mailto links open in a new tab. */}
+              Pricing CTAs route to self-serve checkout with the tier
+              pre-selected (checkout.html?plan=<slug>); checkout.html PLANS +
+              create-invoice both speak the v1.4 slugs. Same-tab internal nav;
+              the target/rel test below only fires for any http/mailto href. */}
           <a
             href={tier.ctaHref}
             target={/^https?:|^mailto:/.test(tier.ctaHref) ? '_blank' : undefined}
             rel={/^https?:/.test(tier.ctaHref) ? 'noopener' : undefined}
-            className="mt-7 md:mt-8 rounded-full px-5 py-3 text-sm font-medium flex items-center justify-center gap-2 no-underline"
+            className={`mt-7 md:mt-8 rounded-full px-5 py-3 text-sm font-medium flex items-center justify-center gap-2 no-underline${isFeatured ? ' cta-pulse' : ''}`}
             style={
               isFeatured
                 ? { background: '#E5322D', color: '#fff', border: '1px solid #E5322D' }
@@ -4022,7 +4028,7 @@
           ariaLabel: 'Perbandingan AI agent biasa',
         },
         {
-          name: 'weuseai.agent Pro',
+          name: 'weuseai.agent',
           subtitle: 'Agent AI',
           subtitleAside: 'multi-agent paralel, milik kamu',
           featured: true,
@@ -4037,10 +4043,10 @@
             { have: true, text: '190+ template Indonesia — PPN, BPJS, KBLI, IDX, siap isi' },
             { have: true, text: 'Kirim voice note, terima kerjaan jadi' },
             { have: true, text: 'Ingat lintas hari — kamu tidak pernah mengulang konteks' },
-            { have: true, text: 'Jalan 24/7 di server milik kamu sendiri' },
+            { have: true, text: 'Jalan di server pribadi kamu, bukan shared' },
             { have: true, text: 'Di-tune ke gaya nulis dan pekerjaan kamu, satu per satu' },
           ],
-          ariaLabel: 'Perbandingan weuseai.agent Pro (paket kami)',
+          ariaLabel: 'Perbandingan weuseai.agent (paket kami)',
         },
         {
           name: 'Claude Pro',
@@ -4150,7 +4156,7 @@
               })}
             </div>
 
-            <p className="mt-10 md:mt-14 text-center text-xs md:text-sm italic text-white/45 font-body font-light max-w-2xl mx-auto leading-relaxed">
+            <p className="mt-10 md:mt-14 text-center text-xs md:text-sm italic text-white/55 font-body font-light max-w-2xl mx-auto leading-relaxed">
               Chat AI berhenti kerja saat kamu berhenti ngetik. Agent AI baru mulai — multi-agent paralel, scrape, schedule, deploy, sambil kamu tidur.
             </p>
 
@@ -4174,56 +4180,6 @@
     // part-time. Six rows lock in: Bahasa native, 10 agents, 24/7,
     // persistent memory, setup time, cost. weuseai column hits ✓ across
     // all + Rp 99rb/bulan at the foot.
-    // ─────────────── DARI HANGZHOU (founder edge — true story) ───────────────
-    // Every claim here is the founder's verifiable life: ZJU GMBA Hangzhou,
-    // firsthand study of China's agent-first daily workflows. This answers
-    // the skeptic's #1 question: kenapa bisa semurah dan sesiap ini.
-    function HangzhouEdge() {
-      const points = [
-        { t: 'Dipelajari di sumbernya', d: 'Founder kami kuliah GMBA di Zhejiang University, Hangzhou — jantungnya ekosistem AI China. Setup agent yang dipakai orang sana tiap hari, kami pelajari langsung, bukan dari thread internet.' },
-        { t: 'Di China, agent itu alat harian', d: 'Mahasiswa pakai agent buat tugas dan slide. Pemilik usaha pakai agent buat operasional. Bukan ChatGPT — agent yang lebih murah, lebih pribadi, dan benar-benar mengerjakan.' },
-        { t: 'Resep yang sama, untuk Indonesia', d: 'Arsitektur efisien yang kami pelajari di sana, kami bangun ulang untuk Bahasa dan konteks bisnis Indonesia. Itu kenapa harga kami serendah ini — resepnya hemat, bukan fiturnya yang dipotong.' },
-        { t: 'Bandingkan dengan bikin sendiri', d: 'Rakit sendiri berarti bakar token untuk eksperimen, debug tengah malam, dan hasil yang belum tentu stabil. Kami sudah bayar harga belajarnya — kamu tinggal pakai.' },
-      ];
-      return (
-        <section className="relative overflow-hidden py-24 md:py-36 px-5 md:px-6 lg:px-16 bg-black">
-          <FadeTop /> <FadeBottom />
-          <div className="relative z-10 max-w-7xl mx-auto">
-            <div className="flex flex-col items-center text-center mb-14 md:mb-20">
-              <div className="liquid-glass rounded-full px-3.5 py-1 text-xs font-medium font-body text-white/90" style={{ borderColor: 'rgba(229, 50, 45, 0.45)' }}>
-                Keunggulan kami
-              </div>
-              <BlurText
-                as="h2"
-                text="Resep ini kami pelajari di kampus elite China."
-                className="mt-5 md:mt-6 text-4xl md:text-6xl lg:text-7xl font-heading text-white tracking-tight leading-[1.0] md:leading-[0.95] max-w-4xl"
-                style={{ letterSpacing: '-0.04em' }}
-                delay={70} />
-              <p className="mt-6 max-w-2xl text-white/60 font-body font-light text-base md:text-lg leading-relaxed">
-                Dunia masih sibuk ngobrol sama chatbot. China sudah pindah ke agent — dan kami mempelajarinya dari dalam, di Zhejiang University, Hangzhou, lalu membawanya pulang.
-              </p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-7 max-w-5xl mx-auto">
-              {points.map((x, i) => (
-                <Mot.div key={x.t}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, amount: 0.3 }}
-                  transition={{ duration: 0.6, ease: EASE, delay: 0.06 * i }}
-                  className="liquid-glass rounded-3xl p-8 md:p-10">
-                  <div className="text-white font-heading text-xl md:text-2xl" style={{ letterSpacing: '-0.02em' }}>{x.t}</div>
-                  <p className="mt-3 text-white/65 font-body font-light text-sm md:text-base leading-relaxed">{x.d}</p>
-                </Mot.div>
-              ))}
-            </div>
-            <p className="mt-12 md:mt-16 text-center text-sm md:text-base text-white/50 font-body font-light max-w-2xl mx-auto leading-relaxed">
-              Kamu tidak perlu pindah ke Hangzhou untuk kerja seperti mereka. Cukup satu checkout.
-            </p>
-          </div>
-        </section>
-      );
-    }
-
     // ─────────────────────── COST COMPARISON ───────────────────────
     function CostComparisonSection() {
       const rows = [
@@ -4435,7 +4391,7 @@
               ))}
             </div>
 
-            <p className="mt-10 md:mt-14 text-center text-xs md:text-sm italic text-white/45 font-body font-light max-w-2xl mx-auto leading-relaxed">
+            <p className="mt-10 md:mt-14 text-center text-xs md:text-sm italic text-white/55 font-body font-light max-w-2xl mx-auto leading-relaxed">
               Setup sekali bayar. Hosting Rp 99rb/bulan. Bisa pause kapan saja dari dashboard.
             </p>
 
@@ -4456,6 +4412,26 @@
     // SecurityNarrativeSection ("Keamanan" — Privat. Terenkripsi. Milik
     // kamu.) removed 2026-05-18 per founder direction — the section was
     // judged unnecessary on the landing page.
+
+    // konten-style interactive toy — drag to see how much ONE agent absorbs.
+    // Honest: shows task VOLUME the agent handles + the flat hosting price; never
+    // invents earnings/savings (we are not a payout platform). No new price string.
+    function ValueSlider() {
+      const [tasks, setTasks] = useState(40);
+      const pct = ((tasks - 5) / (200 - 5)) * 100;
+      return (
+        <div className="vslider" style={{ '--vpct': pct + '%' }}>
+          <div className="vslider-eyebrow">Geser — lihat berapa yang dia tangani</div>
+          <div className="vslider-readout" aria-live="polite">
+            Kasih dia <b>{tasks}</b> tugas seminggu — satu agent yang menangani. Hosting tetap <b className="vslider-flat">Rp 99rb/bulan</b>.
+          </div>
+          <div className="vslider-track" aria-hidden="true"><span className="vslider-fill" /></div>
+          <input className="vslider-input" type="range" min="5" max="200" step="5" value={tasks}
+            onChange={(e) => setTasks(+e.target.value)} aria-label="Tugas per minggu"
+            aria-valuetext={`${tasks} tugas per minggu`} />
+        </div>
+      );
+    }
 
     function Pricing() {
       const [breakdownTier, setBreakdownTier] = React.useState(null);
@@ -4485,7 +4461,7 @@
           apps: ['Telegram'],
           appsTotal: 1,
           cta: 'Mulai Bare Agent',
-          ctaHref: 'https://wa.me/6282154902561?text=Halo%2C%20saya%20mau%20mulai%20paket%20Bare%20Agent%20di%20weuseai.agent',
+          ctaHref: 'checkout.html?plan=bare',
           featured: false,
         },
         {
@@ -4500,16 +4476,15 @@
           recurringLabel: 'Rp 99rb/bulan',
           persona: 'Buat kamu yang mau persona kerja inti, cukup lewat teks.',
           outcomes: [
-            '3 persona: The Pro, Doc Expert, Slide Master',
-            'Mode teks — tanpa voice note',
-            'VPS dedicated, bukan shared',
-            'Kredit LLM perkenalan termasuk — lanjut pakai kunci kamu sendiri, kami bantu pasang',
-            'Community support',
+            '3 persona inti: asisten utama, ahli dokumen, ahli slide',
+            'Draft dokumen & deck dari 190+ template Indonesia',
+            'Nyapa kamu duluan, ingat obrolan lintas hari',
+            'Lewat Telegram, mode teks',
           ],
           apps: ['Telegram', 'Web'],
           appsTotal: 2,
           cta: 'Mulai Solo Starter',
-          ctaHref: 'https://wa.me/6282154902561?text=Halo%2C%20saya%20mau%20mulai%20paket%20Solo%20Starter%20di%20weuseai.agent',
+          ctaHref: 'checkout.html?plan=solo',
           featured: false,
         },
         {
@@ -4524,16 +4499,15 @@
           recurringLabel: 'Rp 99rb/bulan',
           persona: 'Buat kamu yang mau coba rasanya didampingi agent.',
           outcomes: [
-            'Voice — ngobrol pakai suara di Telegram',
-            '3 persona: The Pro, Doc Expert, Slide Master',
-            'VPS dedicated, bukan shared',
-            'Kredit LLM perkenalan termasuk — lanjut pakai kunci kamu sendiri, kami bantu pasang',
-            'Community support',
+            '3 persona inti + ngobrol pakai suara',
+            'Draft dokumen & deck dari 190+ template Indonesia',
+            'Nyapa kamu duluan, ingat obrolan lintas hari',
+            'Kirim voice note, terima kerjaan jadi',
           ],
           apps: ['Telegram', 'Voice note', 'Web'],
           appsTotal: 3,
           cta: 'Mulai Voice Starter',
-          ctaHref: 'https://wa.me/6282154902561?text=Halo%2C%20saya%20mau%20mulai%20paket%20Voice%20Starter%20di%20weuseai.agent',
+          ctaHref: 'checkout.html?plan=voice-starter',
           featured: false,
         },
         {
@@ -4548,16 +4522,16 @@
           recurringLabel: 'Rp 99rb/bulan',
           persona: 'Buat kamu yang mau semua persona tanpa kompromi.',
           outcomes: [
-            'Voice — ngobrol pakai suara di Telegram',
-            'Semua 10 persona, dari The Pro sampai Business Director',
-            'VPS dedicated 24/7',
-            'Kredit LLM perkenalan termasuk — lanjut pakai kunci kamu sendiri, kami bantu pasang',
-            '24/7 support — antrean paling depan',
+            'Semua 10 persona spesialis — riset, slide, dokumen, sosmed, keuangan',
+            'Briefing pagi jam 7 + ringkasan sore, tiap hari',
+            'Draft caption & dokumen dari 190+ template Indonesia',
+            'Riset web mendalam, ingat obrolan lintas hari',
+            'Ngobrol pakai suara · VPS pribadi, bukan shared',
           ],
           apps: ['Telegram', 'Voice note', 'Web'],
           appsTotal: 3,
           cta: 'Ambil Library Lengkap',
-          ctaHref: 'https://wa.me/6282154902561?text=Halo%2C%20saya%20mau%20ambil%20paket%20Library%20Lengkap%20di%20weuseai.agent',
+          ctaHref: 'checkout.html?plan=library-full',
           featured: true,
         },
         {
@@ -4570,24 +4544,30 @@
           hostingMonth: 'Rp 99rb',
           month1Total: 'Rp 1,398jt',
           recurringLabel: 'Rp 99rb/bulan',
-          persona: 'Buat freelancer, founder, creator yang butuh agent kerja 24/7.',
+          persona: 'Buat freelancer, founder, creator yang mau agent kerja tiap hari.',
           outcomes: [
-            'Voice — ngobrol pakai suara di Telegram',
-            'Web app — dashboard kamu sendiri di subdomain',
-            '8 persona set kerja: Pro, Doc, Slide, Researcher, Trade, Project, Video, Social',
-            'VPS dedicated 24/7',
-            '24/7 dedicated support + onboarding privat',
+            'Web app + dashboard di subdomain kamu sendiri',
+            '8 persona kerja inti, pakai suara',
+            'Briefing, draft, riset — di app-mu, bukan cuma chat',
+            'Support privat paling depan',
           ],
           apps: ['Telegram', 'Voice note', 'Web app'],
           appsTotal: 4,
           cta: 'Ambil Siap Pakai',
-          ctaHref: 'https://wa.me/6282154902561?text=Halo%2C%20saya%20mau%20ambil%20paket%20Siap%20Pakai%20di%20weuseai.agent',
+          ctaHref: 'checkout.html?plan=done-for-you',
           featured: false,
         },
       ];
 
+      // Bare Agent (decoy) is hidden from the live grid for now (founder
+      // revision 2026-06-16). It MUST stay in `tiers` above — the pricing-drift
+      // gate source-greps slug:'bare', setupIdr:99_000, priceLabel 'Rp 99rb',
+      // month1Total 'Rp 198rb'. Hiding the card keeps the gate green; deleting
+      // the object breaks it. 4 visible tiers: Solo / Voice / Library / Siap Pakai.
+      const visibleTiers = tiers.filter((t) => !t.decoy);
+
       return (
-        <section id="pricing" className="relative overflow-hidden py-20 md:py-32 px-5 md:px-6 lg:px-16 bg-black">
+        <section id="pricing" className="relative overflow-hidden py-16 md:py-20 lg:py-24 px-5 md:px-6 lg:px-10 bg-black">
           <DottedVideo
             src="/assets/pricing-furnace.mp4"
             color="#E5322D"
@@ -4596,22 +4576,18 @@
             style={{ zIndex: 1, background: '#000' }}
           />
           <FadeTop /> <FadeBottom />
-          <div className="relative z-10 max-w-6xl mx-auto">
-            <div className="flex flex-col items-center text-center mb-14 md:mb-20">
+          <div className="relative z-10 max-w-7xl mx-auto">
+            <div className="pc-section-head flex flex-col items-center text-center mb-10 md:mb-12">
               <div
                 className="liquid-glass rounded-full px-3.5 py-1 text-xs font-medium font-body text-white/90"
                 style={{ borderColor: 'rgba(229, 50, 45, 0.45)' }}
               >
                 Harga
               </div>
-              <p className="mt-4 max-w-xl text-white/60 font-body font-light text-xs md:text-sm leading-relaxed">
-                Tiap tim dirakit dan dicek satu per satu, bukan digenerate massal.
-                Kapasitas onboarding tiap minggu terbatas — kalau slot minggu ini penuh, kamu masuk antrian berikutnya.
-              </p>
               <BlurText
                 as="h2"
                 text="Pilih ukuran tim kamu. Upgrade kapan saja."
-                className="mt-5 md:mt-6 text-3xl md:text-5xl lg:text-6xl font-heading text-white tracking-tight leading-[1.0] md:leading-[0.95] max-w-3xl"
+                className="mt-5 md:mt-6 text-3xl md:text-4xl lg:text-5xl font-heading text-white tracking-tight leading-[1.0] md:leading-[0.95] max-w-3xl"
                 style={{ letterSpacing: '-0.04em' }}
                 delay={70}
               />
@@ -4620,10 +4596,13 @@
               </p>
             </div>
 
-            {/* 5 tiers side by side — Bare (decoy) → Solo → Voice → Library
-                Lengkap (recommended, premium glow) → Siap Pakai. */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 md:gap-5 items-stretch">
-              {tiers.map((t, i) => (
+            <ValueSlider />
+
+            {/* 4 visible tiers — Solo → Voice → Library Lengkap (recommended,
+                premium glow) → Siap Pakai. Bare is hidden but kept in the
+                catalog for the drift gate (see visibleTiers above). */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 md:gap-7 lg:gap-8 items-stretch">
+              {visibleTiers.map((t, i) => (
                 <PricingCard
                   key={t.name}
                   tier={t}
@@ -4695,7 +4674,7 @@
       const skillCards = [
         {
           handle: '@weuseaibot',
-          tagline: 'agen lo',
+          tagline: 'agen kamu',
           timestamp: 'jam 7:00 WIB',
           body: [
             'Selamat pagi.',
@@ -4707,7 +4686,7 @@
         },
         {
           handle: '@weuseaibot',
-          tagline: 'agen lo',
+          tagline: 'agen kamu',
           timestamp: 'jam 6:45 WIB',
           body: [
             'Cuaca Jakarta 27° cerah, sore mulai mendung.',
@@ -4719,7 +4698,7 @@
         },
         {
           handle: '@weuseaibot',
-          tagline: 'agen lo',
+          tagline: 'agen kamu',
           timestamp: 'jam 23:14 WIB',
           body: [
             'Semalam: 50 lowongan dari Glints, LinkedIn, Kalibrr dipantau.',
@@ -4731,7 +4710,7 @@
         },
         {
           handle: '@weuseaibot',
-          tagline: 'agen lo',
+          tagline: 'agen kamu',
           timestamp: 'jam 4 sore',
           body: [
             'Topik "cara mulai bisnis F&B" diolah dari 12 sumber.',
@@ -4743,7 +4722,7 @@
         },
         {
           handle: '@weuseaibot',
-          tagline: 'agen lo',
+          tagline: 'agen kamu',
           timestamp: 'jam 8:30 WIB',
           body: [
             '247 email pasca-cuti diurutkan.',
@@ -4755,7 +4734,7 @@
         },
         {
           handle: '@weuseaibot',
-          tagline: 'agen lo',
+          tagline: 'agen kamu',
           timestamp: 'jam 10:00 WIB',
           body: [
             '5 invoice telat bayar di-check ulang.',
@@ -4767,7 +4746,7 @@
         },
         {
           handle: '@weuseaibot',
-          tagline: 'agen lo',
+          tagline: 'agen kamu',
           timestamp: 'jam 14:00 WIB',
           body: [
             '12 kompetitor harga + listing dipantau hari ini.',
@@ -4779,7 +4758,7 @@
         },
         {
           handle: '@weuseaibot',
-          tagline: 'agen lo',
+          tagline: 'agen kamu',
           timestamp: 'jam 12:30 WIB',
           body: [
             '23 DM Instagram masuk semalam.',
@@ -4791,7 +4770,7 @@
         },
         {
           handle: '@weuseaibot',
-          tagline: 'agen lo',
+          tagline: 'agen kamu',
           timestamp: 'jam 9:00 WIB',
           body: [
             'Watchlist crypto + saham di-scan tiap 5 menit.',
@@ -4803,7 +4782,7 @@
         },
         {
           handle: '@weuseaibot',
-          tagline: 'agen lo',
+          tagline: 'agen kamu',
           timestamp: 'semalam',
           body: [
             '50 hotel di Bali dipantau. 12 dengan rating 4.5+ tapi foto listing buruk.',
@@ -4815,7 +4794,7 @@
         },
         {
           handle: '@weuseaibot',
-          tagline: 'agen lo',
+          tagline: 'agen kamu',
           timestamp: 'jam 19:00 WIB',
           body: [
             'Foto 12 struk hari ini diproses.',
@@ -4827,7 +4806,7 @@
         },
         {
           handle: '@weuseaibot',
-          tagline: 'agen lo',
+          tagline: 'agen kamu',
           timestamp: 'jam 11:30 WIB',
           body: [
             'Recording meeting product strategy 47 menit selesai diolah.',
@@ -4839,7 +4818,7 @@
         },
         {
           handle: '@weuseaibot',
-          tagline: 'agen lo',
+          tagline: 'agen kamu',
           timestamp: 'jam 17:30 WIB',
           body: [
             'Bahan kulkas: 3 telur, ayam fillet, brokoli, bawang putih, nasi.',
@@ -4851,7 +4830,7 @@
         },
         {
           handle: '@weuseaibot',
-          tagline: 'agen lo',
+          tagline: 'agen kamu',
           timestamp: 'jam 6:00 WIB',
           body: [
             '4 emiten watchlist dianalisa: BBCA, BBRI, ASII, TLKM.',
@@ -4863,7 +4842,7 @@
         },
         {
           handle: '@weuseaibot',
-          tagline: 'agen lo',
+          tagline: 'agen kamu',
           timestamp: 'jam 21:00 WIB',
           body: [
             '3 destinasi wishlist dipantau: Tokyo, Seoul, Bangkok.',
@@ -4880,7 +4859,7 @@
           handle: '@hermes_agent',
           timestamp: '3 hari lalu',
           body: [
-            '"Hermes Agent sekarang punya multi-agent via Kanban, baru di v0.12.0. Beberapa agent ngambil task dari papan, kerja paralel, dan hand-off saat ada yang stuck. Kamu pantau progress dan unblock dari satu view, bukan juggling banyak terminal."',
+            '"Hermes Agent sekarang punya multi-agent via Kanban. Beberapa agent ngambil task dari papan, kerja paralel, dan hand-off saat ada yang stuck. Kamu pantau progress dan unblock dari satu view, bukan juggling banyak terminal."',
           ],
           sourceLabel: 'github.com/NousResearch/hermes-agent',
           sourceUrl: 'https://github.com/NousResearch/hermes-agent',
@@ -4931,15 +4910,15 @@
           <div className="flex items-center gap-2 text-[12px] font-mono text-white/65">
             <Avatar handle={card.handle} />
             <span className="text-white/85">{card.handle}</span>
-            {card.tagline && <span className="text-white/40">· {card.tagline}</span>}
-            <span className="text-white/40">· {card.timestamp}</span>
+            {card.tagline && <span className="text-white/55">· {card.tagline}</span>}
+            <span className="text-white/55">· {card.timestamp}</span>
           </div>
           <div className="mt-3 text-sm text-white/85 font-body font-light leading-relaxed space-y-1">
             {card.body.map((line, li) => (
               <p key={li}>{line}</p>
             ))}
           </div>
-          <div className="mt-4 pt-3 border-t border-white/[0.07] text-[10px] font-mono uppercase tracking-[0.18em] text-white/40">
+          <div className="mt-4 pt-3 border-t border-white/[0.07] text-[10px] font-mono uppercase tracking-[0.18em] text-white/55">
             {isCommunity ? (
               <a
                 href={card.sourceUrl}
@@ -4968,19 +4947,19 @@
               </div>
               <BlurText
                 as="h2"
-                text="Skill yang sudah hidup di tim kamu."
+                text="Skill yang terus kami tambah."
                 className="mt-5 md:mt-6 text-3xl md:text-5xl lg:text-6xl font-heading text-white tracking-tight leading-[1.0] md:leading-[0.95] max-w-3xl"
                 style={{ letterSpacing: '-0.04em' }}
                 delay={70}
               />
               <p className="mt-5 md:mt-6 max-w-xl text-white/55 font-body font-light text-sm md:text-base leading-relaxed">
-                Bawaan, siap dipakai hari pertama. Plus apa yang lagi dikerjain agent lain di komunitas.
+                Sebagian sudah jalan, sebagian lagi kami siapkan bareng komunitas.
               </p>
             </div>
 
             {/* Panel A — sample skills we ship */}
             <div className="mb-12 md:mb-16">
-              <div className="text-[11px] font-mono uppercase tracking-[0.18em] text-white/45 mb-4 md:mb-6">
+              <div className="text-[11px] font-mono uppercase tracking-[0.18em] text-white/55 mb-4 md:mb-6">
                 Skill bawaan
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
@@ -4992,7 +4971,7 @@
 
             {/* Panel B — real community quotes */}
             <div>
-              <div className="text-[11px] font-mono uppercase tracking-[0.18em] text-white/45 mb-4 md:mb-6">
+              <div className="text-[11px] font-mono uppercase tracking-[0.18em] text-white/55 mb-4 md:mb-6">
                 Dari komunitas agent
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5">
@@ -5009,71 +4988,22 @@
     // ─────────────────────── FAQ ───────────────────────
     function FAQ() {
       const items = [
-        {
-          q: 'Saya gak tech-savvy, bisa pakai?',
-          a: 'Bisa. Setup otomatis — gak install apapun, gak perlu tau coding atau VPS. Cukup chat di Telegram seperti chat sama temen. Agent yang ngerjain.',
-        },
-        {
-          q: 'Bahasa apa support? Bisa pure Bahasa Indonesia?',
-          a: 'Default Bahasa Indonesia. English fully supported. Mixed chat (Bahasa + English) juga jalan natural.',
-        },
-        {
-          q: 'Aman buat data bisnis saya?',
-          a: 'Agent jalan di server VPS pribadi kamu, bukan share dengan customer lain. Memory chat gak shared dengan kami, gak training data. Customer-grown templates stay di server kamu.',
-        },
-        {
-          q: 'Bisa pakai metode pembayaran apa?',
-          a: 'Bank transfer (semua bank Indonesia), GoPay, OVO, DANA, ShopeePay, kartu kredit/debit. Lewat Xendit (gateway pembayaran Indonesia).',
-        },
-        {
-          q: 'Apa beda dengan subscription biasa?',
-          a: 'Setup-nya beneran sekali bayar — kamu beli engineering work yang sudah kami lakukan. Hosting Rp 99rb/bulan transparan: itu biaya server yang real, kayak bayar listrik. Berhenti kapan saja — tagihan berhenti, setup tetap kamu punya.',
-        },
-        {
-          q: 'Kenapa harus bayar hosting kalau setup-nya sudah bayar?',
-          a: 'Setup itu kerja kami sekali (konfigurasi VPS, install agent, tune ke voice kamu). Hosting itu cost VPS yang jalan terus 24/7. Server butuh listrik dan resource yang real. Kami nggak mau pretend itu gratis — lebih jujur kalau transparent.',
-        },
-        {
-          q: 'Kalau nggak cocok atau mau berhenti?',
-          a: 'Berhenti kapan saja — tagihan hosting berhenti, setup tetap milik kamu. Refund policy tertulis, link-nya di footer. Mau lanjut lagi nanti, tinggal bilang.',
-        },
-        {
-          q: 'Berapa lama proses setup sampai agent saya jalan?',
-          a: 'Sekitar 8 menit setelah bayar — angka yang kami ukur, bukan janji. Agent makin nyambung setelah beberapa hari dipakai, karena dia ingat percakapan dan menyesuaikan gaya kamu.',
-        },
-        {
-          q: 'Berapa biaya LLM-nya?',
-          a: 'Kredit perkenalan sudah termasuk di setup — cukup untuk ratusan pesan pertama. Setelah itu kamu pakai kunci API sendiri (DeepSeek mulai dari puluhan ribu rupiah per bulan untuk pemakaian normal) — kami bantu pasang, dan biayanya transparan langsung ke penyedia, tanpa markup dari kami.',
-        },
-        {
-          q: 'Apa beda dengan ChatGPT atau Claude biasa?',
-          a: 'ChatGPT nunggu kamu tanya. Agent ini ngerjain duluan: briefing pagi jam 7, ringkasan sore, draft dokumen dan caption dari template Indonesia, riset web, dan playbook multi-langkah — sambil ingat percakapan kamu lintas hari. ChatGPT bantu kamu mikir. Agent ini bantu kamu kerja.',
-        },
-        {
-          q: 'Kalau saya cancel di tengah jalan, uang setup balik?',
-          a: 'Setup nggak refundable karena itu engineering work yang udah kami selesaikan untuk kamu. Tapi 14 hari pertama setelah onboarding — kalau ada masalah teknis dari sisi kami yang bikin agent nggak bisa dipakai, kami tanggung: fix gratis atau full refund setup. Hosting bulanan tinggal stop kapan saja, no commitment.',
-        },
-        {
-          q: 'Saya nggak punya background tech, apakah bisa pakai?',
-          a: 'Bisa. Setup-nya kami yang ngerjain — kamu cuma kasih konteks (preferensi, workflow, tools yang sering dipakai) lewat form atau video call. Setelah live, agent diakses lewat Telegram atau Discord — sama persis kayak chat ke teman. Nggak perlu nulis prompt panjang, nggak perlu ngerti API, nggak perlu setting server.',
-        },
-        {
-          q: 'Data dan percakapan saya disimpan di mana? Aman dari kebocoran?',
-          a: 'Server kamu ada di Singapore — paling dekat dan paling stabil untuk Indonesia. Data percakapan disimpan lokal di server kamu sendiri, bukan di server bersama. Kunci API dienkripsi at-rest. Kami tidak mengakses isi percakapan kamu kecuali kamu minta bantuan support dan kasih izin eksplisit.',
-        },
-        {
-          q: 'Always-On vs hosting biasa, kapan saya butuh yang Always-On?',
-          a: 'Untuk pemakaian harian — chat, briefing pagi, draft dokumen — hosting default sudah cukup. Always-On menjamin server kamu menyala 24/7 nonstop dengan prioritas penuh, untuk kamu yang menjadikan agent bagian kritis dari operasional harian.',
-        },
-        {
-          q: 'Bisa lihat demo atau ngobrol dulu sebelum bayar?',
-          a: 'Bisa. Booking 30 menit lewat tombol "Jadwalkan panggilan" di footer — kami tunjukkan agent live, jawab pertanyaan teknis, dan kamu bisa lihat workflow yang sebenarnya. Tanpa hard sell. Kalau nggak cocok, kami nggak follow up.',
-        },
-        {
-          q: 'Kalau ada masalah teknis, gimana cara dapat support?',
-          a: '24/7 support lewat Telegram langsung ke tim engineering kami. Median response time 12 menit untuk Pro dan Studio, 4 jam untuk Starter. Setiap pelanggan dapat dedicated channel — bukan chatbot, bukan ticketing yang antri panjang.',
-        },
+        { q: 'Gak tech-savvy, bisa pakai?',
+          a: 'Bisa. Setup otomatis, nggak install apa-apa — cukup chat di Telegram, agent yang ngerjain.' },
+        { q: 'Aman buat data bisnis?',
+          a: 'Agent jalan di VPS pribadi kamu, bukan shared. Kami nggak baca isi chat kecuali kamu minta bantuan dan kasih izin.' },
+        { q: 'Beda sama subscription biasa?',
+          a: 'Setup sekali bayar. Hosting Rp 99rb transparan kayak bayar listrik, stop kapan saja.' },
+        { q: 'Berapa biaya LLM-nya?',
+          a: 'Kredit perkenalan termasuk. Lanjut pakai kunci sendiri — transparan langsung ke penyedia, tanpa markup.' },
+        { q: 'Kalau mau berhenti?',
+          a: 'Stop kapan saja, tagihan hosting berhenti, setup tetap kamu punya.' },
+        { q: 'Bisa demo dulu?',
+          a: 'Bisa. Booking 15 menit lewat footer, kami tunjukkan agent live.' },
+        { q: 'Kok resepnya dari China?',
+          a: 'Tim agent ini dipelajari di Zhejiang University, Hangzhou, lalu dirakit untuk Indonesia.' },
       ];
+
       const [openIdx, setOpenIdx] = useState(0);
 
       return (
@@ -5091,7 +5021,7 @@
                 delay={70}
               />
               <p className="mt-5 max-w-xl text-white/55 font-body font-light text-sm md:text-base leading-relaxed">
-                Hal-hal yang biasanya bikin orang ragu sebelum mulai. Jawaban jujur, sebelum kamu klik bayar.
+                Jawaban jujur, sebelum kamu klik bayar.
               </p>
             </div>
 
@@ -5106,7 +5036,9 @@
                   <button
                     type="button"
                     className="faq-trigger"
+                    id={`faq-q-${i}`}
                     aria-expanded={openIdx === i}
+                    aria-controls={`faq-a-${i}`}
                     onClick={() => setOpenIdx(openIdx === i ? -1 : i)}
                   >
                     <span>{it.q}</span>
@@ -5114,12 +5046,19 @@
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                     </span>
                   </button>
-                  <div className="faq-body">
+                  <div className="faq-body" id={`faq-a-${i}`} role="region" aria-labelledby={`faq-q-${i}`} aria-hidden={openIdx !== i}>
                     <div className="faq-body-inner">{it.a}</div>
                   </div>
                 </div>
               ))}
             </Mot.div>
+
+            <div className="mt-9 text-center">
+              <a href="/faq" className="faq-all-link">
+                Lihat semua pertanyaan
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+              </a>
+            </div>
           </div>
         </section>
       );
@@ -5173,7 +5112,7 @@
     // ─────────────────────── CTA + FOOTER ───────────────────────
     function CtaFooter() {
       return (
-        <section className="relative overflow-hidden bg-black" style={{ minHeight: 620 }}>
+        <footer className="relative overflow-hidden bg-black" style={{ minHeight: 620 }}>
           <DottedVideo
             src="/assets/ascii-wave.mp4"
             color="#E5322D"
@@ -5189,17 +5128,17 @@
               className="text-4xl md:text-6xl lg:text-7xl font-heading leading-[0.92] md:leading-[0.85] tracking-tight max-w-4xl"
               delay={90} />
             <p className="mt-6 md:mt-8 max-w-xl text-white/70 font-body font-light text-sm md:text-base px-2">
-              Atau besok pagi sama seperti pagi ini — kamu yang pilih. Resep dari Hangzhou, tim penuh di Telegram kamu, hosting Rp 99rb/bulan.
+              Atau besok sama seperti hari ini. Kamu yang pilih.
             </p>
             <div className="mt-8 md:mt-10 flex items-center gap-3 md:gap-4 flex-wrap justify-center">
-              <a href="checkout.html" className="bg-white text-black rounded-full px-5 md:px-6 py-3 text-sm font-medium flex items-center gap-2 no-underline">
+              <a href="#pricing" className="bg-white text-black rounded-full px-5 md:px-6 py-3 text-sm font-medium flex items-center gap-2 no-underline">
                 Aktifkan asisten kamu <ArrowUpRight size={14} stroke={2.2} />
               </a>
               <a href="https://cal.com/weuseai.agent/15min" target="_blank" rel="noopener" className="liquid-glass-strong rounded-full px-5 md:px-6 py-3 text-sm font-medium no-underline text-white">
                 Konsultasi gratis (15 menit)
               </a>
             </div>
-            <p className="mt-6 text-xs text-white/45 font-body font-light max-w-md mx-auto leading-relaxed">
+            <p className="mt-6 text-xs text-white/55 font-body font-light max-w-md mx-auto leading-relaxed">
               Butuh setup custom atau enterprise? Ngobrol dulu —{' '}
               <a href="https://cal.com/weuseai.agent/15min" target="_blank" rel="noopener" className="text-white/75 hover:text-white underline-offset-2 hover:underline">Jadwalkan panggilan</a>
             </p>
@@ -5222,6 +5161,220 @@
               </p>
             </div>
           </div>
+        </footer>
+      );
+    }
+
+    // ─────────────── INTEGRATIONS SPINE (the centerpiece) ───────────────
+    // The #1 value prop: the agent works INSIDE real apps. R2 Content / R2 Fit /
+    // R2 Finance are LIVE (founder-confirmed, operated outside this repo) → tiles
+    // pulse "Aktif". Gmail/Sekolah is "Segera" (dashed, future-tense, "siapkan
+    // tugas" = prepares, never "kerjakan"). An Aktif chip only ever pulses for a
+    // genuinely-live tile (no animated lie). Copy is the founder's confirmed-LIVE
+    // claim; refine the exact value-prop lines anytime (data-driven below).
+    function IntegrationsSpine() {
+      const apps = [
+        { key: 'content', name: 'R2 Content', status: 'live',
+          line: 'Susun & jadwalkan konten kamu.',
+          micro: '7 post terjadwal minggu ini',
+          ask: 'Atur konten minggu ini dong',
+          msg: 'Sudah aku susun 7 post minggu ini di R2 Content, lengkap dengan draf caption gaya kamu.',
+          shots: ['/assets/r2-content-1.png', '/assets/r2-content-2.png', '/assets/r2-content-3.png'] },
+        { key: 'fit', name: 'R2 Fit', status: 'live',
+          line: 'Atur program latihan, catat progres.',
+          micro: 'Streak 12 hari berjalan',
+          ask: 'Susun program latihanku',
+          msg: 'Program latihan kamu aku tata di R2 Fit, dan progres hari ini sudah tercatat.',
+          shots: ['/assets/r2-fit-1.png', '/assets/r2-fit-2.png', '/assets/r2-fit-3.png'] },
+        { key: 'finance', name: 'R2 Finance', status: 'live',
+          line: 'Rapikan cashflow, kasih ringkasan.',
+          micro: 'Ringkasan cashflow tiap minggu',
+          ask: 'Rapikan keuangan bulan ini',
+          msg: 'Pemasukan dan pengeluaran kamu aku rapikan di R2 Finance — ini ringkasan minggu ini.',
+          shots: ['/assets/r2-finance-1.png', '/assets/r2-finance-2.png', '/assets/r2-finance-3.png'] },
+        { key: 'school', name: 'School Expert', status: 'segera',
+          line: 'Pantau tugas & tenggat sekolah.',
+          micro: 'Mata kuliah · checklist · tenggat',
+          ask: 'Bantu siapin tugas minggu ini',
+          msg: 'Nanti aku bantu rangkum tugas dari portal sekolah kamu — checklist dan tenggat siap sebelum deadline.',
+          shots: ['/assets/r2-school-1.png', '/assets/r2-school-2.png', '/assets/r2-school-3.png'] },
+      ];
+      return (
+        <section id="integrasi" className="is-section">
+          <div className="is-wrap">
+            <div className="is-eyebrow"><span className="live-dot" /><span>Agen kamu nggak cuma menjawab</span></div>
+            <BlurText as="h2" text="Dia kerja di app beneran." className="is-headline" delay={70} />
+            <p className="is-sub">Konten, keuangan, latihan — dikerjakan langsung di app-nya, bukan cuma diketik balik.</p>
+            <div className="is-hub" aria-hidden="true"><span className="live-dot" /><span>Satu agen</span></div>
+            <div className="is-grid">
+              {apps.map((a, i) => (
+                <Mot.div key={a.key}
+                  initial={{ opacity: 0, y: 18 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, amount: 0.3 }}
+                  transition={{ duration: 0.5, ease: EASE, delay: 0.06 * i }}
+                  className={`is-item is-item--${a.status}`}>
+                  {/* Title + desc live OUTSIDE the box for a cleaner, lighter look */}
+                  <div className="is-item-head">
+                    <span className="is-item-name">{a.name}</span>
+                    <span className={`is-chip is-chip--${a.status}`}>
+                      {a.status === 'live' ? <><span className="is-chip-dot" />Aktif</> : 'Segera'}
+                    </span>
+                  </div>
+                  <p className="is-item-desc">{a.line}</p>
+
+                  {/* The box: chat flow (mirrors the hero) · divider · app screenshot */}
+                  <div className={`is-tile is-tile--${a.status}`}>
+                    <div className="is-flow">
+                      <div className="is-flow-user">{a.ask}</div>
+                      <div className="is-flow-agent">
+                        <div className="is-flow-avatar" aria-hidden="true">●</div>
+                        <div className="is-flow-bubble">{a.msg}</div>
+                      </div>
+                    </div>
+
+                    <div className="is-tile-divider" aria-hidden="true" />
+
+                    {/* iPhone portrait frame — slow cross-fading slideshow of the
+                        3 real app screenshots (absolute-fill object-fit:cover). */}
+                    <div className="is-phone" aria-hidden="true">
+                      <div className="is-phone-island" />
+                      <div className="is-phone-screen">
+                        {a.shots.map((src, n) => (
+                          <img key={src} className="is-shot-media is-shot-slide" src={src} alt=""
+                            loading="lazy" style={{ animationDelay: `${n * 2}s` }} />
+                        ))}
+                        {a.status === 'segera' && <span className="is-phone-badge">Segera</span>}
+                      </div>
+                    </div>
+
+                    <div className="is-tile-micro">{a.micro}</div>
+                  </div>
+                </Mot.div>
+              ))}
+            </div>
+            <p className="is-foot">Empat app. Satu agen. <strong>Rp 99rb/bulan</strong>.</p>
+          </div>
+        </section>
+      );
+    }
+
+    // ─────────────────────── ORIGIN / FOUNDER EDGE ───────────────────────
+    // The previous video hero, demoted to a credibility section below the
+    // dashboard hero (rev 2026-06-16). NOT id="beranda" — the dashboard hero
+    // owns that. Entrance animates on scroll-in; section sizing, not hero.
+    function OriginSection() {
+      return (
+        <section id="asal-usul" className="origin-section">
+          {/* Same red-dot halftone language as the hero (rev 2026-06-17): brand red
+              dotted video + a clearly-visible CSS halftone grid so it isn't flat. */}
+          <DottedVideo
+            src="/assets/trade-pro.mp4"
+            color="#E5322D"
+            cellSize={6}
+            threshold={0.05}
+            className="absolute inset-0 w-full h-full pointer-events-none origin-dots"
+            style={{ zIndex: 0, background: '#000', opacity: 0.7 }}
+          />
+          <div className="hero-grain" />
+          <div className="absolute inset-0 z-[1] pointer-events-none" style={{
+            background: 'radial-gradient(ellipse 90% 70% at 50% 78%, rgba(5,5,5,0.12), rgba(5,5,5,0.55) 72%), linear-gradient(180deg, rgba(5,5,5,0.55) 0%, rgba(5,5,5,0.28) 50%, rgba(5,5,5,0.6) 100%)'
+          }} />
+          {/* Visible brand-red halftone dot grid, masked to a soft pool — keeps the
+              section from reading flat while staying on-brand (matches the hero dots). */}
+          <div className="origin-halftone" aria-hidden="true" />
+          <div className="absolute top-0 left-0 right-0 z-[2] pointer-events-none"
+            style={{ height: 120, background: 'linear-gradient(to bottom, #050505, transparent)' }} />
+          <div className="absolute bottom-0 left-0 right-0 z-[2] pointer-events-none"
+            style={{ height: 180, background: 'linear-gradient(to bottom, transparent, #050505)' }} />
+
+          <div className="relative z-10 flex flex-col items-center text-center px-5 md:px-6 w-full">
+            <Mot.div
+              initial={{ filter: 'blur(10px)', opacity: 0, y: 20 }}
+              whileInView={{ filter: 'blur(0px)', opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.4 }}
+              transition={{ duration: 0.6, ease: EASE }}
+              className="rounded-full px-1 py-1 flex items-center gap-2 text-xs font-body"
+              style={{
+                background: 'rgba(255, 255, 255, 0.08)',
+                border: '1px solid rgba(255, 255, 255, 0.22)',
+                backdropFilter: 'blur(8px)'
+              }}>
+              <span style={{ background: '#E5322D', color: '#fff' }} className="rounded-full px-3 py-1 text-[10px] font-mono font-medium uppercase tracking-[0.18em]">Resep Hangzhou</span>
+              <span className="pr-3 font-mono uppercase tracking-[0.14em] text-[11px] text-white/85">Dirakit untuk Indonesia</span>
+            </Mot.div>
+
+            <BlurText
+              text="Resep kampus elite China. Aktif 8 menit."
+              className="mt-6 md:mt-8 text-[2rem] sm:text-4xl md:text-5xl lg:text-[3.75rem] font-heading leading-[1.02] md:leading-[0.98] max-w-[20ch] md:max-w-[24ch] text-white px-2"
+              style={{ letterSpacing: '-0.04em', fontStyle: 'normal' }}
+              delay={100} />
+
+            <Mot.p
+              initial={{ filter: 'blur(10px)', opacity: 0, y: 20 }}
+              whileInView={{ filter: 'blur(0px)', opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.4 }}
+              transition={{ duration: 0.6, ease: EASE, delay: 0.15 }}
+              className="mt-5 md:mt-6 max-w-[52ch] text-sm md:text-base font-body font-light leading-[1.5] text-white/85 px-2">
+              Satu tim agent di Telegram kamu — riset, surat, slide, laporan. Dirakit di Zhejiang University, dibawa pulang buat kamu.
+            </Mot.p>
+
+            <Mot.p
+              initial={{ filter: 'blur(10px)', opacity: 0, y: 20 }}
+              whileInView={{ filter: 'blur(0px)', opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.4 }}
+              transition={{ duration: 0.6, ease: EASE, delay: 0.25 }}
+              className="mt-4 font-mono uppercase tracking-[0.18em] text-[10px] md:text-[11px] text-white/55">
+              Setup 5 menit · bayar pakai QRIS · hosting Rp 99rb/bulan · berhenti kapan saja
+            </Mot.p>
+
+            <Mot.div
+              initial={{ filter: 'blur(10px)', opacity: 0, y: 20 }}
+              whileInView={{ filter: 'blur(0px)', opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.4 }}
+              transition={{ duration: 0.6, ease: EASE, delay: 0.35 }}
+              className="mt-8 flex flex-col items-center gap-3">
+              <div className="flex items-center gap-3 flex-wrap justify-center">
+                <a href="#pricing" className="rounded-full px-5 py-2.5 min-h-[44px] text-sm font-medium flex items-center gap-2 no-underline"
+                  style={{ background: '#fff', color: '#0a0a0a', border: '1px solid #fff' }}>
+                  Aktifkan asisten kamu <ArrowUpRight size={14} stroke={2.2} />
+                </a>
+                <a href="https://cal.com/weuseai.agent/15min" target="_blank" rel="noopener" className="rounded-full px-5 py-2.5 min-h-[44px] text-sm font-medium flex items-center gap-2 no-underline text-white"
+                  style={{ background: 'rgba(255, 255, 255, 0.06)', border: '1px solid rgba(255, 255, 255, 0.22)', backdropFilter: 'blur(8px)' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2" />
+                    <line x1="16" y1="2" x2="16" y2="6" />
+                    <line x1="8" y1="2" x2="8" y2="6" />
+                    <line x1="3" y1="10" x2="21" y2="10" />
+                  </svg>
+                  Konsultasi gratis (15 menit)
+                </a>
+              </div>
+            </Mot.div>
+
+            <div className="mt-10 md:mt-12 w-full max-w-5xl mx-auto">
+              <div className="liquid-glass rounded-2xl md:rounded-3xl p-5 md:p-9 grid grid-cols-2 md:grid-cols-4 gap-5 md:gap-6 text-center">
+                {[
+                  { n: 8,   suffix: ' mnt', label: 'Dari bayar ke pesan pertama\n(diukur, bukan janji)' },
+                  { n: 10,  suffix: '',     label: 'Persona spesialis\ndi-engineer satu per satu' },
+                  { n: 190, suffix: '+',    label: 'Template Indonesia\nPPN · BPJS · KBLI · IDX' },
+                  { n: 24,  suffix: '',     label: 'Playbook multi-langkah\nbriefing pagi sampai laporan' },
+                ].map((it, i) => (
+                  <Mot.div key={it.label}
+                    initial={{ opacity: 0, y: 16 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, amount: 0.4 }}
+                    transition={{ duration: 0.6, ease: EASE, delay: 0.06 * i }}
+                    className="flex flex-col items-center">
+                    <div className="text-2xl md:text-4xl lg:text-5xl font-heading text-white leading-none" style={{ letterSpacing: '-0.04em' }}>
+                      <CountUp to={it.n} suffix={it.suffix} duration={1800} delay={150 + i * 120} />
+                    </div>
+                    <div className="mt-2 md:mt-2.5 text-white/55 font-body font-light italic text-[11px] md:text-[13px] leading-snug" style={{ whiteSpace: 'pre-line' }}>{it.label}</div>
+                  </Mot.div>
+                ))}
+              </div>
+            </div>
+          </div>
         </section>
       );
     }
@@ -5232,25 +5385,44 @@
         <div className="bg-black">
           <div className="relative z-10">
             <Navbar />
-            <Hero />
-            <div className="bg-black">
-              <StartSection />
+            <main>
               <DashboardDemo />
-              <FeaturesChess />
-              <VelvetSection />
-              <FeaturesGrid />
-              <ChatVsAgentSection />
-              <HangzhouEdge />
-              <CostComparisonSection />
-              <Pricing />
-              <CommunitySection />
-              <FAQ />
-              <Stats />
-              <CtaFooter />
-            </div>
+              <div className="bg-black">
+                <IntegrationsSpine />
+                <OriginSection />
+                <StartSection />
+                <FeaturesChess />
+                <VelvetSection />
+                <FeaturesGrid />
+                <ChatVsAgentSection />
+                <CostComparisonSection />
+                <Pricing />
+                <CommunitySection />
+                <FAQ />
+                <Stats />
+              </div>
+            </main>
+            <CtaFooter />
           </div>
         </div>
       );
     }
 
-    ReactDOM.createRoot(document.getElementById('app')).render(<App />);
+    // Catch any render error so a single bad component degrades gracefully
+    // instead of white-screening the whole page.
+    class ErrorBoundary extends React.Component {
+      constructor(p) { super(p); this.state = { failed: false }; }
+      static getDerivedStateFromError() { return { failed: true }; }
+      componentDidCatch(err) { try { console.error('Landing render error:', err); } catch (e) {} }
+      render() {
+        if (this.state.failed) {
+          return React.createElement('div', { style: { minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '40px', color: '#f5f5f5', fontFamily: 'Inter, sans-serif' } },
+            React.createElement('div', null,
+              React.createElement('p', { style: { fontSize: '18px', marginBottom: '16px' } }, 'Lagi ada kendala memuat halaman.'),
+              React.createElement('a', { href: 'checkout.html', style: { color: '#E5322D', textDecoration: 'underline' } }, 'Lanjut ke checkout →')));
+        }
+        return this.props.children;
+      }
+    }
+
+    ReactDOM.createRoot(document.getElementById('app')).render(<ErrorBoundary><App /></ErrorBoundary>);

@@ -1,0 +1,30 @@
+# Landing QA round-2 findings (2026-06-17)
+
+## Ship-readiness verdict
+The landing is ~95% ready and materially cleaner than round-1 — all round-1 fixes hold, brand gates are clean (zero exclamation marks / banned words in body copy, single `<h1>`, demo-honesty strings intact), tier prices/slugs/personas match CLAUDE.md v1.4 with no drift, and the comparison + cost sections are genuinely strong IG-conversion assets. Three things gate a clean merge for IG traffic: (1) the honesty over-claims in VelvetSection's `cases` array — tool-name leaks ("via Firecrawl", "native Home Assistant") and an implied live Google Docs access, all sitting under a "Bukan demo. Siap pakai dari hari pertama" header (~3 string edits); (2) the 8-vs-5-menit contradiction inside OriginSection's own viewport (a real trust-ding); and (3) the unguarded triple-`unpkg.com` CDN dependency with no ErrorBoundary, a white-screen risk that matters specifically because this is the China-targeted branch. None require design rework — all are string/config edits. Fix P0, ship.
+
+## P0 — must fix
+- `[honesty] assets/app.jsx:3241 — "otomasi browser via Firecrawl" names vendor tooling, violating the capability-level-only brand rule under a "Siap pakai dari hari pertama" header — strip to "Scraping, search, dan otomasi browser."`
+- `[honesty] assets/app.jsx:3245 — "Integrasi native Home Assistant" names unshipped tool wiring as day-one-ready — genericize to "Kontrol rumah pintar lewat perintah biasa."`
+- `[honesty] assets/app.jsx:3246 — "Beresin Google Docs yang berantakan" implies live Google Docs access, contradicting the deliberate "we don't have it yet" demo stance (app.jsx:2721) — genericize to "Beresin dokumen yang berantakan" or add a roadmap tag like the Coding case (:3237).`
+- `[copy] assets/app.jsx:5295 vs 5315 — OriginSection says "Aktif 8 menit" then "Setup 5 menit" in the same viewport — pick one; given meta/og + headline say 8, change :5315 sub-line and CostComparison :4211 ("us: 5 menit") to 8, OR commit to 5 and fix the headline+meta. Do not ship 8-and-5 together.`
+- `[perf/robustness] index.html:40-42 + app.jsx:2-3 — React/ReactDOM/framer-motion all load from unpkg.com with no fallback and no ErrorBoundary; if framer-motion is blocked (China branch), Mot=M.motion is undefined → first <Mot.div> throws → white screen — self-host the three libs from /assets/ (you already self-host app.js/tw.css), or add a Mot passthrough fallback + ErrorBoundary around <App/>.`
+
+## P1 — should fix
+- `[copy] assets/app.jsx:5193 vs 5194 — IntegrationsSpine headline "Dia kerja di app beneran." and sub "Bukan jawab di chat — dia kerja di app kamu." restate the same idea on the page's #1 value section — rewrite the sub to add specificity, e.g. "Konten, keuangan, latihan — dikerjakan langsung di app-nya, bukan cuma diketik balik."`
+- `[perf] index.html:36 — Noto Serif SC is fetched (render-blocking CJK font with dozens of unicode-range subsets) but has zero font-family references anywhere — drop &family=Noto+Serif+SC:wght@400 from the Google Fonts URL. Pure win, genuinely dead.`
+- `[perf] assets/app.jsx:2833 — above-fold hero loads /assets/new-hero.mp4 (1.35MB, confirmed 1,349,353 bytes), the heaviest asset, and IntersectionObserver play()s it immediately on load while competing with first paint — gate behind requestIdleCallback / short post-paint delay, or swap to a ≤400KB clip (the dotted halftone render hides compression).`
+- `[a11y] assets/app.jsx:3685-3699 — PriceBreakdownModal has Escape + scroll-lock + initial focus but no focus trap (Tab escapes behind the aria-modal dialog) and no focus restoration on close — save activeElement on open, cycle Tab within dialogRef, restore on cleanup (WCAG 2.4.3 / 2.1.2).`
+- `[a11y] assets/app.jsx:376-403 — BlurText (and all whileInView Mot.div) entrance is framer-motion JS-driven, not covered by the CSS reduced-motion reset (index.html:4256), so reduced-motion users still get blur+y:50 on every headline — read useReducedMotion() and render at final state when true.`
+
+## P2 — nice to have
+- `[honesty] assets/app.jsx:4856 — CommunitySection attributes "multi-agent via Kanban, baru di v0.12.0" to @hermes_agent, but v0.12.0 is not a real tag (release tags are date-stamped, e.g. v2026.6.5) — drop the version number or confirm against the real upstream changelog.`
+- `[copy] assets/app.jsx:4030 — ChatVsAgent names our card "weuseai.agent Pro" while no "Pro" tier exists (pro is a deprecated alias) and "Claude Pro" sits 2cm away at :4051 — drop the "Pro" suffix to just "weuseai.agent" (matches CostComparison col label).`
+- `[copy] assets/app.jsx — CTA verb sprawl: "Aktifkan asisten kamu" / "Mulai" / "Mulai X" vs "Ambil X" (Solo/Voice vs Library/Siap Pakai) / two scroll-to-pricing strings (4168 vs 4403) — pick one verb per action class.`
+- `[honesty/code-health] assets/app.jsx:4894-4928 + 4668-4849 — skillCards carry a shipped:true/false flag the Card renderer never reads; the only honesty signal is the hand-appended "· roadmap" suffix — drive the footer/badge from shipped to prevent future drift.`
+- `[a11y] index.html:205,839,2396,2571 — real (non-decorative) micro-labels (.pc-setup-sub "SETUP", .db-stat .lbl, mono uppercase) sit at white/0.45 ≈ 3.7:1, below AA 4.5:1 — bump these specific labels to white/0.55.`
+- `[a11y] assets/app.jsx:2918-2922 — decorative animated db-cursor SVG in the hero mockup lacks aria-hidden="true" (its sibling layers all have it) — add it.`
+- `[a11y/code-health] assets/app.jsx:3890 — tier.priceStrike is read for the 999k strikethrough anchor but no tier object defines priceStrike, so the anchor never renders; charged 799k is correct (no integrity risk) — wire priceStrike on library-full or remove the dead branch. Conscious choice, not an accident.`
+- `[copy] assets/app.jsx:4986-4988 — FAQ uses "gak" 2× while the rest of the page uses "nggak" 4× — pick one spelling.`
+
+Fix order for the loop: P0 (3 VelvetSection string edits at :3241/3245/3246 → 8-vs-5-menit at :5315/4211 → self-host CDN + ErrorBoundary), then P1 top-to-bottom (spine sub-line → drop Noto → hero video → modal focus trap → reduced-motion gate), then P2 as polish.
