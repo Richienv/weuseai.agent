@@ -45,6 +45,12 @@ cat <<'SQL'
   ALTER DATABASE postgres SET app.fleet_sentinel_token = '<service-role-jwt>';
   ALTER DATABASE postgres SET app.library_refine_url   = 'https://gtjgsligllbjcisiyrah.supabase.co/functions/v1/library-refine';
   ALTER DATABASE postgres SET app.library_refine_token = '<service-role-jwt>';
+  -- retry-pending-provisions: the pg_cron job (migration 20260513020000)
+  -- reads these GUCs with missing_ok=true, so if they are UNSET the cron
+  -- POSTs to a NULL url and silently no-ops — i.e. the auto-retry worker
+  -- never fires. These MUST be set or paid-but-failed provisions never retry.
+  ALTER DATABASE postgres SET app.retry_pending_provisions_url   = 'https://gtjgsligllbjcisiyrah.supabase.co/functions/v1/retry-pending-provisions';
+  ALTER DATABASE postgres SET app.retry_pending_provisions_token = '<service-role-jwt>';
 SQL
 
 # ── 4. Fly provisioning service (ships /suspend /resume + bundle-pull v2) ─

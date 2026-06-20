@@ -55,6 +55,13 @@ Ultracode audit `w9gn56t3i` (7 agents, 6 layers, 57 items, 25 P0/blockers), grou
 8. **Founder:** take ONE small real payment, watch the 15-min window live.
 9. Hold at low volume until the recovery chain is proven on a REAL failure.
 
+## ✅ Progress (this session, branch `fix/provision-recovery-chain`)
+- **P0 #1 (dead retry worker) — FIXED** (`82313e9`): `buildSpinUpInput` moved to the shared module with the correct `decrypt_bot_token(encrypted, enc_key)` call + a real test asserting the RPC shape (no more false-green).
+- **P0 #3 + #4 (orphan VM / retry stacking) — FIXED** (`82313e9`): both failure handlers now reap the VM via the inferred provider; new delete-on-failure test. Local chain smoke 16/16 clean.
+- **P0 #2 (retry cron null url) — FIXED** (script): `deploy-all.sh` now emits the `app.retry_pending_provisions_url/token` GUC SQL for the founder to apply.
+- **P2 #6 (webhook amount-guard) — DEFERRED**: needs a new invoice-amount getter (no existing one); low exposure (create-invoice fixes the amount server-side + Xendit enforces it). Follow-up.
+- **P0 #5 (BYOK key-swap) — TODO**: the substantial remaining piece (new X-CID edge fn + UI). Not an immediate blocker (starter credits last days; interim workaround = admin refreshEnv). Best built as its own focused change.
+
 ## Biggest risks
 1. The broken recovery chain (4 compounding bugs) — first failed provision = paid customer with no agent + no recovery + orphan VMs.
 2. **False-green tests** masking the worst P0 (the retry suite mocks the thing it should test).
