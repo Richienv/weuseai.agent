@@ -104,6 +104,79 @@ export type PendingProvisionRow = {
 }
 
 /**
+ * The minimal Supabase client surface `buildSpinUpInput` needs. Declared
+ * structurally so the Deno entry passes the real createClient() client and
+ * unit tests pass a recording mock — this is what makes the decrypt RPC
+ * call shape actually testable (it previously lived un-tested in index.ts).
+ */
+export type RetryDbClient = {
+  from(table: string): {
+    select(cols: string): {
+      eq(col: string, val: string): {
+        // deno-lint-ignore no-explicit-any
+        maybeSingle(): Promise<{ data: any; error: unknown }>
+      }
+    }
+  }
+  rpc(fn: string, args: Record<string, unknown>): Promise<{ data: unknown; error: unknown }>
+}
+
+/**
+ * Reconstruct a SpinUpInput from the customer + subscription rows.
+ *
+ * REGRESSION GUARD: decrypt_bot_token's SQL signature is
+ * `decrypt_bot_token(encrypted text, enc_key text)` — it takes the
+ * CIPHERTEXT, not the customer id. A prior version (index.ts) called it
+ * with a non-existent `cust_id` arg, so the RPC errored and EVERY retry
+ * silently returned null — the auto-retry worker was effectively dead, yet
+ * its handler test stayed green because it MOCKED this function. Moving the
+ * body here (with an injected client) lets a real test assert the call shape.
+ */
+export async function buildSpinUpInput(
+  db: RetryDbClient,
+  row: PendingProvisionRow,
+  encKey: string,
+): Promise<SpinUpInput | null> {
+  const { data: cust, error: custErr } = await db
+    .from('customers')
+    .select('id, telegram_chat_id, soul_md_text, telegram_bot_token')
+    .eq('id', row.customer_id)
+    .maybeSingle()
+  if (custErr || !cust || !cust.telegram_bot_token) return null
+
+  // Pass the ciphertext as `encrypted` (NOT cust_id — that was the dead-worker bug).
+  const { data: dec, error: tokErr } = await db.rpc('decrypt_bot_token', {
+    encrypted: cust.telegram_bot_token,
+    enc_key: encKey,
+  })
+  if (tokErr) return null
+  const telegramBotToken = typeof dec === 'string' ? dec : ''
+
+  const { data: orRow } = await db
+    .from('customer_openrouter_keys')
+    .select('api_key')
+    .eq('customer_id', row.customer_id)
+    .maybeSingle()
+  const openrouterApiKey = (orRow as { api_key?: string } | null)?.api_key ?? ''
+
+  // Missing any critical field → null so the worker logs skipped_invalid
+  // instead of looping forever on an un-provisionable row.
+  if (!telegramBotToken || !cust.telegram_chat_id || !cust.soul_md_text || !openrouterApiKey) {
+    return null
+  }
+
+  return {
+    customerId: row.customer_id,
+    tier: row.tier,
+    telegramChatId: cust.telegram_chat_id,
+    telegramBotToken,
+    openrouterApiKey,
+    soulMdContent: cust.soul_md_text,
+    alwaysOnEnabled: row.always_on_enabled,
+  }
+}
+
+/**
  * Phase A2 PR 4: payload passed to the setup-help notifier dep. The
  * notifier renders setup-help.md via buildSetupHelpEmailBody and ships
  * via Resend. Pure data so unit tests can compare deep-equal.

@@ -429,6 +429,22 @@ export async function spinUpCustomer(
         try {
           await deps.store.updateVPSInstance(vps.uuid, { status: 'failed' })
         } catch {/* best effort */}
+        // Reap the orphan VM. A paid-but-failed provision left the VM
+        // running and billing ~$5/mo forever (the only delete() was in
+        // tearDownCustomer). It also let the auto-retry STACK a 2nd VM,
+        // because findActiveVPSByCustomer ignores 'failed' rows — so the
+        // VM itself must be deleted here. Route via the inferred provider,
+        // exactly like teardown.
+        try {
+          await adapterForRow({ provider: inferredProvider }, deps, 'provision-reap').delete(vps.uuid)
+          log(`✓ reaped failed VPS ${vps.uuid} (no orphan bill)`)
+        } catch (reapErr) {
+          slog('error', 'provision.reap_failed', {
+            customerId: opts.customerId,
+            vpsId: vps.uuid,
+            err: reapErr instanceof Error ? reapErr.message : String(reapErr),
+          })
+        }
         if (deps.alertChatId) {
           try {
             await deps.broker.sendMessage({
@@ -463,6 +479,17 @@ export async function spinUpCustomer(
     try {
       await deps.store.updateVPSInstance(vps.uuid, { status: 'failed' })
     } catch {/* best effort — inner handler already attempted this */}
+    // Reap the orphan VM (see the inner handler) — idempotent: if the inner
+    // handler already deleted it, a second delete is a best-effort no-op.
+    try {
+      await adapterForRow({ provider: inferredProvider }, deps, 'provision-reap').delete(vps.uuid)
+    } catch (reapErr) {
+      slog('error', 'provision.reap_failed', {
+        customerId: opts.customerId,
+        vpsId: vps.uuid,
+        err: reapErr instanceof Error ? reapErr.message : String(reapErr),
+      })
+    }
     if (deps.alertChatId) {
       try {
         await deps.broker.sendMessage({
