@@ -2713,16 +2713,16 @@
     // Animated signal-red circuit flowing into a hub — konten-style hero motion,
     // pure SVG (stroke-dashoffset), sits behind the dim so it never fights the mockup.
     function HeroCircuit() {
+      // Premium "living aurora" hero background (styles in index.html). CSS-only
+      // drifting light pools + conic sheen + grain — see .hero-aurora.
       return (
-        <svg className="hero-circuit" viewBox="0 0 1200 600" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-          <path className="hc-wire" d="M-20 140 C 300 140, 360 300, 600 300" />
-          <path className="hc-wire" d="M-20 300 C 280 300, 340 300, 600 300" />
-          <path className="hc-wire" d="M-20 460 C 300 460, 360 300, 600 300" />
-          <path className="hc-wire hc-wire--r" d="M1220 140 C 900 140, 840 300, 600 300" />
-          <path className="hc-wire hc-wire--r" d="M1220 460 C 900 460, 840 300, 600 300" />
-          <circle className="hc-hub" cx="600" cy="300" r="26" />
-          <circle className="hc-hub-ring" cx="600" cy="300" r="26" />
-        </svg>
+        <div className="hero-aurora" aria-hidden="true">
+          <div className="ha-pool ha-1" />
+          <div className="ha-pool ha-2" />
+          <div className="ha-pool ha-3" />
+          <div className="ha-sheen" />
+          <div className="ha-grain" />
+        </div>
       );
     }
 

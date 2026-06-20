@@ -343,23 +343,63 @@
     .hl-em { color: #E5322D; }
     .db-sub-micro { margin-top: 6px; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(245,245,245,0.62); }
 
-    /* Hero circuit-flow background (rev 2026-06-17) — konten-style nodes flowing into
-       a hub, signal-red, SVG stroke-dashoffset only. Sits behind .db-hero-dim. */
-    .hero-circuit { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none; opacity: 0.8; }
-    .hero-circuit .hc-wire { fill: none; stroke: rgba(229,50,45,0.75); stroke-width: 1.8; stroke-dasharray: 16 200; filter: drop-shadow(0 0 4px rgba(229,50,45,0.5)); animation: hcFlow 3.2s linear infinite; }
-    .hero-circuit .hc-wire:nth-child(2) { animation-delay: -0.9s; }
-    .hero-circuit .hc-wire:nth-child(3) { animation-delay: -1.8s; }
-    .hero-circuit .hc-wire--r { animation-direction: reverse; opacity: 0.7; }
-    .hero-circuit .hc-hub { fill: rgba(229,50,45,0.18); stroke: #E5322D; stroke-width: 1.5; transform-box: fill-box; transform-origin: center; animation: hcHub 2.6s ease-in-out infinite; }
-    .hero-circuit .hc-hub-ring { fill: none; stroke: #E5322D; stroke-width: 1.2; transform-box: fill-box; transform-origin: center; animation: hcRing 2.6s ease-out infinite; }
-    @keyframes hcFlow { to { stroke-dashoffset: -234; } }
-    @keyframes hcHub  { 0%,100% { opacity: 0.85; } 50% { opacity: 1; transform: scale(1.06); } }
-    @keyframes hcRing { 0% { opacity: 0.6; transform: scale(1); } 100% { opacity: 0; transform: scale(2.4); } }
-    @media (max-width: 767px) { .hero-circuit { opacity: 0.32; } }
+    /* Hero "living aurora" background (rev 2026-06-20) — premium volumetric
+       red-on-black glow: drifting blurred light pools + a slow conic sheen +
+       fine grain. CSS-only, GPU transforms (translate/scale/opacity), masked
+       so it never fights the headline or chat demo. Replaces the thin circuit.
+       z-2: above the dim, below the content. */
+    .hero-aurora {
+      position: absolute; inset: 0; z-index: 2; pointer-events: none; overflow: hidden;
+      -webkit-mask-image: radial-gradient(ellipse 120% 92% at 50% 32%, #000 38%, transparent 86%);
+              mask-image: radial-gradient(ellipse 120% 92% at 50% 32%, #000 38%, transparent 86%);
+    }
+    .hero-aurora .ha-pool {
+      position: absolute; border-radius: 50%; filter: blur(46px);
+      mix-blend-mode: screen; opacity: 0.55; will-change: transform, opacity;
+      transform: translateZ(0); backface-visibility: hidden;
+    }
+    .hero-aurora .ha-1 {
+      width: 58vw; height: 58vw; max-width: 760px; max-height: 760px; left: -8%; top: -14%;
+      background: radial-gradient(circle at 50% 50%, rgba(229,50,45,0.62), rgba(229,50,45,0.16) 46%, transparent 70%);
+      animation: haDrift1 26s ease-in-out infinite;
+    }
+    .hero-aurora .ha-2 {
+      width: 52vw; height: 52vw; max-width: 680px; max-height: 680px; right: -10%; top: -6%;
+      background: radial-gradient(circle at 50% 50%, rgba(255,92,70,0.5), rgba(229,50,45,0.12) 48%, transparent 72%);
+      animation: haDrift2 32s ease-in-out infinite;
+    }
+    .hero-aurora .ha-3 {
+      width: 64vw; height: 64vw; max-width: 820px; max-height: 820px; left: 24%; top: 8%;
+      background: radial-gradient(circle at 50% 50%, rgba(180,28,24,0.5), rgba(120,18,16,0.1) 50%, transparent 74%);
+      animation: haDrift3 38s ease-in-out infinite;
+    }
+    .hero-aurora .ha-sheen {
+      position: absolute; inset: -20%; mix-blend-mode: screen; opacity: 0.22;
+      will-change: transform; transform: translateZ(0);
+      background: conic-gradient(from 200deg at 50% 38%, transparent 0deg, rgba(255,120,98,0) 60deg, rgba(255,120,98,0.55) 120deg, rgba(229,50,45,0) 200deg, transparent 360deg);
+      -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 30%, #000, transparent 72%);
+              mask-image: radial-gradient(ellipse 80% 60% at 50% 30%, #000, transparent 72%);
+      animation: haSheen 34s linear infinite;
+    }
+    .hero-aurora .ha-grain {
+      position: absolute; inset: 0; opacity: 0.5;
+      background-image: radial-gradient(rgba(255,255,255,0.05) 0.5px, transparent 0.6px);
+      background-size: 3px 3px; mix-blend-mode: overlay;
+    }
+    @keyframes haDrift1 { 0%,100% { transform: translate3d(0,0,0) scale(1); } 50% { transform: translate3d(7%,5%,0) scale(1.12); } }
+    @keyframes haDrift2 { 0%,100% { transform: translate3d(0,0,0) scale(1.05); } 50% { transform: translate3d(-6%,7%,0) scale(0.94); } }
+    @keyframes haDrift3 { 0%,100% { transform: translate3d(0,0,0) scale(0.96); } 50% { transform: translate3d(-5%,-6%,0) scale(1.1); } }
+    @keyframes haSheen { to { transform: rotate(360deg); } }
+    @media (max-width: 767px) {
+      .hero-aurora .ha-pool { filter: blur(34px); opacity: 0.46; }
+      .hero-aurora .ha-3, .hero-aurora .ha-sheen, .hero-aurora .ha-grain { display: none; }
+    }
     @media (prefers-reduced-motion: reduce) {
-      .hero-circuit .hc-wire, .hero-circuit .hc-hub, .hero-circuit .hc-hub-ring { animation: none; }
-      .hero-circuit .hc-wire { stroke-dasharray: none; opacity: 0.4; }
-      .hero-circuit .hc-hub-ring { display: none; }
+      .hero-aurora .ha-pool, .hero-aurora .ha-sheen { animation: none; }
+      .hero-aurora .ha-sheen { opacity: 0.16; }
+      .hero-aurora .ha-1 { transform: translate3d(3%,2%,0) scale(1.06); }
+      .hero-aurora .ha-2 { transform: translate3d(-3%,3%,0) scale(1); }
+      .hero-aurora .ha-3 { transform: translate3d(-2%,-3%,0) scale(1.04); }
     }
 
     /* Ambient hero video — layered behind the dashboard mockup (rev 2026-06-16). */
