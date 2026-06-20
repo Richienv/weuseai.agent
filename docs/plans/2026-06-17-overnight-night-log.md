@@ -127,3 +127,20 @@ Founder initially wanted Library Lengkap → 6 personas and Siap Pakai → 10 (t
 3. **61 touchpoints** incl. the bundle-fetch **security contract**, ~18 tests, both catalog mirrors, the legacy-alias re-grading (pro→10/studio→6), already-provisioned-customer drift, and off-limits `checkout.html` + `onboarding.html`.
 
 **Decision (founder):** keep the catalog exactly as-is (library-full=10/no-web-app, done-for-you=8/web-app — the deliberate v1.4 matrix) and make Siap Pakai read as flagship via **positioning** instead (`63aae2d`). Zero backend risk, zero cost. The catalog matrix is intentional; re-tiering is a genuine multi-day backend project, not a card tweak — revisit only with the spec-class cost decision made up front.
+
+---
+
+## 🎨 Landing finalization (2026-06-18, founder-directed) — branch ready to merge live
+
+Founder approved finishing the landing before merging #271 (merging main auto-deploys to Vercel). Applied the generated work + the founder's calls:
+- `583a6ab` — **Premium hero**: replaced the "cheap CSS" circuit with a "living aurora" — volumetric red-on-black glow (drifting blurred pools + conic sheen + grain), CSS-only/GPU/mobile-light/reduced-motion-safe, masked so the headline + demo stay legible.
+- `b1229fe` — **Pricing**: moved "Rekomendasi kami" back to **Library Lengkap** (founder's pick) + rewrote every tier's outcomes from terse bullets to concrete benefits (the personas + what they do: briefing pagi, 190+ templates, riset, voice, memory). Siap Pakai stays premium on its web app. Prices/slugs untouched.
+- `344bc64` — **Scarcity + honest price-rise**: the existing 1.000-batch counter (reads the REAL paid count, renders nothing if the API fails) now ticks via CountUp + states the genuine rise (library-full setup **Rp 799rb → Rp 999rb after the first 1.000**). No fake time-clock (would be a false deadline) — the seats ARE the countdown.
+- CLAUDE.md "Launch FOMO" lock UPDATED: the price-rise is now REAL (supersedes the old "prices never rise" for library-full).
+
+**Final QA:** index @1512/390/reduced-motion — 1 h1, aurora renders, flagship=Library Lengkap, seats banner renders, no overflow, 0 errors; gates 10/10.
+
+### ⚑ Required follow-up before the 1000th sale (UNWIRED):
+`create-invoice` must flip the library-full charge 799→999 once `paid_customers ≥ 1000`, or the page advertises a rise that doesn't happen. Tracked in `docs/plans/2026-06-18-go-live-readiness.md`.
+
+**#271 is now finished + merge-ready.** Merging it auto-deploys the landing live (Vercel tracks main). The payment go-live is a SEPARATE sequence (recovery branch `fix/provision-recovery-chain` + #272 + Xendit rotation + first-payment watch).

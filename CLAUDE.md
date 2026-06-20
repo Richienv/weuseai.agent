@@ -105,11 +105,20 @@ accepts all canonical non-enterprise slugs + legacy (the lossy `bare→starter`
 checkout alias the consult proposed was REJECTED — it would mis-provision
 bare/solo).
 
-**Launch FOMO (honesty lock):** the 15-min timer + "first 100 customer"
-badge are session-urgency + anchoring ONLY. NEVER write "harga naik setelah
-July 2" — prices do not rise. The "100 customer" counter MUST read a real
-subscription count. The strikethrough is pure anchoring against a price that
-never charges.
+**Launch FOMO (honesty lock — UPDATED 2026-06-18):** the scarcity counter
+MUST read a REAL subscription count (`/api/public/subscription-count`,
+`paid_customers`); the landing banner renders NOTHING if the fetch fails —
+NEVER fabricate a number. **Price-rise is now REAL (founder decision
+2026-06-18):** `library-full` setup genuinely rises from Rp 799rb → Rp 999rb
+after the first 1.000 paid (the 999 `setup_fee_anchor_idr`, previously
+"display-only, never charged," BECOMES the real post-batch price). So
+"naik ke Rp 999rb setelah 1.000 pertama" is an HONEST forward-looking claim
+(supersedes the old "prices do not rise" lock for this tier). **REQUIRED
+follow-up (unwired):** `create-invoice` must flip the library-full charge
+799→999 once `paid_customers ≥ 1000` — until that lands, do NOT let the
+1000th sale through at 799 while the page advertises 999, or the claim
+breaks. Still NEVER invent a fake time-deadline ("harga naik dalam MM:SS")
+— the rise is tied to the batch count, not a clock.
 
 `enterprise` is contact-only (no fixed persona set, no fixed fee) — it is
 NOT provisionable via the manual-provision form or any self-serve
