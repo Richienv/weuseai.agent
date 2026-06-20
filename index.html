@@ -2940,6 +2940,17 @@
       background: #6FA08F;
       animation: priceLiveDot 1.6s ease-in-out infinite;
     }
+    /* Honest price-rise line: setup genuinely rises 799rb -> 999rb after the
+       first 1.000 sell (founder commitment 2026-06-18). Tied to the real
+       seats counter above, not a fake timer. */
+    .seats-rise {
+      margin-top: 16px; max-width: 460px;
+      font-family: 'Inter', sans-serif; font-weight: 300;
+      font-size: 13px; line-height: 1.55;
+      color: rgba(255,255,255,0.74); text-align: center;
+    }
+    @media (min-width: 768px) { .seats-rise { font-size: 14px; } }
+    .seats-rise strong { color: #E5322D; font-weight: 600; white-space: nowrap; }
 
     /* 12 BRIEF — sun glow + news ticker */
     .cap-brief { padding: 7px 10px; height: 100%; display: flex; flex-direction: column; justify-content: center; gap: 6px; position: relative; overflow: hidden; }

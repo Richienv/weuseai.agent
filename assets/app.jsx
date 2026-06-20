@@ -3675,13 +3675,16 @@
           className="liquid-glass seats-banner"
         >
           <div className="seats-stack">
-            <p className="seats-caption">Hanya 1.000 seat untuk launch ini.</p>
-            <div className="seats-num-big">
-              {remaining.toLocaleString('id-ID')}
+            <p className="seats-caption">Harga launch — batch pertama 1.000 pelanggan.</p>
+            <div className="seats-num-big pulse" aria-label={`${remaining.toLocaleString('id-ID')} dari 1.000 seat tersisa`}>
+              <CountUp to={remaining} duration={1600} delay={120} />
             </div>
-            <p className="seats-sub">dari 1.000 seat tersisa</p>
+            <p className="seats-sub">dari 1.000 seat tersisa di harga launch</p>
             <div className="seats-bar">
               <div className="seats-fill" style={{ width: `${pct}%` }} />
+            </div>
+            <div className="seats-rise">
+              Setelah 1.000 pertama, setup Library Lengkap naik dari Rp 799rb ke <strong>Rp 999rb</strong>.
             </div>
             <div className="seats-foot">
               Counter terhubung ke data pembayaran. Update tiap beberapa menit.
