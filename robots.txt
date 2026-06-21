@@ -10,4 +10,4 @@ Disallow: /welcome
 Disallow: /welcome.html
 Disallow: /admin/
 
-Sitemap: https://weuseai-agent.vercel.app/sitemap.xml
+Sitemap: https://weuseai.id/sitemap.xml
