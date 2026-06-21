@@ -3649,7 +3649,10 @@
 
       useEffect(() => {
         let alive = true;
-        fetch('/api/public/subscription-count')
+        // Abort a slow/hanging API after 3s so the banner never waits on it.
+        const ctrl = new AbortController();
+        const t = setTimeout(() => ctrl.abort(), 3000);
+        fetch('/api/public/subscription-count', { signal: ctrl.signal })
           .then((r) => (r.ok ? r.json() : null))
           .then((data) => {
             if (!alive || !data) return;
@@ -3657,8 +3660,9 @@
               setPaid(data.paid_customers);
             }
           })
-          .catch(() => {});
-        return () => { alive = false; };
+          .catch(() => {})
+          .finally(() => clearTimeout(t));
+        return () => { alive = false; clearTimeout(t); };
       }, []);
 
       if (paid === null) return null;
@@ -4594,6 +4598,26 @@
               <p className="mt-5 md:mt-6 max-w-xl text-white/55 font-body font-light text-sm md:text-base leading-relaxed">
                 Bayar setup sekali. Hosting transparan, bisa pause kapan saja.
               </p>
+            </div>
+
+            {/* Honest risk-reversal strip — every claim is verbatim from
+                faq.html + refund-policy.html. Reassures right at the decision
+                moment, without re-cluttering the cards. */}
+            <div className="liquid-glass rounded-2xl mt-2 mb-10 md:mb-12 px-5 py-5 md:px-7 md:py-6 grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+              {[
+                ['VPS pribadi kamu', 'Bukan server bersama. Data nggak dibagi, bukan bahan training.'],
+                ['Jaminan teknis 14 hari', 'Kalau gagal jalan karena sisi kami, kami fix gratis atau refund setup penuh.'],
+                ['Berhenti kapan saja', 'Tagihan hosting stop. Tanpa penalti, tanpa komitmen.'],
+                ['Setup tetap milik kamu', 'Mau pause atau pindah, hasil setup tetap punya kamu.'],
+              ].map(([label, sub], i) => (
+                <div key={i} className="flex flex-col">
+                  <div className="flex items-center gap-2">
+                    <span aria-hidden="true" className="block w-1.5 h-1.5 flex-shrink-0 rounded-full" style={{ background: '#E5322D' }} />
+                    <span className="text-sm md:text-[15px] font-body text-white/90 font-medium">{label}</span>
+                  </div>
+                  <span className="mt-1 text-[11px] md:text-xs text-white/55 font-body font-light leading-snug">{sub}</span>
+                </div>
+              ))}
             </div>
 
             <ValueSlider />

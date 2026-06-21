@@ -186,7 +186,8 @@
 
     button, a { font-family: inherit; }
     button { cursor: pointer; }
-    html { scroll-behavior: smooth; }
+    html { scroll-behavior: smooth; scroll-padding-top: 96px; }
+    @media (max-width: 767px) { html { scroll-padding-top: 80px; } }
 
     /* count-up red-glow (mirrors .seats-num-big.pulse) */
     .countup {
