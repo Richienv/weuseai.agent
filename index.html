@@ -278,6 +278,14 @@
     button { cursor: pointer; }
     html { scroll-behavior: smooth; scroll-padding-top: 96px; }
     @media (max-width: 767px) { html { scroll-padding-top: 80px; } }
+    /* a11y skip-link — visually hidden until keyboard-focused */
+    .skip-link {
+      position: fixed; left: 10px; top: -56px; z-index: 100;
+      background: #E5322D; color: #fff; padding: 10px 16px; border-radius: 10px;
+      font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 500; text-decoration: none;
+      transition: top 0.18s ease;
+    }
+    .skip-link:focus { top: 10px; outline: 2px solid #fff; outline-offset: 2px; }
 
     /* count-up red-glow (mirrors .seats-num-big.pulse) */
     .countup {
@@ -4426,6 +4434,7 @@
   </style>
 </head>
 <body class="bg-black text-white">
+  <a href="#main" class="skip-link">Lewati ke konten</a>
   <div id="app"></div>
 
   <script src="/assets/app.js" defer></script>

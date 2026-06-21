@@ -5437,7 +5437,7 @@
         <div className="bg-black">
           <div className="relative z-10">
             <Navbar />
-            <main>
+            <main id="main">
               <DashboardDemo />
               <div className="bg-black">
                 <IntegrationsSpine />
