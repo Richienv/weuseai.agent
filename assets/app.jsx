@@ -425,6 +425,7 @@
         { label: 'Harga', href: '#pricing' },
         { label: 'FAQ', href: '#faq' },
       ];
+      const [menuOpen, setMenuOpen] = useState(false);
       return (
         <header className="fixed top-3 md:top-4 left-0 right-0 z-50 px-4 md:px-8 lg:px-16 py-3">
           <div className="flex items-center justify-between gap-3">
@@ -441,10 +442,37 @@
                 Mulai <ArrowUpRight size={14} stroke={2.2} />
               </a>
             </nav>
-            <a href="#pricing" className="md:hidden nav-clean rounded-full px-3.5 py-1.5 text-xs font-medium text-white flex items-center gap-1.5 whitespace-nowrap no-underline">
-              Mulai <ArrowUpRight size={12} stroke={2.2} />
-            </a>
+            <div className="md:hidden flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setMenuOpen((o) => !o)}
+                aria-label={menuOpen ? 'Tutup menu' : 'Buka menu'}
+                aria-expanded={menuOpen}
+                className="nav-clean rounded-full w-9 h-9 grid place-items-center text-white"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                  {menuOpen
+                    ? <><line x1="6" y1="6" x2="18" y2="18" /><line x1="6" y1="18" x2="18" y2="6" /></>
+                    : <><line x1="4" y1="8" x2="20" y2="8" /><line x1="4" y1="16" x2="20" y2="16" /></>}
+                </svg>
+              </button>
+              <a href="#pricing" onClick={() => setMenuOpen(false)} className="nav-clean rounded-full px-3.5 py-1.5 text-xs font-medium text-white flex items-center gap-1.5 whitespace-nowrap no-underline">
+                Mulai <ArrowUpRight size={12} stroke={2.2} />
+              </a>
+            </div>
           </div>
+          {menuOpen && (
+            <Mot.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2, ease: EASE }}
+              className="md:hidden mt-2 nav-clean rounded-2xl p-2 flex flex-col"
+            >
+              {links.map((l) => (
+                <a key={l.label} href={l.href} onClick={() => setMenuOpen(false)} className="px-4 py-3 text-sm font-medium text-white/90 font-body rounded-xl hover:bg-white/5 hover:text-white transition-colors">{l.label}</a>
+              ))}
+            </Mot.div>
+          )}
         </header>
       );
     }
