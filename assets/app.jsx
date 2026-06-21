@@ -2885,7 +2885,7 @@
             <p className="db-sub">Dia nyapa kamu duluan — briefing pagi masuk sebelum diminta. Kamu cukup setujui.</p>
             <div className="mt-7 flex flex-col items-center gap-3">
               <div className="flex items-center gap-3 flex-wrap justify-center">
-                <a href="#pricing" className="rounded-full px-5 py-2.5 min-h-[44px] text-sm font-medium flex items-center gap-2 no-underline" style={{ background: '#fff', color: '#0a0a0a', border: '1px solid #fff' }}>
+                <a href="#pricing" className="cta-tactile rounded-full px-5 py-2.5 min-h-[44px] text-sm font-medium flex items-center gap-2 no-underline" style={{ background: '#fff', color: '#0a0a0a', border: '1px solid #fff' }}>
                   Aktifkan asisten kamu <ArrowUpRight size={14} stroke={2.2} />
                 </a>
                 <a href="https://cal.com/weuseai.agent/15min" target="_blank" rel="noopener" className="rounded-full px-5 py-2.5 min-h-[44px] text-sm font-medium flex items-center gap-2 no-underline text-white" style={{ background: 'rgba(255, 255, 255, 0.06)', border: '1px solid rgba(255, 255, 255, 0.22)', backdropFilter: 'blur(8px)' }}>
@@ -4016,7 +4016,7 @@
             href={tier.ctaHref}
             target={/^https?:|^mailto:/.test(tier.ctaHref) ? '_blank' : undefined}
             rel={/^https?:/.test(tier.ctaHref) ? 'noopener' : undefined}
-            className={`mt-7 md:mt-8 rounded-full px-5 py-3 text-sm font-medium flex items-center justify-center gap-2 no-underline${isFeatured ? ' cta-pulse' : ''}`}
+            className={`cta-tactile mt-7 md:mt-8 rounded-full px-5 py-3 text-sm font-medium flex items-center justify-center gap-2 no-underline${isFeatured ? ' cta-pulse' : ''}`}
             style={
               isFeatured
                 ? { background: '#E5322D', color: '#fff', border: '1px solid #E5322D' }
