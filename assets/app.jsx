@@ -5419,7 +5419,7 @@
           return React.createElement('div', { style: { minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '40px', color: '#f5f5f5', fontFamily: 'Inter, sans-serif' } },
             React.createElement('div', null,
               React.createElement('p', { style: { fontSize: '18px', marginBottom: '16px' } }, 'Lagi ada kendala memuat halaman.'),
-              React.createElement('a', { href: 'checkout.html', style: { color: '#E5322D', textDecoration: 'underline' } }, 'Lanjut ke checkout →')));
+              React.createElement('a', { href: 'checkout.html?plan=library-full', style: { color: '#E5322D', textDecoration: 'underline' } }, 'Lanjut ke checkout →')));
         }
         return this.props.children;
       }
