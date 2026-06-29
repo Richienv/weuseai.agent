@@ -5596,6 +5596,55 @@
       );
     }
 
+    function SkillsSection() {
+      // Section 5 — skill library the agent ships with. Honest: each maps to a
+      // real capability (24/7 uptime, decks, memory, ideation, scripts, Excel,
+      // research-summarize). The design's "File Management · 128 file" implied
+      // filesystem access we lack → reframed to "Riset & Ringkas". Coding is the
+      // coming-soon (SEGERA) early-access skill → WhatsApp CTA.
+      const skills = [
+        { n: '01', tag: 'SKILL', name: 'Siaga 24/7', desc: 'Jam 23:47 kepikiran sesuatu? Chat aja — dia nggak tidur, nggak cuti.', ex: 'selalu online', wide: true },
+        { n: '02', tag: 'SKILL', name: 'Pitch Deck', desc: 'Slide deck dengan alur cerita yang jelas.', ex: '12 slide' },
+        { n: '03', tag: 'SKILL', name: 'Memori Relasi', desc: 'Ingat klien, konteks, dan janji kamu.', ex: 'tersimpan' },
+        { n: '04', tag: 'SKILL', name: 'Radar Ide', desc: 'Ide konten dan angle, lengkap hook pembuka.', ex: '5 ide' },
+        { n: '05', tag: 'SKILL', name: 'Script Generator', desc: 'Script video terstruktur, tinggal kamu rekam.', ex: 'hook · body · cta' },
+        { n: '06', tag: 'SKILL', name: 'Excel Wizard', desc: 'Formula, pivot, dan rapikan data spreadsheet.', ex: '=SUMIFS' },
+        { n: '07', tag: 'SKILL', name: 'Riset & Ringkas', desc: 'Riset topik, rangkum jadi poin penting.', ex: '3 sumber' },
+      ];
+      return (
+        <section id="skills" className="kt-skills">
+          <div className="kt-skills-inner">
+            <div className="kt-skills-head">
+              <div className="kt-eyebrow"><span className="kt-eyebrow-dot" />Skill bawaan</div>
+              <h2 className="kt-h2">Skill siap pakai. <span className="kt-grad-text">Langsung dari kotak.</span></h2>
+              <p className="kt-lead">Agen kamu datang dengan skill yang sudah kami fine-tune. Tanpa setup ribet — tinggal kamu minta.</p>
+            </div>
+            <div className="kt-skills-grid">
+              {skills.map((s) => (
+                <div key={s.n} className={'kt-skill-card' + (s.wide ? ' wide' : '')}>
+                  <div className="kt-skill-num">{s.n} · {s.tag}</div>
+                  <div className="kt-skill-name">{s.name}</div>
+                  <div className="kt-skill-desc">{s.desc}</div>
+                  <div className="kt-skill-ex"><span className="kt-skill-ex-chip">{s.ex} <span className="kt-skill-check">✓</span></span></div>
+                </div>
+              ))}
+              <div className="kt-skill-card wide kt-skill-soon">
+                <div className="kt-skill-num">08 · <span className="kt-skill-soon-tag">SEGERA</span></div>
+                <div className="kt-skill-name">Coding</div>
+                <div className="kt-skill-desc">Bikin tool dan automasi kecil langsung dari chat. Masih kami siapkan — kamu bisa coba duluan.</div>
+                <a href="https://wa.me/6282154902561?text=Halo%20Richie%2C%20mau%20early%20access%20Code%20Wizard%20agent%20di%20weuseai.agent" target="_blank" rel="noopener" className="kt-skill-cta cta-tactile no-underline">Minta early access <ArrowUpRight size={13} stroke={2.2} /></a>
+              </div>
+              <a href="use-cases.html" className="kt-skill-card wide kt-skill-uc no-underline">
+                <div className="kt-skill-num">CONTOH NYATA</div>
+                <div className="kt-skill-name">Lihat cara orang pakai →</div>
+                <div className="kt-skill-desc">Contoh nyata dari berbagai usaha dan peran.</div>
+              </a>
+            </div>
+          </div>
+        </section>
+      );
+    }
+
     function App() {
       return (
         <div className="bg-black">
@@ -5604,12 +5653,13 @@
             <main id="main">
               <DashboardDemo />
               <div className="bg-black">
-                {/* Konten redesign sections (Iters 4-8). Skills / Stepper land
-                    before Pricing in Iters 7-8. Legacy aurora-era sections
-                    retired from the composition; defs pruned at cleanup (Iter 12). */}
+                {/* Konten redesign sections (Iters 4-8). Stepper lands before
+                    Pricing in Iter 8. Legacy aurora-era sections retired from the
+                    composition; defs pruned at cleanup (Iter 12). */}
                 <ExploreSection />
                 <MemoryPersonaSection />
                 <ProductAppsSection />
+                <SkillsSection />
                 <Pricing />
                 <FAQ />
               </div>
