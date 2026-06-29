@@ -698,10 +698,10 @@
     }
     @media (prefers-reduced-motion: reduce) { .live-dot { animation: none; } }
     .db-section .db-headline {
-      font-family: 'Instrument Serif', serif;
-      color: #fff;
-      font-size: 38px; line-height: 1.0; letter-spacing: -0.04em;
-      max-width: 24ch;
+      font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 600;
+      color: #f5f2ef;
+      font-size: 38px; line-height: 1.02; letter-spacing: -0.01em;
+      max-width: 20ch;
       margin: 0 auto;
     }
     @media (min-width: 768px) { .db-section .db-headline { font-size: 56px; } }
@@ -4551,6 +4551,19 @@
       .kt-nav-mobile { display:flex; }
       .kt-nav-inner { padding:0 16px; gap:12px; }
     }
+
+
+    /* Konten redesign hero (Iter 3) — converging-channels circuit + CTAs */
+    .kt-hero-circuit { position:absolute; inset:0; z-index:0; overflow:hidden; pointer-events:none; opacity:.92; -webkit-mask-image:radial-gradient(125% 95% at 50% 42%, #000 52%, transparent 100%); mask-image:radial-gradient(125% 95% at 50% 42%, #000 52%, transparent 100%); }
+    .kt-hero-circuit svg { width:100%; height:100%; min-height:520px; }
+    .kt-current { animation: ktCurrentFlow 2.6s linear infinite; }
+    .kt-port { transform-box:fill-box; transform-origin:center; animation: ktPortPulse 3s ease-in-out infinite; }
+    .kt-hub-glow { transform-box:fill-box; transform-origin:center; animation: ktGlowPulse 5s ease-in-out infinite; }
+    .kt-hub-core { transform-box:fill-box; transform-origin:center; filter:drop-shadow(0 0 8px #ee3c30); animation: ktPortPulse 2.6s ease-in-out infinite; }
+    @media (max-width:760px) { .kt-hero-circuit .kt-chan text { display:none; } .kt-hero-circuit { opacity:.7; } }
+    .kt-cta-primary { display:inline-flex; align-items:center; gap:10px; background:linear-gradient(180deg,#ff7a45,#ee3c30 55%,#c01f12); color:#fff; border:1px solid rgba(255,150,120,.5); font-family:'Plus Jakarta Sans',sans-serif; font-size:15px; font-weight:600; padding:14px 24px; min-height:44px; border-radius:14px; text-shadow:0 1px 3px rgba(120,15,5,.5); box-shadow:0 16px 34px rgba(238,60,48,.42), inset 0 2px 2px rgba(255,210,180,.7), inset 0 -10px 20px rgba(150,20,5,.5); }
+    .kt-cta-ghost { display:inline-flex; align-items:center; gap:8px; background:rgba(255,255,255,.05); color:#e7e3df; border:1px solid rgba(255,255,255,.13); font-family:'Plus Jakarta Sans',sans-serif; font-size:15px; font-weight:500; padding:14px 22px; min-height:44px; border-radius:14px; -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); transition:border-color .2s, background .2s; }
+    .kt-cta-ghost:hover { background:rgba(255,255,255,.08); border-color:rgba(255,255,255,.22); }
 
   </style>
 </head>

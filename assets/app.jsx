@@ -2744,15 +2744,49 @@
     // Animated signal-red circuit flowing into a hub — konten-style hero motion,
     // pure SVG (stroke-dashoffset), sits behind the dim so it never fights the mockup.
     function HeroCircuit() {
-      // Premium "living aurora" hero background (styles in index.html). CSS-only
-      // drifting light pools + conic sheen + grain — see .hero-aurora.
+      // Converging-channels circuit backdrop (Konten redesign Iter 3): faint
+      // L-elbow traces carry flowing current from the customer's channels
+      // (left + right edges) into a central agent hub. CSS-only motion
+      // (ktCurrentFlow / ktPortPulse / ktGlowPulse) — reduced-motion safe.
+      const HUBX = 600, HUBY = 250;
+      const left = [{ y: 110, label: 'WhatsApp', c: '#25d366' }, { y: 250, label: 'Instagram', c: '#e1306c' }, { y: 390, label: 'Telegram', c: '#3aa9e0' }];
+      const right = [{ y: 110, label: 'Email', c: '#e0b341' }, { y: 250, label: 'Kalender', c: '#ff7a5e' }, { y: 390, label: 'Spreadsheet', c: '#4caa5a' }];
+      const trace = (x0, y0) => `M${x0} ${y0} H${x0 < HUBX ? x0 + 230 : x0 - 230} L${HUBX} ${HUBY}`;
+      const all = [...left, ...right];
       return (
-        <div className="hero-aurora" aria-hidden="true">
-          <div className="ha-pool ha-1" />
-          <div className="ha-pool ha-2" />
-          <div className="ha-pool ha-3" />
-          <div className="ha-sheen" />
-          <div className="ha-grain" />
+        <div className="kt-hero-circuit" aria-hidden="true">
+          <svg viewBox="0 0 1200 520" fill="none" preserveAspectRatio="xMidYMid slice">
+            <defs>
+              <radialGradient id="ktHubGlow" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stopColor="#ee3c30" stopOpacity="0.5" />
+                <stop offset="55%" stopColor="#ee3c30" stopOpacity="0.12" />
+                <stop offset="100%" stopColor="#ee3c30" stopOpacity="0" />
+              </radialGradient>
+            </defs>
+            <circle cx={HUBX} cy={HUBY} r="150" fill="url(#ktHubGlow)" className="kt-hub-glow" />
+            {all.map((ch, i) => {
+              const d = trace(i < 3 ? 60 : 1140, ch.y);
+              return (
+                <g key={'t' + i}>
+                  <path d={d} stroke="rgba(238,60,48,0.13)" strokeWidth="1.4" />
+                  <path d={d} stroke={ch.c} strokeOpacity="0.7" strokeWidth="1.6" strokeLinecap="round" strokeDasharray="10 30" className="kt-current" style={{ animationDelay: `${i * 0.45}s` }} />
+                </g>
+              );
+            })}
+            {left.map((ch, i) => (
+              <g key={'l' + i} className="kt-chan">
+                <circle cx="60" cy={ch.y} r="5" fill={ch.c} className="kt-port" style={{ animationDelay: `${i * 0.4}s` }} />
+                <text x="74" y={ch.y + 4} fill="#8a837d" fontFamily="'JetBrains Mono',monospace" fontSize="13">{ch.label}</text>
+              </g>
+            ))}
+            {right.map((ch, i) => (
+              <g key={'r' + i} className="kt-chan">
+                <circle cx="1140" cy={ch.y} r="5" fill={ch.c} className="kt-port" style={{ animationDelay: `${i * 0.4}s` }} />
+                <text x="1126" y={ch.y + 4} fill="#8a837d" fontFamily="'JetBrains Mono',monospace" fontSize="13" textAnchor="end">{ch.label}</text>
+              </g>
+            ))}
+            <circle cx={HUBX} cy={HUBY} r="9" fill="#ee3c30" className="kt-hub-core" />
+          </svg>
         </div>
       );
     }
@@ -2873,25 +2907,22 @@
 
       return (
         <section id="beranda" className="db-section db-section--hero">
-          {/* Ambient dotted-red hero video — dimmed behind the dashboard mockup.
-              DottedVideo's IntersectionObserver pauses its rAF when scrolled away. */}
-          <DottedVideo src="/assets/new-hero.mp4" color="#E5322D" cellSize={7} className="db-hero-video" />
+          {/* Konten redesign: converging-channels circuit backdrop. */}
           <HeroCircuit />
-          <div className="db-hero-dim" aria-hidden="true" />
           <div className="db-hero-fade" aria-hidden="true" />
           <div className="db-eyebrow">
             <div className="db-eyebrow-pill">
               <span className="live-dot" />
               <span>Agen kamu bekerja</span>
             </div>
-            <h1 className="db-headline"><span className="hl-em">Satu agent.</span><br className="hidden md:inline" /> Ngerjain kerja kamu.</h1>
+            <h1 className="db-headline"><span className="kt-grad-text">Satu agent.</span><br className="hidden md:inline" /> Ngerjain kerja kamu.</h1>
             <p className="db-sub">Dia nyapa kamu duluan — briefing pagi masuk sebelum diminta. Kamu cukup setujui.</p>
             <div className="mt-7 flex flex-col items-center gap-3">
               <div className="flex items-center gap-3 flex-wrap justify-center">
-                <a href="#pricing" className="cta-tactile rounded-full px-5 py-2.5 min-h-[44px] text-sm font-medium flex items-center gap-2 no-underline" style={{ background: '#fff', color: '#0a0a0a', border: '1px solid #fff' }}>
+                <a href="#pricing" className="kt-cta-primary cta-tactile no-underline">
                   Aktifkan asisten kamu <ArrowUpRight size={14} stroke={2.2} />
                 </a>
-                <a href="https://cal.com/weuseai.agent/15min" target="_blank" rel="noopener" className="rounded-full px-5 py-2.5 min-h-[44px] text-sm font-medium flex items-center gap-2 no-underline text-white" style={{ background: 'rgba(255, 255, 255, 0.06)', border: '1px solid rgba(255, 255, 255, 0.22)', backdropFilter: 'blur(8px)' }}>
+                <a href="https://cal.com/weuseai.agent/15min" target="_blank" rel="noopener" className="kt-cta-ghost no-underline">
                   Konsultasi gratis (15 menit)
                 </a>
               </div>
