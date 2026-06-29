@@ -418,37 +418,42 @@
     }
 
     // ─────────────────────── NAVBAR ───────────────────────
+    // Konten redesign nav (Iter 2): solid glassmorphism top bar, diamond+gradient
+    // logo, decorative search (no search backend — design fidelity), Kerja/Harga/
+    // FAQ + white Mulai pill. Wiring preserved; mobile hamburger kept.
     function Navbar() {
       const links = [
-        { label: 'Beranda', href: '#beranda' },
         { label: 'Kerja', href: '#proses' },
         { label: 'Harga', href: '#pricing' },
         { label: 'FAQ', href: '#faq' },
       ];
       const [menuOpen, setMenuOpen] = useState(false);
       return (
-        <header className="fixed top-3 md:top-4 left-0 right-0 z-50 px-4 md:px-8 lg:px-16 py-3">
-          <div className="flex items-center justify-between gap-3">
-            <a href="/" aria-label="weuseai.agent — beranda" className="flex items-center gap-2">
-              <span className="rounded-full nav-clean grid place-items-center px-4 py-2 md:px-5 md:py-2.5">
-                <img src="assets/logo.svg" alt="" className="block h-4 md:h-5 w-auto" />
+        <header className="kt-nav fixed top-0 left-0 right-0 z-50">
+          <div className="kt-nav-inner">
+            <a href="/" aria-label="weuseai.agent — beranda" className="kt-nav-brand">
+              <span className="kt-nav-logo" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 100 100"><path d="M50 8 C54 32 68 46 92 50 C68 54 54 68 50 92 C46 68 32 54 8 50 C32 46 46 32 50 8 Z" fill="#5a0f08" /></svg>
               </span>
+              <span className="kt-nav-word">weuseai<span style={{ color: '#ff6a4c' }}>.agent</span></span>
             </a>
-            <nav className="hidden md:flex nav-clean rounded-full px-1.5 py-1 items-center gap-0">
+            <div className="kt-nav-search" aria-hidden="true">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7c736e" strokeWidth="2"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4-4" /></svg>
+              <span>Cari tugas atau agent</span>
+            </div>
+            <nav className="kt-nav-links">
               {links.map((l) => (
-                <a key={l.label} href={l.href} className="px-3 py-2 text-sm font-medium text-foreground/90 font-body hover:text-white transition-colors">{l.label}</a>
+                <a key={l.label} href={l.href} className="kt-nav-link">{l.label}</a>
               ))}
-              <a href="#pricing" className="bg-white text-black rounded-full px-3.5 py-1.5 text-sm font-medium flex items-center gap-1.5 ml-1 no-underline">
-                Mulai <ArrowUpRight size={14} stroke={2.2} />
-              </a>
+              <a href="#pricing" className="kt-nav-cta cta-tactile">Mulai <ArrowUpRight size={14} stroke={2.2} /></a>
             </nav>
-            <div className="md:hidden flex items-center gap-2">
+            <div className="kt-nav-mobile">
               <button
                 type="button"
                 onClick={() => setMenuOpen((o) => !o)}
                 aria-label={menuOpen ? 'Tutup menu' : 'Buka menu'}
                 aria-expanded={menuOpen}
-                className="nav-clean rounded-full w-9 h-9 grid place-items-center text-white"
+                className="kt-nav-burger"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
                   {menuOpen
@@ -456,9 +461,7 @@
                     : <><line x1="4" y1="8" x2="20" y2="8" /><line x1="4" y1="16" x2="20" y2="16" /></>}
                 </svg>
               </button>
-              <a href="#pricing" onClick={() => setMenuOpen(false)} className="nav-clean rounded-full px-3.5 py-1.5 text-xs font-medium text-white flex items-center gap-1.5 whitespace-nowrap no-underline">
-                Mulai <ArrowUpRight size={12} stroke={2.2} />
-              </a>
+              <a href="#pricing" onClick={() => setMenuOpen(false)} className="kt-nav-cta-sm cta-tactile">Mulai <ArrowUpRight size={12} stroke={2.2} /></a>
             </div>
           </div>
           {menuOpen && (
@@ -466,10 +469,10 @@
               initial={{ opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.2, ease: EASE }}
-              className="md:hidden mt-2 nav-clean rounded-2xl p-2 flex flex-col"
+              className="kt-nav-panel"
             >
               {links.map((l) => (
-                <a key={l.label} href={l.href} onClick={() => setMenuOpen(false)} className="px-4 py-3 text-sm font-medium text-white/90 font-body rounded-xl hover:bg-white/5 hover:text-white transition-colors">{l.label}</a>
+                <a key={l.label} href={l.href} onClick={() => setMenuOpen(false)} className="kt-nav-panel-link">{l.label}</a>
               ))}
             </Mot.div>
           )}
