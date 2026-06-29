@@ -123,7 +123,7 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
   <!-- Warm DNS+TLS for the Stats Mux HLS stream + hls.js CDN (non-Safari path loads both on hydration). -->
   <link rel="preconnect" href="https://stream.mux.com" crossorigin>
@@ -4438,6 +4438,95 @@
         scroll-behavior: auto !important;
       }
     }
+
+    /* ===================== KONTEN REDESIGN FOUNDATION (kt) =====================
+       New "Konten Hero Motion" design system. Namespaced kt* so ported + not-yet-
+       ported sections coexist during the section-by-section migration; pruned at
+       cleanup (Iteration 12). Tokens + 65 design keyframes. */
+    :root {
+      --kt-bg:#070608; --kt-stage:#09080a; --kt-card:#0c0a0b; --kt-card-el:#0d0b0c;
+      --kt-inner:#141011; --kt-hair:rgba(255,255,255,.07); --kt-hair-soft:rgba(255,255,255,.06);
+      --kt-accent:#ee3c30; --kt-accent-bright:#ff6a4c; --kt-accent-deep:#c41d10;
+      --kt-grad:linear-gradient(100deg,#ff8a3d,#ee2f1f);
+      --kt-hi:#f5f2ef; --kt-body:#9a938d; --kt-muted:#8a837d; --kt-success:#6fe39a;
+    }
+    .kt-serif { font-family:'Instrument Serif',serif; }
+    .kt-sans { font-family:'Plus Jakarta Sans',sans-serif; }
+    .kt-mono { font-family:'JetBrains Mono',monospace; }
+    .kt-grad-text { background:var(--kt-grad); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; color:transparent; }
+    @keyframes ktTravelFade { 0%{ offset-distance:0%; opacity:0 } 9%{ opacity:1 } 80%{ opacity:1 } 100%{ offset-distance:100%; opacity:0 } }
+    @keyframes ktScanFade { 0%{ offset-distance:0%; opacity:0 } 14%{ opacity:.9 } 72%{ opacity:.9 } 100%{ offset-distance:100%; opacity:0 } }
+    @keyframes ktGlowPulse { 0%,100%{ opacity:.45 } 50%{ opacity:.8 } }
+    @keyframes ktHubFloat { 0%,100%{ transform:translateY(0) } 50%{ transform:translateY(-8px) } }
+    @keyframes ktCaretBlink { 0%,48%{ opacity:1 } 52%,100%{ opacity:0 } }
+    @keyframes ktDotBounce { 0%,80%,100%{ transform:translateY(0); opacity:.5 } 40%{ transform:translateY(-4px); opacity:1 } }
+    @keyframes ktPortPulse { 0%,100%{ opacity:.5; transform:scale(1) } 50%{ opacity:1; transform:scale(1.25) } }
+    @keyframes ktHeroReveal { from{ opacity:0; transform:translateX(-50%) translateY(16px) } to{ opacity:1; transform:translateX(-50%) translateY(0) } }
+    @keyframes ktCardRise { from{ opacity:0; transform:translateY(30px) } to{ opacity:1; transform:translateY(0) } }
+    @keyframes ktRowScan { 0%{ transform:translateY(0); opacity:0 } 12%{ opacity:1 } 55%{ opacity:1 } 72%{ transform:translateY(96px); opacity:0 } 100%{ opacity:0 } }
+    @keyframes ktBarFill { from{ width:24% } to{ width:90% } }
+    @keyframes ktDrawLine { 0%{ stroke-dashoffset:240 } 55%{ stroke-dashoffset:0 } 100%{ stroke-dashoffset:0 } }
+    @keyframes ktCheckSeq { 0%,8%{ opacity:.15; transform:scale(.7) } 24%,88%{ opacity:1; transform:scale(1) } 100%{ opacity:.15; transform:scale(.7) } }
+    @keyframes ktDotPulse { 0%,100%{ opacity:1 } 50%{ opacity:.25 } }
+    @keyframes ktTickUp { 0%,100%{ transform:translateY(0) } 50%{ transform:translateY(-2px) } }
+    @keyframes ktSeqIn { 0%{ opacity:0; transform:translateY(10px) scale(.96) } 9%,80%{ opacity:1; transform:translateY(0) scale(1) } 94%,100%{ opacity:0; transform:translateY(-6px) scale(.98) } }
+    @keyframes ktFireFlick { 0%,100%{ opacity:.5; transform:translateY(0) scaleY(1) } 30%{ opacity:.85; transform:translateY(-2px) scaleY(1.14) } 55%{ opacity:.62; transform:translateY(1px) scaleY(.93) } 80%{ opacity:.92; transform:translateY(-1px) scaleY(1.07) } }
+    @keyframes ktEmberRise { 0%{ opacity:0; transform:translateY(0) scale(1) } 16%{ opacity:1 } 100%{ opacity:0; transform:translateY(-52px) scale(.3) } }
+    @keyframes ktCorePulse { 0%,100%{ transform:scale(1) } 50%{ transform:scale(1.07) } }
+    @keyframes ktMsgIn { 0%{ opacity:0; transform:translateX(-12px) } 12%,82%{ opacity:1; transform:translateX(0) } 93%,100%{ opacity:0; transform:translateX(-8px) } }
+    @keyframes ktWave { 0%,100%{ transform:scaleY(.35) } 50%{ transform:scaleY(1) } }
+    @keyframes ktCellWrite { 0%,8%{ opacity:.14 } 28%,82%{ opacity:1 } 96%,100%{ opacity:.14 } }
+    @keyframes ktScanY { 0%{ top:-8%; opacity:0 } 10%{ opacity:.9 } 88%{ top:90%; opacity:.9 } 100%{ top:90%; opacity:0 } }
+    @keyframes ktMatchFlash { 0%,38%{ background:transparent; border-color:rgba(255,255,255,.08) } 52%,82%{ background:rgba(34,197,94,.16); border-color:rgba(34,197,94,.45) } 100%{ background:transparent; border-color:rgba(255,255,255,.08) } }
+    @keyframes ktRadarSweep { to{ transform:rotate(360deg) } }
+    @keyframes ktDeckMove { 0%{ transform:translate(0,0) } 25%{ transform:translate(34px,0) } 50%{ transform:translate(34px,30px) } 75%{ transform:translate(68px,30px) } 100%{ transform:translate(0,0) } }
+    @keyframes ktCellMove { 0%{ transform:translate(0,0) } 33%{ transform:translate(34px,0) } 66%{ transform:translate(34px,22px) } 100%{ transform:translate(0,0) } }
+    @keyframes ktLineGrow { 0%{ width:4% } 92%,100%{ width:92% } }
+    @keyframes ktNumActive { 0%,1%{ background:rgba(255,255,255,.02); color:#8a837d; border-color:rgba(255,255,255,.16); box-shadow:none } 4%,21%{ background:#ee3c30; color:#fff; border-color:#ee3c30; box-shadow:0 0 22px rgba(238,60,48,.6) } 24%,100%{ background:rgba(255,255,255,.02); color:#8a837d; border-color:rgba(255,255,255,.16); box-shadow:none } }
+    @keyframes ktStepGlow { 0%,1%{ border-color:rgba(255,255,255,.08); box-shadow:none } 4%,21%{ border-color:rgba(238,60,48,.45); box-shadow:0 0 34px rgba(238,60,48,.16) } 24%,100%{ border-color:rgba(255,255,255,.08); box-shadow:none } }
+    @keyframes ktShimmer { 0%{ transform:translateX(-140%) } 55%,100%{ transform:translateX(460%) } }
+    @keyframes ktFloatY { 0%,100%{ transform:translateY(0) } 50%{ transform:translateY(-6px) } }
+    @keyframes ktSheenSweep { 0%{ transform:translateX(0) } 16%,100%{ transform:translateX(360%) } }
+    @keyframes ktChipFloat { 0%,100%{ transform:translateY(0) rotate(0deg) } 50%{ transform:translateY(-4px) rotate(-3deg) } }
+    @keyframes ktCurrentFlow { from{ stroke-dashoffset:240 } to{ stroke-dashoffset:0 } }
+    @keyframes ktTwinkle { 0%,100%{ opacity:.2; transform:scale(.55) } 50%{ opacity:1; transform:scale(1) } }
+    @keyframes ktFloatBob { 0%,100%{ transform:translateY(0) } 50%{ transform:translateY(-5px) } }
+    @keyframes ktPingIn { 0%,8%{ opacity:0; transform:translateY(9px) scale(.85) } 22%,68%{ opacity:1; transform:translateY(0) scale(1) } 84%,100%{ opacity:0; transform:translateY(-7px) scale(.92) } }
+    @keyframes ktSlideRise { 0%,5%{ opacity:0; transform:translateY(24px) scale(.9) } 26%,90%{ opacity:1; transform:translateY(0) scale(1) } 100%{ opacity:1 } }
+    @keyframes ktRipple { 0%{ transform:scale(.32); opacity:.85 } 100%{ transform:scale(1.9); opacity:0 } }
+    @keyframes ktIdeaPop { 0%,52%{ opacity:0; transform:scale(.3) translateY(6px) } 66%,86%{ opacity:1; transform:scale(1) translateY(0) } 100%{ opacity:0; transform:scale(.85) translateY(-4px) } }
+    @keyframes ktEqBar { 0%,100%{ transform:scaleY(.28) } 50%{ transform:scaleY(1) } }
+    @keyframes ktTypeLine { 0%,6%{ width:6% } 34%,100%{ width:var(--w,80%) } }
+    @keyframes ktPlayMove { 0%{ left:8% } 100%{ left:90% } }
+    @keyframes ktCellFill { 0%,6%{ opacity:.1; transform:scale(.78) } 30%,84%{ opacity:1; transform:scale(1) } 97%,100%{ opacity:.1; transform:scale(.78) } }
+    @keyframes ktGrowBar { 0%,8%{ transform:scaleY(.12) } 40%,90%{ transform:scaleY(1) } 100%{ transform:scaleY(.12) } }
+    @keyframes ktFileSnap { 0%,10%{ opacity:0; transform:translate(var(--fx,0),var(--fy,0)) rotate(var(--fr,0)) } 32%,86%{ opacity:1; transform:translate(0,0) rotate(0) } 100%{ opacity:1; transform:translate(0,0) rotate(0) } }
+    @keyframes ktTestGreen { 0%,42%{ color:#5a5550 } 56%,100%{ color:#6ff0a4 } }
+    @keyframes ktSpinHand { to{ transform:rotate(360deg) } }
+    @keyframes ktOrbit { to{ transform:rotate(360deg) } }
+    @keyframes ktOrbit3d {
+    0%   { transform:translate(-50%,-50%) translate(0px,28px) scale(1);     z-index:6; opacity:1;   filter:none }
+    25%  { transform:translate(-50%,-50%) translate(124px,0px) scale(.82);  z-index:4; opacity:.92; filter:brightness(.92) }
+    50%  { transform:translate(-50%,-50%) translate(0px,-28px) scale(.6);   z-index:1; opacity:.5;  filter:brightness(.65) }
+    75%  { transform:translate(-50%,-50%) translate(-124px,0px) scale(.82); z-index:4; opacity:.92; filter:brightness(.92) }
+    100% { transform:translate(-50%,-50%) translate(0px,28px) scale(1);     z-index:6; opacity:1;   filter:none }
+  }
+    @keyframes ktRowLit { 0%,100%{ background:rgba(255,255,255,.04); border-color:rgba(255,255,255,.08); transform:translateZ(0) } 50%{ background:rgba(110,124,240,.14); border-color:rgba(110,124,240,.42) } }
+    @keyframes ktBadgeFloat { 0%,100%{ transform:translateY(0) rotate(-3deg) } 50%{ transform:translateY(-7px) rotate(3deg) } }
+    @keyframes ktColFloat { 0%,100%{ transform:translateY(0) } 50%{ transform:translateY(-8px) } }
+    @keyframes ktRecGlow { 0%,100%{ box-shadow:inset 0 1px 0 rgba(255,255,255,.12), 0 0 50px rgba(238,60,48,.2), 0 32px 70px rgba(0,0,0,.62) } 50%{ box-shadow:inset 0 1px 0 rgba(255,255,255,.18), 0 0 78px rgba(238,60,48,.4), 0 32px 80px rgba(0,0,0,.62) } }
+    @keyframes ktGlazeStreak { 0%{ transform:translateX(-160%) skewX(-18deg) } 30%,100%{ transform:translateX(520%) skewX(-18deg) } }
+    @keyframes ktHoloShift { 0%,100%{ opacity:.35; transform:translateY(0) } 50%{ opacity:.7; transform:translateY(-4px) } }
+    @keyframes ktAmberFlick { 0%,100%{ opacity:.55 } 50%{ opacity:.9 } }
+    @keyframes ktChargeDrop { 0%{ top:-12px; opacity:0 } 5%{ opacity:1 } 72%{ top:192px; opacity:1 } 80%{ top:198px; opacity:1 } 86%{ opacity:0 } 100%{ top:198px; opacity:0 } }
+    @keyframes ktWirePulse { 0%,100%{ opacity:.5 } 50%{ opacity:1 } }
+    @keyframes ktWireBuzz { 0%,100%{ opacity:.5; filter:brightness(1) } 22%{ opacity:.8 } 38%{ opacity:.55 } 52%{ opacity:1; filter:brightness(1.45) } 72%{ opacity:.6 } 88%{ opacity:.88 } }
+    @keyframes ktSparkFly { 0%,3%{ transform:translate(-50%,0) scale(0); opacity:0 } 9%{ transform:translate(-50%,0) scale(1); opacity:1 } 100%{ transform:translate(calc(-50% + var(--sx,12px)), 14px) scale(0); opacity:0 } }
+    @keyframes ktPanelCharge { 0%,76%{ border-top-color:rgba(238,60,48,.4) } 86%{ border-top-color:rgba(255,160,100,1) } 100%{ border-top-color:rgba(238,60,48,.5) } }
+    @keyframes ktSlashIn { 0%,12%{ transform:translateY(-50%) rotate(-5deg) scaleX(0) } 30%{ transform:translateY(-50%) rotate(-5deg) scaleX(1.04) } 36%,92%{ transform:translateY(-50%) rotate(-5deg) scaleX(1) } 100%{ transform:translateY(-50%) rotate(-5deg) scaleX(1) } }
+    @keyframes ktPriceGlint { 0%,40%{ transform:translateX(0) } 60%,100%{ transform:translateX(520%) } }
+    @media (prefers-reduced-motion: reduce) { [class*="kt-"], [class*="kt-"] * { animation:none !important; } }
+
   </style>
 </head>
 <body class="bg-black text-white">
