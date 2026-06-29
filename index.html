@@ -4613,6 +4613,26 @@
     .kt-mem-recalls { display:flex; flex-wrap:wrap; gap:7px; margin-top:12px; }
     @media (max-width:860px){ .kt-mem-inner { grid-template-columns:1fr; gap:34px; } .kt-mem-stats { max-width:none; } }
 
+
+    /* Konten redesign — Product Apps (Iter 6) */
+    .kt-apps { position:relative; background:#070608; padding:90px 24px 100px; font-family:'Plus Jakarta Sans',sans-serif; border-top:1px solid rgba(255,255,255,.05); }
+    .kt-apps-inner { max-width:1180px; margin:0 auto; }
+    .kt-apps-head { max-width:680px; }
+    .kt-apps-grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-top:42px; }
+    .kt-app-card { padding:22px; border-radius:18px; background:linear-gradient(180deg,#110e0f,#0c0a0b); border:1px solid rgba(255,255,255,.08); }
+    .kt-app-top { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    .kt-app-name { font-size:18px; font-weight:600; color:#f1ede9; }
+    .kt-app-inc { font-family:'JetBrains Mono',monospace; font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:#6fe39a; padding:4px 9px; border-radius:7px; background:rgba(37,211,102,.1); border:1px solid rgba(37,211,102,.3); white-space:nowrap; }
+    .kt-app-desc { font-size:14px; color:#9a938d; margin-top:6px; }
+    .kt-app-chat { margin-top:16px; display:flex; flex-direction:column; gap:8px; }
+    .kt-app-msg { font-size:13.5px; line-height:1.45; padding:10px 13px; border-radius:11px; max-width:92%; }
+    .kt-app-msg.user { align-self:flex-end; background:linear-gradient(160deg,#ff6a3c,#ee3c30 70%,#c41d10); color:#fff; border-bottom-right-radius:4px; }
+    .kt-app-msg.agent { align-self:flex-start; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.07); color:#d6d2ce; border-bottom-left-radius:4px; }
+    .kt-app-mini { display:flex; flex-wrap:wrap; align-items:center; gap:7px; margin-top:16px; padding-top:14px; border-top:1px solid rgba(255,255,255,.06); }
+    .kt-app-mini-tag { font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.12em; color:#ff7a5e; }
+    .kt-app-mini-chip { font-size:12px; color:#c9c3bd; padding:5px 10px; border-radius:8px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); }
+    @media (max-width:860px){ .kt-apps-grid { grid-template-columns:1fr; } }
+
   </style>
 </head>
 <body class="bg-black text-white">

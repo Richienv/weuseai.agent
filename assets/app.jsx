@@ -5552,6 +5552,50 @@
       );
     }
 
+    function ProductAppsSection() {
+      // Section 4 — one agent covers many work domains (content, fitness,
+      // finance, school) from one chat. HONEST: it drafts/prepares real
+      // deliverables, kamu approves; the design's fabricated standalone
+      // "Harga normal Rp X / Rp Y/bln" anchors are DROPPED (we don't sell
+      // these standalone at those prices — shipping them would be deceptive).
+      const apps = [
+        { name: 'Konten', desc: 'Susun dan jadwalkan konten kamu.', u: 'Atur konten minggu ini dong', a: 'Sudah aku susun 7 post minggu ini, lengkap draf caption gaya kamu.', tag: 'KONTEN', mini: ['7 post', '3 reels', '7 caption'] },
+        { name: 'Program latihan', desc: 'Atur program latihan, catat progres.', u: 'Susun program latihanku', a: 'Program latihan kamu aku tata — progres hari ini tercatat.', tag: 'WORKOUT', mini: ['Deadlift 5×5', 'Streak 12 hari', 'Gym day'] },
+        { name: 'Keuangan', desc: 'Rapikan cashflow, kasih ringkasan.', u: 'Rapikan keuangan bulan ini', a: 'Pemasukan dan pengeluaran aku rapikan — ini ringkasan minggu ini.', tag: 'CASHFLOW', mini: ['Net minggu ini', 'Pemasukan', 'Ringkasan'] },
+        { name: 'Sekolah', desc: 'Pantau tugas dan tenggat sekolah.', u: 'Bantu siapin tugas minggu ini', a: 'Tugas dan tenggat minggu ini aku rapikan — draf jawaban siap kamu cek.', tag: 'SEKOLAH', mini: ['3 tugas', '2 tenggat', 'Draf siap'] },
+      ];
+      return (
+        <section id="apps" className="kt-apps">
+          <div className="kt-apps-inner">
+            <div className="kt-apps-head">
+              <div className="kt-eyebrow"><span className="kt-eyebrow-dot" />Lebih dari chatbot</div>
+              <h2 className="kt-h2">Agen kamu nggak cuma menjawab — <span className="kt-grad-text">dia ngerjain kerja beneran.</span></h2>
+              <p className="kt-lead">Konten, program latihan, keuangan, tugas sekolah — pekerjaan yang biasanya butuh tool terpisah, dia tangani dari satu chat. Tinggal kamu setujui hasilnya.</p>
+            </div>
+            <div className="kt-apps-grid">
+              {apps.map((ap) => (
+                <div key={ap.name} className="kt-app-card">
+                  <div className="kt-app-top">
+                    <div className="kt-app-name">{ap.name}</div>
+                    <span className="kt-app-inc">Termasuk paket</span>
+                  </div>
+                  <div className="kt-app-desc">{ap.desc}</div>
+                  <div className="kt-app-chat">
+                    <div className="kt-app-msg user">{ap.u}</div>
+                    <div className="kt-app-msg agent">{ap.a}</div>
+                  </div>
+                  <div className="kt-app-mini">
+                    <span className="kt-app-mini-tag">{ap.tag}</span>
+                    {ap.mini.map((m) => <span key={m} className="kt-app-mini-chip">{m}</span>)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      );
+    }
+
     function App() {
       return (
         <div className="bg-black">
@@ -5560,11 +5604,12 @@
             <main id="main">
               <DashboardDemo />
               <div className="bg-black">
-                {/* Konten redesign sections (Iters 4-8). Apps / Skills / Stepper
-                    land before Pricing in Iters 6-8. Legacy aurora-era sections
+                {/* Konten redesign sections (Iters 4-8). Skills / Stepper land
+                    before Pricing in Iters 7-8. Legacy aurora-era sections
                     retired from the composition; defs pruned at cleanup (Iter 12). */}
                 <ExploreSection />
                 <MemoryPersonaSection />
+                <ProductAppsSection />
                 <Pricing />
                 <FAQ />
               </div>
