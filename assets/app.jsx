@@ -5508,6 +5508,50 @@
       );
     }
 
+    function MemoryPersonaSection() {
+      // Section 3 — Memory & persona: corrections become permanent memory;
+      // personas are pre-fine-tuned. Honest framing — the design's "Akurat 99%"
+      // hard claim is replaced with the real, verifiable behaviour.
+      const flow = [
+        { k: '01', t: 'Instruksi baru', tag: 'dari kamu', d: 'Kamu koreksi sekali — misal "tone-nya lebih santai ya".' },
+        { k: '02', t: 'Tersimpan permanen', tag: 'permanen', d: 'Ditulis jadi memory permanen, bukan cuma chat sesi ini.' },
+        { k: '03', t: 'Dipakai ulang', tag: 'otomatis', d: 'Dipanggil otomatis tiap kerja berikutnya — tanpa kamu ulang.' },
+      ];
+      const recalls = ['Tone persona', 'Refund SOP', 'Format laporan', 'Gaya nulis kamu'];
+      const stats = [
+        { t: 'Sekali diajarin', d: 'Koreksi cukup sekali' },
+        { t: 'Nempel permanen', d: 'Lintas sesi, bukan sesaat' },
+        { t: 'Recall cepat', d: 'Dipanggil saat dibutuhkan' },
+        { t: 'Persona konsisten', d: 'Sudah kami fine-tune' },
+      ];
+      return (
+        <section id="memory" className="kt-mem">
+          <div className="kt-mem-inner">
+            <div className="kt-mem-head">
+              <div className="kt-eyebrow"><span className="kt-eyebrow-dot" />Memori &amp; persona</div>
+              <h2 className="kt-h2">Ajarin sekali. <span className="kt-grad-text">Dia ingat seterusnya.</span></h2>
+              <p className="kt-lead">Tiap koreksi dari kamu langsung jadi memory permanen — bukan cuma chat sesi ini. Persona kerjanya sudah kami fine-tune dari awal, jadi nada dan caranya konsisten.</p>
+              <div className="kt-mem-stats">
+                {stats.map((s) => <div key={s.t} className="kt-mem-stat"><div className="kt-mem-stat-t">{s.t}</div><div className="kt-mem-stat-d">{s.d}</div></div>)}
+              </div>
+            </div>
+            <div className="kt-mem-flow">
+              {flow.map((f, i) => (
+                <div key={f.k} className="kt-mem-step">
+                  <div className="kt-mem-step-num">{f.k}</div>
+                  <div className="kt-mem-step-body">
+                    <div className="kt-mem-step-top"><span className="kt-mem-step-t">{f.t}</span><span className="kt-mem-step-tag">{f.tag}</span></div>
+                    <div className="kt-mem-step-d">{f.d}</div>
+                    {i === 2 && <div className="kt-mem-recalls">{recalls.map((r) => <span key={r} className="kt-tool-chip">{r}</span>)}</div>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      );
+    }
+
     function App() {
       return (
         <div className="bg-black">
@@ -5516,11 +5560,11 @@
             <main id="main">
               <DashboardDemo />
               <div className="bg-black">
-                {/* Konten redesign sections (Iters 4-8). Memory&Persona / Apps /
-                    Skills / Stepper land before Pricing in Iters 5-8. Legacy
-                    aurora-era sections retired from the composition; defs pruned
-                    at cleanup (Iter 12). */}
+                {/* Konten redesign sections (Iters 4-8). Apps / Skills / Stepper
+                    land before Pricing in Iters 6-8. Legacy aurora-era sections
+                    retired from the composition; defs pruned at cleanup (Iter 12). */}
                 <ExploreSection />
+                <MemoryPersonaSection />
                 <Pricing />
                 <FAQ />
               </div>

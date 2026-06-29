@@ -4593,6 +4593,26 @@
     .kt-calc-note { font-size:12px; color:#8a837d; margin-top:14px; line-height:1.5; }
     @media (max-width:860px){ .kt-explore-inner { grid-template-columns:1fr; gap:36px; } .kt-h2 { font-size:32px; } }
 
+
+    /* Konten redesign — Memory & persona (Iter 5) */
+    .kt-mem { position:relative; background:#09080a; padding:90px 24px 100px; font-family:'Plus Jakarta Sans',sans-serif; border-top:1px solid rgba(255,255,255,.05); }
+    .kt-mem-inner { max-width:1180px; margin:0 auto; display:grid; grid-template-columns:1fr 1fr; gap:56px; align-items:center; }
+    .kt-mem-stats { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:30px; max-width:460px; }
+    .kt-mem-stat { padding:14px 16px; border-radius:12px; background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.07); }
+    .kt-mem-stat-t { font-size:15px; font-weight:600; color:#f1ede9; }
+    .kt-mem-stat-d { font-size:12.5px; color:#8a837d; margin-top:3px; }
+    .kt-mem-flow { position:relative; display:flex; flex-direction:column; gap:14px; }
+    .kt-mem-flow::before { content:''; position:absolute; left:35px; top:46px; bottom:46px; width:2px; background:linear-gradient(180deg, rgba(238,60,48,.05), rgba(238,60,48,.45), rgba(238,60,48,.05)); }
+    .kt-mem-step { position:relative; display:flex; gap:16px; padding:18px; border-radius:16px; background:linear-gradient(180deg,#110e0f,#0c0a0b); border:1px solid rgba(255,255,255,.08); }
+    .kt-mem-step-num { flex:none; width:34px; height:34px; border-radius:10px; display:grid; place-items:center; font-family:'JetBrains Mono',monospace; font-size:13px; color:#ff7a5e; background:rgba(238,60,48,.1); border:1px solid rgba(238,60,48,.3); z-index:1; }
+    .kt-mem-step-body { flex:1; }
+    .kt-mem-step-top { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    .kt-mem-step-t { font-size:16px; font-weight:600; color:#f1ede9; }
+    .kt-mem-step-tag { font-family:'JetBrains Mono',monospace; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:#ff7a5e; padding:3px 8px; border-radius:6px; background:rgba(238,60,48,.08); white-space:nowrap; }
+    .kt-mem-step-d { font-size:13.5px; line-height:1.5; color:#9a938d; margin-top:6px; }
+    .kt-mem-recalls { display:flex; flex-wrap:wrap; gap:7px; margin-top:12px; }
+    @media (max-width:860px){ .kt-mem-inner { grid-template-columns:1fr; gap:34px; } .kt-mem-stats { max-width:none; } }
+
   </style>
 </head>
 <body class="bg-black text-white">
