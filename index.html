@@ -4565,6 +4565,34 @@
     .kt-cta-ghost { display:inline-flex; align-items:center; gap:8px; background:rgba(255,255,255,.05); color:#e7e3df; border:1px solid rgba(255,255,255,.13); font-family:'Plus Jakarta Sans',sans-serif; font-size:15px; font-weight:500; padding:14px 22px; min-height:44px; border-radius:14px; -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); transition:border-color .2s, background .2s; }
     .kt-cta-ghost:hover { background:rgba(255,255,255,.08); border-color:rgba(255,255,255,.22); }
 
+
+    /* Konten redesign — Explore section (Iter 4) */
+    .kt-explore { position:relative; background:#070608; padding:96px 24px 110px; font-family:'Plus Jakarta Sans',sans-serif; overflow:hidden; }
+    .kt-explore-glow { position:absolute; left:50%; bottom:-140px; transform:translateX(-50%); width:1100px; max-width:120vw; height:520px; background:radial-gradient(circle, rgba(238,60,48,.15), transparent 66%); filter:blur(20px); pointer-events:none; }
+    .kt-explore-inner { position:relative; max-width:1180px; margin:0 auto; display:grid; grid-template-columns:1fr 1fr; gap:56px; align-items:center; }
+    .kt-eyebrow { display:inline-flex; align-items:center; gap:8px; padding:7px 16px; border-radius:999px; border:1px solid rgba(238,60,48,.4); background:rgba(238,60,48,.07); font-family:'JetBrains Mono',monospace; font-size:11.5px; letter-spacing:.14em; color:#ff7a5e; text-transform:uppercase; }
+    .kt-eyebrow-dot { width:6px; height:6px; border-radius:50%; background:#ee3c30; box-shadow:0 0 8px #ee3c30; animation:ktDotPulse 2s ease-in-out infinite; }
+    .kt-h2 { font-family:'Plus Jakarta Sans',sans-serif; font-weight:600; font-size:38px; line-height:1.06; letter-spacing:-.01em; color:#f1ede9; margin:22px 0 0; }
+    @media (min-width:768px){ .kt-h2 { font-size:46px; } }
+    .kt-lead { font-size:16px; line-height:1.55; color:#9a938d; margin:18px 0 0; max-width:460px; }
+    .kt-lead strong { color:#e7e3df; font-weight:600; }
+    .kt-badge-100 { display:inline-block; margin-top:30px; padding:16px 30px; border-radius:16px; background:linear-gradient(180deg,#ff7a45,#ee3c30 55%,#c01f12); box-shadow:0 16px 36px rgba(238,60,48,.38), inset 0 2px 2px rgba(255,210,180,.7), inset 0 -10px 20px rgba(150,20,5,.5); border:1px solid rgba(255,150,120,.5); font-weight:700; font-size:26px; letter-spacing:.02em; color:#fff; text-shadow:0 2px 6px rgba(120,15,5,.5); }
+    .kt-tool-chips { display:flex; flex-wrap:wrap; gap:8px; margin-top:24px; max-width:460px; }
+    .kt-tool-chip { padding:7px 13px; border-radius:9px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); font-size:13px; color:#c9c3bd; }
+    .kt-calc { padding:28px; border-radius:20px; background:linear-gradient(180deg,#110e0f,#0c0a0b); border:1px solid rgba(255,255,255,.09); box-shadow:0 40px 80px rgba(0,0,0,.5); }
+    .kt-calc-label { font-size:15px; color:#c9c3bd; line-height:1.4; }
+    .kt-calc-val { font-size:30px; font-weight:700; color:#f1ede9; margin-top:12px; }
+    .kt-calc-val .kt-grad-text { font-size:36px; }
+    .kt-slider { -webkit-appearance:none; appearance:none; width:100%; height:6px; border-radius:999px; margin:20px 0 6px; background:linear-gradient(90deg,#ee3c30,#ff8a3d); outline:none; }
+    .kt-slider::-webkit-slider-thumb { -webkit-appearance:none; appearance:none; width:20px; height:20px; border-radius:50%; background:#fff; box-shadow:0 0 0 4px rgba(238,60,48,.3), 0 2px 6px rgba(0,0,0,.4); cursor:pointer; }
+    .kt-slider::-moz-range-thumb { width:20px; height:20px; border:none; border-radius:50%; background:#fff; box-shadow:0 0 0 4px rgba(238,60,48,.3); cursor:pointer; }
+    .kt-calc-out { margin-top:22px; padding:18px; border-radius:14px; background:rgba(238,60,48,.08); border:1px solid rgba(238,60,48,.22); }
+    .kt-calc-out-num { font-size:30px; font-weight:700; color:#fff; }
+    .kt-calc-out-num span { font-size:16px; font-weight:500; color:#9a938d; margin-left:4px; }
+    .kt-calc-out-sub { font-size:14px; color:#c9c3bd; margin-top:6px; line-height:1.5; }
+    .kt-calc-note { font-size:12px; color:#8a837d; margin-top:14px; line-height:1.5; }
+    @media (max-width:860px){ .kt-explore-inner { grid-template-columns:1fr; gap:36px; } .kt-h2 { font-size:32px; } }
+
   </style>
 </head>
 <body class="bg-black text-white">

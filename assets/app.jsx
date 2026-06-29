@@ -5466,6 +5466,48 @@
     }
 
     // ─────────────────────── APP ───────────────────────
+    // ─────────────── KONTEN REDESIGN SECTIONS (Iters 4-8) ───────────────
+    // New design's mid-page sections. Each replaces the legacy aurora-era
+    // sections in the App composition below; the legacy component defs remain
+    // in source (unused) until cleanup (Iter 12) prunes them.
+
+    function ExploreSection() {
+      // Section 2 — Explore usage: the bundling-value story + an honest,
+      // clearly-illustrative time-savings calculator (never a hard claim).
+      const [hrs, setHrs] = useState(18);
+      const back = Math.round(hrs * 4.33 * 0.6); // illustrative: agent handles ~60% of admin hours
+      const days = Math.max(1, Math.round(back / 8));
+      const tools = ['Chatbot CS', 'Landing page', 'Notulen rapat', 'Sistem finance', 'Konten sosial', 'Riset pasar'];
+      return (
+        <section id="explore" className="kt-explore">
+          <div className="kt-explore-glow" aria-hidden="true" />
+          <div className="kt-explore-inner">
+            <div className="kt-explore-left">
+              <div className="kt-eyebrow"><span className="kt-eyebrow-dot" />Satu sistem, semua surface</div>
+              <h2 className="kt-h2">Tiap tool yang biasanya <span className="kt-grad-text">dijual mahal terpisah</span>, jadi satu.</h2>
+              <p className="kt-lead">Chatbot customer support, landing page creator, notulen rapat, sistem finance — biasanya dijual satu-satu. Kami bangun dan pre-fine-tune semuanya jadi <strong>satu agent</strong> buat kamu.</p>
+              <div className="kt-badge-100">100+ TUGAS</div>
+              <div className="kt-tool-chips">
+                {tools.map((t) => <span key={t} className="kt-tool-chip">{t}</span>)}
+              </div>
+            </div>
+            <div className="kt-explore-right">
+              <div className="kt-calc">
+                <div className="kt-calc-label">Berapa jam kerja administratif kamu per minggu?</div>
+                <div className="kt-calc-val"><span className="kt-grad-text">{hrs}</span> jam/minggu</div>
+                <input type="range" min="5" max="40" value={hrs} onChange={(e) => setHrs(+e.target.value)} aria-label="Jam kerja administratif per minggu" className="kt-slider" />
+                <div className="kt-calc-out">
+                  <div className="kt-calc-out-num">≈ {back} jam<span>/bulan</span></div>
+                  <div className="kt-calc-out-sub">bisa agent yang pegang — setara {days} hari kerja kamu balik.</div>
+                </div>
+                <div className="kt-calc-note">Estimasi kasar. Hasil tiap orang beda — kamu yang tetap pegang keputusan.</div>
+              </div>
+            </div>
+          </div>
+        </section>
+      );
+    }
+
     function App() {
       return (
         <div className="bg-black">
@@ -5474,18 +5516,13 @@
             <main id="main">
               <DashboardDemo />
               <div className="bg-black">
-                <IntegrationsSpine />
-                <OriginSection />
-                <StartSection />
-                <FeaturesChess />
-                <VelvetSection />
-                <FeaturesGrid />
-                <ChatVsAgentSection />
-                <CostComparisonSection />
+                {/* Konten redesign sections (Iters 4-8). Memory&Persona / Apps /
+                    Skills / Stepper land before Pricing in Iters 5-8. Legacy
+                    aurora-era sections retired from the composition; defs pruned
+                    at cleanup (Iter 12). */}
+                <ExploreSection />
                 <Pricing />
-                <CommunitySection />
                 <FAQ />
-                <Stats />
               </div>
             </main>
             <CtaFooter />
