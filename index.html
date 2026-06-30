@@ -88,7 +88,525 @@
   @keyframes slashIn { 0%,12%{ transform:translateY(-50%) rotate(-5deg) scaleX(0) } 30%{ transform:translateY(-50%) rotate(-5deg) scaleX(1.04) } 36%,92%{ transform:translateY(-50%) rotate(-5deg) scaleX(1) } 100%{ transform:translateY(-50%) rotate(-5deg) scaleX(1) } }
   @keyframes priceGlint { 0%,40%{ transform:translateX(0) } 60%,100%{ transform:translateX(520%) } }
   @media (prefers-reduced-motion: reduce){ *{ animation:none !important } }
-</style>
+
+    /* ===== Recovered DashboardDemo terminal CSS (hero swap) ===== */
+    .db-section {
+      position: relative;
+      padding: 80px 16px 100px;
+      background: #050505;
+      overflow: hidden;
+    }
+    .db-section--hero { padding-top: 118px; }
+    .db-sub-micro { margin-top: 6px; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(245,245,245,0.62); }
+    .db-section--hero .db-hero-video {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      z-index: 0; pointer-events: none;
+      background: #050505;            /* matches section, masks first-frame flash */
+      opacity: 0.72;                  /* rev 2026-06-17: noticeable (was 0.55) */
+    }
+    .db-section--hero .db-hero-dim {
+      position: absolute; inset: 0; z-index: 1; pointer-events: none;
+      /* Lighter scrim (rev 2026-06-17) — dots read clearly while a soft dark
+         pool under the eyebrow+headline keeps text contrast. */
+      background:
+        radial-gradient(ellipse 86% 64% at 50% 30%, rgba(5,5,5,0.30), rgba(5,5,5,0.66) 74%),
+        linear-gradient(180deg, rgba(5,5,5,0.52) 0%, rgba(5,5,5,0.30) 44%, rgba(5,5,5,0.80) 100%);
+    }
+    .db-section--hero .db-hero-fade {
+      position: absolute; left: 0; right: 0; bottom: 0; height: 220px;
+      z-index: 1; pointer-events: none;
+      background: linear-gradient(to bottom, rgba(5,5,5,0), #050505);
+    }
+    .db-section--hero .db-eyebrow { position: relative; z-index: 3; }
+    .db-section--hero .db-frame { position: relative; z-index: 3; }
+    .db-section::before {
+      content: ''; position: absolute; inset: 0; pointer-events: none;
+      background: radial-gradient(ellipse 60% 50% at 50% 30%, rgba(229, 50, 45, 0.08), transparent 70%);
+    }
+    .db-section .db-eyebrow {
+      display: flex; flex-direction: column; align-items: center; gap: 14px;
+      margin-bottom: 36px; text-align: center;
+    }
+    .db-section .db-eyebrow-pill {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 5px 14px; border-radius: 999px;
+      background: rgba(229, 50, 45, 0.10);
+      border: 1px solid rgba(229, 50, 45, 0.40);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px; letter-spacing: 0.20em; text-transform: uppercase;
+      color: #FF6B66;
+    }
+    .db-section .db-eyebrow-pill .live-dot {
+      width: 5px; height: 5px; border-radius: 50%; background: #E5322D;
+      animation: priceLiveDot 1.4s ease-in-out infinite;
+    }
+    .db-section .db-headline {
+      font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 600;
+      color: #f5f2ef;
+      font-size: 38px; line-height: 1.02; letter-spacing: -0.01em;
+      max-width: 20ch;
+      margin: 0 auto;
+    }
+    .db-section .db-sub {
+      margin-top: 6px;
+      font-family: 'Inter', sans-serif; font-weight: 300;
+      font-size: 13px; line-height: 1.5;
+      color: rgba(255, 255, 255, 0.55);
+      max-width: 42ch;
+      margin-left: auto; margin-right: auto;
+    }
+    .db-frame {
+      max-width: 1080px; margin: 0 auto;
+      border-radius: 14px;
+      overflow: hidden;
+      position: relative;
+      background: rgba(8, 8, 10, 0.92);
+      border: 1px solid rgba(255,255,255,0.08);
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,0.03),
+        0 24px 64px rgba(0,0,0,0.6),
+        0 0 80px rgba(229, 50, 45, 0.06);
+      display: flex; flex-direction: column;
+      height: 660px;
+    }
+    .db-topbar {
+      height: 38px; flex-shrink: 0;
+      display: flex; align-items: center; gap: 14px;
+      padding: 0 14px;
+      background: rgba(0, 0, 0, 0.45);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .db-traffic { display: flex; gap: 6px; }
+    .db-traffic span { width: 11px; height: 11px; border-radius: 50%; }
+    .db-traffic span:nth-child(1) { background: #FF5F57; }
+    .db-traffic span:nth-child(2) { background: #FEBC2E; }
+    .db-traffic span:nth-child(3) { background: #28C840; }
+    .db-title {
+      font-family: 'JetBrains Mono', monospace; font-size: 12px;
+      color: rgba(255, 255, 255, 0.55); letter-spacing: 0.04em;
+    }
+    .db-status {
+      margin-left: auto; display: flex; align-items: center; gap: 6px;
+      font-family: 'JetBrains Mono', monospace; font-size: 10px;
+      color: #6FA08F; letter-spacing: 0.10em;
+    }
+    .db-status::before {
+      content: ''; width: 6px; height: 6px; border-radius: 50%;
+      background: #6FA08F; box-shadow: 0 0 6px rgba(111, 160, 143, 0.7);
+    }
+    .db-body { flex: 1; display: flex; min-height: 0; }
+    .db-sidebar {
+      width: 200px; flex-shrink: 0;
+      display: flex; flex-direction: column;
+      padding: 18px 12px 14px;
+      background: rgba(0, 0, 0, 0.30);
+      border-right: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .db-nav {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 11px; border-radius: 8px;
+      background: transparent; border: none;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.55);
+      margin-bottom: 6px;
+      letter-spacing: 0.02em;
+      cursor: default;
+      width: 100%;
+    }
+    .db-nav.active {
+      background: rgba(229, 50, 45, 0.10);
+    }
+    .db-agent-avatar {
+      width: 28px; height: 28px; border-radius: 50%;
+      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Instrument Serif', serif;
+      font-size: 14px;
+      letter-spacing: -0.02em;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.10);
+      color: rgba(255,255,255,0.78);
+    }
+    .db-nav.active .db-agent-avatar.a {
+      background: linear-gradient(135deg, #E5322D, #8B1410);
+      border-color: rgba(229,50,45,0.55);
+      color: #fff;
+      box-shadow: 0 0 12px rgba(229,50,45,0.30);
+    }
+    .db-agent-avatar.b {
+      background: rgba(111,160,143,0.18);
+      border-color: rgba(111,160,143,0.40);
+      color: #6FA08F;
+    }
+    .db-agent-avatar.c {
+      background: rgba(217,205,182,0.10);
+      border-color: rgba(217,205,182,0.30);
+      color: #d9cdb6;
+    }
+    .db-agent-name {
+      flex: 1;
+      text-align: left;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11.5px;
+      color: rgba(255,255,255,0.78);
+    }
+    .db-nav.active .db-agent-name {
+      color: #E5322D;
+      font-weight: 500;
+    }
+    .db-agent-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9.5px;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 999px;
+      min-width: 20px;
+      text-align: center;
+      background: #E5322D;
+      color: #fff;
+      box-shadow: 0 0 8px rgba(229,50,45,0.45);
+      animation: badgePulse 2.4s ease-in-out infinite;
+    }
+    .db-user {
+      margin-top: auto;
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 11px;
+      font-family: 'JetBrains Mono', monospace; font-size: 12px;
+      color: rgba(255, 255, 255, 0.55);
+    }
+    .db-user-avatar {
+      width: 24px; height: 24px; border-radius: 50%;
+      background: #E5322D;
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-size: 11px; font-weight: 600;
+    }
+    .db-main {
+      flex: 1; position: relative; overflow: hidden;
+      background: rgba(0, 0, 0, 0.10);
+    }
+    .db-thread {
+      position: absolute; inset: 0;
+      overflow: hidden;
+      padding: 22px 28px;
+      display: flex;
+      mask-image: linear-gradient(to bottom, transparent 0, #000 56px, #000 100%);
+      -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 56px, #000 100%);
+    }
+    .db-thread-content {
+      display: flex; flex-direction: column;
+      justify-content: flex-end;
+      gap: 10px;
+      width: 100%; min-height: 100%;
+    }
+    .db-bubble-row {
+      animation: bubbleMountIn 0.55s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+    }
+    .db-typing-row {
+      display: flex; align-items: flex-start;
+      animation: bubbleMountIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+    }
+    .db-typing-row.user { justify-content: flex-end; }
+    .db-typing-row.agent { gap: 12px; }
+    .db-typing-row .typing-bubble {
+      display: inline-flex; gap: 5px; align-items: center;
+      padding: 9px 12px; border-radius: 14px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.10);
+    }
+    .db-typing-row.user .typing-bubble {
+      background: rgba(229, 50, 45, 0.12);
+      border-color: rgba(229, 50, 45, 0.35);
+    }
+    .db-typing-row .typing-bubble .dot {
+      width: 5px; height: 5px; border-radius: 50%;
+      background: rgba(255, 255, 255, 0.65);
+      animation: typingPulse 1.4s ease-in-out infinite;
+    }
+    .db-typing-row.user .typing-bubble .dot { background: rgba(255, 255, 255, 0.85); }
+    .db-typing-row .typing-bubble .dot:nth-child(2) { animation-delay: 0.2s; }
+    .db-typing-row .typing-bubble .dot:nth-child(3) { animation-delay: 0.4s; }
+    .db-bubble-row.user { display: flex; justify-content: flex-end; }
+    .db-bubble-row.agent { display: flex; gap: 12px; align-items: flex-start; }
+    .db-bubble-row.agent .db-avatar { margin-top: 2px; }
+    .db-bubble-row.system {
+      align-self: center;
+      font-family: 'JetBrains Mono', monospace; font-size: 9.5px;
+      letter-spacing: 0.16em; text-transform: uppercase;
+      color: rgba(255,255,255,0.30);
+      padding: 6px 12px; border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.06);
+      background: rgba(255,255,255,0.02);
+    }
+    .db-msg-user {
+      align-self: flex-end; max-width: 75%;
+      padding: 8px 14px; border-radius: 14px 14px 4px 14px;
+      background: rgba(229, 50, 45, 0.12);
+      border: 1px solid rgba(229, 50, 45, 0.35);
+      font-family: 'Inter', sans-serif; font-size: 13px; line-height: 1.4;
+      color: #fff;
+    }
+    .db-msg-agent {
+      display: flex; gap: 12px; align-items: flex-start;
+      max-width: 92%;
+    }
+    .db-avatar {
+      width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+      background: linear-gradient(135deg, #E5322D, #8B1410);
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-size: 13px;
+    }
+    .db-bubble {
+      padding: 12px 16px; border-radius: 4px 14px 14px 14px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      font-family: 'Inter', sans-serif; font-size: 13px; line-height: 1.45;
+      color: rgba(255, 255, 255, 0.92); flex: 1;
+    }
+    .db-bubble strong { color: #fff; font-weight: 500; }
+    .db-list { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+    .db-list .item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 7px 10px; border-radius: 7px;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06);
+      font-family: 'JetBrains Mono', monospace; font-size: 11px;
+      color: rgba(255,255,255,0.78);
+    }
+    .db-list .item .marker {
+      width: 6px; height: 6px; border-radius: 2px; background: #E5322D; flex-shrink: 0;
+    }
+    .db-list .item .meta { color: rgba(255,255,255,0.40); margin-left: auto; }
+    .db-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+    .db-chip {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 9px; border-radius: 999px;
+      background: rgba(229,50,45,0.10);
+      border: 1px solid rgba(229,50,45,0.45);
+      font-family: 'JetBrains Mono', monospace; font-size: 10px;
+      color: #E5322D; letter-spacing: 0.04em;
+    }
+    .db-chip::before { content: '✓'; font-size: 9px; }
+    .db-chip.dim { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.10); color: rgba(255,255,255,0.6); }
+    .db-chip.dim::before { content: ''; width: 4px; height: 4px; border-radius: 50%; background: rgba(255,255,255,0.4); }
+    .db-slides { display: flex; gap: 8px; margin-top: 10px; }
+    .db-slide {
+      flex: 1; aspect-ratio: 16/10;
+      border: 1px solid rgba(255,255,255,0.18); border-radius: 4px;
+      padding: 6px 7px;
+      display: flex; flex-direction: column; gap: 3px;
+      background: rgba(0,0,0,0.30);
+    }
+    .db-slide .h { height: 3px; background: #E5322D; width: 60%; border-radius: 1px; }
+    .db-slide .l { height: 2px; background: rgba(255,255,255,0.30); border-radius: 1px; }
+    .db-stats { display: flex; gap: 10px; margin-top: 10px; }
+    .db-stat {
+      flex: 1; padding: 10px 12px;
+      border-radius: 8px; background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.07);
+    }
+    .db-stat .num { font-family: 'Instrument Serif', serif; font-size: 22px; line-height: 1; color: #fff; letter-spacing: -0.02em; }
+    .db-stat .lbl { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(255,255,255,0.55); margin-top: 6px; }
+    .db-attach {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 6px 10px 6px 6px; border-radius: 8px;
+      background: rgba(229,50,45,0.10); border: 1px solid rgba(229,50,45,0.45);
+      margin-top: 10px;
+    }
+    .db-attach .ic {
+      font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 600;
+      color: #fff; background: #E5322D;
+      padding: 3px 6px; border-radius: 3px; letter-spacing: 0.06em;
+    }
+    .db-attach .nm { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: rgba(255,255,255,0.92); }
+    .db-cal-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 10px; }
+    .db-cal-cell {
+      aspect-ratio: 1; border-radius: 4px;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06);
+      display: flex; flex-direction: column; padding: 4px; gap: 2px;
+      font-family: 'JetBrains Mono', monospace; font-size: 9px;
+      color: rgba(255,255,255,0.4);
+    }
+    .db-cal-cell.evt { background: rgba(229,50,45,0.10); border-color: rgba(229,50,45,0.45); color: #E5322D; }
+    .db-cal-cell.conflict { background: rgba(229,50,45,0.20); border-color: #E5322D; }
+    .db-script { display: flex; flex-direction: column; gap: 5px; margin-top: 10px; }
+    .db-script-row { display: flex; align-items: center; gap: 8px; }
+    .db-script-row .t { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #E5322D; width: 36px; }
+    .db-script-row .lbl { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: rgba(255,255,255,0.55); width: 50px; letter-spacing: 0.10em; }
+    .db-script-row .bar { flex: 1; height: 3px; background: rgba(255,255,255,0.15); border-radius: 1.5px; }
+    .db-radar { display: flex; align-items: center; gap: 14px; margin-top: 10px; }
+    .db-radar svg { width: 56px; height: 56px; flex-shrink: 0; }
+    .db-radar .ring { fill: none; stroke: rgba(255,255,255,0.15); stroke-width: 0.8; }
+    .db-radar .sw { stroke: #E5322D; stroke-width: 1.2; transform-origin: 30px 30px; animation: capSweep 3s linear infinite; }
+    .db-radar .blip { fill: #E5322D; }
+    .db-radar .info { display: flex; flex-direction: column; gap: 4px; }
+    .db-radar .info .t { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #fff; }
+    .db-radar .info .s { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; color: rgba(255,255,255,0.5); letter-spacing: 0.08em; text-transform: uppercase; }
+    .db-input {
+      flex-shrink: 0;
+      padding: 14px 16px;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      background: rgba(0, 0, 0, 0.30);
+      display: flex; align-items: center; gap: 10px;
+    }
+    .db-input-box {
+      flex: 1;
+      padding: 10px 14px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.10);
+      border-radius: 10px;
+      font-family: 'Inter', sans-serif; font-size: 13px;
+      color: rgba(255, 255, 255, 0.85);
+      position: relative;
+      min-height: 40px;
+      display: flex; align-items: center;
+      overflow: hidden;
+    }
+    .db-input-text {
+      position: relative;
+      width: 100%;
+      height: 1.4em;
+      overflow: hidden;
+    }
+    .db-input-text .typing {
+      position: absolute; top: 0; left: 0;
+      white-space: nowrap; opacity: 0;
+      animation: dbInputTyping 72s ease-in-out infinite;
+    }
+    .db-input-text .typing:nth-child(1) { animation-delay: 0s; }
+    .db-input-text .typing:nth-child(2) { animation-delay: 6s; }
+    .db-input-text .typing:nth-child(3) { animation-delay: 12s; }
+    .db-input-text .typing:nth-child(4) { animation-delay: 18s; }
+    .db-input-text .typing:nth-child(5) { animation-delay: 24s; }
+    .db-input-text .typing:nth-child(6) { animation-delay: 30s; }
+    .db-input-text .typing:nth-child(7) { animation-delay: 36s; }
+    .db-input-text .typing:nth-child(8) { animation-delay: 42s; }
+    .db-input-text .typing:nth-child(9) { animation-delay: 48s; }
+    .db-input-text .typing:nth-child(10) { animation-delay: 54s; }
+    .db-input-text .typing:nth-child(11) { animation-delay: 60s; }
+    .db-input-text .typing:nth-child(12) { animation-delay: 66s; }
+    .db-input-placeholder {
+      font-family: 'Inter', sans-serif; font-size: 13px;
+      color: rgba(255, 255, 255, 0.45);
+      display: inline-flex; align-items: center;
+    }
+    .db-input-typed {
+      font-family: 'Inter', sans-serif; font-size: 13px;
+      color: rgba(255, 255, 255, 0.92);
+      display: inline-flex; align-items: center;
+      white-space: nowrap; min-width: 0; max-width: 100%;
+    }
+    .db-send {
+      transition: background 0.18s ease, transform 0.12s ease, box-shadow 0.18s ease;
+    }
+    .db-send.db-send-clicked {
+      background: #B8231F;
+      transform: scale(0.92);
+      box-shadow: 0 0 24px rgba(229, 50, 45, 0.75);
+    }
+    .db-cursor {
+      position: absolute;
+      width: 18px; height: 22px;
+      pointer-events: none;
+      z-index: 50;
+      bottom: 110px;
+      right: 50%;
+      opacity: 0;
+      transition:
+        bottom 0.55s cubic-bezier(0.16, 1, 0.3, 1),
+        right 0.55s cubic-bezier(0.16, 1, 0.3, 1),
+        transform 0.18s cubic-bezier(0.4, 0, 0.6, 1),
+        opacity 0.30s ease;
+      filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.55));
+    }
+    .db-cursor svg { width: 100%; height: 100%; display: block; }
+    .db-cursor.cur-user-typing {
+      opacity: 1;
+      bottom: 100px;
+      right: 56%;
+      transform: rotate(-6deg);
+    }
+    .db-cursor.cur-user-moving {
+      opacity: 1;
+      bottom: 30px;
+      right: 36px;
+      transform: rotate(-4deg);
+    }
+    .db-cursor.cur-user-click {
+      opacity: 1;
+      bottom: 30px;
+      right: 36px;
+      transform: rotate(-4deg) scale(0.84);
+    }
+    .db-input-caret {
+      display: inline-block;
+      width: 1.5px; height: 14px; background: #E5322D;
+      vertical-align: middle; margin-left: 2px;
+      animation: pvBlink 0.9s steps(2) infinite;
+    }
+    .db-send {
+      width: 40px; height: 40px; border-radius: 10px;
+      background: #E5322D;
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; flex-shrink: 0;
+      box-shadow: 0 0 16px rgba(229, 50, 45, 0.35);
+    }
+    .uc-research .dot { width: 3px; height: 3px; border-radius: 50%; background: rgba(255,255,255,0.45); flex-shrink: 0; }
+    .price-launch-pill .dot {
+      width: 5px; height: 5px; border-radius: 50%;
+      background: #E5322D;
+      animation: priceLiveDot 1.4s ease-in-out infinite;
+    }
+    .howmock-chat .bubble.dots {
+      top: 48px; left: 2px;
+      background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.85);
+      border: 1px solid rgba(255,255,255,0.12);
+      display: flex; gap: 3px; align-items: center; padding: 7px 9px;
+      animation: howChat-dots 16s ease-out infinite;
+    }
+    .howmock-chat .bubble.dots .dot {
+      width: 4px; height: 4px; border-radius: 50%; background: rgba(255,255,255,0.7);
+      animation: howTypingDot 1.4s ease-in-out infinite;
+    }
+    .howmock-chat .bubble.dots .dot:nth-child(2) { animation-delay: 0.2s; }
+    .howmock-chat .bubble.dots .dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes badgePulse {
+      0%, 100% { box-shadow: 0 0 8px rgba(229,50,45,0.45); }
+      50% { box-shadow: 0 0 14px rgba(229,50,45,0.70); }
+    }
+    @keyframes bubbleMountIn {
+      from { opacity: 0; transform: translateY(14px) scale(0.98); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @keyframes typingPulse {
+      0%, 60%, 100% { opacity: 0.30; transform: translateY(0); }
+      30% { opacity: 1; transform: translateY(-2px); }
+    }
+    @keyframes dbInputTyping {
+      0% { opacity: 0; }
+      1% { opacity: 1; }
+      7% { opacity: 1; }
+      8.3% { opacity: 0; }
+      100% { opacity: 0; }
+    }
+    @keyframes pvBlink { 50% { opacity: 0; } }
+    @keyframes capSweep {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    @keyframes priceLiveDot {
+      0%, 100% { opacity: 1; box-shadow: 0 0 6px rgba(229, 50, 45, 0.8); }
+      50% { opacity: 0.4; box-shadow: 0 0 0 rgba(229, 50, 45, 0); }
+    }
+    @keyframes howTypingDot {
+      0%, 70%, 100% { opacity: 0.3; transform: translateY(0); }
+      35% { opacity: 1; transform: translateY(-2px); }
+    }
+    /* Hero terminal mount — fill the design's stage slot (740x468). */
+    #kt-hero-demo { width:100%; height:100%; }
+    #kt-hero-demo .db-frame { position:absolute; inset:0; width:100%; max-width:none; height:100%; margin:0; border-radius:16px; display:flex; flex-direction:column; }
+    #kt-hero-demo .db-body { flex:1; min-height:0; }
+
+  </style>
 </helmet>
 <nav style="position:fixed; top:0; left:0; right:0; height:64px; z-index:50; display:flex; align-items:center; justify-content:space-between; gap:24px; padding:0 32px; box-sizing:border-box; background:rgba(7,6,8,.55); backdrop-filter:saturate(160%) blur(18px); -webkit-backdrop-filter:saturate(160%) blur(18px); border-bottom:1px solid rgba(255,255,255,.06); font-family:'Plus Jakarta Sans',sans-serif">
   <div style="display:flex; align-items:center; gap:10px">
@@ -190,60 +708,7 @@
     <!-- ============ AGENT TERMINAL ============ -->
     <div style="position:absolute; left:350px; top:392px; width:740px; height:468px; z-index:5; animation:hubFloat 9s ease-in-out infinite">
       <div style="position:absolute; inset:-46px; border-radius:60px; background:radial-gradient(circle, rgba(238,60,48,.32), transparent 68%); filter:blur(10px); z-index:0; animation:glowPulse 5s ease-in-out infinite"></div>
-      <div style="position:absolute; inset:0; display:flex; flex-direction:column; border-radius:16px; background:linear-gradient(180deg,#110e0f,#0c0a0b); border:1px solid rgba(255,255,255,.09); box-shadow:0 50px 100px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.04); overflow:hidden; z-index:1">
-        <!-- titlebar -->
-        <div style="display:flex; align-items:center; justify-content:space-between; padding:0 16px; height:42px; border-bottom:1px solid rgba(255,255,255,.06); flex:none">
-          <div style="display:flex; align-items:center; gap:14px">
-            <div style="display:flex; gap:7px"><span style="width:11px; height:11px; border-radius:50%; background:#ec5f53"></span><span style="width:11px; height:11px; border-radius:50%; background:#e0b341"></span><span style="width:11px; height:11px; border-radius:50%; background:#4caa5a"></span></div>
-            <span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#7c736e">weuseai.agent · dashboard</span>
-          </div>
-          <span style="display:flex; align-items:center; gap:7px; font-family:'JetBrains Mono',monospace; font-size:12px; color:#7c736e"><span style="width:7px; height:7px; border-radius:50%; background:#4ade80; box-shadow:0 0 7px #4ade80"></span>Online</span>
-        </div>
-        <!-- body -->
-        <div style="flex:1; padding:24px; display:flex; flex-direction:column; gap:18px; overflow:hidden; font-family:'JetBrains Mono',monospace">
-          <!-- agent msg 1 -->
-          <div ref="{{ m1Ref }}" style="display:flex; gap:11px; align-items:flex-start; opacity:0; transform:translateY(14px); transition:opacity .45s ease, transform .45s ease">
-            <div style="flex:none; width:22px; height:22px; border-radius:7px; background:linear-gradient(160deg,#ff6a3c,#ee3c30 60%,#c41d10); display:grid; place-items:center; box-shadow:inset 0 1px 1px rgba(255,200,180,.5)"><svg width="12" height="12" viewBox="0 0 100 100"><path d="M50 8 C54 32 68 46 92 50 C68 54 54 68 50 92 C46 68 32 54 8 50 C32 46 46 32 50 8 Z" fill="#5a0f08"/></svg></div>
-            <div style="max-width:460px">
-              <div style="background:rgba(255,255,255,.035); border:1px solid rgba(255,255,255,.06); border-radius:12px; padding:13px 15px; font-size:14.5px; line-height:1.5; color:#d6d2ce">5 chat masuk dari WhatsApp &amp; Instagram. Draft balasan siap — tinggal kirim.</div>
-              <div style="display:flex; gap:8px; margin-top:8px">
-                <span style="display:inline-flex; align-items:center; gap:5px; font-size:11px; padding:4px 9px; border-radius:7px; background:rgba(37,211,102,.1); border:1px solid rgba(37,211,102,.3); color:#6fe39a"><span style="color:#4ade80">✓</span>WhatsApp</span>
-                <span style="display:inline-flex; align-items:center; gap:5px; font-size:11px; padding:4px 9px; border-radius:7px; background:rgba(225,48,108,.1); border:1px solid rgba(225,48,108,.3); color:#f184a8"><span style="color:#f184a8">✓</span>Instagram</span>
-                <span style="display:inline-flex; align-items:center; gap:5px; font-size:11px; padding:4px 9px; border-radius:7px; background:rgba(110,124,240,.1); border:1px solid rgba(110,124,240,.3); color:#9aa3f5"><span style="color:#9aa3f5">✓</span>Email</span>
-              </div>
-            </div>
-          </div>
-          <!-- user msg -->
-          <div ref="{{ m2Ref }}" style="display:flex; justify-content:flex-end; opacity:0; transform:translateY(14px); transition:opacity .45s ease, transform .45s ease">
-            <div style="background:rgba(238,60,48,.13); border:1px solid rgba(238,60,48,.32); border-radius:12px; padding:11px 15px; font-size:14.5px; color:#f3e7e4; max-width:60%">Rangkum email penting hari ini</div>
-          </div>
-          <!-- agent msg 2 -->
-          <div ref="{{ m3Ref }}" style="display:flex; gap:11px; align-items:flex-start; opacity:0; transform:translateY(14px); transition:opacity .45s ease, transform .45s ease">
-            <div style="flex:none; width:22px; height:22px; border-radius:7px; background:linear-gradient(160deg,#ff6a3c,#ee3c30 60%,#c41d10); display:grid; place-items:center; box-shadow:inset 0 1px 1px rgba(255,200,180,.5)"><svg width="12" height="12" viewBox="0 0 100 100"><path d="M50 8 C54 32 68 46 92 50 C68 54 54 68 50 92 C46 68 32 54 8 50 C32 46 46 32 50 8 Z" fill="#5a0f08"/></svg></div>
-            <div style="max-width:460px">
-              <div style="background:rgba(255,255,255,.035); border:1px solid rgba(255,255,255,.06); border-radius:12px; padding:13px 15px; font-size:14.5px; line-height:1.5; color:#d6d2ce">12 email — <span style="color:#ff8a72">3 perlu aksi</span>. Aku siapin ringkasannya.</div>
-              <div style="display:inline-flex; align-items:center; gap:9px; margin-top:8px; padding:8px 11px; border-radius:9px; background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.07)">
-                <span style="font-size:10px; font-weight:600; color:#fff; background:#ee3c30; padding:3px 6px; border-radius:5px">PDF</span>
-                <span style="font-size:12px; color:#a59e98">ringkasan-inbox.pdf · 2 hal</span>
-              </div>
-            </div>
-          </div>
-          <!-- typing -->
-          <div style="display:flex; gap:11px; align-items:center">
-            <div style="flex:none; width:22px; height:22px; border-radius:7px; background:linear-gradient(160deg,#ff6a3c,#ee3c30 60%,#c41d10); display:grid; place-items:center; box-shadow:inset 0 1px 1px rgba(255,200,180,.5)"><svg width="12" height="12" viewBox="0 0 100 100"><path d="M50 8 C54 32 68 46 92 50 C68 54 54 68 50 92 C46 68 32 54 8 50 C32 46 46 32 50 8 Z" fill="#5a0f08"/></svg></div>
-            <div style="display:flex; gap:5px; padding:11px 14px; border-radius:11px; background:rgba(255,255,255,.035); border:1px solid rgba(255,255,255,.06)">
-              <span style="width:6px; height:6px; border-radius:50%; background:#ff6a4c; animation:dotBounce 1.2s ease-in-out infinite"></span>
-              <span style="width:6px; height:6px; border-radius:50%; background:#ff6a4c; animation:dotBounce 1.2s ease-in-out infinite .15s"></span>
-              <span style="width:6px; height:6px; border-radius:50%; background:#ff6a4c; animation:dotBounce 1.2s ease-in-out infinite .3s"></span>
-            </div>
-          </div>
-        </div>
-        <!-- input -->
-        <div style="flex:none; display:flex; align-items:center; gap:11px; padding:0 14px; height:60px; border-top:1px solid rgba(255,255,255,.06)">
-          <div style="flex:1; display:flex; align-items:center; padding:12px 15px; border-radius:12px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.09); font-family:'JetBrains Mono',monospace; font-size:13px; color:#6f6862">Tanya apa aja<span style="display:inline-block; width:2px; height:15px; background:#ee3c30; margin-left:2px; animation:caretBlink 1.1s step-end infinite"></span></div>
-          <button style="flex:none; width:42px; height:42px; border-radius:12px; border:none; background:#ee3c30; color:#fff; font-size:17px; cursor:pointer; display:grid; place-items:center; box-shadow:0 6px 18px rgba(238,60,48,.45)">↗</button>
-        </div>
-      </div>
+      <div id="kt-hero-demo" style="position:absolute; inset:0; z-index:1; border-radius:16px; overflow:hidden"></div>
     </div>
 
   </div>
@@ -1416,5 +1881,6 @@ class Component extends DCLogic {
 }
 </script>
 <script src="/assets/konten-wiring.js" defer></script>
+  <script src="/assets/konten-hero-demo.js" defer></script>
 </body>
 </html>
