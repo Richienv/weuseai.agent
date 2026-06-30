@@ -5645,6 +5645,69 @@
       );
     }
 
+    function StepperSection() {
+      // Section 6 — how it works. id="proses" so the nav "Kerja" anchor lands
+      // here. HONESTY: design's "Delapan menit" → "Lima menit" (matches the
+      // standing ~5-menit setup claim, CLAUDE.md); step-1 misleading "Rp 99rb"
+      // dropped (price lives in Pricing); step-4 "Rangkum email" reframed to a
+      // content example (the agent has no live email access — DashboardDemo lock).
+      const visual = (type) => {
+        if (type === 'plan') return (
+          <div className="kt-sv">
+            <div className="kt-sv-row"><span className="kt-sv-k">PLAN</span><span className="kt-sv-v">Instance dedicated</span></div>
+            <span className="kt-sv-pill">Langsung termasuk</span>
+          </div>
+        );
+        if (type === 'form') return (
+          <div className="kt-sv">
+            <div className="kt-sv-row"><span className="kt-sv-k">CHANNEL</span><span className="kt-sv-v">Telegram</span></div>
+            <div className="kt-sv-row"><span className="kt-sv-k">AI BRAIN</span><span className="kt-sv-v">Hand-picked</span></div>
+            <div className="kt-sv-row"><span className="kt-sv-k">BOT TOKEN</span><span className="kt-sv-v">••••••••</span></div>
+          </div>
+        );
+        if (type === 'setup') return (
+          <div className="kt-sv">
+            {['VPS provisioned', 'Tools tersambung', 'Voice tuned'].map((x) => <div key={x} className="kt-sv-check"><span className="kt-skill-check">✓</span>{x}</div>)}
+          </div>
+        );
+        return (
+          <div className="kt-sv kt-sv-chat">
+            <div className="kt-app-msg user">Susun kalender konten minggu ini</div>
+            <div className="kt-app-msg agent">Beres — 7 post, draf caption gaya kamu.</div>
+          </div>
+        );
+      };
+      const steps = [
+        { n: '01', t: 'Pilih plan kamu', d: 'Satu instance dedicated, khusus buat kamu — langsung termasuk.', v: 'plan' },
+        { n: '02', t: 'Isi informasi', d: 'Pilih channel Telegram, isi bot token. AI brain-nya kami yang pilihkan.', v: 'form' },
+        { n: '03', t: 'Sistem auto-setup', d: 'Server, persona, dan template — kami siapkan otomatis.', v: 'setup' },
+        { n: '04', t: 'Mulai pakai', d: 'Buka Telegram, kirim pesan, beres.', v: 'chat' },
+      ];
+      return (
+        <section id="proses" className="kt-steps">
+          <div className="kt-steps-inner">
+            <div className="kt-steps-head">
+              <div className="kt-eyebrow"><span className="kt-eyebrow-dot" />Cara kerjanya</div>
+              <h2 className="kt-h2">Empat langkah. <span className="kt-grad-text">Lima menit.</span></h2>
+            </div>
+            <div className="kt-steps-grid">
+              {steps.map((s) => (
+                <div key={s.n} className="kt-step">
+                  <div className="kt-step-num">{s.n}</div>
+                  <div className="kt-step-t">{s.t}</div>
+                  <div className="kt-step-d">{s.d}</div>
+                  <div className="kt-step-visual">{visual(s.v)}</div>
+                </div>
+              ))}
+            </div>
+            <div className="kt-steps-cta">
+              <a href="#pricing" className="kt-cta-primary cta-tactile no-underline">Aktifkan asisten kamu <ArrowUpRight size={14} stroke={2.2} /></a>
+            </div>
+          </div>
+        </section>
+      );
+    }
+
     function App() {
       return (
         <div className="bg-black">
@@ -5653,13 +5716,13 @@
             <main id="main">
               <DashboardDemo />
               <div className="bg-black">
-                {/* Konten redesign sections (Iters 4-8). Stepper lands before
-                    Pricing in Iter 8. Legacy aurora-era sections retired from the
-                    composition; defs pruned at cleanup (Iter 12). */}
+                {/* Konten redesign sections. Legacy aurora-era sections retired
+                    from the composition; defs pruned at cleanup (Iter 12). */}
                 <ExploreSection />
                 <MemoryPersonaSection />
                 <ProductAppsSection />
                 <SkillsSection />
+                <StepperSection />
                 <Pricing />
                 <FAQ />
               </div>

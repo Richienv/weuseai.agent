@@ -4656,6 +4656,29 @@
     @media (max-width:980px){ .kt-skills-grid { grid-template-columns:repeat(2,1fr); } .kt-skill-card.wide { grid-column:span 2; } }
     @media (max-width:620px){ .kt-skills-grid { grid-template-columns:1fr; } .kt-skill-card.wide { grid-column:span 1; } }
 
+
+    /* Konten redesign — Stepper / how-it-works (Iter 8) */
+    .kt-steps { position:relative; background:#070608; padding:90px 24px 100px; font-family:'Plus Jakarta Sans',sans-serif; border-top:1px solid rgba(255,255,255,.05); }
+    .kt-steps-inner { max-width:1180px; margin:0 auto; }
+    .kt-steps-head { text-align:center; max-width:680px; margin:0 auto; }
+    .kt-steps-head .kt-eyebrow { margin:0 auto; }
+    .kt-steps-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-top:46px; }
+    .kt-step { position:relative; padding:22px; border-radius:18px; background:linear-gradient(180deg,#110e0f,#0c0a0b); border:1px solid rgba(255,255,255,.08); display:flex; flex-direction:column; }
+    .kt-step-num { width:38px; height:38px; border-radius:11px; display:grid; place-items:center; font-family:'JetBrains Mono',monospace; font-size:14px; font-weight:600; color:#ff7a5e; background:rgba(238,60,48,.1); border:1px solid rgba(238,60,48,.3); }
+    .kt-step-t { font-size:17px; font-weight:600; color:#f1ede9; margin-top:14px; }
+    .kt-step-d { font-size:13px; line-height:1.5; color:#9a938d; margin-top:6px; flex:1; }
+    .kt-step-visual { margin-top:16px; }
+    .kt-sv { display:flex; flex-direction:column; gap:8px; padding:12px; border-radius:12px; background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.06); }
+    .kt-sv-row { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+    .kt-sv-k { font-family:'JetBrains Mono',monospace; font-size:9.5px; letter-spacing:.1em; color:#7c736e; }
+    .kt-sv-v { font-size:12.5px; color:#d6d2ce; }
+    .kt-sv-pill { font-size:11px; color:#6fe39a; padding:4px 9px; border-radius:7px; background:rgba(37,211,102,.1); border:1px solid rgba(37,211,102,.3); align-self:flex-start; }
+    .kt-sv-check { display:flex; align-items:center; gap:8px; font-size:12.5px; color:#c9c3bd; }
+    .kt-sv-chat .kt-app-msg { font-size:12px; }
+    .kt-steps-cta { text-align:center; margin-top:40px; }
+    @media (max-width:980px){ .kt-steps-grid { grid-template-columns:repeat(2,1fr); } }
+    @media (max-width:560px){ .kt-steps-grid { grid-template-columns:1fr; } }
+
   </style>
 </head>
 <body class="bg-black text-white">
