@@ -45,6 +45,8 @@ cat <<'SQL'
   ALTER DATABASE postgres SET app.fleet_sentinel_token = '<service-role-jwt>';
   ALTER DATABASE postgres SET app.library_refine_url   = 'https://gtjgsligllbjcisiyrah.supabase.co/functions/v1/library-refine';
   ALTER DATABASE postgres SET app.library_refine_token = '<service-role-jwt>';
+  ALTER DATABASE postgres SET app.retry_pending_provisions_url   = 'https://gtjgsligllbjcisiyrah.supabase.co/functions/v1/retry-pending-provisions';
+  ALTER DATABASE postgres SET app.retry_pending_provisions_token = '<service-role-jwt>';
 SQL
 
 # ── 4. Fly provisioning service (ships /suspend /resume + bundle-pull v2) ─

@@ -150,15 +150,18 @@ async function buildSpinUpInput(row: PendingProvisionRow): Promise<SpinUpInput |
   // complete-onboarding-handler.ts does at first spin-up time.
   const { data: cust, error: custErr } = await supabase
     .from('customers')
-    .select('id, telegram_chat_id, soul_md_text')
+    .select('id, telegram_chat_id, telegram_bot_token, soul_md_text')
     .eq('id', row.customer_id)
     .maybeSingle()
   if (custErr || !cust) return null
 
-  // Decrypt bot token via RPC (same path as complete-onboarding).
+  // Decrypt bot token via RPC (same two-step path as xendit-webhook /
+  // complete-onboarding): pass the row's encrypted ciphertext, not a
+  // customer id. The RPC signature is decrypt_bot_token(encrypted text,
+  // enc_key text) — there is no cust_id overload.
   const { data: tokRows, error: tokErr } = await supabase
     .rpc('decrypt_bot_token', {
-      cust_id: row.customer_id,
+      encrypted: cust.telegram_bot_token,
       enc_key: BOT_TOKEN_ENC_KEY,
     })
   if (tokErr) return null
