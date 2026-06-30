@@ -37,15 +37,18 @@ test('committed artifacts are FRESH (rebuild reproduces them byte-for-byte)', ()
   )
 })
 
-test('index.html ships the compiled stack — never the runtime compilers', () => {
+test('index.html (Konten design landing) ships a LOCAL runtime — never CDN compilers', () => {
+  // The landing is the Konten design file, mounted by a vendored DC runtime +
+  // vendored React (no unpkg, no in-browser Babel). System CTAs are wired by
+  // assets/konten-wiring.js. Each banned dependency re-adds seconds on 4G.
   const html = read('index.html').toString()
   // What must be there:
-  assert.ok(html.includes('<script src="/assets/app.js" defer></script>'), 'compiled app referenced')
-  assert.ok(html.includes('<link rel="stylesheet" href="/assets/tw.css">'), 'static tailwind referenced')
-  // What must NEVER come back (each one re-adds seconds on 4G):
-  assert.ok(!html.includes('babel'), 'Babel-standalone must not return to the landing')
+  assert.ok(html.includes('/assets/vendor/dc-support.js'), 'local DC runtime referenced')
+  assert.ok(html.includes('/assets/konten-wiring.js'), 'system wiring referenced')
+  // What must NEVER ship on the landing:
+  assert.ok(!html.includes('unpkg.com'), 'React/ReactDOM are vendored — no CDN runtime')
+  assert.ok(!html.includes('babel'), 'Babel-standalone must not ship on the landing')
   assert.ok(!html.includes('cdn.tailwindcss.com'), 'Tailwind runtime JIT must not return')
-  assert.ok(!html.includes('hls.min.js'), 'hls.js is lazy-loaded from app.js, not the head')
   assert.ok(!html.includes('type="text/babel"'), 'no in-browser JSX blocks')
 })
 
