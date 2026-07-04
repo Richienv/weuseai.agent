@@ -20,6 +20,7 @@ import {
   buildSetupScript,
   PAGI_BRIEFING_CRON_PROMPT,
   EOD_SUMMARY_CRON_PROMPT,
+  WEEKLY_RECAP_CRON_PROMPT,
   type SetupScriptParams,
 } from '../services/provisioning/src/setup-script.ts'
 
@@ -51,15 +52,22 @@ test('18:00 WIB end-of-day cron exists (0 11 * * * UTC)', () => {
   assert.ok(s.includes('ringkasan akhir hari'))
 })
 
+test('Sunday weekly-recap cron exists (0 12 * * 0 UTC = Minggu 19:00 WIB)', () => {
+  const s = buildSetupScript(params('done-for-you'))
+  assert.match(s, /cron add --schedule "0 12 \* \* 0"/)
+  assert.ok(s.includes('Susun Laporan Mingguan'), 'weekly recap prompt present')
+  assert.ok(s.includes('menunjukkan bahwa kamu INGAT'), 'recap leans on cross-session memory')
+})
+
 test('briefing prompts are honest: explicitly no calendar/email claims', () => {
-  for (const prompt of [PAGI_BRIEFING_CRON_PROMPT, EOD_SUMMARY_CRON_PROMPT]) {
+  for (const prompt of [PAGI_BRIEFING_CRON_PROMPT, EOD_SUMMARY_CRON_PROMPT, WEEKLY_RECAP_CRON_PROMPT]) {
     assert.match(prompt, /TIDAK punya akses kalender/)
   }
 })
 
 test('briefing prompts obey brand rules (no exclamation, no banned words, kamu-register)', () => {
   const banned = ['basically', 'just', 'literally', 'honestly', 'revolutionary', 'game-changer']
-  for (const prompt of [PAGI_BRIEFING_CRON_PROMPT, EOD_SUMMARY_CRON_PROMPT]) {
+  for (const prompt of [PAGI_BRIEFING_CRON_PROMPT, EOD_SUMMARY_CRON_PROMPT, WEEKLY_RECAP_CRON_PROMPT]) {
     assert.equal((prompt.match(/!/g) ?? []).length, 0, 'zero exclamation marks')
     for (const w of banned) {
       assert.ok(!prompt.toLowerCase().includes(w), `banned word "${w}"`)
