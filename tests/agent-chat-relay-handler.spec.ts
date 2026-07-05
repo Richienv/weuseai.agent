@@ -27,6 +27,7 @@ function makeDeps(over: Partial<AgentChatRelayDeps> = {}): AgentChatRelayDeps & 
       commit: async (_cid, delta) => { commits.push(delta) },
     },
     resolveCustomerState: async () => 'running',
+    tierAllowsWebChat: async () => true,
     resolveTarget: async () => ({ ip: '203.0.113.5', cipher: { ciphertext: 'x', iv: 'y', auth_tag: 'z', key_version: 1 } }),
     decryptKey: async () => 'sk-decrypted-key',
     callFlyRelay: async () => flyJson({ choices: [{ message: { content: 'halo' } }], model: 'deepseek/deepseek-v4-pro', usage: { total_tokens: 120 } }),
@@ -144,6 +145,30 @@ test('inactive customer → 403 not_active + refund', async () => {
   assert.equal(res.status, 403)
   assert.equal((await readErr(res)).error, 'not_active')
   assert.deepEqual(deps._commits, [-2048])
+})
+
+// ── tier gate (v1.4 web_app unlock — Siap Pakai / Enterprise only) ────────
+test('tier without web_app → 403 tier_does_not_grant_web_chat + refund', async () => {
+  const deps = makeDeps({ tierAllowsWebChat: async () => false })
+  const res = await agentChatRelayHandler(req(chat()), deps)
+  assert.equal(res.status, 403)
+  assert.equal((await readErr(res)).error, 'tier_does_not_grant_web_chat')
+  assert.deepEqual(deps._commits, [-2048], 'pre-charge must be refunded on tier rejection')
+})
+
+test('tier lookup failure → 502 fail-closed + refund (never fail-open)', async () => {
+  const deps = makeDeps({ tierAllowsWebChat: async () => { throw new Error('db down') } })
+  const res = await agentChatRelayHandler(req(chat()), deps)
+  assert.equal(res.status, 502)
+  assert.equal((await readErr(res)).error, 'upstream_unavailable')
+  assert.deepEqual(deps._commits, [-2048])
+})
+
+test('meta call is NOT tier-gated in the handler (entry meta reports chat_enabled per tier)', async () => {
+  const deps = makeDeps({ tierAllowsWebChat: async () => false, meta: async () => ({ chat_enabled: false, persona_slug: 'the-pro', remaining_pct: 100 }) })
+  const res = await agentChatRelayHandler(req({ customer_id: CID, meta: true }), deps)
+  assert.equal(res.status, 200)
+  assert.equal(((await res.json()) as { chat_enabled: boolean }).chat_enabled, false)
 })
 
 test('no resolvable target (0 rows / ambiguous) → 503 agent_unavailable + refund', async () => {

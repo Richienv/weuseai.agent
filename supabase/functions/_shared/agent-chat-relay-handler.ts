@@ -35,6 +35,10 @@ export type FlyPayload = {
 export type CustomerState = 'running' | 'provisioning' | 'inactive'
 
 export type AgentChatRelayDeps = {
+  /** v1.4 web_app unlock — dashboard chat ships only to tiers whose
+   *  features.web_app is true (done-for-you / enterprise). Founder decision
+   *  2026-07-04; this IS the Phase C feature landing inside existing slugs. */
+  tierAllowsWebChat: (cid: string) => Promise<boolean>
   flag: { enabled: boolean; allowAll: boolean; allowlist: Set<string> }
   rateLimiter: AgentChatRateLimiter
   /** sub active + running VPS → 'running'; VPS still provisioning → 'provisioning'; else 'inactive'. */
@@ -167,6 +171,13 @@ export async function agentChatRelayHandler(req: Request, deps: AgentChatRelayDe
   try { state = await deps.resolveCustomerState(cid) } catch { refund(); return err('upstream_unavailable', 502) }
   if (state === 'provisioning') { refund(); return err('not_ready', 503) }
   if (state !== 'running') { refund(); return err('not_active', 403) }
+
+  // 7b. TIER — dashboard chat is the v1.4 web_app unlock (Siap Pakai /
+  // Enterprise). Mirrors bundle-fetch's tier_does_not_grant_persona pattern;
+  // safe to disclose post-X-CID (no probing oracle), and the UI upsells on it.
+  let tierOk = false
+  try { tierOk = await deps.tierAllowsWebChat(cid) } catch { refund(); return err('upstream_unavailable', 502) }
+  if (!tierOk) { refund(); return err('tier_does_not_grant_web_chat', 403) }
 
   // 8. RESOLVE (LATE, NARROW) — ip + key cipher; decrypt. IP/key live in locals only.
   let target: { ip: string; cipher: unknown } | null
