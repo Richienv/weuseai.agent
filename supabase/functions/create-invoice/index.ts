@@ -169,6 +169,16 @@ Deno.serve(async (req) => {
       xendit,
       successRedirectBase: `${PUBLIC_BASE}/welcome`,
       failureRedirectBase: `${PUBLIC_BASE}/checkout.html`,
+      // Paid count for the library-full 799→999 batch flip — same
+      // status='active' definition as /api/public/subscription-count.
+      countActiveSubscriptions: async () => {
+        const { count, error } = await supabase
+          .from('subscriptions')
+          .select('id', { count: 'exact', head: true })
+          .eq('status', 'active')
+        if (error || typeof count !== 'number') throw (error ?? new Error('count unavailable'))
+        return count
+      },
     })
     return withCors(res, req)
   } catch (e) {
