@@ -754,13 +754,23 @@ function makeDeployedDeps(): ChainDeps {
       throw new Error('VPS did not reach status=running within 480s')
     },
     async checkVpsModel(vpsIp) {
-      // P0 cost fix (2026-05-17): read the top-level `model:` key from
-      // the agent's config.yaml on the VPS. The setup-script pins it to
-      // deepseek/deepseek-v4-pro; an empty/Opus value is the $-burning
-      // regression.
-      const r = ssh(vpsIp, "grep -m1 -E '^model:' /home/weuseai/.hermes/config.yaml 2>&1 || echo 'model: <none>'")
-      const m = /^model:\s*(\S+)/m.exec(r.stdout.trim())
-      return m ? m[1] : '<unreadable>'
+      // P0 cost fix (2026-05-17): read the pinned model from the agent's
+      // config.yaml on the VPS — must be deepseek/deepseek-v4-pro (an
+      // empty/Opus value is the $-burning regression). SHAPE-INDEPENDENT
+      // (2026-07-07): the config-yaml incident (2026-06-07, LOCKED in
+      // CLAUDE.md) moved the key from a scalar `model: X` to a nested
+      // `model:\n  default: X`; the setup-script now writes the nested
+      // shape, so match either — the old scalar-only grep false-failed
+      // Stage 5 on every healthy post-June VPS.
+      const r = ssh(
+        vpsIp,
+        "awk '/^model:[[:space:]]*[^[:space:]]/{print $2; exit} " +
+          "/^model:[[:space:]]*$/{inblk=1; next} " +
+          "inblk && /^[[:space:]]+default:/{print $2; exit} " +
+          "inblk && /^[^[:space:]]/{inblk=0}' /home/weuseai/.hermes/config.yaml 2>&1 || echo '<none>'",
+      )
+      const out = r.stdout.trim()
+      return /^\S+$/.test(out) ? out : '<unreadable>'
     },
     async validateBotToken(customerId, botToken) {
       // Real onboarding path: validate-bot-token does Telegram getMe,
