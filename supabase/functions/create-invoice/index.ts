@@ -163,11 +163,35 @@ Deno.serve(async (req) => {
   const preflight = handleCors(req)
   if (preflight) return preflight
 
-  const res = await handleCreateInvoice(req, {
-    db,
-    xendit,
-    successRedirectBase: `${PUBLIC_BASE}/welcome`,
-    failureRedirectBase: `${PUBLIC_BASE}/checkout.html`,
-  })
-  return withCors(res, req)
+  try {
+    const res = await handleCreateInvoice(req, {
+      db,
+      xendit,
+      successRedirectBase: `${PUBLIC_BASE}/welcome`,
+      failureRedirectBase: `${PUBLIC_BASE}/checkout.html`,
+      // Paid count for the library-full 799→999 batch flip — same
+      // status='active' definition as /api/public/subscription-count.
+      countActiveSubscriptions: async () => {
+        const { count, error } = await supabase
+          .from('subscriptions')
+          .select('id', { count: 'exact', head: true })
+          .eq('status', 'active')
+        if (error || typeof count !== 'number') throw (error ?? new Error('count unavailable'))
+        return count
+      },
+    })
+    return withCors(res, req)
+  } catch (e) {
+    // An uncaught error (e.g. Xendit rejecting the invoice) used to escape as a
+    // raw 500 WITHOUT cors headers — the browser then mislabels it a CORS block.
+    // Catch it, log it, and return a cors-wrapped JSON error the client can read.
+    console.error('[create-invoice] uncaught:', e)
+    return withCors(
+      new Response(
+        JSON.stringify({ error: 'server_error' }),
+        { status: 500, headers: { 'content-type': 'application/json' } },
+      ),
+      req,
+    )
+  }
 })
