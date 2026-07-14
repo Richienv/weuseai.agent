@@ -37,7 +37,7 @@
 import type {
   IOnboardingProvisioningClient,
   SpinUpInput,
-  Tier,
+  SubscriptionTier,
 } from './types.ts'
 
 /**
@@ -90,7 +90,7 @@ export const SETUP_HELP_AGE_MS = 24 * 60 * 60 * 1000 // 24h
 export type PendingProvisionRow = {
   subscription_id: string
   customer_id: string
-  tier: Tier
+  tier: SubscriptionTier
   always_on_enabled: boolean
   /** When the customer paid + the subscription was created. */
   subscription_started_at: string  // ISO8601
@@ -184,7 +184,7 @@ export async function buildSpinUpInput(
 export type SetupHelpNotification = {
   subscription_id: string
   customer_id: string
-  tier: Tier
+  tier: SubscriptionTier
   /**
    * How long the row has been pending, in milliseconds. Useful for
    * tuning the email copy ("you've been stuck X hours") and for the

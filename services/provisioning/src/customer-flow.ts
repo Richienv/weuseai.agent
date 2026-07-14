@@ -295,6 +295,13 @@ export async function spinUpCustomer(
   })
 
   // ── Background: discover IP, wait for SSH, run setup ──
+  //
+  // Reap guard: flips true the moment the setup script exits 0 (the VM is then
+  // a working agent). Both reap sites below MUST check it — a post-success
+  // failure (second-finisher hook, or the status='running' DB write) rejects
+  // the same promise as a real provision failure, and reaping on that would
+  // delete a healthy customer's VM over a transient DB blip.
+  let setupSucceeded = false
   const done = (async () => {
     try {
       log('Polling for public IP allocation...')
@@ -365,6 +372,12 @@ export async function spinUpCustomer(
         )
       }
       log('✓ Setup script complete')
+      // PAST THIS LINE THE VM IS GENUINELY USABLE — Hermes is installed and the
+      // setup script exited 0. Everything after is bookkeeping (second-finisher
+      // hook + the status='running' write). A failure THERE must NEVER reap the
+      // VM: a transient DB/network blip on updateVPSInstance() would otherwise
+      // destroy a healthy, paid-for customer agent. Reap only un-provisioned VMs.
+      setupSucceeded = true
 
       // Wait-page race fix (2026-05-16): second-finisher. The setup-
       // script is done, so it is finally safe to SSH-refresh the .env
@@ -426,6 +439,32 @@ export async function spinUpCustomer(
       // lose the original error).
       try {
         log(`✗ Background provision failed: ${msg}`)
+        if (setupSucceeded) {
+          // The agent is INSTALLED AND RUNNING on the box — only the trailing
+          // bookkeeping threw. Do not mark it failed, and above all do not reap
+          // it: that would delete a working, paid-for customer VM. Leave the row
+          // as-is (the customer's own complete-onboarding self-heals the gateway)
+          // and alert loudly so an operator reconciles the row.
+          slog('error', 'provision.post_success_bookkeeping_failed', {
+            customerId: opts.customerId,
+            vpsId: vps.uuid,
+            degraded: true,
+            reaped: false,
+            err: msg,
+          })
+          if (deps.alertChatId) {
+            try {
+              await deps.broker.sendMessage({
+                chatId: deps.alertChatId,
+                text:
+                  `[provisioning alert]\nPOST-SUCCESS failure for ${opts.customerId} — the VPS is ` +
+                  `PROVISIONED AND HEALTHY (setup exited 0); only the bookkeeping failed, so the VM ` +
+                  `was NOT reaped. Reconcile vps_instances row ${vps.uuid} by hand. ${msg}`,
+              })
+            } catch {/* best effort */}
+          }
+          throw e
+        }
         try {
           await deps.store.updateVPSInstance(vps.uuid, { status: 'failed' })
         } catch {/* best effort */}
@@ -434,7 +473,7 @@ export async function spinUpCustomer(
         // tearDownCustomer). It also let the auto-retry STACK a 2nd VM,
         // because findActiveVPSByCustomer ignores 'failed' rows — so the
         // VM itself must be deleted here. Route via the inferred provider,
-        // exactly like teardown.
+        // exactly like teardown. Gated on !setupSucceeded (see the flag).
         try {
           await adapterForRow({ provider: inferredProvider }, deps, 'provision-reap').delete(vps.uuid)
           log(`✓ reaped failed VPS ${vps.uuid} (no orphan bill)`)
@@ -475,7 +514,25 @@ export async function spinUpCustomer(
     slog('error', 'provision.background_rejected', {
       customerId: opts.customerId,
       err: msg,
+      setupSucceeded,
     })
+    // Same guard as the inner handler: a rejection AFTER the setup script
+    // succeeded means the box is a healthy agent and only bookkeeping broke.
+    // Never mark it failed, never reap it — that would destroy a paid customer's
+    // VM over a transient DB write.
+    if (setupSucceeded) {
+      if (deps.alertChatId) {
+        try {
+          await deps.broker.sendMessage({
+            chatId: deps.alertChatId,
+            text:
+              `[provisioning alert]\nPOST-SUCCESS rejection for ${opts.customerId} — VPS ${vps.uuid} ` +
+              `is provisioned and healthy; NOT reaped. Reconcile the row by hand. ${msg}`,
+          })
+        } catch {/* best effort */}
+      }
+      return
+    }
     try {
       await deps.store.updateVPSInstance(vps.uuid, { status: 'failed' })
     } catch {/* best effort — inner handler already attempted this */}
