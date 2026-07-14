@@ -18,6 +18,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
 
 import { handleCors, withCors } from '../_shared/cors.ts'
 import { createRateLimiter } from '../_shared/agent-chat-rate-limiter.ts'
+import { resolveTier, TIERS } from '../_shared/tier-personas.ts'
 import { decryptCredential, type CredentialCipher } from '../_shared/integration-credential-crypto.ts'
 import { slogRedacted } from '../_shared/redact-for-log.ts'
 import {
@@ -53,9 +54,19 @@ const supabase = createClient(SUPABASE_URL, SERVICE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
 })
 
+// v1.4 web_app unlock — customers.tier → features.web_app (done-for-you /
+// enterprise). Missing customer/tier fails closed.
+const tierAllowsWebChat = async (cid: string): Promise<boolean> => {
+  const { data } = await supabase.from('customers').select('tier').eq('id', cid).maybeSingle()
+  const t = (data as { tier?: string | null } | null)?.tier
+  if (!t) return false
+  return TIERS[resolveTier(t)].features.web_app === true
+}
+
 const deps: AgentChatRelayDeps = {
   flag: FLAG,
   rateLimiter: createRateLimiter(supabase),
+  tierAllowsWebChat,
 
   resolveCustomerState: async (cid: string): Promise<CustomerState> => {
     const { data: subs } = await supabase
@@ -105,7 +116,9 @@ const deps: AgentChatRelayDeps = {
     const used = Number((u as { tokens_today?: number } | null)?.tokens_today ?? 0)
     const remaining = Math.max(0, Math.min(100, Math.round((1 - used / DAILY_TOKEN_BUDGET) * 100)))
     return {
-      chat_enabled: true, // reaching meta means flag-on + allowlisted
+      // Honest per-tier flag: reaching meta means flag-on + allowlisted, but
+      // chat itself is the web_app unlock — the UI upsells when false.
+      chat_enabled: await tierAllowsWebChat(cid),
       persona_slug: ((c as { agent_slug?: string } | null)?.agent_slug) || 'the-pro',
       remaining_pct: remaining,
     }
