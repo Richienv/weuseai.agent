@@ -418,33 +418,64 @@
     }
 
     // ─────────────────────── NAVBAR ───────────────────────
+    // Konten redesign nav (Iter 2): solid glassmorphism top bar, diamond+gradient
+    // logo, decorative search (no search backend — design fidelity), Kerja/Harga/
+    // FAQ + white Mulai pill. Wiring preserved; mobile hamburger kept.
     function Navbar() {
       const links = [
-        { label: 'Beranda', href: '#beranda' },
         { label: 'Kerja', href: '#proses' },
         { label: 'Harga', href: '#pricing' },
         { label: 'FAQ', href: '#faq' },
       ];
+      const [menuOpen, setMenuOpen] = useState(false);
       return (
-        <header className="fixed top-3 md:top-4 left-0 right-0 z-50 px-4 md:px-8 lg:px-16 py-3">
-          <div className="flex items-center justify-between gap-3">
-            <a href="/" aria-label="weuseai.agent — beranda" className="flex items-center gap-2">
-              <span className="rounded-full nav-clean grid place-items-center px-4 py-2 md:px-5 md:py-2.5">
-                <img src="assets/logo.svg" alt="" className="block h-4 md:h-5 w-auto" />
+        <header className="kt-nav fixed top-0 left-0 right-0 z-50">
+          <div className="kt-nav-inner">
+            <a href="/" aria-label="weuseai.agent — beranda" className="kt-nav-brand">
+              <span className="kt-nav-logo" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 100 100"><path d="M50 8 C54 32 68 46 92 50 C68 54 54 68 50 92 C46 68 32 54 8 50 C32 46 46 32 50 8 Z" fill="#5a0f08" /></svg>
               </span>
+              <span className="kt-nav-word">weuseai<span style={{ color: '#ff6a4c' }}>.agent</span></span>
             </a>
-            <nav className="hidden md:flex nav-clean rounded-full px-1.5 py-1 items-center gap-0">
+            <div className="kt-nav-search" aria-hidden="true">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7c736e" strokeWidth="2"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4-4" /></svg>
+              <span>Cari tugas atau agent</span>
+            </div>
+            <nav className="kt-nav-links">
               {links.map((l) => (
-                <a key={l.label} href={l.href} className="px-3 py-2 text-sm font-medium text-foreground/90 font-body hover:text-white transition-colors">{l.label}</a>
+                <a key={l.label} href={l.href} className="kt-nav-link">{l.label}</a>
               ))}
-              <a href="#pricing" className="bg-white text-black rounded-full px-3.5 py-1.5 text-sm font-medium flex items-center gap-1.5 ml-1 no-underline">
-                Mulai <ArrowUpRight size={14} stroke={2.2} />
-              </a>
+              <a href="#pricing" className="kt-nav-cta cta-tactile">Mulai <ArrowUpRight size={14} stroke={2.2} /></a>
             </nav>
-            <a href="#pricing" className="md:hidden nav-clean rounded-full px-3.5 py-1.5 text-xs font-medium text-white flex items-center gap-1.5 whitespace-nowrap no-underline">
-              Mulai <ArrowUpRight size={12} stroke={2.2} />
-            </a>
+            <div className="kt-nav-mobile">
+              <button
+                type="button"
+                onClick={() => setMenuOpen((o) => !o)}
+                aria-label={menuOpen ? 'Tutup menu' : 'Buka menu'}
+                aria-expanded={menuOpen}
+                className="kt-nav-burger"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                  {menuOpen
+                    ? <><line x1="6" y1="6" x2="18" y2="18" /><line x1="6" y1="18" x2="18" y2="6" /></>
+                    : <><line x1="4" y1="8" x2="20" y2="8" /><line x1="4" y1="16" x2="20" y2="16" /></>}
+                </svg>
+              </button>
+              <a href="#pricing" onClick={() => setMenuOpen(false)} className="kt-nav-cta-sm cta-tactile">Mulai <ArrowUpRight size={12} stroke={2.2} /></a>
+            </div>
           </div>
+          {menuOpen && (
+            <Mot.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2, ease: EASE }}
+              className="kt-nav-panel"
+            >
+              {links.map((l) => (
+                <a key={l.label} href={l.href} onClick={() => setMenuOpen(false)} className="kt-nav-panel-link">{l.label}</a>
+              ))}
+            </Mot.div>
+          )}
         </header>
       );
     }
@@ -2713,15 +2744,49 @@
     // Animated signal-red circuit flowing into a hub — konten-style hero motion,
     // pure SVG (stroke-dashoffset), sits behind the dim so it never fights the mockup.
     function HeroCircuit() {
-      // Premium "living aurora" hero background (styles in index.html). CSS-only
-      // drifting light pools + conic sheen + grain — see .hero-aurora.
+      // Converging-channels circuit backdrop (Konten redesign Iter 3): faint
+      // L-elbow traces carry flowing current from the customer's channels
+      // (left + right edges) into a central agent hub. CSS-only motion
+      // (ktCurrentFlow / ktPortPulse / ktGlowPulse) — reduced-motion safe.
+      const HUBX = 600, HUBY = 250;
+      const left = [{ y: 110, label: 'WhatsApp', c: '#25d366' }, { y: 250, label: 'Instagram', c: '#e1306c' }, { y: 390, label: 'Telegram', c: '#3aa9e0' }];
+      const right = [{ y: 110, label: 'Email', c: '#e0b341' }, { y: 250, label: 'Kalender', c: '#ff7a5e' }, { y: 390, label: 'Spreadsheet', c: '#4caa5a' }];
+      const trace = (x0, y0) => `M${x0} ${y0} H${x0 < HUBX ? x0 + 230 : x0 - 230} L${HUBX} ${HUBY}`;
+      const all = [...left, ...right];
       return (
-        <div className="hero-aurora" aria-hidden="true">
-          <div className="ha-pool ha-1" />
-          <div className="ha-pool ha-2" />
-          <div className="ha-pool ha-3" />
-          <div className="ha-sheen" />
-          <div className="ha-grain" />
+        <div className="kt-hero-circuit" aria-hidden="true">
+          <svg viewBox="0 0 1200 520" fill="none" preserveAspectRatio="xMidYMid slice">
+            <defs>
+              <radialGradient id="ktHubGlow" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stopColor="#ee3c30" stopOpacity="0.5" />
+                <stop offset="55%" stopColor="#ee3c30" stopOpacity="0.12" />
+                <stop offset="100%" stopColor="#ee3c30" stopOpacity="0" />
+              </radialGradient>
+            </defs>
+            <circle cx={HUBX} cy={HUBY} r="150" fill="url(#ktHubGlow)" className="kt-hub-glow" />
+            {all.map((ch, i) => {
+              const d = trace(i < 3 ? 60 : 1140, ch.y);
+              return (
+                <g key={'t' + i}>
+                  <path d={d} stroke="rgba(238,60,48,0.13)" strokeWidth="1.4" />
+                  <path d={d} stroke={ch.c} strokeOpacity="0.7" strokeWidth="1.6" strokeLinecap="round" strokeDasharray="10 30" className="kt-current" style={{ animationDelay: `${i * 0.45}s` }} />
+                </g>
+              );
+            })}
+            {left.map((ch, i) => (
+              <g key={'l' + i} className="kt-chan">
+                <circle cx="60" cy={ch.y} r="5" fill={ch.c} className="kt-port" style={{ animationDelay: `${i * 0.4}s` }} />
+                <text x="74" y={ch.y + 4} fill="#8a837d" fontFamily="'JetBrains Mono',monospace" fontSize="13">{ch.label}</text>
+              </g>
+            ))}
+            {right.map((ch, i) => (
+              <g key={'r' + i} className="kt-chan">
+                <circle cx="1140" cy={ch.y} r="5" fill={ch.c} className="kt-port" style={{ animationDelay: `${i * 0.4}s` }} />
+                <text x="1126" y={ch.y + 4} fill="#8a837d" fontFamily="'JetBrains Mono',monospace" fontSize="13" textAnchor="end">{ch.label}</text>
+              </g>
+            ))}
+            <circle cx={HUBX} cy={HUBY} r="9" fill="#ee3c30" className="kt-hub-core" />
+          </svg>
         </div>
       );
     }
@@ -2842,25 +2907,22 @@
 
       return (
         <section id="beranda" className="db-section db-section--hero">
-          {/* Ambient dotted-red hero video — dimmed behind the dashboard mockup.
-              DottedVideo's IntersectionObserver pauses its rAF when scrolled away. */}
-          <DottedVideo src="/assets/new-hero.mp4" color="#E5322D" cellSize={7} className="db-hero-video" />
+          {/* Konten redesign: converging-channels circuit backdrop. */}
           <HeroCircuit />
-          <div className="db-hero-dim" aria-hidden="true" />
           <div className="db-hero-fade" aria-hidden="true" />
           <div className="db-eyebrow">
             <div className="db-eyebrow-pill">
               <span className="live-dot" />
               <span>Agen kamu bekerja</span>
             </div>
-            <h1 className="db-headline"><span className="hl-em">Satu agent.</span><br className="hidden md:inline" /> Ngerjain kerja kamu.</h1>
+            <h1 className="db-headline"><span className="kt-grad-text">Satu agent.</span><br className="hidden md:inline" /> Ngerjain kerja kamu.</h1>
             <p className="db-sub">Dia nyapa kamu duluan — briefing pagi masuk sebelum diminta. Kamu cukup setujui.</p>
             <div className="mt-7 flex flex-col items-center gap-3">
               <div className="flex items-center gap-3 flex-wrap justify-center">
-                <a href="#pricing" className="rounded-full px-5 py-2.5 min-h-[44px] text-sm font-medium flex items-center gap-2 no-underline" style={{ background: '#fff', color: '#0a0a0a', border: '1px solid #fff' }}>
+                <a href="#pricing" className="kt-cta-primary cta-tactile no-underline">
                   Aktifkan asisten kamu <ArrowUpRight size={14} stroke={2.2} />
                 </a>
-                <a href="https://cal.com/weuseai.agent/15min" target="_blank" rel="noopener" className="rounded-full px-5 py-2.5 min-h-[44px] text-sm font-medium flex items-center gap-2 no-underline text-white" style={{ background: 'rgba(255, 255, 255, 0.06)', border: '1px solid rgba(255, 255, 255, 0.22)', backdropFilter: 'blur(8px)' }}>
+                <a href="https://cal.com/weuseai.agent/15min" target="_blank" rel="noopener" className="kt-cta-ghost no-underline">
                   Konsultasi gratis (15 menit)
                 </a>
               </div>
@@ -3649,7 +3711,10 @@
 
       useEffect(() => {
         let alive = true;
-        fetch('/api/public/subscription-count')
+        // Abort a slow/hanging API after 3s so the banner never waits on it.
+        const ctrl = new AbortController();
+        const t = setTimeout(() => ctrl.abort(), 3000);
+        fetch('/api/public/subscription-count', { signal: ctrl.signal })
           .then((r) => (r.ok ? r.json() : null))
           .then((data) => {
             if (!alive || !data) return;
@@ -3657,8 +3722,9 @@
               setPaid(data.paid_customers);
             }
           })
-          .catch(() => {});
-        return () => { alive = false; };
+          .catch(() => {})
+          .finally(() => clearTimeout(t));
+        return () => { alive = false; clearTimeout(t); };
       }, []);
 
       if (paid === null) return null;
@@ -3984,7 +4050,7 @@
             href={tier.ctaHref}
             target={/^https?:|^mailto:/.test(tier.ctaHref) ? '_blank' : undefined}
             rel={/^https?:/.test(tier.ctaHref) ? 'noopener' : undefined}
-            className={`mt-7 md:mt-8 rounded-full px-5 py-3 text-sm font-medium flex items-center justify-center gap-2 no-underline${isFeatured ? ' cta-pulse' : ''}`}
+            className={`cta-tactile mt-7 md:mt-8 rounded-full px-5 py-3 text-sm font-medium flex items-center justify-center gap-2 no-underline${isFeatured ? ' cta-pulse' : ''}`}
             style={
               isFeatured
                 ? { background: '#E5322D', color: '#fff', border: '1px solid #E5322D' }
@@ -4594,6 +4660,26 @@
               <p className="mt-5 md:mt-6 max-w-xl text-white/55 font-body font-light text-sm md:text-base leading-relaxed">
                 Bayar setup sekali. Hosting transparan, bisa pause kapan saja.
               </p>
+            </div>
+
+            {/* Honest risk-reversal strip — every claim is verbatim from
+                faq.html + refund-policy.html. Reassures right at the decision
+                moment, without re-cluttering the cards. */}
+            <div className="liquid-glass rounded-2xl mt-2 mb-10 md:mb-12 px-5 py-5 md:px-7 md:py-6 grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+              {[
+                ['VPS pribadi kamu', 'Bukan server bersama. Data nggak dibagi, bukan bahan training.'],
+                ['Jaminan teknis 14 hari', 'Kalau gagal jalan karena sisi kami, kami fix gratis atau refund setup penuh.'],
+                ['Berhenti kapan saja', 'Tagihan hosting stop. Tanpa penalti, tanpa komitmen.'],
+                ['Setup tetap milik kamu', 'Mau pause atau pindah, hasil setup tetap punya kamu.'],
+              ].map(([label, sub], i) => (
+                <div key={i} className="flex flex-col">
+                  <div className="flex items-center gap-2">
+                    <span aria-hidden="true" className="block w-1.5 h-1.5 flex-shrink-0 rounded-full" style={{ background: '#E5322D' }} />
+                    <span className="text-sm md:text-[15px] font-body text-white/90 font-medium">{label}</span>
+                  </div>
+                  <span className="mt-1 text-[11px] md:text-xs text-white/55 font-body font-light leading-snug">{sub}</span>
+                </div>
+              ))}
             </div>
 
             <ValueSlider />
@@ -5380,26 +5466,265 @@
     }
 
     // ─────────────────────── APP ───────────────────────
+    // ─────────────── KONTEN REDESIGN SECTIONS (Iters 4-8) ───────────────
+    // New design's mid-page sections. Each replaces the legacy aurora-era
+    // sections in the App composition below; the legacy component defs remain
+    // in source (unused) until cleanup (Iter 12) prunes them.
+
+    function ExploreSection() {
+      // Section 2 — Explore usage: the bundling-value story + an honest,
+      // clearly-illustrative time-savings calculator (never a hard claim).
+      const [hrs, setHrs] = useState(18);
+      const back = Math.round(hrs * 4.33 * 0.6); // illustrative: agent handles ~60% of admin hours
+      const days = Math.max(1, Math.round(back / 8));
+      const tools = ['Chatbot CS', 'Landing page', 'Notulen rapat', 'Sistem finance', 'Konten sosial', 'Riset pasar'];
+      return (
+        <section id="explore" className="kt-explore">
+          <div className="kt-explore-glow" aria-hidden="true" />
+          <div className="kt-explore-inner">
+            <div className="kt-explore-left">
+              <div className="kt-eyebrow"><span className="kt-eyebrow-dot" />Satu sistem, semua surface</div>
+              <h2 className="kt-h2">Tiap tool yang biasanya <span className="kt-grad-text">dijual mahal terpisah</span>, jadi satu.</h2>
+              <p className="kt-lead">Chatbot customer support, landing page creator, notulen rapat, sistem finance — biasanya dijual satu-satu. Kami bangun dan pre-fine-tune semuanya jadi <strong>satu agent</strong> buat kamu.</p>
+              <div className="kt-badge-100">100+ TUGAS</div>
+              <div className="kt-tool-chips">
+                {tools.map((t) => <span key={t} className="kt-tool-chip">{t}</span>)}
+              </div>
+            </div>
+            <div className="kt-explore-right">
+              <div className="kt-calc">
+                <div className="kt-calc-label">Berapa jam kerja administratif kamu per minggu?</div>
+                <div className="kt-calc-val"><span className="kt-grad-text">{hrs}</span> jam/minggu</div>
+                <input type="range" min="5" max="40" value={hrs} onChange={(e) => setHrs(+e.target.value)} aria-label="Jam kerja administratif per minggu" className="kt-slider" />
+                <div className="kt-calc-out">
+                  <div className="kt-calc-out-num">≈ {back} jam<span>/bulan</span></div>
+                  <div className="kt-calc-out-sub">bisa agent yang pegang — setara {days} hari kerja kamu balik.</div>
+                </div>
+                <div className="kt-calc-note">Estimasi kasar. Hasil tiap orang beda — kamu yang tetap pegang keputusan.</div>
+              </div>
+            </div>
+          </div>
+        </section>
+      );
+    }
+
+    function MemoryPersonaSection() {
+      // Section 3 — Memory & persona: corrections become permanent memory;
+      // personas are pre-fine-tuned. Honest framing — the design's "Akurat 99%"
+      // hard claim is replaced with the real, verifiable behaviour.
+      const flow = [
+        { k: '01', t: 'Instruksi baru', tag: 'dari kamu', d: 'Kamu koreksi sekali — misal "tone-nya lebih santai ya".' },
+        { k: '02', t: 'Tersimpan permanen', tag: 'permanen', d: 'Ditulis jadi memory permanen, bukan cuma chat sesi ini.' },
+        { k: '03', t: 'Dipakai ulang', tag: 'otomatis', d: 'Dipanggil otomatis tiap kerja berikutnya — tanpa kamu ulang.' },
+      ];
+      const recalls = ['Tone persona', 'Refund SOP', 'Format laporan', 'Gaya nulis kamu'];
+      const stats = [
+        { t: 'Sekali diajarin', d: 'Koreksi cukup sekali' },
+        { t: 'Nempel permanen', d: 'Lintas sesi, bukan sesaat' },
+        { t: 'Recall cepat', d: 'Dipanggil saat dibutuhkan' },
+        { t: 'Persona konsisten', d: 'Sudah kami fine-tune' },
+      ];
+      return (
+        <section id="memory" className="kt-mem">
+          <div className="kt-mem-inner">
+            <div className="kt-mem-head">
+              <div className="kt-eyebrow"><span className="kt-eyebrow-dot" />Memori &amp; persona</div>
+              <h2 className="kt-h2">Ajarin sekali. <span className="kt-grad-text">Dia ingat seterusnya.</span></h2>
+              <p className="kt-lead">Tiap koreksi dari kamu langsung jadi memory permanen — bukan cuma chat sesi ini. Persona kerjanya sudah kami fine-tune dari awal, jadi nada dan caranya konsisten.</p>
+              <div className="kt-mem-stats">
+                {stats.map((s) => <div key={s.t} className="kt-mem-stat"><div className="kt-mem-stat-t">{s.t}</div><div className="kt-mem-stat-d">{s.d}</div></div>)}
+              </div>
+            </div>
+            <div className="kt-mem-flow">
+              {flow.map((f, i) => (
+                <div key={f.k} className="kt-mem-step">
+                  <div className="kt-mem-step-num">{f.k}</div>
+                  <div className="kt-mem-step-body">
+                    <div className="kt-mem-step-top"><span className="kt-mem-step-t">{f.t}</span><span className="kt-mem-step-tag">{f.tag}</span></div>
+                    <div className="kt-mem-step-d">{f.d}</div>
+                    {i === 2 && <div className="kt-mem-recalls">{recalls.map((r) => <span key={r} className="kt-tool-chip">{r}</span>)}</div>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      );
+    }
+
+    function ProductAppsSection() {
+      // Section 4 — one agent covers many work domains (content, fitness,
+      // finance, school) from one chat. HONEST: it drafts/prepares real
+      // deliverables, kamu approves; the design's fabricated standalone
+      // "Harga normal Rp X / Rp Y/bln" anchors are DROPPED (we don't sell
+      // these standalone at those prices — shipping them would be deceptive).
+      const apps = [
+        { name: 'Konten', desc: 'Susun dan jadwalkan konten kamu.', u: 'Atur konten minggu ini dong', a: 'Sudah aku susun 7 post minggu ini, lengkap draf caption gaya kamu.', tag: 'KONTEN', mini: ['7 post', '3 reels', '7 caption'] },
+        { name: 'Program latihan', desc: 'Atur program latihan, catat progres.', u: 'Susun program latihanku', a: 'Program latihan kamu aku tata — progres hari ini tercatat.', tag: 'WORKOUT', mini: ['Deadlift 5×5', 'Streak 12 hari', 'Gym day'] },
+        { name: 'Keuangan', desc: 'Rapikan cashflow, kasih ringkasan.', u: 'Rapikan keuangan bulan ini', a: 'Pemasukan dan pengeluaran aku rapikan — ini ringkasan minggu ini.', tag: 'CASHFLOW', mini: ['Net minggu ini', 'Pemasukan', 'Ringkasan'] },
+        { name: 'Sekolah', desc: 'Pantau tugas dan tenggat sekolah.', u: 'Bantu siapin tugas minggu ini', a: 'Tugas dan tenggat minggu ini aku rapikan — draf jawaban siap kamu cek.', tag: 'SEKOLAH', mini: ['3 tugas', '2 tenggat', 'Draf siap'] },
+      ];
+      return (
+        <section id="apps" className="kt-apps">
+          <div className="kt-apps-inner">
+            <div className="kt-apps-head">
+              <div className="kt-eyebrow"><span className="kt-eyebrow-dot" />Lebih dari chatbot</div>
+              <h2 className="kt-h2">Agen kamu nggak cuma menjawab — <span className="kt-grad-text">dia ngerjain kerja beneran.</span></h2>
+              <p className="kt-lead">Konten, program latihan, keuangan, tugas sekolah — pekerjaan yang biasanya butuh tool terpisah, dia tangani dari satu chat. Tinggal kamu setujui hasilnya.</p>
+            </div>
+            <div className="kt-apps-grid">
+              {apps.map((ap) => (
+                <div key={ap.name} className="kt-app-card">
+                  <div className="kt-app-top">
+                    <div className="kt-app-name">{ap.name}</div>
+                    <span className="kt-app-inc">Termasuk paket</span>
+                  </div>
+                  <div className="kt-app-desc">{ap.desc}</div>
+                  <div className="kt-app-chat">
+                    <div className="kt-app-msg user">{ap.u}</div>
+                    <div className="kt-app-msg agent">{ap.a}</div>
+                  </div>
+                  <div className="kt-app-mini">
+                    <span className="kt-app-mini-tag">{ap.tag}</span>
+                    {ap.mini.map((m) => <span key={m} className="kt-app-mini-chip">{m}</span>)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      );
+    }
+
+    function SkillsSection() {
+      // Section 5 — skill library the agent ships with. Honest: each maps to a
+      // real capability (24/7 uptime, decks, memory, ideation, scripts, Excel,
+      // research-summarize). The design's "File Management · 128 file" implied
+      // filesystem access we lack → reframed to "Riset & Ringkas". Coding is the
+      // coming-soon (SEGERA) early-access skill → WhatsApp CTA.
+      const skills = [
+        { n: '01', tag: 'SKILL', name: 'Siaga 24/7', desc: 'Jam 23:47 kepikiran sesuatu? Chat aja — dia nggak tidur, nggak cuti.', ex: 'selalu online', wide: true },
+        { n: '02', tag: 'SKILL', name: 'Pitch Deck', desc: 'Slide deck dengan alur cerita yang jelas.', ex: '12 slide' },
+        { n: '03', tag: 'SKILL', name: 'Memori Relasi', desc: 'Ingat klien, konteks, dan janji kamu.', ex: 'tersimpan' },
+        { n: '04', tag: 'SKILL', name: 'Radar Ide', desc: 'Ide konten dan angle, lengkap hook pembuka.', ex: '5 ide' },
+        { n: '05', tag: 'SKILL', name: 'Script Generator', desc: 'Script video terstruktur, tinggal kamu rekam.', ex: 'hook · body · cta' },
+        { n: '06', tag: 'SKILL', name: 'Excel Wizard', desc: 'Formula, pivot, dan rapikan data spreadsheet.', ex: '=SUMIFS' },
+        { n: '07', tag: 'SKILL', name: 'Riset & Ringkas', desc: 'Riset topik, rangkum jadi poin penting.', ex: '3 sumber' },
+      ];
+      return (
+        <section id="skills" className="kt-skills">
+          <div className="kt-skills-inner">
+            <div className="kt-skills-head">
+              <div className="kt-eyebrow"><span className="kt-eyebrow-dot" />Skill bawaan</div>
+              <h2 className="kt-h2">Skill siap pakai. <span className="kt-grad-text">Langsung dari kotak.</span></h2>
+              <p className="kt-lead">Agen kamu datang dengan skill yang sudah kami fine-tune. Tanpa setup ribet — tinggal kamu minta.</p>
+            </div>
+            <div className="kt-skills-grid">
+              {skills.map((s) => (
+                <div key={s.n} className={'kt-skill-card' + (s.wide ? ' wide' : '')}>
+                  <div className="kt-skill-num">{s.n} · {s.tag}</div>
+                  <div className="kt-skill-name">{s.name}</div>
+                  <div className="kt-skill-desc">{s.desc}</div>
+                  <div className="kt-skill-ex"><span className="kt-skill-ex-chip">{s.ex} <span className="kt-skill-check">✓</span></span></div>
+                </div>
+              ))}
+              <div className="kt-skill-card wide kt-skill-soon">
+                <div className="kt-skill-num">08 · <span className="kt-skill-soon-tag">SEGERA</span></div>
+                <div className="kt-skill-name">Coding</div>
+                <div className="kt-skill-desc">Bikin tool dan automasi kecil langsung dari chat. Masih kami siapkan — kamu bisa coba duluan.</div>
+                <a href="https://wa.me/6282154902561?text=Halo%20Richie%2C%20mau%20early%20access%20Code%20Wizard%20agent%20di%20weuseai.agent" target="_blank" rel="noopener" className="kt-skill-cta cta-tactile no-underline">Minta early access <ArrowUpRight size={13} stroke={2.2} /></a>
+              </div>
+              <a href="use-cases.html" className="kt-skill-card wide kt-skill-uc no-underline">
+                <div className="kt-skill-num">CONTOH NYATA</div>
+                <div className="kt-skill-name">Lihat cara orang pakai →</div>
+                <div className="kt-skill-desc">Contoh nyata dari berbagai usaha dan peran.</div>
+              </a>
+            </div>
+          </div>
+        </section>
+      );
+    }
+
+    function StepperSection() {
+      // Section 6 — how it works. id="proses" so the nav "Kerja" anchor lands
+      // here. HONESTY: design's "Delapan menit" → "Lima menit" (matches the
+      // standing ~5-menit setup claim, CLAUDE.md); step-1 misleading "Rp 99rb"
+      // dropped (price lives in Pricing); step-4 "Rangkum email" reframed to a
+      // content example (the agent has no live email access — DashboardDemo lock).
+      const visual = (type) => {
+        if (type === 'plan') return (
+          <div className="kt-sv">
+            <div className="kt-sv-row"><span className="kt-sv-k">PLAN</span><span className="kt-sv-v">Instance dedicated</span></div>
+            <span className="kt-sv-pill">Langsung termasuk</span>
+          </div>
+        );
+        if (type === 'form') return (
+          <div className="kt-sv">
+            <div className="kt-sv-row"><span className="kt-sv-k">CHANNEL</span><span className="kt-sv-v">Telegram</span></div>
+            <div className="kt-sv-row"><span className="kt-sv-k">AI BRAIN</span><span className="kt-sv-v">Hand-picked</span></div>
+            <div className="kt-sv-row"><span className="kt-sv-k">BOT TOKEN</span><span className="kt-sv-v">••••••••</span></div>
+          </div>
+        );
+        if (type === 'setup') return (
+          <div className="kt-sv">
+            {['VPS provisioned', 'Tools tersambung', 'Voice tuned'].map((x) => <div key={x} className="kt-sv-check"><span className="kt-skill-check">✓</span>{x}</div>)}
+          </div>
+        );
+        return (
+          <div className="kt-sv kt-sv-chat">
+            <div className="kt-app-msg user">Susun kalender konten minggu ini</div>
+            <div className="kt-app-msg agent">Beres — 7 post, draf caption gaya kamu.</div>
+          </div>
+        );
+      };
+      const steps = [
+        { n: '01', t: 'Pilih plan kamu', d: 'Satu instance dedicated, khusus buat kamu — langsung termasuk.', v: 'plan' },
+        { n: '02', t: 'Isi informasi', d: 'Pilih channel Telegram, isi bot token. AI brain-nya kami yang pilihkan.', v: 'form' },
+        { n: '03', t: 'Sistem auto-setup', d: 'Server, persona, dan template — kami siapkan otomatis.', v: 'setup' },
+        { n: '04', t: 'Mulai pakai', d: 'Buka Telegram, kirim pesan, beres.', v: 'chat' },
+      ];
+      return (
+        <section id="proses" className="kt-steps">
+          <div className="kt-steps-inner">
+            <div className="kt-steps-head">
+              <div className="kt-eyebrow"><span className="kt-eyebrow-dot" />Cara kerjanya</div>
+              <h2 className="kt-h2">Empat langkah. <span className="kt-grad-text">Lima menit.</span></h2>
+            </div>
+            <div className="kt-steps-grid">
+              {steps.map((s) => (
+                <div key={s.n} className="kt-step">
+                  <div className="kt-step-num">{s.n}</div>
+                  <div className="kt-step-t">{s.t}</div>
+                  <div className="kt-step-d">{s.d}</div>
+                  <div className="kt-step-visual">{visual(s.v)}</div>
+                </div>
+              ))}
+            </div>
+            <div className="kt-steps-cta">
+              <a href="#pricing" className="kt-cta-primary cta-tactile no-underline">Aktifkan asisten kamu <ArrowUpRight size={14} stroke={2.2} /></a>
+            </div>
+          </div>
+        </section>
+      );
+    }
+
     function App() {
       return (
         <div className="bg-black">
           <div className="relative z-10">
             <Navbar />
-            <main>
+            <main id="main">
               <DashboardDemo />
               <div className="bg-black">
-                <IntegrationsSpine />
-                <OriginSection />
-                <StartSection />
-                <FeaturesChess />
-                <VelvetSection />
-                <FeaturesGrid />
-                <ChatVsAgentSection />
-                <CostComparisonSection />
+                {/* Konten redesign sections. Legacy aurora-era sections retired
+                    from the composition; defs pruned at cleanup (Iter 12). */}
+                <ExploreSection />
+                <MemoryPersonaSection />
+                <ProductAppsSection />
+                <SkillsSection />
+                <StepperSection />
                 <Pricing />
-                <CommunitySection />
                 <FAQ />
-                <Stats />
               </div>
             </main>
             <CtaFooter />
@@ -5419,7 +5744,7 @@
           return React.createElement('div', { style: { minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '40px', color: '#f5f5f5', fontFamily: 'Inter, sans-serif' } },
             React.createElement('div', null,
               React.createElement('p', { style: { fontSize: '18px', marginBottom: '16px' } }, 'Lagi ada kendala memuat halaman.'),
-              React.createElement('a', { href: 'checkout.html', style: { color: '#E5322D', textDecoration: 'underline' } }, 'Lanjut ke checkout →')));
+              React.createElement('a', { href: 'checkout.html?plan=library-full', style: { color: '#E5322D', textDecoration: 'underline' } }, 'Lanjut ke checkout →')));
         }
         return this.props.children;
       }

@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="/assets/vendor/dc-support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *{ box-sizing:border-box }
+  html,body{ margin:0; background:#070608 }
+  input::placeholder{ color:#5f5853 }
+  input:focus, select:focus{ outline:none; border-color:rgba(238,60,48,.55) !important; box-shadow:0 0 0 3px rgba(238,60,48,.14) !important }
+  @keyframes dotPulse { 0%,100%{ opacity:1 } 50%{ opacity:.3 } }
+  @keyframes sheenSweep { 0%{ transform:translateX(-160%) } 30%,100%{ transform:translateX(520%) } }
+</style>
+</helmet>
+
+<div style="min-height:100vh; background:#070608; font-family:'Plus Jakarta Sans',sans-serif; display:grid; grid-template-columns:1fr 1fr">
+
+  <!-- ============ LEFT: order summary ============ -->
+  <div style="position:relative; overflow:hidden; padding:54px clamp(32px,5vw,80px) 80px; display:flex; justify-content:flex-end">
+    <div style="position:absolute; left:0; right:0; top:0; height:200px; z-index:0; pointer-events:none; opacity:.5; background-image:radial-gradient(circle, rgba(238,60,48,.45) 1px, transparent 1.6px); background-size:17px 17px; -webkit-mask-image:linear-gradient(180deg,#000,transparent); mask-image:linear-gradient(180deg,#000,transparent)"></div>
+
+    <div style="position:relative; z-index:1; width:100%; max-width:560px">
+
+      <!-- brand row -->
+      <div style="display:flex; align-items:center; gap:14px">
+        <span style="color:#6a6660; font-size:20px; cursor:pointer">‹</span>
+        <div style="width:38px; height:38px; border-radius:11px; background:linear-gradient(160deg,#ff6a3c,#ee3c30 60%,#c41d10); display:grid; place-items:center; box-shadow:inset 0 1.5px 1.5px rgba(255,210,180,.55), 0 8px 18px rgba(238,60,48,.4); color:#fff; font-weight:800; font-size:18px">W</div>
+        <span style="color:#f1ede9; font-size:18px; font-weight:600; letter-spacing:-.01em">weuseai<span style="color:#ff6a4c">.agent</span></span>
+      </div>
+
+      <!-- amount -->
+      <div style="margin-top:48px; font-size:15px; color:#8a837d">Bayar ke weuseai.agent</div>
+      <div style="margin-top:8px; font-family:'Plus Jakarta Sans',sans-serif; font-weight:800; font-size:62px; line-height:1; color:#f8f4f0; letter-spacing:-.02em">{{ totalStr }}</div>
+      <div style="margin-top:12px; font-size:15px; color:#8a837d">Setup + bulan pertama hosting · {{ planName }}</div>
+
+      <!-- line item: Library Lengkap -->
+      <div style="margin-top:40px; display:flex; gap:18px; align-items:flex-start">
+        <div style="flex:none; width:48px; height:48px; border-radius:13px; background:linear-gradient(180deg,#7a241c,#3a100c); border:1px solid rgba(255,120,90,.32); box-shadow:inset 0 1.5px 1.5px rgba(255,150,120,.3); display:grid; place-items:center; color:#ffb39e; font-weight:700; font-size:20px">{{ planThumb }}</div>
+        <div style="flex:1; min-width:0">
+          <div style="display:flex; align-items:baseline; justify-content:space-between; gap:14px">
+            <span style="color:#f1ede9; font-size:16.5px; font-weight:600">{{ planTitle }}</span>
+            <span style="white-space:nowrap; font-family:'JetBrains Mono',monospace; font-size:15px"><span style="display:{{ oldDisplay }}; color:#6a6660; text-decoration:line-through">{{ planOldStr }}</span> <span style="color:#f1ede9">{{ planSetupStr }}</span></span>
+          </div>
+          <p style="margin:7px 0 0; font-size:13.5px; line-height:1.5; color:#8a837d; max-width:330px">{{ planSub }}</p>
+        </div>
+      </div>
+
+      <!-- divider -->
+      <div style="height:1px; margin:24px 0; background:rgba(255,255,255,.07)"></div>
+
+      <!-- line item: Hosting -->
+      <div style="display:flex; gap:18px; align-items:flex-start">
+        <div style="flex:none; width:48px; height:48px; border-radius:13px; background:linear-gradient(180deg,#3a3260,#1a1530); border:1px solid rgba(150,140,230,.32); box-shadow:inset 0 1.5px 1.5px rgba(180,170,250,.28); display:grid; place-items:center; color:#bdb4f5; font-weight:700; font-size:20px">H</div>
+        <div style="flex:1; min-width:0">
+          <div style="display:flex; align-items:baseline; justify-content:space-between; gap:14px">
+            <span style="color:#f1ede9; font-size:16.5px; font-weight:600">Hosting · bulan pertama</span>
+            <span style="white-space:nowrap; font-family:'JetBrains Mono',monospace; font-size:15px; color:#f1ede9">Rp 99.000</span>
+          </div>
+          <p style="margin:7px 0 0; font-size:13.5px; line-height:1.5; color:#8a837d; max-width:340px">Auto-pause kalau nggak aktif &gt;30 hari. Stop kapan saja dari dashboard.</p>
+        </div>
+      </div>
+
+      <!-- Always-On add-on toggle -->
+      <div onClick="{{ toggleAddon }}" style="margin-top:24px; display:flex; align-items:center; gap:16px; padding:16px 18px; border-radius:14px; cursor:pointer; background:{{ addonBg }}; border:1px solid {{ addonBorder }}; transition:background .2s, border-color .2s">
+        <span style="flex:none; width:22px; height:22px; border-radius:6px; background:{{ addonBoxBg }}; border:1.5px solid {{ addonBoxBorder }}; display:grid; place-items:center; color:#fff; font-size:13px; transition:all .2s">{{ addonCheck }}</span>
+        <div style="flex:1; min-width:0">
+          <div style="color:#f1ede9; font-size:15.5px; font-weight:600">Always-On add-on</div>
+          <div style="margin-top:3px; font-size:13px; color:#8a837d">VPS 24/7, skip auto-suspend</div>
+        </div>
+        <span style="white-space:nowrap; font-family:'JetBrains Mono',monospace; font-size:15px; color:#ff7a5e; font-weight:500">+ Rp 49k/bln</span>
+      </div>
+
+      <!-- subtotal rows -->
+      <div style="margin-top:28px; display:flex; flex-direction:column; gap:14px">
+        <div style="display:flex; align-items:center; justify-content:space-between">
+          <span style="font-size:14.5px; color:#9a938d">Setup <span style="color:#6a6660">(full price)</span></span>
+          <span style="font-family:'JetBrains Mono',monospace; font-size:14.5px; color:#c9c3bd">{{ planFullStr }}</span>
+        </div>
+        <div style="align-items:center; justify-content:space-between; display:{{ discountRowDisplay }}">
+          <span style="font-size:14.5px; color:#9a938d">Diskon launch</span>
+          <span style="font-family:'JetBrains Mono',monospace; font-size:14.5px; color:#6fe39a">{{ discountStr }}</span>
+        </div>
+        <div style="align-items:center; justify-content:space-between; display:{{ addonRowDisplay }}">
+          <span style="font-size:14.5px; color:#9a938d">Always-On add-on</span>
+          <span style="font-family:'JetBrains Mono',monospace; font-size:14.5px; color:#c9c3bd">+Rp 49.000</span>
+        </div>
+      </div>
+
+      <!-- divider -->
+      <div style="height:1px; margin:22px 0; background:rgba(255,255,255,.1)"></div>
+
+      <!-- total -->
+      <div style="display:flex; align-items:baseline; justify-content:space-between">
+        <span style="font-size:21px; font-weight:700; color:#f8f4f0">Total hari ini</span>
+        <span style="font-family:'Plus Jakarta Sans',sans-serif; font-weight:800; font-size:24px; color:#f8f4f0">{{ totalStr }}</span>
+      </div>
+
+      <!-- recurring box -->
+      <div style="margin-top:22px; padding:18px 20px; border-radius:14px; background:#0d0b0c; border:1px solid rgba(255,255,255,.08)">
+        <div style="display:flex; align-items:center; justify-content:space-between">
+          <span style="font-size:14.5px; color:#cfc9c3; font-weight:500">Recurring tiap bulan</span>
+          <span style="font-family:'JetBrains Mono',monospace; font-size:14px; color:#f1ede9; font-weight:500">Rp 99.000/bulan</span>
+        </div>
+        <div style="margin-top:14px; display:flex; flex-direction:column; gap:9px">
+          <div style="display:flex; gap:9px; font-size:13px; color:#8a837d"><span style="color:#5f5853">·</span>Hosting auto-pause kalau kamu nggak aktif &gt;30 hari</div>
+          <div style="display:flex; gap:9px; font-size:13px; color:#8a837d"><span style="color:#5f5853">·</span>Stop kapan saja dari dashboard, no commitment</div>
+        </div>
+      </div>
+
+      <!-- promo code -->
+      <div style="margin-top:16px; border-radius:14px; background:#0d0b0c; border:1px solid rgba(255,255,255,.08); overflow:hidden">
+        <div onClick="{{ togglePromo }}" style="display:flex; align-items:center; gap:13px; padding:18px 20px; cursor:pointer">
+          <span style="flex:none; width:24px; height:24px; border-radius:7px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.12); display:grid; place-items:center; color:#9a938d; font-size:15px; transition:transform .3s; transform:rotate({{ promoRot }})">+</span>
+          <span style="font-size:14.5px; color:#cfc9c3; font-weight:500">Punya kode promo?</span>
+        </div>
+        <div style="max-height:{{ promoMaxH }}; overflow:hidden; transition:max-height .35s cubic-bezier(.16,1,.3,1)">
+          <div style="display:flex; gap:10px; padding:0 20px 20px">
+            <input type="text" placeholder="Masukkan kode" style="flex:1; min-width:0; padding:12px 14px; border-radius:10px; background:#0a0809; border:1px solid rgba(255,255,255,.12); color:#f1ede9; font-family:'JetBrains Mono',monospace; font-size:13.5px; transition:border-color .2s, box-shadow .2s">
+            <button style="flex:none; padding:0 20px; border-radius:10px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.14); color:#f1ede9; font-family:'Plus Jakarta Sans',sans-serif; font-weight:600; font-size:14px; cursor:pointer">Pakai</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============ RIGHT: detail form ============ -->
+  <div style="position:relative; background:linear-gradient(180deg, #0a0809, #070608); border-left:1px solid rgba(255,255,255,.06); padding:54px clamp(32px,5vw,80px) 80px; display:flex; justify-content:flex-start">
+    <div style="width:100%; max-width:540px">
+
+      <h1 style="margin:34px 0 0; font-family:'Plus Jakarta Sans',sans-serif; font-weight:700; font-size:38px; letter-spacing:-.02em; color:#f8f4f0">Detail kamu</h1>
+      <p style="margin:14px 0 0; font-size:15px; line-height:1.6; color:#9a938d; max-width:430px">Setup sekali bayar. Hosting Rp 99k/bulan, stop kapan saja. Cara bayar kamu pilih di langkah terakhir.</p>
+
+      <!-- email -->
+      <div style="margin-top:40px">
+        <label style="display:block; font-size:14.5px; font-weight:600; color:#e9e4e0">Email <span style="color:#ee3c30">*</span></label>
+        <p style="margin:8px 0 12px; font-size:13px; color:#8a837d">Receipt + status agent kamu kami kirim ke email ini.</p>
+        <input type="email" placeholder="you@company.com" ref="{{ emailRef }}" style="width:100%; padding:15px 16px; border-radius:12px; background:#0d0b0c; border:1px solid rgba(255,255,255,.12); color:#f1ede9; font-family:'Plus Jakarta Sans',sans-serif; font-size:15px; transition:border-color .2s, box-shadow .2s">
+      </div>
+
+      <!-- country -->
+      <div style="margin-top:24px">
+        <label style="display:block; font-size:14.5px; font-weight:600; color:#e9e4e0; margin-bottom:10px">Country or region</label>
+        <div style="position:relative">
+          <select ref="{{ countryRef }}" style="width:100%; appearance:none; -webkit-appearance:none; padding:15px 16px; border-radius:12px; background:#0d0b0c; border:1px solid rgba(255,255,255,.12); color:#f1ede9; font-family:'Plus Jakarta Sans',sans-serif; font-size:15px; cursor:pointer; transition:border-color .2s, box-shadow .2s">
+            <option>Indonesia</option>
+            <option>Singapore</option>
+            <option>Malaysia</option>
+            <option>Philippines</option>
+            <option>Other</option>
+          </select>
+          <span style="position:absolute; right:16px; top:50%; transform:translateY(-50%); color:#7c736e; pointer-events:none; font-size:12px">▼</span>
+        </div>
+      </div>
+
+      <!-- agreements -->
+      <div style="margin-top:24px; padding:20px 22px; border-radius:14px; background:#0d0b0c; border:1px solid rgba(255,255,255,.08); display:flex; flex-direction:column; gap:18px">
+        <div onClick="{{ toggleAgree }}" style="display:flex; gap:13px; cursor:pointer">
+          <span style="flex:none; margin-top:1px; width:20px; height:20px; border-radius:5px; background:{{ agreeBoxBg }}; border:1.5px solid {{ agreeBoxBorder }}; display:grid; place-items:center; color:#fff; font-size:12px; transition:all .2s">{{ agreeCheck }}</span>
+          <span style="font-size:13.5px; line-height:1.55; color:#b8b1ab">Saya menyetujui <span style="color:#e7e3df; text-decoration:underline; text-underline-offset:2px">Syarat dan Ketentuan</span>, <span style="color:#e7e3df; text-decoration:underline; text-underline-offset:2px">Kebijakan Privasi</span>, dan <span style="color:#e7e3df; text-decoration:underline; text-underline-offset:2px">Kebijakan Pengembalian Dana</span> weuseai.agent. <span style="color:#ee3c30">*</span></span>
+        </div>
+        <div onClick="{{ toggleNews }}" style="display:flex; gap:13px; cursor:pointer">
+          <span style="flex:none; margin-top:1px; width:20px; height:20px; border-radius:5px; background:{{ newsBoxBg }}; border:1.5px solid {{ newsBoxBorder }}; display:grid; place-items:center; color:#fff; font-size:12px; transition:all .2s">{{ newsCheck }}</span>
+          <span style="font-size:13.5px; line-height:1.55; color:#b8b1ab">Saya bersedia menerima email pemberitahuan produk dan tips pemakaian (opsional, bisa unsubscribe kapan saja).</span>
+        </div>
+      </div>
+
+      <!-- pay button -->
+      <button onClick="{{ pay }}" style="position:relative; overflow:hidden; width:100%; margin-top:26px; padding:19px; border-radius:15px; border:1px solid {{ payBorder }}; background:{{ payBg }}; box-shadow:{{ payShadow }}; color:{{ payColor }}; font-family:'Plus Jakarta Sans',sans-serif; font-weight:700; font-size:17px; text-shadow:0 1px 2px rgba(120,15,5,.5); cursor:{{ payCursor }}">
+        <span style="position:absolute; top:0; left:-40%; width:40%; height:100%; background:linear-gradient(105deg, transparent, rgba(255,255,255,.35), transparent); animation:sheenSweep 4.5s ease-in-out infinite 1s"></span>
+        <span style="position:relative">{{ payLabel }}</span>
+      </button>
+
+      <p style="display:{{ errorDisplay }}; margin:14px 0 0; padding:11px 14px; border-radius:10px; background:rgba(238,60,48,.1); border:1px solid rgba(238,60,48,.35); color:#ff8a72; font-size:13.5px; text-align:center">{{ error }}</p>
+      <p style="margin:16px 0 0; text-align:center; font-size:13.5px; line-height:1.6; color:#8a837d">Bayar via QRIS, GoPay, OVO, DANA, atau transfer di halaman Xendit.</p>
+      <p style="margin:12px 0 0; text-align:center; font-size:13.5px; line-height:1.6; color:#8a837d">Bot kamu aktif sekitar 8 menit setelah pembayaran — jam berapa pun. Berhenti kapan saja; <span style="color:#cfc9c3; text-decoration:underline; text-underline-offset:2px; cursor:pointer">refund policy</span> tertulis.</p>
+      <div style="margin-top:18px; display:flex; align-items:center; justify-content:center; gap:8px; font-size:13px; color:#8a837d"><span>🔒</span>Secure payment · TLS encrypted</div>
+
+      <!-- divider + footer -->
+      <div style="height:1px; margin:30px 0 22px; background:rgba(255,255,255,.07)"></div>
+      <div style="display:flex; gap:26px; font-size:13.5px; color:#8a837d">
+        <a href="#" style="color:#8a837d; text-decoration:none; transition:color .2s" style-hover="color:#f1ede9">Syarat</a>
+        <a href="#" style="color:#8a837d; text-decoration:none; transition:color .2s" style-hover="color:#f1ede9">Privasi</a>
+        <a href="#" style="color:#8a837d; text-decoration:none; transition:color .2s" style-hover="color:#f1ede9">Kontak</a>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  emailRef = React.createRef();
+  countryRef = React.createRef();
+  state = { addon: false, promoOpen: false, agreed: false, news: false, submitting: false, error: '' };
+
+  fmt(n) { return 'Rp ' + Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
+
+  PLANS = {
+    bare:            { name: 'Bare Agent',      thumb: 'B', title: 'Bare Agent · setup',      sub: 'Agent AI dasar di Telegram — tanpa persona, siap dipakai.', price: 99000 },
+    solo:            { name: 'Solo Starter',    thumb: 'S', title: 'Solo Starter · setup',    sub: '3 persona inti untuk kerja harian kamu.', price: 399000 },
+    'voice-starter': { name: 'Voice Starter',   thumb: 'V', title: 'Voice Starter · setup',   sub: '3 persona inti, plus kirim voice note ke agent kamu.', price: 599000 },
+    'library-full':  { name: 'Library Lengkap', thumb: 'L', title: 'Library Lengkap · setup', sub: 'Semua 10 persona + voice. Library paling lengkap.', old: 999000, price: 799000 },
+    'done-for-you':  { name: 'Siap Pakai',      thumb: 'P', title: 'Siap Pakai · setup',      sub: '8 persona + voice + web app, di-fine-tune untuk kamu.', price: 1299000 },
+  };
+  ALIAS = { starter: 'voice-starter', pro: 'done-for-you', studio: 'library-full' };
+
+  planKey() {
+    let raw = '';
+    try { raw = (new URL(window.location.href).searchParams.get('plan') || '').toLowerCase(); } catch (e) {}
+    raw = this.ALIAS[raw] || raw;
+    return this.PLANS[raw] ? raw : 'library-full';
+  }
+
+  toggleAddon = () => this.setState(s => ({ addon: !s.addon }));
+  togglePromo = () => this.setState(s => ({ promoOpen: !s.promoOpen }));
+  toggleAgree = () => this.setState(s => ({ agreed: !s.agreed, error: '' }));
+  toggleNews  = () => this.setState(s => ({ news: !s.news }));
+
+  pay = async () => {
+    if (this.state.submitting) return;
+    const email = ((this.emailRef.current && this.emailRef.current.value) || '').trim();
+    if (!this.state.agreed) { this.setState({ error: 'Centang persetujuan Syarat dan Ketentuan dulu untuk lanjut.' }); return; }
+    if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { this.setState({ error: 'Masukkan email yang valid — receipt + status agent dikirim ke sini.' }); return; }
+    const country = (this.countryRef.current && this.countryRef.current.value) || 'Indonesia';
+    this.setState({ submitting: true, error: '' });
+    const FN = 'https://gtjgsligllbjcisiyrah.supabase.co/functions/v1';
+    const ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd0amdzbGlnbGxiamNpc2l5cmFoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0Njc2NjUsImV4cCI6MjA5MzA0MzY2NX0.krPAvB3kyxcqsBS5dyDahFMqCB_4MZKaz6FEB0RfjtY';
+    const now = new Date().toISOString();
+    try {
+      const res = await fetch(FN + '/create-invoice', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: 'Bearer ' + ANON },
+        body: JSON.stringify({
+          email, plan: this.planKey(), alwaysOn: this.state.addon, methodId: 'qris',
+          country, postal: '', tos_accepted_at: now,
+          marketing_opt_in_at: this.state.news ? now : null, policy_version: 'v1.0',
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data || !data.invoice_url) {
+        const code = data && data.error;
+        const msg = (code === 'tos_required' || code === 'tos_stale') ? 'Persetujuan perlu dicentang ulang, lalu coba lagi.'
+          : code === 'invalid_email' ? 'Email tidak valid. Periksa lalu coba lagi.'
+          : 'Gagal membuat invoice. Coba lagi sebentar.';
+        this.setState({ submitting: false, error: msg });
+        return;
+      }
+      window.location.href = data.invoice_url;
+    } catch (e) {
+      this.setState({ submitting: false, error: 'Koneksi gagal. Cek internet kamu, lalu coba lagi.' });
+    }
+  };
+
+  renderVals() {
+    const p = this.PLANS[this.planKey()];
+    const HOSTING = 99000, ALWAYS_ON = 49000;
+    const base = p.price + HOSTING + (this.state.addon ? ALWAYS_ON : 0);
+    const total = base + Math.round(base * 0.007);
+    const hasOld = !!p.old;
+    const sub = this.state.submitting;
+    return {
+      planName: p.name, planThumb: p.thumb, planTitle: p.title, planSub: p.sub,
+      planSetupStr: this.fmt(p.price),
+      planOldStr: hasOld ? this.fmt(p.old) : '',
+      oldDisplay: hasOld ? 'inline' : 'none',
+      planFullStr: this.fmt(hasOld ? p.old : p.price),
+      discountStr: hasOld ? '−' + this.fmt(p.old - p.price) : '',
+      discountRowDisplay: hasOld ? 'flex' : 'none',
+      totalStr: this.fmt(total),
+
+      toggleAddon: this.toggleAddon,
+      addonBg: this.state.addon ? 'rgba(238,60,48,.08)' : 'rgba(255,255,255,.02)',
+      addonBorder: this.state.addon ? 'rgba(238,60,48,.42)' : 'rgba(255,255,255,.1)',
+      addonBoxBg: this.state.addon ? 'linear-gradient(180deg,#ff8a52,#ee3c30 55%,#c01f12)' : 'transparent',
+      addonBoxBorder: this.state.addon ? 'rgba(255,150,120,.7)' : 'rgba(255,255,255,.22)',
+      addonCheck: this.state.addon ? '✓' : '',
+      addonRowDisplay: this.state.addon ? 'flex' : 'none',
+
+      togglePromo: this.togglePromo,
+      promoRot: this.state.promoOpen ? '45deg' : '0deg',
+      promoMaxH: this.state.promoOpen ? '120px' : '0px',
+
+      toggleAgree: this.toggleAgree, toggleNews: this.toggleNews,
+      agreeBoxBg: this.state.agreed ? 'linear-gradient(180deg,#ff8a52,#ee3c30 55%,#c01f12)' : 'transparent',
+      agreeBoxBorder: this.state.agreed ? 'rgba(255,150,120,.7)' : 'rgba(255,255,255,.24)',
+      agreeCheck: this.state.agreed ? '✓' : '',
+      newsBoxBg: this.state.news ? 'linear-gradient(180deg,#ff8a52,#ee3c30 55%,#c01f12)' : 'transparent',
+      newsBoxBorder: this.state.news ? 'rgba(255,150,120,.7)' : 'rgba(255,255,255,.24)',
+      newsCheck: this.state.news ? '✓' : '',
+
+      emailRef: this.emailRef, countryRef: this.countryRef,
+      pay: this.pay,
+      payLabel: sub ? 'Memproses…' : ('Bayar Sekarang · ' + this.fmt(total)),
+      error: this.state.error,
+      errorDisplay: this.state.error ? 'block' : 'none',
+
+      payBg: (this.state.agreed && !sub) ? 'linear-gradient(180deg,#ff8a52,#ee3c30 55%,#c01f12)' : '#1a1413',
+      payBorder: (this.state.agreed && !sub) ? 'rgba(255,150,120,.6)' : 'rgba(255,255,255,.1)',
+      payColor: (this.state.agreed && !sub) ? '#fff' : '#7c736e',
+      payShadow: (this.state.agreed && !sub) ? 'inset 0 1.5px 1px rgba(255,225,205,.7), inset 0 -5px 11px rgba(150,20,5,.45), 0 16px 36px rgba(238,60,48,.5)' : 'none',
+      payCursor: sub ? 'wait' : (this.state.agreed ? 'pointer' : 'not-allowed'),
+    };
+  }
+}
+</script>
+</body>
+</html>
