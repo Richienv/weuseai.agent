@@ -64,6 +64,11 @@
   // The band ships `hidden`. It only un-hides once a real count is in hand.
   // A failed/blocked fetch leaves it hidden forever — the page just omits it.
   var BATCH_LIMIT = 1000;
+  // Below this, the band stays hidden. Showing a truthful "2 / 1.000" would
+  // advertise that nobody has bought yet — so we say nothing instead. Omitting a
+  // counter is honest; inventing one is not. Raise/lower freely; the ONLY rule is
+  // that whatever renders must be the real number from the endpoint.
+  var MIN_DISPLAY = 25;
   var batchCount = null; // null until a real number arrives
 
   function paintBatch() {
@@ -74,7 +79,7 @@
     // the `hidden` attribute, which would otherwise leave an empty "— / 1.000"
     // scarcity band on screen. Hide via style too, since `hidden` alone loses to
     // the element's own display rule.
-    if (batchCount === null) {
+    if (batchCount === null || batchCount < MIN_DISPLAY) {
       band.hidden = true;
       band.style.display = 'none';
       return;
