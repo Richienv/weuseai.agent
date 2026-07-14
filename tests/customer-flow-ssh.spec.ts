@@ -191,6 +191,32 @@ test('flow: ssh.runSetup failure → subscription marked failed + alert + throws
   )
 })
 
+test('flow: ssh.runSetup failure → orphan VM is reaped (delete called), not left billing', async () => {
+  const deps = makeDeps()
+  ;(deps.vps as any).getPublicIp = async () => '1.2.3.4'
+  deps.ssh.setNextResult({ ok: false, stdout: '', stderr: 'connection refused', exitCode: 255 })
+
+  // Spy on delete — a paid-but-failed provision must NOT leave the VM
+  // running (it would bill ~$5/mo forever + let the retry stack a 2nd VM).
+  const deleted: string[] = []
+  const origDelete = deps.vps.delete.bind(deps.vps)
+  ;(deps.vps as any).delete = async (id: string) => {
+    deleted.push(id)
+    return origDelete(id)
+  }
+
+  const r = await spinUpCustomer(
+    { customerId: 'cust-reap', tier: 'pro', customerTelegramBotToken: 'tok' },
+    deps,
+  )
+  await assert.rejects(() => r.done, /SSH setup failed|connection refused/)
+
+  const row = deps.store.vpsInstances.values().next().value
+  assert.equal(row?.status, 'failed', 'row marked failed')
+  assert.ok(deleted.length >= 1, 'failed-provision VM must be reaped (deleted)')
+  assert.equal(deleted[0], row?.vps_id, 'reaped the VM created for this customer')
+})
+
 test('flow: idempotent — second call returns existing row, no second SSH', async () => {
   const deps = makeDeps()
   ;(deps.vps as any).getPublicIp = async () => '1.2.3.4'
