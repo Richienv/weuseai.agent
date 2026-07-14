@@ -6,6 +6,7 @@
   <title>Lengkapi profil agent — weuseai.agent</title>
   <meta name="description" content="Lengkapi profil agent kamu — 4 langkah, sekitar 5 menit.">
   <meta name="robots" content="noindex,nofollow" />
+  <link rel="canonical" href="https://weuseai-agent.vercel.app/onboarding" />
   <meta name="theme-color" content="#0a0a0a" />
   <link rel="icon" type="image/svg+xml" href="assets/logo.svg" />
   <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png" />
@@ -349,6 +350,55 @@
     .chip:hover { background: rgba(255, 255, 255, 0.10); border-color: rgba(255, 255, 255, 0.22); color: var(--ink); }
     .chip:active { transform: translateY(1px); }
 
+    /* Persona picker (Step 4) — card grid, radio-select */
+    .persona-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    @media (min-width: 560px) {
+      .persona-grid { grid-template-columns: 1fr 1fr; }
+    }
+    .persona-card {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding: 14px 16px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--field-bg);
+      cursor: pointer;
+      transition: border-color 180ms ease, box-shadow 180ms ease, background 180ms ease;
+      position: relative;
+    }
+    .persona-card:hover { border-color: rgba(255, 255, 255, 0.24); }
+    .persona-card.is-selected {
+      border-color: var(--signal-red);
+      box-shadow: 0 0 0 3px rgba(229, 50, 45, 0.15);
+      background: rgba(229, 50, 45, 0.06);
+    }
+    .persona-card .persona-name {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--ink);
+    }
+    .persona-card .persona-blurb {
+      font-size: 12px;
+      line-height: 1.5;
+      color: rgba(245, 245, 245, 0.6);
+    }
+    .persona-card input[type="radio"] {
+      position: absolute;
+      opacity: 0;
+      width: 1px;
+      height: 1px;
+    }
+    .persona-card:focus-within {
+      border-color: var(--signal-red);
+      box-shadow: 0 0 0 3px rgba(229, 50, 45, 0.15);
+    }
+
     /* Step transitions ----------------------------------------------- */
     @keyframes stepFadeIn {
       from { opacity: 0; transform: translateY(8px); }
@@ -499,15 +549,48 @@
 
         <form id="step1-form" style="margin-top: 28px; display: flex; flex-direction: column; gap: 16px;" novalidate>
           <div>
-            <label class="field-label" for="f-name">Nama</label>
-            <input id="f-name" class="field-input readonly" readonly aria-readonly="true" value="" />
+            <label class="field-label" for="f-name">
+              <span style="font-weight: 500;">1. Nama</span>
+              <span aria-hidden="true" style="color:#e5322d; margin-left: 2px;">*</span>
+            </label>
+            <input
+              id="f-name"
+              class="field-input focus-ring"
+              type="text"
+              autocomplete="name"
+              placeholder="Nama lengkap kamu"
+              maxlength="80"
+              required
+            />
+            <p id="f-name-help" class="field-help">
+              Dipakai untuk tagihan dan kontak support.
+            </p>
+            <p id="f-name-error" class="field-error" aria-live="polite"></p>
           </div>
           <div>
-            <label class="field-label" for="f-email">Email</label>
-            <input id="f-email" class="field-input readonly" readonly aria-readonly="true" value="" type="email" />
+            <label class="field-label" for="f-email">
+              <span style="font-weight: 500;">2. Email</span>
+              <span aria-hidden="true" style="color:#e5322d; margin-left: 2px;">*</span>
+            </label>
+            <input
+              id="f-email"
+              class="field-input focus-ring"
+              type="email"
+              autocomplete="off"
+              placeholder="kamu@email.com"
+              readonly
+              required
+            />
+            <p id="f-email-help" class="field-help">
+              Email pembayaran kamu — diambil otomatis dari data pembayaran, tidak perlu diubah.
+            </p>
+            <p id="f-email-error" class="field-error" aria-live="polite"></p>
           </div>
           <div>
-            <label class="field-label" for="f-whatsapp">Nomor WhatsApp</label>
+            <label class="field-label" for="f-whatsapp">
+              <span style="font-weight: 500;">3. Nomor WhatsApp</span>
+              <span aria-hidden="true" style="color:#e5322d; margin-left: 2px;">*</span>
+            </label>
             <input
               id="f-whatsapp"
               class="field-input focus-ring"
@@ -643,9 +726,26 @@
 
         <div class="pair-code-wrap">
           <div class="eyebrow" style="margin-bottom: 10px;">Kode pasangan kamu</div>
-          <div id="pair-code" class="pair-code" aria-label="Kode pasangan 6 digit" role="img"></div>
+          <div id="pair-code" class="pair-code" aria-label="Kode pasangan 6 digit" role="img" aria-live="polite">
+            <!-- Loading placeholder (Track 4 P0 fix, 2026-05-10): visible
+                 until rotatePairingCode resolves, then renderPairingCode
+                 overwrites this with the digit cells. Without this the
+                 box is empty for ~5s and customers think it's broken. -->
+            <span data-pair-code-loading style="display:inline-flex; align-items:center; gap:10px; font-size:14px; color:rgba(245,245,245,0.65); font-family:'Inter',sans-serif; font-weight:300; letter-spacing:0;">
+              <span class="pulse-dot" aria-hidden="true"></span>
+              <span>Membuat kode pasangan…</span>
+            </span>
+          </div>
           <div id="pair-expiry" class="mono" style="font-size: 12px; color: rgba(245,245,245,0.5); margin-top: 14px;">
             Kode kadaluarsa dalam: <span data-mmss>—:—</span>
+          </div>
+          <!-- Soft-timeout slot (filled by JS after PAIR_CODE_SLOW_MS). -->
+          <div
+            id="pair-code-slow"
+            data-pair-code-slow
+            style="display:none; margin-top:12px; font-size:12px; font-style:italic; color:rgba(245,245,245,0.55);"
+          >
+            Sedang lambat — coba refresh halaman, atau hubungi support kalau tidak muncul juga.
           </div>
         </div>
 
@@ -664,12 +764,42 @@
                 Buka Telegram
                 <span aria-hidden="true">→</span>
               </a>
+              <div style="margin-top: 10px; font-size: 12px; color: rgba(245,245,245,0.55);">
+                Bukan bot kamu —
+                <a
+                  href="#reset-bot"
+                  data-reset-bot-link
+                  role="button"
+                  class="focus-ring"
+                  style="color: rgba(245,245,245,0.75); text-decoration: underline;"
+                >Ganti bot</a>
+                (paste ulang token dari BotFather)
+              </div>
             </div>
           </li>
           <li>
             <span class="num">02</span>
             <div class="body">
-              <div class="text">Kirim pesan: <span class="mono" style="color: rgba(245,245,245,0.95);">/pair <span data-pair-inline>—</span></span></div>
+              <!-- Track 5 of post-pair UX polish (2026-05-10): hint added
+                   so customers know to /start the bot before sending /pair.
+                   Without /start, Telegram blocks bot replies (which are
+                   silent now per Track 3 anyway, but the bot also can't
+                   READ the user's first message until they /start). -->
+              <div class="text" style="color: rgba(245,245,245,0.65); font-size: 13px; margin-bottom: 6px;">
+                Klik <span class="mono" style="color: rgba(245,245,245,0.85);">/start</span> di bot dulu, baru kirim:
+              </div>
+              <div class="text" style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <span class="mono" style="color: rgba(245,245,245,0.95);">/pair <span data-pair-inline>—</span></span>
+                <button
+                  type="button"
+                  data-copy-pair-cmd
+                  class="btn-secondary focus-ring"
+                  style="padding: 4px 10px; font-size: 12px; min-width: 64px;"
+                  aria-label="Salin perintah /pair ke clipboard"
+                >
+                  <span data-copy-pair-label>Salin</span>
+                </button>
+              </div>
             </div>
           </li>
           <li>
@@ -723,6 +853,44 @@
         </p>
 
         <form id="step3-form" style="margin-top: 28px;" novalidate>
+          <!-- ─── Genesis Onboarding (2026-06-13): "forward aja" fast path ─── -->
+          <!-- Optional. Pastes work samples → genesis-distill → pre-fills the -->
+          <!-- expectations + persona below. The customer still reviews and -->
+          <!-- submits via the normal flow; distill never submits. Degrades -->
+          <!-- gracefully: if it fails (or isn't deployed yet), the manual -->
+          <!-- path below is fully untouched. -->
+          <div id="genesis-panel" style="margin-bottom: 28px; padding: 18px; border: 1px solid rgba(245,245,245,0.14); border-radius: 14px; background: rgba(245,245,245,0.03);">
+            <div class="eyebrow" style="margin-bottom: 8px;">Cara cepat</div>
+            <label class="field-label" for="f-samples" style="margin-bottom: 4px;">
+              Forward contoh kerja kamu, biar aku yang nyusun
+            </label>
+            <p style="font-size: 12px; color: rgba(245,245,245,0.5); margin: 0 0 10px;">
+              Tempel satu proposal, beberapa chat klien, atau caption kamu. Aku baca, lalu isi bagian bawah otomatis — kamu tinggal cek dan sesuaikan.
+            </p>
+            <textarea
+              id="f-samples"
+              class="field-input focus-ring"
+              rows="4"
+              maxlength="8000"
+              placeholder="Tempel di sini: proposal, chat bisnis, caption, atau daftar klien kamu."
+              style="line-height: 1.55; min-height: 96px; resize: vertical;"
+            ></textarea>
+            <div style="display: flex; align-items: center; gap: 12px; margin-top: 10px; flex-wrap: wrap;">
+              <button id="genesis-cta" type="button" class="focus-ring"
+                style="background: transparent; color: #f5f5f5; border: 1px solid rgba(245,245,245,0.3); border-radius: 999px; padding: 10px 18px; font: inherit; font-size: 13px; cursor: pointer;">
+                <span class="genesis-cta-spinner" aria-hidden="true" style="display: none;"></span>
+                <span class="genesis-cta-label">Biar aku yang nyusun</span>
+              </button>
+              <p id="genesis-status" class="field-error" aria-live="polite" style="margin: 0; flex: 1; min-width: 140px;"></p>
+            </div>
+            <div id="genesis-summary" hidden
+              style="margin-top: 14px; padding: 12px 14px; border-radius: 10px; background: rgba(229,50,45,0.08); border: 1px solid rgba(229,50,45,0.28);">
+              <div id="genesis-summary-eyebrow" class="eyebrow" style="margin-bottom: 6px; color: #E5322D;">Ini yang aku tangkap</div>
+              <p id="genesis-summary-text" style="margin: 0; font-size: 13px; line-height: 1.6; color: rgba(245,245,245,0.92);"></p>
+              <p style="margin: 8px 0 0; font-size: 12px; color: rgba(245,245,245,0.55);">Sudah aku isi di bawah — cek dan sesuaikan sebelum lanjut.</p>
+            </div>
+          </div>
+
           <label class="field-label" for="f-expectations">
             Apa yang paling kamu butuhkan dari agent kamu?
           </label>
@@ -751,6 +919,26 @@
               <button type="button" class="chip focus-ring" data-preset="Trading analysis">Trading analysis</button>
               <button type="button" class="chip focus-ring" data-preset="Bantuan tugas">Bantuan tugas</button>
             </div>
+          </div>
+
+          <!-- ─── Persona picker (2026-05-17) ─── -->
+          <!-- Customer picks ONE persona from the set their tier grants. -->
+          <!-- Cards are rendered by JS (renderPersonaPicker) from the -->
+          <!-- tier resolved off the customer's subscription row. -->
+          <div style="margin-top: 28px;">
+            <label class="field-label" for="persona-grid" style="margin-bottom: 4px;">
+              Pilih persona agent kamu
+            </label>
+            <p style="font-size: 12px; color: rgba(245,245,245,0.5); margin: 0 0 4px;">
+              Persona menentukan keahlian dan gaya agent. Kamu bisa ganti nanti.
+            </p>
+            <div
+              id="persona-grid"
+              class="persona-grid"
+              role="radiogroup"
+              aria-label="Persona agent"
+            ></div>
+            <p id="persona-error" class="field-error" aria-live="polite" style="margin-top: 8px;"></p>
           </div>
 
           <button id="step3-cta" type="submit" class="btn-primary focus-ring" aria-disabled="true" disabled style="margin-top: 28px;">
@@ -816,10 +1004,17 @@
       </div>
       <div class="links">
         <a href="/#faq" class="focus-ring">FAQ</a>
-        <a href="/syarat" class="focus-ring">syarat</a>
-        <a href="/privasi" class="focus-ring">privasi</a>
-        <a href="/kontak" class="focus-ring">kontak</a>
+        <a href="/terms" class="focus-ring">syarat</a>
+        <a href="/privacy" class="focus-ring">privasi</a>
+        <a href="/refund-policy" class="focus-ring">pengembalian</a>
+        <a href="/contact" class="focus-ring">kontak</a>
       </div>
+    </div>
+    <div class="container row" style="margin-top: 14px;">
+      <p style="margin: 0; font-size: 11px; color: rgba(245,245,245,0.55); line-height: 1.5;">
+        Dioperasikan oleh Richie Kidnovell, berbasis di Jakarta.
+        Kontak: <a href="mailto:support@weuseai.agent" class="focus-ring" style="color: rgba(245,245,245,0.75);">support@weuseai.agent</a>.
+      </p>
     </div>
   </footer>
 
@@ -861,6 +1056,53 @@
     const PAIR_POLL_MS  = 3_000;       // founder-locked: 3s
     const CODE_LIFETIME = 30 * 60_000; // founder-locked: 30 min
 
+    // ─── Persona library (2026-05-17) ───────────────────────────
+    // Mirror of supabase/functions/_shared/tier-personas.ts (TIER_PERSONAS
+    // + PERSONA_META). Static page — can't import the TS module. The
+    // server re-validates the submitted slug against the customer's tier
+    // in complete-onboarding (tier_does_not_grant_persona, 403), so this
+    // mirror is a UX convenience, not a trust boundary. Keep in lockstep
+    // with tier-personas.ts when the persona library changes.
+    const _SET_3 = ['the-pro', 'doc-expert', 'slide-master'];
+    const _SET_8 = [
+      'the-pro', 'doc-expert', 'slide-master', 'deep-researcher',
+      'trade-pro', 'project-conductor', 'video-producer', 'social-conductor',
+    ];
+    const _SET_10 = [
+      'the-pro', 'doc-expert', 'slide-master', 'deep-researcher',
+      'trade-pro', 'project-conductor', 'video-producer', 'social-conductor',
+      'web-app-builder', 'business-agent',
+    ];
+    const TIER_PERSONAS = {
+      // v1.4 canonical slugs (tier-personas.ts TIER_PERSONAS). bare is
+      // persona-free ([]); done-for-you carries the 8 Pro set; library-full
+      // carries all 10. Pinned to tier-personas.ts by the onboarding
+      // tier-persona drift gate (tests/onboarding-tier-personas-drift.spec.ts).
+      'bare': [],
+      'solo': _SET_3,
+      'voice-starter': _SET_3,
+      'done-for-you': _SET_8,
+      'library-full': _SET_10,
+      // Deprecated count-based aliases (expand-then-contract) — still resolve
+      // server-side via resolveTier(). starter→3, pro→8 Pro set, studio→10.
+      'starter': _SET_3,
+      'pro': _SET_8,
+      'studio': _SET_10,
+    };
+    const DEFAULT_PERSONA = 'the-pro';
+    const PERSONA_META = {
+      'the-pro': { name: 'The Pro', blurb: 'Pendamping kerja harian. Briefing pagi, ingatan lintas sesi, bantu apa pun.' },
+      'doc-expert': { name: 'Doc Expert', blurb: 'Draft laporan, proposal, dan email yang sesuai gaya kamu.' },
+      'slide-master': { name: 'Slide Master', blurb: 'Susun deck presentasi dari poin mentah jadi slide rapi.' },
+      'deep-researcher': { name: 'Deep Researcher', blurb: 'Riset mendalam, banding sumber, dan rangkum temuan jadi ringkas.' },
+      'trade-pro': { name: 'Trade Pro', blurb: 'Analisis pasar dan rangkuman data trading. Bukan saran finansial.' },
+      'project-conductor': { name: 'Project Conductor', blurb: 'Jaga big picture project — bagi task, monitor progres, ingatkan blocker.' },
+      'video-producer': { name: 'Video Producer', blurb: 'Bantu konsep, script, dan alur produksi video dari ide sampai jadi.' },
+      'social-conductor': { name: 'Social Conductor', blurb: 'Rencanakan konten sosial, susun kalender, dan draft caption.' },
+      'web-app-builder': { name: 'Web Creator', blurb: 'Bangun landing page dan web app sederhana dari brief kamu.' },
+      'business-agent': { name: 'Business Director', blurb: 'Orkestrasi lintas departemen — operasi, marketing, sampai keuangan.' },
+    };
+
     // ─── URL ────────────────────────────────────────────────────
     const params = new URLSearchParams(location.search);
     const cid    = params.get('cid');
@@ -883,6 +1125,12 @@
     const $step2BotCta  = document.getElementById('step2bot-cta');
     const $botUsernameDisplay = document.querySelectorAll('[data-bot-username-display]');
     const $pairBotLink = document.querySelector('[data-pair-bot-link]');
+    // Wrong-bot recovery (2026-05-10 P0 fix): "Bukan bot kamu — Ganti bot"
+    // sends customer back to step 2 after server-side reset of stored bot
+    // fields. Without this, a customer who pasted the wrong token (e.g.
+    // a typosquat handle that Telegram getMe accepted as legit) is stuck
+    // with the bad link until they wipe localStorage manually.
+    const $resetBotLink = document.querySelector('[data-reset-bot-link]');
 
     const $pairCode    = document.getElementById('pair-code');
     const $pairInline  = document.querySelector('[data-pair-inline]');
@@ -895,6 +1143,15 @@
     const $step3Form       = document.getElementById('step3-form');
     const $step3Cta        = document.getElementById('step3-cta');
     const $chips           = document.querySelectorAll('.chip');
+    const $personaGrid     = document.getElementById('persona-grid');
+    const $personaError    = document.getElementById('persona-error');
+
+    // Genesis Onboarding "forward aja" fast path (2026-06-13)
+    const $samples            = document.getElementById('f-samples');
+    const $genesisCta         = document.getElementById('genesis-cta');
+    const $genesisStatus      = document.getElementById('genesis-status');
+    const $genesisSummary     = document.getElementById('genesis-summary');
+    const $genesisSummaryText = document.getElementById('genesis-summary-text');
 
     const $overlay        = document.getElementById('submit-overlay');
     const $submitPanel    = document.getElementById('submit-panel');
@@ -908,10 +1165,14 @@
     // ─── State ──────────────────────────────────────────────────
     let currentStep   = '1';
     let customer      = null;          // CustomerRow from Supabase
+    let paymentEmail  = null;          // email from the payment record (customer-onboarding-info)
     let pairingCode   = null;
     let pairingExpiry = null;          // Date
     let expiryTimer   = null;
     let pollTimer     = null;
+    // Persona selection (2026-05-17)
+    let customerTier    = null;        // 'starter' | 'pro' | 'studio'
+    let selectedPersona = null;        // chosen agent_slug
 
     // ─── Helpers ────────────────────────────────────────────────
 
@@ -926,7 +1187,7 @@
       // to the matching customer row. Without the header, anon SELECT
       // returns 0 rows even for the allowlisted columns.
       const url = `${SUPABASE_URL}/rest/v1/customers?id=eq.${encodeURIComponent(cid)}` +
-        `&select=id,display_name,telegram_chat_id,telegram_bot_username,pairing_code,pairing_code_expires_at`;
+        `&select=id,display_name,telegram_chat_id,telegram_bot_username,pairing_code,pairing_code_expires_at,genesis_draft`;
       return fetch(url, {
         headers: {
           apikey: SUPABASE_ANON_KEY,
@@ -937,6 +1198,115 @@
         if (!r.ok) throw new Error(`fetchCustomer: ${r.status}`);
         return r.json();
       }).then((rows) => rows[0] ?? null);
+    }
+
+    /**
+     * Resolve the customer's tier from their most recent subscription.
+     * Persona selection (2026-05-17): the persona picker shows only the
+     * personas this tier grants. Anon SELECT on `subscriptions` is
+     * RLS-scoped by the X-CID header (Sesi D P0-3) — same pattern
+     * welcome.html's pollOnce uses. Returns 'starter' | 'pro' | 'studio'
+     * or null on any failure (caller falls back to 'starter').
+     */
+    /**
+     * Email-mismatch fix (2026-05-17): resolve the customer's email from
+     * the PAYMENT record (the customers row xendit-webhook created from
+     * Xendit's payer_email), server-side, via the X-CID-gated
+     * customer-onboarding-info Edge Function. This replaces the old
+     * global-localStorage source that showed the wrong email when a
+     * browser ran more than one checkout. Returns the email string, or
+     * null on any failure (caller leaves the field editable).
+     */
+    async function fetchOnboardingInfo() {
+      const r = await fetch(`${SUPABASE_URL}/functions/v1/customer-onboarding-info`, {
+        method: 'POST',
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          'X-CID': cid,
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ customer_id: cid }),
+      });
+      if (!r.ok) throw new Error(`customer-onboarding-info: ${r.status}`);
+      const j = await r.json();
+      return (j && typeof j.email === 'string' && j.email) ? j.email : null;
+    }
+
+    function fetchTier() {
+      const url =
+        `${SUPABASE_URL}/rest/v1/subscriptions` +
+        `?customer_id=eq.${encodeURIComponent(cid)}` +
+        `&select=tier,status,started_at` +
+        `&order=started_at.desc&limit=1`;
+      return fetch(url, {
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          'X-CID': cid,
+        },
+      }).then((r) => {
+        if (!r.ok) throw new Error(`fetchTier: ${r.status}`);
+        return r.json();
+      }).then((rows) => {
+        const t = rows[0]?.tier;
+        // Accept any tier slug we have a persona map for — the v1.4
+        // canonical slugs (bare/solo/voice-starter/library-full/done-for-you)
+        // AND the deprecated aliases (starter/pro/studio). Unknown → null.
+        return (t && Object.prototype.hasOwnProperty.call(TIER_PERSONAS, t)) ? t : null;
+      });
+    }
+
+    /**
+     * Render the persona picker cards for the customer's tier. Customer
+     * MUST be able to pick ANY persona their tier grants — every tier
+     * persona gets a card. Default selection: 'the-pro' if in tier (it
+     * always is — first-of-list invariant), else the first tier persona.
+     */
+    function renderPersonaPicker() {
+      const slugs = TIER_PERSONAS[customerTier] || TIER_PERSONAS.starter;
+      // v1.4 `bare` (persona-free): no picker. Render an honest note and
+      // leave selectedPersona null — the submit handler skips the persona
+      // gate for persona-free tiers and posts agent_slug: null.
+      if (slugs.length === 0) {
+        selectedPersona = null;
+        $personaError.textContent = '';
+        $personaGrid.innerHTML =
+          '<p class="persona-blurb" style="opacity:.8">' +
+          'Paket dasar — agent kamu jalan sebagai asisten umum berbasis DeepSeek, ' +
+          'tanpa persona khusus. Kamu bisa upgrade kapan saja untuk menambah persona.' +
+          '</p>';
+        return;
+      }
+      const preferred = slugs.indexOf(DEFAULT_PERSONA) !== -1
+        ? DEFAULT_PERSONA
+        : slugs[0];
+      // Preserve an earlier choice across re-renders (tab resume); else
+      // default. Never leave selectedPersona pointing outside the tier.
+      if (!selectedPersona || slugs.indexOf(selectedPersona) === -1) {
+        selectedPersona = preferred;
+      }
+      $personaGrid.innerHTML = '';
+      slugs.forEach((slug) => {
+        const meta = PERSONA_META[slug] || { name: slug, blurb: '' };
+        const label = document.createElement('label');
+        label.className = 'persona-card focus-ring';
+        label.dataset.persona = slug;
+        if (slug === selectedPersona) label.classList.add('is-selected');
+        const checked = slug === selectedPersona ? ' checked' : '';
+        label.innerHTML =
+          `<input type="radio" name="persona" value="${slug}"${checked} />` +
+          `<span class="persona-name">${meta.name}</span>` +
+          `<span class="persona-blurb">${meta.blurb}</span>`;
+        label.querySelector('input').addEventListener('change', () => {
+          selectedPersona = slug;
+          $personaError.textContent = '';
+          $personaGrid.querySelectorAll('.persona-card').forEach((c) => {
+            c.classList.toggle('is-selected', c.dataset.persona === slug);
+          });
+        });
+        $personaGrid.appendChild(label);
+      });
     }
 
     /**
@@ -977,6 +1347,50 @@
       if ($pairBotLink) {
         $pairBotLink.href = `https://t.me/${encodeURIComponent(username)}`;
       }
+    }
+
+    /**
+     * Wrong-bot recovery (2026-05-10 P0 fix): customer realises the bot
+     * shown next to "Buka Telegram" is wrong (e.g. they pasted a token
+     * for a different / typosquat bot). Calls reset-bot-pairing edge fn
+     * to clear telegram_bot_token + telegram_bot_username + telegram_chat_id
+     * for this cid (service-role write — anon UPDATE is locked down per
+     * Sesi D P0-2). Then sends the customer back to step 2 to re-paste.
+     */
+    async function resetBotPairing() {
+      try {
+        const r = await fetch(`${SUPABASE_URL}/functions/v1/reset-bot-pairing`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ customer_id: cid }),
+        });
+        if (!r.ok) {
+          throw new Error(`reset-bot-pairing: ${r.status}`);
+        }
+        // Clear in-memory state so applyBotUsername won't re-hydrate it.
+        if (customer) {
+          customer.telegram_bot_username = null;
+          customer.telegram_chat_id = null;
+        }
+        $botUsernameDisplay.forEach((el) => {
+          el.textContent = '@bot kamu';
+        });
+        if ($pairBotLink) $pairBotLink.href = 'https://t.me/';
+        if ($botToken) $botToken.value = '';
+        setStep('2');
+      } catch (err) {
+        // Surface the failure so the customer knows we didn't reset; they
+        // can retry or contact support. Don't navigate away — leaves
+        // current state intact.
+        const msg = `Gagal me-reset bot — coba lagi atau hubungi support. (${err.message})`;
+        alert(msg);
+      }
+    }
+    if ($resetBotLink) {
+      $resetBotLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        void resetBotPairing();
+      });
     }
 
     /**
@@ -1111,23 +1525,182 @@
 
     function renderStep1() {
       $name.value = customer.display_name ?? '';
-      $email.value = customer.email ?? '';
+      // Email-mismatch fix (2026-05-17): the email shown is the PAYMENT
+      // record's email, resolved server-side by fetchOnboardingInfo()
+      // (customer-onboarding-info, X-CID gated). It is metadata of the
+      // payment — NOT user-editable — so the field stays readonly when
+      // resolved. The old code sourced this from a global localStorage
+      // key, which showed the wrong customer's email on any browser that
+      // ran more than one checkout. localStorage is no longer consulted
+      // for the email. If the server lookup failed (paymentEmail null),
+      // the field is made editable so the customer can still proceed.
+      if (paymentEmail) {
+        $email.value = paymentEmail;
+        $email.readOnly = true;
+      } else {
+        $email.value = customer.email ?? '';
+        $email.readOnly = false;
+      }
       if (customer.whatsapp_number) $whatsapp.value = customer.whatsapp_number;
     }
 
-    $step1Form.addEventListener('submit', (e) => {
+    /**
+     * Step 1 server-side persist (2026-05-10 P0 fix). Customers can complete
+     * checkout without filling Name + WhatsApp. Step 1 is now the
+     * canonical capture point — POSTs to save-onboarding-profile (service
+     * role) before advancing. Without this, Name/WhatsApp lived only in
+     * localStorage until final submit, so a customer who closed the tab
+     * after step 1 lost both fields.
+     */
+    const $nameErr     = document.getElementById('f-name-error');
+    const $emailErr    = document.getElementById('f-email-error');
+
+    function clearStep1Errors() {
+      if ($nameErr) $nameErr.textContent = '';
+      if ($emailErr) $emailErr.textContent = '';
+      $whatsappErr.textContent = '';
+      // Clear red-border highlight on all step-1 inputs.
+      [$name, $email, $whatsapp].forEach((inp) => {
+        if (!inp) return;
+        inp.style.borderColor = '';
+        inp.style.boxShadow = '';
+      });
+    }
+
+    /**
+     * Mark a field as invalid: red border + inline error message.
+     * Track 2 of post-pair UX polish (2026-05-10): checkout + step 1
+     * use the same prominence treatment for consistency.
+     */
+    function markStep1FieldInvalid(input, errEl, msg) {
+      if (input) {
+        input.style.borderColor = '#e5322d';
+        input.style.boxShadow = '0 0 0 3px rgba(229,50,45,0.10)';
+      }
+      if (errEl) errEl.textContent = msg;
+    }
+
+    // Clear red-border highlight as the customer corrects the field.
+    [$name, $email, $whatsapp].forEach((inp) => {
+      if (!inp) return;
+      inp.addEventListener('input', () => {
+        inp.style.borderColor = '';
+        inp.style.boxShadow = '';
+      });
+    });
+
+    function validEmailFormat(s) {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
+    }
+
+    async function saveStep1Profile(payload) {
+      const r = await fetch(`${SUPABASE_URL}/functions/v1/save-onboarding-profile`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ customer_id: cid, ...payload }),
+      });
+      // Edge Function 401 with platform body (UNAUTHORIZED_NO_AUTH_HEADER)
+      // would historically swallow into our generic "Koneksi gagal" toast.
+      // Read body as text first so we surface non-JSON / non-200 to the
+      // browser console for next-time diagnosis (fixed in PR for the
+      // 2026-05-10 verify_jwt regression — see config.toml history note).
+      const rawBody = await r.text();
+      let data = {};
+      try { data = JSON.parse(rawBody); } catch { /* non-JSON body */ }
+      if (!r.ok) {
+        console.error('[onboarding] save-onboarding-profile failed', {
+          status: r.status,
+          statusText: r.statusText,
+          body: rawBody.slice(0, 500),
+        });
+        const err = new Error(`save-onboarding-profile: ${r.status}`);
+        err.status = r.status;
+        err.field = data && data.field;
+        err.code = data && data.code;
+        err.payload = data;
+        err.rawBody = rawBody;
+        throw err;
+      }
+      return data;
+    }
+
+    $step1Form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const wa = $whatsapp.value;
+      clearStep1Errors();
+
+      const name = ($name.value || '').trim();
+      const email = ($email.value || '').trim();
+      const wa = ($whatsapp.value || '').trim();
+
+      // Client-side validation mirrors save-onboarding-profile-handler so
+      // we surface friendly inline errors before the server round-trip.
+      // Track 2 prominence (2026-05-10): also paint red border on the
+      // first invalid input so the customer can see WHERE the problem
+      // is at a glance, not just the inline error.
+      if (!name) {
+        markStep1FieldInvalid($name, $nameErr, 'Nama wajib diisi.');
+        $name.focus();
+        return;
+      }
+      if (!email) {
+        markStep1FieldInvalid($email, $emailErr, 'Email wajib diisi.');
+        $email.focus();
+        return;
+      }
+      if (!validEmailFormat(email)) {
+        markStep1FieldInvalid($email, $emailErr, 'Format email belum benar (mis. kamu@email.com).');
+        $email.focus();
+        return;
+      }
       if (!validWhatsappFormat(wa)) {
-        $whatsappErr.textContent = 'Format nomor belum benar. Mulai dengan 08 atau +62.';
+        markStep1FieldInvalid($whatsapp, $whatsappErr, 'Format nomor belum benar. Mulai dengan 08 atau +62.');
         $whatsapp.focus();
         return;
       }
-      $whatsappErr.textContent = '';
-      // Persist WA in-memory + localStorage so a tab refresh after Step 1
-      // doesn't lose it (we only PATCH it server-side at final submit).
-      customer.whatsapp_number = wa.trim();
-      try { localStorage.setItem(`onboarding_wa_${cid}`, customer.whatsapp_number); } catch {}
+
+      const cta = document.getElementById('step1-cta');
+      if (cta) cta.disabled = true;
+      try {
+        await saveStep1Profile({
+          display_name: name,
+          email: email,
+          whatsapp_number: wa,
+        });
+      } catch (err) {
+        const field = err && err.field;
+        const status = err && err.status;
+        const target =
+          field === 'display_name' ? $nameErr :
+          field === 'email' ? $emailErr :
+          field === 'whatsapp_number' ? $whatsappErr :
+          null;
+        if (target) {
+          target.textContent = 'Tidak bisa menyimpan. Coba lagi atau hubungi support.';
+        } else if ($whatsappErr) {
+          // Distinguish auth/server failures from network ones so the
+          // customer sees a different action hint. Underlying detail goes
+          // to console.error inside saveStep1Profile.
+          if (status === 401 || status === 403) {
+            $whatsappErr.textContent = 'Sesi tidak valid. Refresh halaman dan coba lagi.';
+          } else if (status >= 500) {
+            $whatsappErr.textContent = 'Server lagi error. Coba lagi sebentar atau hubungi support.';
+          } else {
+            $whatsappErr.textContent = 'Koneksi gagal. Coba lagi.';
+          }
+        }
+        if (cta) cta.disabled = false;
+        return;
+      }
+
+      // Mirror to in-memory + localStorage so other steps see the values
+      // without re-hydrating from server.
+      customer.display_name = name;
+      customer.email = email;
+      customer.whatsapp_number = wa;
+      try { localStorage.setItem(`onboarding_wa_${cid}`, wa); } catch {}
+
+      if (cta) cta.disabled = false;
+
       // Pair-flow Option A routing (2026-05-09):
       //  - already paired (chat_id set) → Step 4 (expectations) — full resume
       //  - bot token already validated (username set) but not yet paired → Step 3
@@ -1192,7 +1765,32 @@
 
     // ─── STEP 2: Pasangkan Telegram ─────────────────────────────
 
+    // Track 4 P0 fix (2026-05-10): soft-timeout that surfaces a "lambat"
+    // hint if rotate-pairing-code takes >10s. Without this, customers
+    // see "Membuat kode pasangan…" indefinitely on slow networks and
+    // assume the page is broken.
+    const PAIR_CODE_SLOW_MS = 10_000;
+    let pairCodeSlowTimer = null;
+
+    function clearPairCodeSlowTimer() {
+      if (pairCodeSlowTimer) {
+        clearTimeout(pairCodeSlowTimer);
+        pairCodeSlowTimer = null;
+      }
+      const slow = document.querySelector('[data-pair-code-slow]');
+      if (slow) slow.style.display = 'none';
+    }
+
+    function armPairCodeSlowTimer() {
+      clearPairCodeSlowTimer();
+      pairCodeSlowTimer = setTimeout(() => {
+        const slow = document.querySelector('[data-pair-code-slow]');
+        if (slow) slow.style.display = 'block';
+      }, PAIR_CODE_SLOW_MS);
+    }
+
     async function startPairing() {
+      armPairCodeSlowTimer();
       try {
         // Resume check: if pairing already complete (chat_id set), jump
         // straight to Step 4 (expectations). Pair-flow Option A renumbered:
@@ -1200,6 +1798,7 @@
         const fresh = await fetchCustomer();
         customer = { ...customer, ...fresh, whatsapp_number: customer.whatsapp_number };
         if (customer.telegram_chat_id) {
+          clearPairCodeSlowTimer();
           setStep('4');
           return;
         }
@@ -1209,10 +1808,12 @@
         pairingCode = data.code;
         pairingExpiry = new Date(data.expires_at);
 
+        clearPairCodeSlowTimer();
         renderPairingCode(pairingCode);
         startExpiryTicker();
         startPairingPoll();
       } catch (err) {
+        clearPairCodeSlowTimer();
         // Friendly retry — most likely cause is a transient network blip.
         $pairStatus.innerHTML = `
           <span style="font-size: 14px; color: rgba(245,245,245,0.85); flex: 1;">Gagal menyiapkan kode pasangan.</span>
@@ -1237,6 +1838,56 @@
       if ($pairInline) $pairInline.textContent = code;
     }
 
+    /**
+     * Track 5 of post-pair UX polish (2026-05-10): copy "/pair <code>"
+     * to clipboard so customers can paste straight into Telegram instead
+     * of retyping (especially fiddly on mobile). Falls back to a
+     * textarea + execCommand for environments without async clipboard
+     * (older mobile webviews).
+     */
+    (function wireCopyPairButton() {
+      const btn = document.querySelector('[data-copy-pair-cmd]');
+      const label = document.querySelector('[data-copy-pair-label]');
+      if (!btn) return;
+      btn.addEventListener('click', async () => {
+        const code = $pairInline?.textContent?.trim();
+        if (!code || code === '—' || !/^\d{6}$/.test(code)) {
+          // Code not yet rendered (still rotating) — nudge politely.
+          if (label) {
+            label.textContent = 'Tunggu kode';
+            setTimeout(() => { label.textContent = 'Salin'; }, 1200);
+          }
+          return;
+        }
+        const cmd = `/pair ${code}`;
+        let ok = false;
+        try {
+          if (navigator.clipboard?.writeText) {
+            await navigator.clipboard.writeText(cmd);
+            ok = true;
+          } else {
+            // Fallback: textarea + execCommand. Required on iOS Safari
+            // when accessed without a secure-context-mediated clipboard
+            // (e.g. preview deploys before HTTPS is in the cache).
+            const ta = document.createElement('textarea');
+            ta.value = cmd;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            ok = document.execCommand('copy');
+            document.body.removeChild(ta);
+          }
+        } catch {
+          ok = false;
+        }
+        if (label) {
+          label.textContent = ok ? 'Disalin ✓' : 'Gagal salin';
+          setTimeout(() => { label.textContent = 'Salin'; }, 1500);
+        }
+      });
+    })();
+
     function startExpiryTicker() {
       const $mmss = $pairExpiry.querySelector('[data-mmss]');
       const tick = () => {
@@ -1259,8 +1910,14 @@
     }
 
     function renderExpired() {
+      // A4 (audit §P1-CF-7, 2026-05-13): expired-state copy now
+      // explains the 30-min auto-expiry is a security feature and
+      // sets expectation that re-generation is a ~5 second tap.
+      // Pre-fix terse "Kode kadaluarsa." read as a customer mistake;
+      // new copy frames it as a normal-by-design event with a fast
+      // recovery path.
       $pairStatus.innerHTML = `
-        <span style="font-size: 14px; color: rgba(245,245,245,0.85); flex: 1;">Kode kadaluarsa.</span>
+        <span style="font-size: 14px; color: rgba(245,245,245,0.85); flex: 1; line-height: 1.5;">Kode pasangan kadaluarsa otomatis setelah 30 menit untuk keamanan. Mulai ulang untuk dapat kode baru — cepat, sekitar 5 detik.</span>
         <button type="button" class="btn-secondary focus-ring" id="rotate-now">Mulai ulang <span aria-hidden="true">→</span></button>
       `;
       document.getElementById('rotate-now')?.addEventListener('click', () => {
@@ -1358,11 +2015,115 @@
       });
     });
 
+    // ─── Genesis Onboarding: "forward aja" fast path (2026-06-13) ───
+    // Calls genesis-distill, then PRE-FILLS the expectations textarea +
+    // persona picker below. It never submits — the customer reviews and
+    // uses the normal submit button. Any failure degrades to the manual
+    // path with an honest nudge; it never blocks onboarding.
+    function setGenesisLoading(on) {
+      if (!$genesisCta) return;
+      $genesisCta.disabled = on;
+      const sp = $genesisCta.querySelector('.genesis-cta-spinner');
+      const lb = $genesisCta.querySelector('.genesis-cta-label');
+      if (sp) sp.style.display = on ? 'inline-block' : 'none';
+      if (lb) lb.textContent = on ? 'Lagi baca...' : 'Biar aku yang nyusun';
+    }
+
+    async function runGenesisDistill() {
+      const samples = ($samples.value || '').trim();
+      $genesisStatus.textContent = '';
+      if (samples.length < 40) {
+        $genesisStatus.textContent =
+          'Tempel sedikit lebih banyak — satu proposal atau beberapa chat sudah cukup.';
+        return;
+      }
+      setGenesisLoading(true);
+      let r, data = null;
+      try {
+        r = await fetch(`${SUPABASE_URL}/functions/v1/genesis-distill`, {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+            'X-CID': cid,
+          },
+          body: JSON.stringify({
+            customer_id: cid,
+            tier: customerTier || 'starter',
+            samples,
+          }),
+        });
+        try { data = await r.json(); } catch { /* keep null */ }
+      } catch (err) {
+        setGenesisLoading(false);
+        $genesisStatus.textContent =
+          'Belum bisa nyusun otomatis sekarang. Tulis langsung di bawah aja.';
+        return;
+      }
+      setGenesisLoading(false);
+
+      if (!r.ok || !data || !data.ok) {
+        // Graceful: never block the manual path.
+        $genesisStatus.textContent =
+          'Belum bisa nyusun otomatis sekarang. Tulis langsung di bawah aja.';
+        return;
+      }
+
+      applyGenesisDraft(data, { scroll: true });
+    }
+
+    // Pre-fill Step 4 from a distilled draft — shared by the web "forward
+    // aja" path (runGenesisDistill) and the Telegram-native path (a draft
+    // already on the customer row, distilled when they forwarded samples to
+    // their bot). Only fills inputs; the customer still reviews + submits.
+    function applyGenesisDraft(draft, opts) {
+      opts = opts || {};
+      if (!draft) return;
+      if (typeof draft.expectations_paragraph === 'string' && draft.expectations_paragraph.length > 0) {
+        $expectations.value = draft.expectations_paragraph;
+        $expectations.dispatchEvent(new Event('input'));
+      }
+      if (draft.recommended_persona) {
+        const tierSlugs = TIER_PERSONAS[customerTier] || TIER_PERSONAS.starter;
+        if (tierSlugs.indexOf(draft.recommended_persona) !== -1) {
+          selectedPersona = draft.recommended_persona;
+          renderPersonaPicker();
+        }
+      }
+      if (typeof draft.summary_bahasa === 'string' && draft.summary_bahasa.length > 0) {
+        const eyebrow = document.getElementById('genesis-summary-eyebrow');
+        if (eyebrow) {
+          eyebrow.textContent =
+            opts.source === 'telegram' ? 'Dari yang kamu forward di Telegram' : 'Ini yang aku tangkap';
+        }
+        $genesisSummaryText.textContent = draft.summary_bahasa;
+        $genesisSummary.hidden = false;
+      }
+      if (opts.scroll) $expectations.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    if ($genesisCta) {
+      $genesisCta.addEventListener('click', runGenesisDistill);
+    }
+
     $step3Form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const text = $expectations.value.trim();
       if (text.length < 10) {
         $expectationsErr.textContent = 'Tulis minimal 1 kalimat biar agent ngerti karakter kamu.';
+        return;
+      }
+      // Persona selection (2026-05-17): a persona MUST be picked before
+      // submit. selectedPersona is set by renderPersonaPicker's default,
+      // so this guards only the pathological no-render case.
+      // v1.4 `bare` (persona-free): tier grants no personas — skip the gate
+      // entirely and submit with selectedPersona null (agent_slug: null).
+      const tierSlugs = TIER_PERSONAS[customerTier] || TIER_PERSONAS.starter;
+      if (tierSlugs.length > 0 &&
+          (!selectedPersona || tierSlugs.indexOf(selectedPersona) === -1)) {
+        $personaError.textContent = 'Pilih satu persona untuk agent kamu.';
+        $personaGrid.scrollIntoView({ behavior: 'smooth', block: 'center' });
         return;
       }
       await submitOnboarding(text);
@@ -1392,6 +2153,9 @@
             customer_id: cid,
             whatsapp: customer.whatsapp_number,
             expectations_text,
+            // Persona selection (2026-05-17): the chosen persona slug.
+            // complete-onboarding re-validates it against the tier.
+            agent_slug: selectedPersona,
           }),
         });
       } catch (err) {
@@ -1448,6 +2212,37 @@
         $expectationsErr.textContent = 'Ada karakter yang ditolak. Tulis ulang tanpa tag/kode.';
         return;
       }
+      // Persona selection (2026-05-17): server rejected the chosen
+      // persona as out-of-tier. Should be unreachable — the picker only
+      // renders tier personas — but a stale tab or a tier downgrade
+      // could trip it. Send the customer back to the picker.
+      if (r.status === 403 && data?.error === 'tier_does_not_grant_persona') {
+        $overlay.hidden = true;
+        setBtnLoading($step3Cta, false);
+        $personaError.textContent =
+          'Persona itu tidak tersedia di paket kamu. Pilih persona lain.';
+        $personaGrid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      // Capacity-exhaustion path. Originally the IDCloudHost honest-error
+      // fix (2026-05-11); now applies to Vultr+DO double-capacity-fail
+      // post-cutover. A3 / audit §P1-CF-6 Phase 1 (+ P2-CF-8 jargon
+      // fix in passing): customer needs to know the retry IS automatic
+      // and the 30-min email fallback exists. "Server VPS" tech-name
+      // leak from the original 2026-05-11 copy is also dropped.
+      //
+      // D1 (P1-CF-6 Phase 2) — the pg_cron retry worker that honors
+      // the "every 3 menit" promise — ships separately. Until then,
+      // the 30-min email promise is kept by founder-manual
+      // intervention (audit explicitly documents this Phase-1 path).
+      // See docs/investigation/2026-05-11-pair-failure.md.
+      if (r.status === 503 && data?.error === 'vps_capacity_exhausted') {
+        showSubmitError(
+          'Sistem infrastruktur sedang ramai. Agent kamu dijadwalkan ulang otomatis — kami coba lagi setiap 3 menit. Kalau dalam 30 menit belum berhasil, tim kami hubungi kamu via email. Stay di halaman ini atau cek email untuk update.',
+          true,
+        );
+        return;
+      }
       // 502 / 503 / 500 / unknown
       showSubmitError('Ada kendala teknis. Coba lagi dalam 1 menit, atau hubungi tim via WhatsApp.', true);
     }
@@ -1500,6 +2295,17 @@
         return;
       }
 
+      // Email-mismatch fix (2026-05-17): resolve the email from the
+      // PAYMENT record server-side (customer-onboarding-info, X-CID
+      // gated) — never from browser localStorage. localStorage held a
+      // single global key, so a browser that ran more than one checkout
+      // showed the wrong (previous) customer's email on this form.
+      try {
+        paymentEmail = await fetchOnboardingInfo();
+      } catch {
+        paymentEmail = null; // renderStep1 leaves the field editable
+      }
+
       // Restore in-flight WA from localStorage (only relevant when the
       // server-side row doesn't have whatsapp_number yet — Step 3 submit
       // is the moment we PATCH it). Keyed by cid so multiple checkouts
@@ -1510,6 +2316,25 @@
       } catch {}
 
       renderStep1();
+
+      // Persona selection (2026-05-17): resolve tier, then build the
+      // persona picker. A tier-read failure is non-fatal — fall back to
+      // 'starter' (smallest persona set; server re-validates anyway) so
+      // onboarding never blocks on this.
+      try {
+        customerTier = await fetchTier();
+      } catch {
+        customerTier = null;
+      }
+      if (!customerTier) customerTier = 'starter';
+      renderPersonaPicker();
+
+      // Genesis Onboarding Phase 3b (2026-06-13): if the customer forwarded
+      // work samples to their bot, the webhook already distilled + stored a
+      // draft. Pre-fill Step 4 from it so they finish with one confirm.
+      if (customer && customer.genesis_draft) {
+        applyGenesisDraft(customer.genesis_draft, { source: 'telegram' });
+      }
 
       // Pre-populate the bot username deeplink if we already validated
       // it server-side (resume case after a tab refresh post-Step 2).

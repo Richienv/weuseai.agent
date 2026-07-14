@@ -75,6 +75,13 @@ verify_jwt = false
 [functions.workflow-execute]
 verify_jwt = false
 
+# Playbook state-machine engine (Phase 1 Week 2, 2026-05-18 consult).
+# Hermes on the customer's VPS calls this server-to-server to drive a
+# persona playbook. Bypasses Supabase JWT — same model as workflow-execute
+# — and the handler does its own X-CID == customer_id gate.
+[functions.flow-state]
+verify_jwt = false
+
 [functions.invoice-generator-handler]
 verify_jwt = false
 
@@ -120,4 +127,68 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.customer-tier-bump]
+verify_jwt = false
+
+# Per-customer Telegram bot pairing flow (Phase 1, Pair-flow Option A —
+# 2026-05-09). All four bypass Supabase JWT — see comments above for the
+# auth-pattern rationale (cid + paid subscription verified server-side
+# for browser-callable; Telegram secret-token header for the webhook).
+#
+# History note (2026-05-10): validate-bot-token + pair-customer-bot-webhook
+# were missing from this file at one point and got 401-ed in prod after a
+# deploy that flipped them back to verify_jwt=true. Same regression class
+# as the 2026-05-02 xendit-webhook incident referenced at the top of this
+# file. tests/edge-fn-verify-jwt-config.spec.ts now pins this shut.
+#
+#   - validate-bot-token        → onboarding step 2 (browser pastes the
+#                                  customer's BotFather token)
+#   - pair-customer-bot-webhook → Telegram → customer's own bot when they
+#                                  send /pair <code>; auth = secret-token
+#                                  header on setWebhook
+#   - reset-bot-pairing         → onboarding step 3 "Bukan bot kamu —
+#                                  Ganti bot" recovery (PR #56)
+#   - save-onboarding-profile   → onboarding step 1 capture of Name +
+#                                  Email + WhatsApp post-payment (PR #57)
+[functions.validate-bot-token]
+verify_jwt = false
+
+[functions.pair-customer-bot-webhook]
+verify_jwt = false
+
+[functions.reset-bot-pairing]
+verify_jwt = false
+
+[functions.save-onboarding-profile]
+verify_jwt = false
+
+# Track 1 (post-pair UX polish, 2026-05-10): browser-callable readiness
+# probe wrapper. welcome.html polls this every 10s during state A/B and
+# only transitions to "klik Buka Telegram" when critical checks pass.
+# Authz: customer_id must be UUID + map to existing customer with
+# subscription. No PII in response (just 8 booleans + vps_id + ip).
+[functions.customer-readiness]
+verify_jwt = false
+
+# Track 3c (2026-05-10): admin-only manual rescue path. Service-role
+# JWT required. Gateway verifies bearer (verify_jwt=true), then
+# isServiceRoleCaller in the handler extracts role from the verified
+# JWT. Per docs/security/jwt-role-pattern.md.
+[functions.admin-customer-vps-refresh]
+verify_jwt = true
+
+# Genesis Onboarding (2026-06-13): called from onboarding.html in the
+# browser — same model as complete-onboarding. The customer has no Supabase
+# JWT; authz is "knowledge of the cid UUID" + the handler's own
+# X-CID == customer_id gate. The function has NO side effects (no DB writes,
+# no provisioning) — it only distills pasted samples into a draft the
+# customer confirms — so the exposure here is an LLM call, not state.
+[functions.genesis-distill]
+verify_jwt = false
+
+# Dashboard chat relay (Phase 2, 2026-06-16): browser-facing relay for the
+# "chat dengan agent kamu" web UI. The browser carries no Supabase Auth JWT;
+# authz is the X-CID == customer_id gate + a durable per-cid rate/budget cap,
+# enforced in the handler. Ships DARK — AGENT_CHAT_ENABLED defaults false, so
+# every request 404s until the live throwaway-VPS spike validates the transport.
+[functions.agent-chat-relay]
 verify_jwt = false

@@ -1,0 +1,118 @@
+# Phase 4 (2026-05-14): e2e smoke against production.
+#
+# Origin: founder hotfix brief 2026-05-14 — none of the 1577 unit/
+# integration tests caught the customer-flow regression because nothing
+# tested the assembled HTTP flow against the LIVE deployed system.
+# This workflow closes that gap.
+#
+# Triggers:
+#
+#   1. push to main           — post-deploy verification. Vercel
+#      starts a production build on every push; we wait ~60 s for
+#      it to roll out, then smoke. If a deploy lands code that
+#      breaks the customer flow, founder gets a Telegram DM within
+#      ~2 minutes of merge.
+#
+#   2. schedule (daily 03:00 UTC = 10:00 SGT) — catches third-party
+#      drift (Xendit changing endpoint shapes, Supabase env rotations,
+#      Vercel CDN regional weirdness) that wouldn't show up in a
+#      code-change-triggered run.
+#
+#   3. workflow_dispatch     — manual trigger for ad-hoc smoke runs
+#      from the GitHub Actions UI.
+#
+# Pull-request triggers are INTENTIONALLY OMITTED in v1:
+#   - Each smoke run creates a real Supabase customers row + Xendit
+#     invoice API call. PR-triggered would multiply that by every push.
+#   - Vercel preview alias-naming is unpredictable from CI context
+#     (uses a hash suffix), so targeting the PR's actual preview is
+#     non-trivial without a Vercel API lookup step.
+#   - Post-deploy on main catches everything that matters for the
+#     "first paying customer" gate.
+# Pre-merge can be added in a follow-up once a preview-deploy resolver
+# is wired.
+#
+# On failure: a founder Telegram DM is sent via scripts/notify-smoke-
+# failure.mjs (mirrors the PR #110 retry-worker alert pattern: reuses
+# SUPPORT_TELEGRAM_BOT_TOKEN + RICHIE_CHAT_ID, throws are swallowed).
+# This is in addition to GitHub Actions' native failure notification.
+#
+# Required GitHub Actions secrets:
+#   SUPPORT_TELEGRAM_BOT_TOKEN — bot to DM from
+#   RICHIE_CHAT_ID             — founder DM chat_id
+# Missing either → the script no-ops (workflow still fails appropriately).
+
+name: e2e smoke (production)
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 3 * * *'  # daily 03:00 UTC = 10:00 SGT
+  workflow_dispatch:
+    inputs:
+      target_url:
+        description: 'Override smoke target URL (default: weuseai-agent.vercel.app)'
+        required: false
+        default: ''
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Wait for Vercel deploy to roll out (post-deploy trigger only)
+        if: github.event_name == 'push'
+        run: |
+          echo "Waiting 60 s for Vercel production deploy to roll out…"
+          sleep 60
+
+      - name: Compute smoke target
+        id: target
+        run: |
+          if [ -n "${{ inputs.target_url }}" ]; then
+            echo "url=${{ inputs.target_url }}" >> "$GITHUB_OUTPUT"
+            echo "trigger=workflow_dispatch" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event_name }}" = "schedule" ]; then
+            echo "url=https://weuseai-agent.vercel.app" >> "$GITHUB_OUTPUT"
+            echo "trigger=daily" >> "$GITHUB_OUTPUT"
+          else
+            echo "url=https://weuseai-agent.vercel.app" >> "$GITHUB_OUTPUT"
+            echo "trigger=post-deploy" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run e2e smoke
+        id: smoke
+        env:
+          E2E_SMOKE_BASE: ${{ steps.target.outputs.url }}
+        run: |
+          set -o pipefail
+          npx tsx --test tests/e2e/smoke-production.spec.ts 2>&1 | tee smoke.log
+
+      - name: Notify founder via Telegram DM (on failure)
+        if: failure()
+        env:
+          SUPPORT_TELEGRAM_BOT_TOKEN: ${{ secrets.SUPPORT_TELEGRAM_BOT_TOKEN }}
+          RICHIE_CHAT_ID: ${{ secrets.RICHIE_CHAT_ID }}
+          E2E_SMOKE_BASE: ${{ steps.target.outputs.url }}
+          SMOKE_TRIGGER: ${{ steps.target.outputs.trigger }}
+        run: |
+          node scripts/notify-smoke-failure.mjs smoke.log || echo "(notify script swallowed an error)"
+
+      - name: Upload smoke log as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-log-${{ github.run_id }}
+          path: smoke.log
+          retention-days: 14

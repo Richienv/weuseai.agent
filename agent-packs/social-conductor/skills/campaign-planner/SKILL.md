@@ -75,6 +75,12 @@ Persona-voice wrapper untuk product-launch (4 weeks):
 >
 > Mau adjust phase split, atau lanjut?"
 
+## Fetch template
+
+Sebelum susun campaign plan, panggil `bundle-fetch` dengan `agent_slug` `social-conductor` dan filter `kind` ke `reference` atau `brief`. Kalau template registry punya entry yang cocok (mis. `campaign-template.md` untuk plan template phase-by-phase, `campaign-brief.md` untuk brief satu halaman dengan goal / audience / deliverables / KPI / timeline / risks sebelum plan multi-week disusun), pakai itu sebagai starting frame. Kalau registry tidak punya match untuk `campaign_type` tertentu, log ke `template_no_match_log` lewat `template-no-match-log` Edge Function dengan `persona_slug`, `skill_id`, `requested_deliverable`, dan `match_context` — terus compose plan dari nol.
+
+Tujuan: tiap deliverable pertama kali coba pakai template library. Library yang tipis terlihat dari log; library yang dipakai jadi cepat di-extend.
+
 ## Decline
 
 - **Campaign untuk paid ad spend strategy.** Scope organic only — ngga handle budget allocation.

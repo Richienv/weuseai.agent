@@ -1,7 +1,7 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "slide-master",
-  "version": "2.0.0",
+  "version": "2.3.0",
   "description_id": "Bundle skill + template Slide Master v2. Dua mode: narrative-arc (default — story arc 12 slide) dan template-picker (8 template student/worker). Tier change v2: Pro+ → All tiers (Starter+).",
   "skills": [
     {
@@ -9,6 +9,7 @@
       "description_id": "Susun deck 12 slide pakai story arc problem→solution→market→traction→ask. Mode default — cocok buat pitch deck, customer pitch, internal review.",
       "description_en": "Build a 12-slide deck using the problem→solution→market→traction→ask story arc. Default mode — good for pitch decks, customer pitches, internal reviews.",
       "templates_used": [],
+      "template_fetch_required": true,
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:narrative-arc-deck-builder",
       "enabled_for_tiers": ["starter", "pro", "studio"]
@@ -25,9 +26,20 @@
         "deck/worker/project-update.md",
         "deck/worker/training-onboarding.md"
       ],
+      "template_fetch_required": true,
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:template-deck-builder",
       "enabled_for_tiers": ["starter", "pro", "studio"]
+    },
+    {
+      "id": "pitch-deck",
+      "skill_kind": "playbook",
+      "description_id": "Playbook 6 langkah untuk bikin pitch deck dari nol: intake, riset, kerangka cerita, checkpoint approval, draft semua slide, polish dan export. Berhenti minta approval kerangka sebelum semua slide ditulis.",
+      "description_en": "A 6-step playbook to build a pitch deck end to end: intake, research, narrative outline, an approval checkpoint, full draft, then polish and export. Pauses for outline approval before drafting every slide.",
+      "templates_used": [],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:pitch-deck",
+      "enabled_for_tiers": ["pro", "studio"]
     },
     {
       "id": "extend-capabilities",
@@ -75,6 +87,96 @@
       "kind": "deck-template",
       "description_id": "Training / onboarding deck (12-15 slide) — welcome, learning objectives, content sections, hands-on exercise, summary, resources, Q&A.",
       "best_for": "Trainer atau team lead yang bikin onboarding deck"
+    },
+    {
+      "id": "pitch-deck/seed-round.md",
+      "kind": "pitch-deck",
+      "description_id": "Pitch deck seed round (12 slide) — vision-forward dan team-led karena pre-revenue. Cover masalah, kenapa sekarang, solusi, visi 5 tahun, pasar, sinyal traction, produk, model, tim, ask plus use of funds. Cocok untuk founder yang fundraising di ronde pertama serius ke angel atau seed VC.",
+      "best_for": "Founder pre-revenue yang pitch ke angel atau seed-stage VC"
+    },
+    {
+      "id": "pitch-deck/series-a.md",
+      "kind": "pitch-deck",
+      "description_id": "Pitch deck Series A (14 slide) — metrics-led dengan unit economics, cohort retention, dan plan ekspansi pasar. Cover ARR plus growth, CAC payback, LTV/CAC, gross margin, NRR, customer logo, pasar baru, kompetisi, tim scale-up, ask plus milestone ke Series B. Cocok untuk perusahaan revenue-stage yang siap pitch institutional VC.",
+      "best_for": "Founder revenue-stage yang fundraising Series A ke institutional VC"
+    },
+    {
+      "id": "pitch-deck/internal-review.md",
+      "kind": "pitch-deck",
+      "description_id": "Internal review deck kuartalan (10 slide) — operasional-presisi. Cover scorecard target vs hasil, wins, misses dengan root cause, pembelajaran, prioritas kuartal depan, target numerik, risiko, decisions yang dibutuhkan hari ini, plus ask resources. Cocok untuk leadership review atau cross-functional internal review.",
+      "best_for": "Tim atau divisi yang review kuartalan ke leadership atau cross-functional"
+    },
+    {
+      "id": "pitch-deck/board-update.md",
+      "kind": "pitch-deck",
+      "description_id": "Board update deck (10 slide) — direksi-presisi untuk update bulanan atau kuartalan ke board. Cover north star metric, KPI dashboard, ringkasan keuangan plus runway, wins material, risiko, sinyal pasar, tim, decisions yang butuh board vote, plus appendix index. Cocok untuk CEO yang update board atau investor existing.",
+      "best_for": "CEO yang update board of directors atau investor existing reguler"
+    },
+    {
+      "id": "pitch-deck/customer-facing.md",
+      "kind": "pitch-deck",
+      "description_id": "Sales deck customer-facing (10 slide) — outcome-first dengan tone B2B. Cover masalah spesifik prospek, cost of inaction, janji solusi, cara kerja 3 langkah, bukti customer lain, case study mirip, pricing eksplisit, dan next step konkret. Cocok untuk sales meeting first-call atau second-call ke prospek yang sedang evaluasi pembelian.",
+      "best_for": "Sales atau founder yang pitch produk ke prospek B2B yang evaluasi pembelian"
+    },
+    {
+      "id": "outlines/narrative-arc-10slide.md",
+      "kind": "outline",
+      "description_id": "Scaffolding outline 10 slide pakai story arc generik problem-why-now-solution-market-product-traction-model-competition-team-ask. Outline saja: judul kerja, arc act, visual brief, dan catatan drafting per slide. Tidak ada konten slide. Cocok dipakai sebelum draft deck penuh, supaya presenter approve struktur dulu.",
+      "best_for": "Presenter yang mau approve kerangka deck sebelum invest waktu drafting tiap slide"
+    },
+    {
+      "id": "slides/slide-problem.md",
+      "kind": "slide",
+      "description_id": "Template satu slide masalah stand-alone — fokus satu statistik bersumber, satu kutipan customer literal, dan satu cost of inaction di footer. Visual layout lengkap dengan center anchor angka, quote block, dan whitespace dominan. Cocok di-slot ke deck pitch, sales, atau internal yang butuh slide problem yang punchy.",
+      "best_for": "Drafter yang butuh slide problem stand-alone untuk slot ke deck mana pun"
+    },
+    {
+      "id": "slides/slide-solution.md",
+      "kind": "slide",
+      "description_id": "Template satu slide solusi stand-alone — janji satu kalimat outcome (bukan feature), 3 bullet how yang ringkas, visual produk dominan, dan satu kalimat diferensiasi di footer. Visual layout lengkap dengan judul outcome, screenshot center, dan side bullet. Cocok di-slot ke deck pitch atau sales yang butuh slide solusi yang fokus.",
+      "best_for": "Drafter yang butuh slide solusi stand-alone yang outcome-first"
+    },
+    {
+      "id": "slides/slide-traction.md",
+      "kind": "slide",
+      "description_id": "Template satu slide traksi stand-alone — satu chart utama dengan sumbu jujur, 3 KPI di bottom strip, dan satu milestone callout di sudut chart. Anti-pola seperti truncated axis atau cherry-picked window di-flag eksplisit. Cocok untuk slot ke pitch deck investor, board update, atau review internal yang butuh slide traction yang kredibel.",
+      "best_for": "Drafter yang butuh slide traction kredibel untuk pitch investor atau board update"
+    },
+    {
+      "id": "deck/indonesia/deck-investor-indonesia-id.md",
+      "kind": "deck-template",
+      "description_id": "Pitch deck untuk audiens VC Indonesia (East Ventures, AC Ventures, Alpha JWC, Northstar, Mandiri Capital, BRI Ventures). Urutan slide disesuaikan pertanyaan khas VC lokal — market sizing dalam IDR dengan sumber BPS, unit economics dalam IDR, tim slide dengan konvensi pendidikan dan riwayat kerja Indonesia, tesis exit yang sadar IDX vs SGX vs offshore.",
+      "best_for": "Founder Indonesia yang pitch ke VC lokal (post-seed sampai Series B)"
+    },
+    {
+      "id": "deck/indonesia/deck-z-gen-id.md",
+      "kind": "deck-template",
+      "description_id": "Deck untuk audience Z-Gen Indonesia (lahir 1997-2012). Visual references konvensi meme TikTok-id, pacing slide cepat 7-10 detik per ide, copy casual BI (nggak, banget, lagi viral). Cocok untuk presentasi kampus, pitch internship, lomba mahasiswa, kampanye brand Gen-Z.",
+      "best_for": "Presenter yang pitch ke audience Z-Gen Indonesia (kampus, internship, lomba, brand campaign)"
+    },
+    {
+      "id": "deck/indonesia/deck-umkm-pengajuan-modal.md",
+      "kind": "deck-template",
+      "description_id": "Deck untuk pelaku UMKM yang pitch permodalan ke lembaga pembiayaan (KUR bank, P2P lending OJK, angel, koperasi). Membahas KBLI code, omzet bracket per PP 7/2021 (Mikro <Rp 2M, Kecil <Rp 15M, Menengah <Rp 50M), legalitas (NIB, SIUP, NPWP), cash flow dalam IDR. Tone hormat-profesional ke analis kredit.",
+      "best_for": "Pemilik UMKM yang pitch permodalan ke bank penyalur KUR, P2P lending OJK, atau angel"
+    },
+    {
+      "id": "deck/indonesia/deck-rapat-direksi-pt.md",
+      "kind": "deck-template",
+      "description_id": "Deck internal Rapat Direksi atau RUPS Perseroan Terbatas Indonesia. Format mengikuti UU PT 40/2007 (Pasal 78 jenis RUPS, Pasal 79 quorum, Pasal 86 quorum RUPS, Pasal 108 fungsi pengawasan Komisaris). Quorum check di awal, action item dengan PIC Direksi tunggal dan deadline. Register formal-direksi.",
+      "best_for": "Sekretaris Perusahaan atau Direksi PT yang siapkan Rapat Direksi atau RUPS"
+    },
+    {
+      "id": "deck/indonesia/deck-launch-produk-indonesia.md",
+      "kind": "deck-template",
+      "description_id": "Deck peluncuran produk untuk pasar Indonesia. GTM Indonesia-spesifik: channel mix marketplace (Tokopedia / Shopee / TikTok Shop / Lazada), payment mix (QRIS / GoPay / OVO / DANA / VA / COD), pricing regional (Jabodetabek vs Tier-2 vs luar Jawa), checklist regulasi (BPOM, SNI, Komdigi, MUI Halal), strategi KOL multi-tier.",
+      "best_for": "Tim pemasaran atau brand manager yang launching produk baru ke pasar Indonesia"
+    },
+    {
+      "id": "deck/indonesia/deck-csr-bahasa.md",
+      "kind": "deck-template",
+      "description_id": "Deck laporan Tanggung Jawab Sosial dan Lingkungan (TJSL/CSR) untuk PT bidang Sumber Daya Alam per Pasal 74 UU PT 40/2007 dan PP 47/2012. Pemetaan ke SDGs Indonesia (Perpres 59/2017 Roadmap SDGs Bappenas), status PROPER (PermenLHK 1/2021 — 5 peringkat Emas/Hijau/Biru/Merah/Hitam), pelaporan output kuantitatif untuk anti-greenwashing.",
+      "best_for": "Direktur HSSE atau Head of Sustainability PT bidang SDA yang laporkan CSR ke board, KLHK, atau publik"
     }
   ],
   "self_extend": true,

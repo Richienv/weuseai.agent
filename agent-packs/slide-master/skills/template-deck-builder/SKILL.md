@@ -45,6 +45,12 @@ Persona-voice wrapper (template-mode):
 
 > "Aku susun [template_id] dengan topic [topic]. Total [N] slide. Markdown ada di [path]. Slide-slide yang butuh data kamu (metrics, chart) udah aku tag dengan [DATA_NEEDED] — kasih tahu kalau mau aku isi. Convert ke PowerPoint / Keynote / Google Slides bisa via Pandoc."
 
+## Fetch template
+
+Sebelum compose deck, panggil `bundle-fetch` dengan `agent_slug` `slide-master` dan filter `kind` ke `deck-template`. Kalau template registry punya entry yang cocok dengan `template_id` yang customer minta (mis. `deck/student/assignment-presentation.md`, `deck/student/thesis-defense.md`, `deck/student/lecture-recap.md`, `deck/worker/weekly-report.md`, `deck/worker/project-update.md`, `deck/worker/training-onboarding.md`), pakai itu sebagai starting frame. Kalau customer minta template_id yang tidak ada di registry, log ke `template_no_match_log` lewat `template-no-match-log` Edge Function dengan `persona_slug`, `skill_id`, `requested_deliverable`, dan `match_context` — lalu tawarkan extend-capabilities untuk generate template baru.
+
+Tujuan: tiap deliverable pertama kali coba pakai template library. Library yang tipis terlihat dari log; library yang dipakai jadi cepat di-extend.
+
 ## Decline criteria
 
 - Sama seperti narrative-arc-deck-builder — no data fabrication, no misleading claims.

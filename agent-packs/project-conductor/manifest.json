@@ -1,26 +1,34 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "project-conductor",
-  "version": "2.0.0",
-  "description_id": "Bundle skill + template Project Conductor v2 (renamed dari Macro Strategist). Kanban orchestrator pakai Hermes v0.13.0 native — bagi project jadi task, spawn specialist agents per task, monitor dashboard, weekly recap. Tier change v1: Studio → v2: Pro+.",
+  "version": "2.6.0",
+  "description_id": "Bundle skill + template Project Conductor v2 — kanban orchestrator pakai Hermes v0.13.0, bagi project jadi task, spawn specialist agents, monitor dashboard, weekly recap. Tier Pro+. Playbook: project-orchestration, pt-perorangan-registration, weekly-recap-cycle. v2.4 tambah 7 template generik (sprint, quarter, year, status, raci, risk, retro). v2.5 tambah 5 template Indonesia-deep: NIB OSS-RBA, BPJS karyawan, BPOM produk, KBLI 2020, status report direksi.",
   "skills": [
     {
       "id": "kanban-orchestrator",
       "description_id": "Susun kanban board dari project goal. Hermes v0.13.0 native kanban — column To Do / In Progress / Review / Done. Customer bisa custom column kalau workflow team beda.",
       "description_en": "Build a kanban board from a project goal. Uses Hermes v0.13.0 native kanban with standard columns (To Do / In Progress / Review / Done). Customer can customize columns to match their team workflow.",
       "templates_used": [],
+      "template_fetch_required": true,
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:kanban-orchestrator",
-      "enabled_for_tiers": ["pro", "studio"]
+      "enabled_for_tiers": [
+        "pro",
+        "studio"
+      ]
     },
     {
       "id": "task-decomposer",
       "description_id": "Terjemahkan project goal high-level (mis. 'plan product launch') jadi task-task konkret dengan dependencies + owner default per persona library.",
       "description_en": "Translate a high-level project goal into concrete tasks with dependencies and default owners drawn from the persona library.",
       "templates_used": [],
+      "template_fetch_required": true,
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:task-decomposer",
-      "enabled_for_tiers": ["pro", "studio"]
+      "enabled_for_tiers": [
+        "pro",
+        "studio"
+      ]
     },
     {
       "id": "multi-agent-router",
@@ -29,16 +37,23 @@
       "templates_used": [],
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:multi-agent-router",
-      "enabled_for_tiers": ["pro", "studio"]
+      "enabled_for_tiers": [
+        "pro",
+        "studio"
+      ]
     },
     {
       "id": "progress-monitor",
       "description_id": "Render dashboard URL untuk view real-time project status. Telegram update saat milestone reached atau blocker baru. Weekly recap composer.",
       "description_en": "Render a dashboard URL for real-time project status. Telegram updates when milestones are reached or blockers appear. Weekly recap composer included.",
       "templates_used": [],
+      "template_fetch_required": true,
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:progress-monitor",
-      "enabled_for_tiers": ["pro", "studio"]
+      "enabled_for_tiers": [
+        "pro",
+        "studio"
+      ]
     },
     {
       "id": "extend-capabilities",
@@ -47,10 +62,125 @@
       "templates_used": [],
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:extend-capabilities",
-      "enabled_for_tiers": ["pro", "studio"]
+      "enabled_for_tiers": [
+        "pro",
+        "studio"
+      ]
+    },
+    {
+      "id": "project-orchestration",
+      "skill_kind": "playbook",
+      "description_id": "Playbook enam langkah yang menjalankan satu project dari goal sampai eksekusi terpantau — decompose jadi task, bangun kanban, checkpoint approve plan plus owner, dispatch ke specialist agent, lalu monitor progress sampai selesai.",
+      "description_en": "Six-step playbook that runs a project from goal to monitored execution — decompose into tasks, build the kanban, a plan-and-owner approval checkpoint, dispatch to specialist agents, then monitor progress to completion.",
+      "templates_used": [],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:project-orchestration",
+      "enabled_for_tiers": [
+        "pro",
+        "studio"
+      ]
+    },
+    {
+      "id": "pt-perorangan-registration",
+      "skill_kind": "playbook",
+      "description_id": "Playbook tujuh langkah yang memandu customer membuka PT Perorangan dari nol sampai akun Xendit produksi aktif — intake plus cek kesiapan, kunci nama plus KBLI plus alamat plus modal, pendaftaran AHU (Rp 50 ribu PNBP), NPWP badan di Coretax, NIB di OSS-RBA, domisili plus rekening bank badan, lalu aktivasi Xendit. Enam dari tujuh langkah adalah gerbang keras yang membuka approval_requests action_kind incorporate (14 hari) atau regulatory_filing (48 jam) — tiap langkah berbiaya menahan run di status escalated sampai customer setuju eksplisit. Alur multi-hari, sekitar 10 sampai 18 hari kalender ujung ke ujung. Project Conductor tidak login portal pemerintah, tidak bayar PNBP, dan tidak buka rekening atas nama customer.",
+      "description_en": "Seven-step playbook that walks a customer from zero to a live Xendit production account by registering a PT Perorangan — intake and readiness check, lock company name plus KBLI plus address plus capital, AHU registration (Rp 50k PNBP), Coretax company NPWP, OSS-RBA NIB, domicile plus business bank account, then Xendit activation. Six of seven steps are hard-gates that open approval_requests of action_kind incorporate (14 days) or regulatory_filing (48 hours) — every cost-bearing step parks the run as escalated until the customer explicitly approves. Multi-day flow, roughly 10 to 18 calendar days end to end. Project Conductor does not log into government portals, does not pay PNBP, and does not open accounts on behalf of the customer.",
+      "templates_used": [],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:pt-perorangan-registration",
+      "enabled_for_tiers": [
+        "pro",
+        "studio"
+      ]
+    },
+    {
+      "id": "weekly-recap-cycle",
+      "skill_kind": "playbook",
+      "description_id": "Playbook recap mingguan project — agregasi aktivitas tujuh hari, surface blocker, deteksi scope creep, susun recap sesuai audience, lalu kirim. Audience `self` auto-deliver. Audience `stakeholder` atau `1on1-manager` lewat satu checkpoint review dulu sebelum diteruskan. Tujuh langkah, satu gerbang kondisional.",
+      "description_en": "Weekly project recap playbook — aggregate seven-day kanban activity, surface blockers, detect scope creep, compose recap per audience, then deliver. Audience `self` auto-delivers. Audience `stakeholder` or `1on1-manager` parks at one checkpoint for customer review before forwarding. Seven steps, one conditional gate.",
+      "templates_used": [],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:weekly-recap-cycle",
+      "enabled_for_tiers": [
+        "pro",
+        "studio"
+      ]
     }
   ],
-  "templates": [],
+  "templates": [
+    {
+      "id": "plans/sprint-plan.md",
+      "kind": "plan",
+      "description_id": "Template sprint plan 1-2 minggu — goal, capacity team, task line-item dengan owner plus estimasi plus dependency, risiko, plus out of scope yang eksplisit. Dipakai team eksekusi plus stakeholder yang butuh tahu apa yang sedang dikerjakan.",
+      "best_for": "Operational 1-2 week sprint planning — line-item tasks, owners, dependencies"
+    },
+    {
+      "id": "plans/quarter-plan.md",
+      "kind": "plan",
+      "description_id": "Template quarter plan 90 hari — north star, 3-5 tema kuartal, outcome terukur per tema dengan baseline plus target, 3-5 milestone, risiko kunci, dan disiplin 'yang tidak dikerjakan kuartal ini'. Lebih strategis dari sprint, lebih taktis dari year plan.",
+      "best_for": "Strategic 90-day plan — themes, measurable outcomes, milestones"
+    },
+    {
+      "id": "plans/year-plan.md",
+      "kind": "plan",
+      "description_id": "Template year plan tahunan — konteks strategis, 3-5 tema tahun, breakdown per kuartal, bet dengan tesis plus sinyal evaluasi, ditch yang sengaja dilepas, plus envelope modal. Dokumen orientasi level founder atau exec, bukan dokumen kerja harian.",
+      "best_for": "Annual strategy plan — themes, quarterly breakdown, bets and ditches"
+    },
+    {
+      "id": "coordination/status-report.md",
+      "kind": "coordination",
+      "description_id": "Template status report project mingguan satu halaman untuk sponsor atau stakeholder eksekutif. Status RAG, highlight, completed, in-progress, blocker, decisions needed, dan fokus minggu depan. Scannable dalam 60 detik.",
+      "best_for": "Weekly executive status update — one page, scannable, sponsor-facing"
+    },
+    {
+      "id": "coordination/raci-matrix.md",
+      "kind": "coordination",
+      "description_id": "Template RACI matrix — grid task lintas peserta dengan kode R/A/C/I, definisi standar, eskalasi path, plus catatan 5 kesalahan umum (dua Accountable di satu task, semua sel Consulted, task tanpa Responsible, satu orang Accountable di seluruh baris, matrix sekali pakai). Dipasang di awal project lintas-team.",
+      "best_for": "Cross-team RACI matrix — responsibility mapping with anti-patterns guide"
+    },
+    {
+      "id": "coordination/risk-register.md",
+      "kind": "coordination",
+      "description_id": "Template risk register project — tabel risiko dengan ID, likelihood plus impact kualitatif, RAG status, mitigasi, owner, dan status. Plus konvensi scoring eksplisit (rendah/sedang/tinggi, hijau/kuning/merah) dan daftar retired risks supaya register tidak menggemuk.",
+      "best_for": "Project risk register — RAG-tracked risks with mitigation owners and scoring conventions"
+    },
+    {
+      "id": "retrospective.md",
+      "kind": "retro",
+      "description_id": "Template retrospective sprint atau project — yang berjalan baik, yang tidak, hal tak terduga, action konkret untuk siklus berikutnya, parking lot, plus tema. Disertai prompt fasilitator dan catatan psychological safety supaya retro tetap jujur dan tidak slide ke blame.",
+      "best_for": "Sprint or project retrospective — structured reflection with facilitator prompts"
+    },
+    {
+      "id": "plans/plan-oss-rba-nib-issuance.md",
+      "kind": "plan",
+      "description_id": "Plan penerbitan NIB via OSS-RBA (oss.go.id). Tujuh fase: prasyarat dokumen (NPWP, KTP, akta, NPWP badan), kunci nama plus KBLI di kbli.bps.go.id, registrasi akun OSS, input data, output NIB plus izin per tingkat risiko PP 5/2021 (Rendah 1 hari, Tinggi 14-30 hari), tindak lanjut. Timeline 1-30 hari kerja per tingkat risiko KBLI.",
+      "best_for": "Pendirian PT/CV/UD/perorangan baru — registrasi NIB via OSS-RBA"
+    },
+    {
+      "id": "plans/plan-bpjs-onboarding-karyawan.md",
+      "kind": "plan",
+      "description_id": "Plan onboarding karyawan baru ke BPJS Kesehatan plus BPJS Ketenagakerjaan 4 program (JKK, JKM, JHT, JP) sesuai UU 24/2011. Lima fase: kumpul dokumen, daftar BPJS Kesehatan via SIPP, daftar BPJS Ketenagakerjaan via sipp.bpjsketenagakerjaan.go.id, integrasi payroll dengan persentase iuran, distribusi kartu. Timeline 7-14 hari kerja.",
+      "best_for": "HR PT/CV onboarding karyawan baru ke BPJS Kesehatan plus Ketenagakerjaan"
+    },
+    {
+      "id": "plans/plan-bpom-mendaftar-produk-konsumsi.md",
+      "kind": "plan",
+      "description_id": "Plan pendaftaran produk konsumsi ke BPOM. Tujuh fase: prasyarat (NIB, sertifikat halal MUI jika klaim), pilih portal per kategori (asrot.pom.go.id pangan, notifkos.pom.go.id kosmetik, obat tradisional), registrasi akun, uji lab terakreditasi, submit plus PNBP, review BPOM, izin terbit (MD/ML/NA/TR). Timeline 60-90 hari kerja typical.",
+      "best_for": "Bisnis F&B / kosmetik / herbal yang mau jual legal di Indonesia"
+    },
+    {
+      "id": "plans/plan-kbli-2020-pemilihan.md",
+      "kind": "plan",
+      "description_id": "Plan pemilihan KBLI 2020 sebelum registrasi NIB. Enam fase: identifikasi aktivitas usaha utama, lookup di kbli.bps.go.id, cek tingkat risiko per PP 5/2021, cek batasan asing per Perpres 49/2021, konfirmasi notaris jika PT/CV, input ke OSS-RBA. Disertai 10 contoh KBLI umum startup (62019 programming, 70209 konsultasi, 63121 platform digital, dst) plus strategi multi-KBLI.",
+      "best_for": "Founder atau notaris memilih KBLI 2020 sebelum pendaftaran NIB OSS-RBA"
+    },
+    {
+      "id": "coordination/status-report-mingguan-direksi.md",
+      "kind": "coordination",
+      "description_id": "Template status report mingguan formal ke direksi PT. Format laporan resmi (Bapak/Ibu, Hormat saya), struktur 7 bagian: ringkasan eksekutif, progress vs target, milestone, blocker, keputusan dibutuhkan direksi, outlook, lampiran. RAG ditulis Hijau/Kuning/Merah. Register formal korporat Indonesia, beda dari status-report executive-sponsor generik.",
+      "best_for": "Project manager melapor ke Direktur Utama atau Komisaris PT — register formal Indonesia"
+    }
+  ],
   "self_extend": true,
   "extension_dir": "/var/lib/weuseai/customer-grown/"
 }

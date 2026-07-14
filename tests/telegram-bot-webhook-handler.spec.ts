@@ -47,6 +47,7 @@ class FakeTelegram implements ITelegramClient {
   // exercise the new approval surfaces).
   async sendMessageWithButtonsAs() {}
   async answerCallbackQuery() {}
+  async getWebhookInfo(_token: string): Promise<{ url: string }> { return { url: '' } }
 }
 
 const SECRET = 'super-secret-token'

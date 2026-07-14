@@ -37,7 +37,7 @@ function makeBoard(): ProxyInput['board'] {
       t1: {
         id: 't1',
         title: 'task 1',
-        owner_persona: 'business-director',
+        owner_persona: 'business-agent',
         depends_on: [],
         status: 'todo',
         created_at: NOW,

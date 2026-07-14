@@ -46,14 +46,23 @@ export class SupabaseDataStore implements IDataStore {
   }
 
   async findActiveVPSByCustomer(customerId: string): Promise<VPSInstanceRecord | null> {
+    // H4 (security audit, 2026-06-14): order + limit(1), NOT .maybeSingle().
+    // .maybeSingle() throws PGRST116 the instant a customer has >1 active row,
+    // which made BOTH spin-up idempotency AND tear-down crash with an opaque
+    // error — an orphaned ~$5/mo VPS that could never be reaped + a customer
+    // who could never re-spin. The partial unique index
+    // vps_instances_one_active_per_customer (migration 20260614010000) now
+    // prevents >1 active row, but reading the most-recent row is correct +
+    // resilient regardless.
     const { data, error } = await this.client
       .from('vps_instances')
       .select('*')
       .eq('customer_id', customerId)
       .in('status', ['provisioning', 'running'])
-      .maybeSingle()
+      .order('created_at', { ascending: false })
+      .limit(1)
     if (error) throw error
-    return (data as VPSInstanceRecord | null) ?? null
+    return ((data as VPSInstanceRecord[] | null)?.[0]) ?? null
   }
 
   async createVPSInstance(rec: CreateVPSInstanceInput): Promise<VPSInstanceRecord> {

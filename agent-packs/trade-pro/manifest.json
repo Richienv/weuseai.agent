@@ -1,14 +1,15 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "trade-pro",
-  "version": "2.0.0",
-  "description_id": "Bundle skill + template Trade Pro v2. Briefing pasar pagi, alert saham + crypto, ringkas laporan keuangan emiten, plus IDR/BI rate watcher (pindahan dari Macro Strategist) + Bitget read-only (P1).",
+  "version": "2.5.0",
+  "description_id": "Bundle Trade Pro v2.5 — briefing pasar pagi, alert saham/crypto, ringkasan laporan emiten, IDR/BI rate watcher, Bitget read-only. v2.2 playbook bitget-onboarding. v2.3 7 template disiplin trading. v2.4 (B8) 5 template Indonesia-deep. v2.5 (C7) playbook daily-trade-discipline — siklus harian 7 langkah dari pre-market intake sampai jurnal end-of-day. Advisory-only NON-NEGOTIABLE: tidak pernah place order, tidak pindahkan dana, tidak sebut level harga sebagai rekomendasi.",
   "skills": [
     {
       "id": "market-briefing",
       "description_id": "Briefing pasar pagi jam 8 WIB — IDX open recap, US/EU overnight summary, crypto major moves, event calendar hari ini.",
       "description_en": "Morning market briefing — IDX open, overnight US/EU, crypto top moves, today's event calendar.",
-      "templates_used": [],
+      "templates_used": ["market-briefing-format.md"],
+      "template_fetch_required": true,
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:market-briefing",
       "enabled_for_tiers": ["pro", "studio"]
@@ -17,7 +18,7 @@
       "id": "alert-watcher",
       "description_id": "Set alert saham / crypto berdasarkan threshold (price, volume, news). Delivery via Telegram dengan one-line context. Tidak auto-trade.",
       "description_en": "Watch stocks / crypto for threshold-based alerts (price, volume, news). Telegram delivery with one-line context. Never auto-trades.",
-      "templates_used": [],
+      "templates_used": ["alert-rule-schema.md"],
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:alert-watcher",
       "enabled_for_tiers": ["pro", "studio"]
@@ -26,7 +27,8 @@
       "id": "earnings-summarizer",
       "description_id": "Ringkas laporan keuangan emiten — key metrics, surprises vs konsensus, audit notes, guidance change. Source dari laporan resmi (annual / quarterly).",
       "description_en": "Summarize listed-company financial reports — key metrics, surprises vs consensus, audit notes, guidance change. Sourced from official annual/quarterly filings.",
-      "templates_used": [],
+      "templates_used": ["earnings-summary-format.md"],
+      "template_fetch_required": true,
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:earnings-summarizer",
       "enabled_for_tiers": ["pro", "studio"]
@@ -35,7 +37,8 @@
       "id": "idr-bi-rate-watcher",
       "description_id": "Monitor IDR/USD dan BI rate. Update kalau IDR break level psikologis atau BI Board signal rate change. Konteks: spread vs Fed, capital flow, cadangan devisa. v2 — pindahan dari Macro Strategist.",
       "description_en": "Monitor IDR/USD and BI rate. Updates on psychological-level breaks or BI Board signals. Context includes Fed spread, capital flow, foreign reserves. v2 — moved from Macro Strategist.",
-      "templates_used": [],
+      "templates_used": ["rate-watch-reference.md"],
+      "template_fetch_required": true,
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:idr-bi-rate-watcher",
       "enabled_for_tiers": ["pro", "studio"]
@@ -50,6 +53,26 @@
       "enabled_for_tiers": ["pro", "studio"]
     },
     {
+      "id": "bitget-onboarding",
+      "skill_kind": "playbook",
+      "description_id": "Playbook 8 langkah memandu pemasangan API key Bitget dengan kontrak read-only. Akses surface bitget-readonly baru dibuka setelah scope key diverifikasi bersih lewat panggilan permissions Bitget. Gerbang keras langkah 7 menahan akses inline platform-side tanpa membuka baris approval — kalau scope keliru, customer regenerate key, paste ulang, dan verifikasi diulang sampai bersih.",
+      "description_en": "Eight-step playbook that walks customer through Bitget API key setup with a read-only contract. Access to the bitget-readonly surface unlocks only after the key's scope is verified clean via a Bitget permissions call. Step 7's hard gate rejects inline platform-side without opening an approval row — if scope is wrong, customer regenerates the key, re-pastes, and verification re-runs until clean.",
+      "templates_used": [],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:bitget-onboarding",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
+      "id": "daily-trade-discipline",
+      "skill_kind": "playbook",
+      "description_id": "Playbook siklus disiplin trading harian IDX (7 langkah): pre-market intake + cek hari bursa, risk checklist IDX, scan keputusan BI dan Fed, surface watchlist dengan papan + status suspension, monitoring window sesi I (09:00-11:30) dan sesi II (13:30-15:00) WIB, draft jurnal end-of-day per trade, ringkasan P&L harian + persiapan besok. Advisory-only NON-NEGOTIABLE: tidak pernah place order, tidak pindahkan dana, tidak sebut level harga sebagai rekomendasi.",
+      "description_en": "Seven-step daily trading discipline cycle for IDX: pre-market intake + market-open check, IDX risk checklist, BI / Fed rate scan, watchlist with board + suspension status, Sesi I (09:00-11:30) + Sesi II (13:30-15:00) WIB monitoring window, end-of-day per-trade journal, daily P&L summary + tomorrow prep. Advisory-only NON-NEGOTIABLE: never places orders, never moves funds, never quotes concrete price levels as recommendations.",
+      "templates_used": ["risk-checklist-idx-stock.md", "trade-journal-idx-bahasa.md", "alert-bi-rate-decision.md"],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:daily-trade-discipline",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
       "id": "extend-capabilities",
       "description_id": "Generate template baru saat customer minta sesuatu yang belum ada di inventory. Pakai LLM customer (BYOK), simpan ke /var/lib/weuseai/customer-grown/.",
       "description_en": "Generate a new template at runtime when the customer asks for something not in inventory.",
@@ -59,7 +82,104 @@
       "enabled_for_tiers": ["pro", "studio"]
     }
   ],
-  "templates": [],
+  "templates": [
+    {
+      "id": "market-briefing-format.md",
+      "kind": "reference",
+      "description_id": "Struktur tetap briefing pasar pagi — IDX recap, overnight global, crypto, event calendar, sentiment one-liner.",
+      "best_for": "market-briefing output skeleton"
+    },
+    {
+      "id": "alert-rule-schema.md",
+      "kind": "schema-spec",
+      "description_id": "Schema rule alert — ticker, asset class, condition, threshold, status. Disimpan append-only di alerts.jsonl.",
+      "best_for": "alert-watcher rule storage shape"
+    },
+    {
+      "id": "earnings-summary-format.md",
+      "kind": "reference",
+      "description_id": "Struktur tetap ringkasan laporan keuangan emiten — key metrics, surprises vs konsensus, catatan auditor, guidance change.",
+      "best_for": "earnings-summarizer output skeleton"
+    },
+    {
+      "id": "rate-watch-reference.md",
+      "kind": "reference",
+      "description_id": "Reference IDR/BI rate — level psikologis IDR/USD, sumber data, dan framing per konteks customer (import, export, usd-debt, portfolio).",
+      "best_for": "idr-bi-rate-watcher level + framing reference"
+    },
+    {
+      "id": "trading-journal-entry.md",
+      "kind": "journal",
+      "description_id": "Template entry journal trading — satu trade per entry, append-only. Field: tanggal, instrument, arah, entry, exit, size, risk, thesis, hasil, plan-diikuti, pelajaran. Dipakai untuk catat trade closed dan lihat pola di 20-30 entry.",
+      "best_for": "per-trade post-mortem and pattern discovery"
+    },
+    {
+      "id": "position-size-calculator.md",
+      "kind": "sizing",
+      "description_id": "Worksheet sizing posisi sebelum entry — account size, risk per trade, entry, stop, dan formula deterministik (risk_amount / stop_distance). Output ukuran posisi yang terikat ke stop yang sudah di-set, bukan ke confidence.",
+      "best_for": "pre-trade position sizing tied to stop distance"
+    },
+    {
+      "id": "exit-plan.md",
+      "kind": "exit",
+      "description_id": "Exit plan wajib pre-entry — stop-loss + alasan, profit target (T1/T2) dengan aksi konkret, time-stop, scaling-out, dan R:R ratio. Stop tidak boleh digeser ke arah loss saat trade berjalan.",
+      "best_for": "pre-entry exit planning with stop + target + time-stop"
+    },
+    {
+      "id": "market-analysis.md",
+      "kind": "analysis",
+      "description_id": "Analisis terstruktur satu instrumen atau market — tren, key levels, catalysts, setup, risk yang membatalkan thesis, confidence tag (high/moderate/low), dan source line. Bukan rekomendasi beli/jual.",
+      "best_for": "deep single-instrument or single-market analysis"
+    },
+    {
+      "id": "sentiment-analysis.md",
+      "kind": "analysis",
+      "description_id": "Dashboard sentimen asset class atau pair — fear/greed, volume vs rata-rata, open interest, funding rate, social signal, interpretasi, bias, dan implikasi ke size + timing (bukan ke arah trade).",
+      "best_for": "sentiment snapshot informing sizing and timing, not direction"
+    },
+    {
+      "id": "weekly-review.md",
+      "kind": "review",
+      "description_id": "Review mingguan trading — PnL, win rate, best trade (apa yang dilakukan benar), worst trade (apa yang bisa dipelajari), tema minggu, plan adherence, dan adjustments konkret untuk minggu depan.",
+      "best_for": "Friday or weekend reflection on process not just results"
+    },
+    {
+      "id": "risk-checklist.md",
+      "kind": "risk",
+      "description_id": "Checklist pre-market daily — inventory posisi open, total exposure vs cap pribadi, korelasi antar posisi, kapital available, macro flags hari ini, self-rating emosional 1-5, dan decision rule (GO / REDUCED SIZE / NO TRADE TODAY).",
+      "best_for": "pre-market open daily readiness gate"
+    },
+    {
+      "id": "risk-checklist-idx-stock.md",
+      "kind": "checklist",
+      "description_id": "Pre-trade risk checklist untuk saham IDX — nama emiten + kode 4-huruf, papan listing (Utama/Pengembangan/Akselerasi/Pemantauan Khusus), suspension status, RUPS terdekat, dividend ex-date, fundamental snapshot (PER, PBV, ROE, DER) per laporan keuangan resmi di idx.co.id. Referensi POJK + rule book IDX + pajak transaksi 0.1% per PP 41/1994. Bukan saran investasi.",
+      "best_for": "Trader retail Indonesia yang masuk posisi IDX, butuh disiplin pre-trade"
+    },
+    {
+      "id": "trade-journal-idx-bahasa.md",
+      "kind": "journal",
+      "description_id": "Trade journal IDX dalam Bahasa Indonesia — per-trade entry: tanggal, kode IDX, papan, lot (1 lot = 100 saham), harga rata-rata, thesis, stop/target, hasil net IDR setelah fee broker + pajak 0.1%, plan-diikuti, pelajaran. Append-only, satu trade per entry. Bukan saran investasi.",
+      "best_for": "Post-mortem disiplin per-trade IDX dengan konvensi lot + pajak yang tepat"
+    },
+    {
+      "id": "bappebti-checklist-futures-commodity.md",
+      "kind": "checklist",
+      "description_id": "Compliance checklist BAPPEBTI untuk trader futures, komoditas, atau crypto-asset di Indonesia. Verifikasi pialang berjangka terdaftar di BAPPEBTI, produk diizinkan (PBK list / PFAK list), notional + leverage cap per regulasi, Risk Disclosure Statement, KYC, jalur sengketa via BAKTI. Referensi UU 10/2011 PBK + Peraturan BAPPEBTI 5/2019 crypto. Bukan saran investasi.",
+      "best_for": "Pre top-up dana ke pialang berjangka futures / komoditas / crypto"
+    },
+    {
+      "id": "dividend-watchlist-idx.md",
+      "kind": "watchlist",
+      "description_id": "Dividend watchlist IDX — table tracking per emiten: kode, papan, DPS, yield indikatif, cum-date, ex-date, recording date, payment date, lot dipegang, dividen bruto + net setelah pajak 10% Final per Pasal 17(2c) UU PPh. Sumber pengumuman corporate action di idx.co.id + KSEI. Bukan saran investasi.",
+      "best_for": "Income-investor IDX yang track dividen + payment timeline + pajak net"
+    },
+    {
+      "id": "alert-bi-rate-decision.md",
+      "kind": "alert",
+      "description_id": "Alert + framing template keputusan Bank Indonesia di RDG bulanan — BI 7-Day Reverse Repo Rate, Deposit + Lending Facility, rasional BI, spread vs Fed, framing implikasi (bukan rekomendasi) ke IDR / IHSG / SBN, plus pertanyaan untuk posisi yang dipegang customer. Referensi UU 23/1999 BI + rilis resmi bi.go.id. Bukan saran investasi.",
+      "best_for": "Pre dan post-RDG framing untuk customer dengan posisi IDR / equity / bond sensitif"
+    }
+  ],
   "self_extend": true,
   "extension_dir": "/var/lib/weuseai/customer-grown/"
 }

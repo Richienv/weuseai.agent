@@ -51,6 +51,11 @@ function makeFakeInvoiceStore(seed: {
     async findCustomerByEmail() {
       return null
     },
+    async findCustomerById() {
+      // Receipt-email dep is not wired in these tests; method exists to
+      // satisfy IInvoiceStore (Sesi B P0 #7).
+      return null
+    },
     async insertCustomer({ email }) {
       return { id: `cust_${email}`, email }
     },
@@ -89,6 +94,23 @@ function makeFakeInvoiceStore(seed: {
     },
     async addStarterCredits(customerId, cents) {
       creditsAdds.push({ customerId, cents })
+    },
+    async clearStalePairState() {
+      // HF-1 (2026-05-12): no-op for these tests. The dedicated
+      // wipe-semantics tests live in
+      // tests/xendit-webhook-wipe-stale-pair.spec.ts.
+    },
+    async getDecryptedBotToken() {
+      // Phase E Option 2 part 2 (2026-05-14): no-op for these tests.
+      // The dedicated snapshot-semantics tests live in
+      // tests/xendit-webhook-bot-token-snapshot.spec.ts.
+      return null
+    },
+    async insertConsentEvent() {
+      // Sesi D pass-3 P0 (2026-05-13): no-op for post-payment-flow
+      // tests. The dedicated consent tests live in
+      // tests/create-invoice-consent.spec.ts.
+      return { id: 'consent_stub' }
     },
   }
 }
@@ -146,6 +168,11 @@ function makeProvisioningWiredToSpinUp(opts: {
                 : { ok: true, stdout: '', stderr: '', exitCode: 0 },
             }),
             llmMinter: new MockLlmKeyMinter(),
+            // providerName='mock' is required post-IDCH-retirement: the
+            // default flipped from 'idcloudhost' to 'vultr', which would
+            // route the SSH branch to key-auth and demand a real
+            // FLEET_SSH_PRIVATE_KEY env var.
+            providerName: 'mock',
             alertChatId: 'admin-chat',
             ipPollIntervalMs: 1,
             ipPollTimeoutMs: 1000,

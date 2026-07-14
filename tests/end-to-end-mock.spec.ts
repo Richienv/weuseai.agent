@@ -62,6 +62,11 @@ test('happy path: pay → spawn → SSH setup → halo + ready marker', async ()
       broker,
       ssh,
     llmMinter: new MockLlmKeyMinter(),
+      // providerName='mock' is required post-IDCH-retirement: default
+      // flipped to 'vultr', which routes to key-auth + demands a real
+      // FLEET_SSH_PRIVATE_KEY env. Mock provider stays on the legacy
+      // password-auth branch.
+      providerName: 'mock',
       billingAccountId: 'fake-billing',
       ipPollIntervalMs: 1,
       ipPollTimeoutMs: 1000,
@@ -85,7 +90,10 @@ test('happy path: pay → spawn → SSH setup → halo + ready marker', async ()
 
   // ── 4. SSH setup script ran with halo + Hermes install ───
   assert.equal(ssh.calls.length, 1, 'ssh.runSetup called once')
-  assert.equal(ssh.calls[0].user, 'liren', 'IDCloudHost default user')
+  // Mock provider routes through the legacy password-auth SSH branch;
+  // user is incidental to the test (the real assertion is "SSH was
+  // invoked with the expected payload").
+  assert.equal(ssh.calls[0].user, 'liren')
   assert.match(ssh.calls[0].script, /Halo, gue agen lo/, 'halo greeting in script')
   assert.match(ssh.calls[0].script, /install\.sh/, 'Hermes installer in script')
 
@@ -117,6 +125,7 @@ test('idempotency: spinUp dua kali ngembaliin VPS yang sama', async () => {
     broker,
     ssh,
     llmMinter: new MockLlmKeyMinter(),
+    providerName: 'mock' as const,
     ipPollIntervalMs: 1,
     ipPollTimeoutMs: 1000,
     sshPollIntervalMs: 1,

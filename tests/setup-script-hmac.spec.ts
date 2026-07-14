@@ -22,7 +22,7 @@ const baseParams = {
   telegramBotToken: 'fake-bot-token',
   telegramAllowedUserIds: '12345',
   openRouterKey: 'sk-or-fake',
-  agentSlug: 'business-director',
+  agentSlug: 'business-agent',
 }
 
 // ─── Token written to env when provided ───────────────────────────

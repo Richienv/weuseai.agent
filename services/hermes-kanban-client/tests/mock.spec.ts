@@ -80,7 +80,7 @@ test('moveTask: To Do → In Progress shifts task_ids between columns', async ()
   const b = await client.createBoard({ title: 't', customer_id: 'c' })
   const task = await client.addTask({
     board_id: b.id,
-    task: { title: 'X', owner_persona: 'web-master', depends_on: [] },
+    task: { title: 'X', owner_persona: 'web-app-builder', depends_on: [] },
   })
   await client.moveTask({ task_id: task.id, to_status: 'in_progress' })
   const fresh = await client.getBoard({ board_id: b.id })
@@ -113,10 +113,10 @@ test('updateTask: patches title + owner_persona', async () => {
   })
   const updated = await client.updateTask({
     task_id: t.id,
-    patch: { title: 'new', owner_persona: 'web-master' },
+    patch: { title: 'new', owner_persona: 'web-app-builder' },
   })
   assert.equal(updated.title, 'new')
-  assert.equal(updated.owner_persona, 'web-master')
+  assert.equal(updated.owner_persona, 'web-app-builder')
 })
 
 test('updateTask: depends_on patch propagates', async () => {
@@ -234,7 +234,7 @@ test('seedBoardWithTasks: bulk-creates a board with N tasks', async () => {
     'Plan launch',
     [
       { title: 'Spec', owner_persona: 'doc-expert' },
-      { title: 'Landing page', owner_persona: 'web-master' },
+      { title: 'Landing page', owner_persona: 'web-app-builder' },
       { title: 'Deck', owner_persona: 'slide-master' },
     ],
   )

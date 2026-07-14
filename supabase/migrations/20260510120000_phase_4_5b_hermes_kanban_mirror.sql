@@ -65,12 +65,12 @@ create table if not exists hermes_kanban_tasks (
   owner_persona   text not null check (owner_persona in (
     'the-pro',
     'deep-researcher',
-    'web-master',
+    'web-app-builder',
     'doc-expert',
     'slide-master',
     'trade-pro',
     'project-conductor',
-    'business-director',
+    'business-agent',
     'video-producer',
     'social-conductor'
   )),

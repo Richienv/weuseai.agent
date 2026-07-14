@@ -19,7 +19,7 @@ const ROOT = path.resolve(process.cwd())
 
 test('business-director SOUL.md identifies as Business Director v3', () => {
   const md = fs.readFileSync(
-    path.join(ROOT, 'agent-packs/business-director/SOUL.md'),
+    path.join(ROOT, 'agent-packs/business-agent/SOUL.md'),
     'utf8',
   )
   assert.ok(
@@ -30,7 +30,7 @@ test('business-director SOUL.md identifies as Business Director v3', () => {
 
 test('BD SOUL.md documents 5 department packs', () => {
   const md = fs.readFileSync(
-    path.join(ROOT, 'agent-packs/business-director/SOUL.md'),
+    path.join(ROOT, 'agent-packs/business-agent/SOUL.md'),
     'utf8',
   )
   for (const dept of ['sales', 'marketing', 'engineering', 'legal', 'finance']) {
@@ -43,7 +43,7 @@ test('BD SOUL.md documents 5 department packs', () => {
 
 test('BD SOUL.md documents approval queue + 4 action_kinds', () => {
   const md = fs.readFileSync(
-    path.join(ROOT, 'agent-packs/business-director/SOUL.md'),
+    path.join(ROOT, 'agent-packs/business-agent/SOUL.md'),
     'utf8',
   )
   assert.ok(/approval[ -_]?queue/i.test(md), 'should mention approval queue')
@@ -59,7 +59,7 @@ test('BD SOUL.md documents approval queue + 4 action_kinds', () => {
 
 test('BD SOUL.md documents Studio-tier + phase_5_enabled gate', () => {
   const md = fs.readFileSync(
-    path.join(ROOT, 'agent-packs/business-director/SOUL.md'),
+    path.join(ROOT, 'agent-packs/business-agent/SOUL.md'),
     'utf8',
   )
   assert.ok(/Studio/i.test(md), 'should mention Studio tier')
@@ -71,7 +71,7 @@ test('BD SOUL.md documents Studio-tier + phase_5_enabled gate', () => {
 
 test('BD SOUL.md documents cross-session memory via bd_decisions_log', () => {
   const md = fs.readFileSync(
-    path.join(ROOT, 'agent-packs/business-director/SOUL.md'),
+    path.join(ROOT, 'agent-packs/business-agent/SOUL.md'),
     'utf8',
   )
   assert.ok(
@@ -82,7 +82,7 @@ test('BD SOUL.md documents cross-session memory via bd_decisions_log', () => {
 
 test('BD SOUL.md does NOT reference deprecated department-task-spawner', () => {
   const md = fs.readFileSync(
-    path.join(ROOT, 'agent-packs/business-director/SOUL.md'),
+    path.join(ROOT, 'agent-packs/business-agent/SOUL.md'),
     'utf8',
   )
   assert.ok(
@@ -93,14 +93,22 @@ test('BD SOUL.md does NOT reference deprecated department-task-spawner', () => {
 
 // ─── BD manifest version bump ──────────────────────────────────────
 
-test('business-director manifest version bumped to 3.0.0', () => {
+test('business-director manifest version bumped to 3.0.0 or higher', () => {
   const m = JSON.parse(
     fs.readFileSync(
-      path.join(ROOT, 'agent-packs/business-director/manifest.json'),
+      path.join(ROOT, 'agent-packs/business-agent/manifest.json'),
       'utf8',
     ),
   ) as { version: string; description_id: string }
-  assert.equal(m.version, '3.0.0', 'BD v3 manifest should be 3.0.0')
+  // Drift defense: BD v3 SOUL.md rewrite locked at 3.0.0 (Phase 5-3.a).
+  // Subsequent Phase 2/3 playbook additions (compliance-cycle 3.1.0,
+  // finance-cycle 3.2.0, …) keep major version 3. Asserting on the major
+  // is the durable check; the exact minor moves with each playbook PR.
+  const major = Number(m.version.split('.')[0])
+  assert.ok(
+    major >= 3,
+    `BD v3 manifest should be ≥3.0.0; got ${m.version}`,
+  )
   assert.ok(
     /v3/.test(m.description_id),
     'manifest description_id should mention v3',

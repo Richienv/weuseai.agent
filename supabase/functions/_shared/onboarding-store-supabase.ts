@@ -12,6 +12,7 @@ import { createClient, SupabaseClient } from 'jsr:@supabase/supabase-js@2'
 
 import type {
   CustomerRow,
+  GenesisDraft,
   IOnboardingStore,
   SubscriptionRow,
 } from './types.ts'
@@ -50,7 +51,7 @@ export function createOnboardingStore(opts: {
       const { data } = await supabase
         .from('customers')
         .select(
-          'id, email, display_name, whatsapp_number, telegram_chat_id, telegram_bot_username, pairing_code, pairing_code_expires_at, soul_md_text',
+          'id, email, display_name, whatsapp_number, telegram_chat_id, telegram_bot_username, pairing_code, pairing_code_expires_at, soul_md_text, agent_slug, greeting_sent_at, genesis_draft',
         )
         .eq('id', id)
         .maybeSingle()
@@ -61,7 +62,7 @@ export function createOnboardingStore(opts: {
       const { data } = await supabase
         .from('customers')
         .select(
-          'id, email, display_name, whatsapp_number, telegram_chat_id, telegram_bot_username, pairing_code, pairing_code_expires_at, soul_md_text',
+          'id, email, display_name, whatsapp_number, telegram_chat_id, telegram_bot_username, pairing_code, pairing_code_expires_at, soul_md_text, agent_slug, greeting_sent_at, genesis_draft',
         )
         .eq('pairing_code', code)
         .maybeSingle()
@@ -69,18 +70,23 @@ export function createOnboardingStore(opts: {
     },
 
     async findActiveOrPendingSubscriptionByCustomer(customerId) {
-      // Most recent subscription for this customer in a "billable" state.
-      // We accept pending too because xendit-webhook may not have flipped
-      // it yet — but in practice the onboarding page only renders after
-      // payment-success redirect, which means the webhook has already run
-      // OR is racing this read.
+      // Most recent subscription for this customer in a PAID state. We accept
+      // ONLY post-payment statuses — 'active' and 'pending_provision', both set
+      // by the xendit-webhook PAID handler. We MUST NOT accept the pre-payment
+      // 'pending' status: it is created by create-invoice BEFORE any money
+      // moves. Including it (the prior behaviour, rationalised by "the webhook
+      // may not have flipped it yet") let an unauthenticated caller who knows a
+      // customer_id drive the full onboarding flow — mint an LLM key and
+      // provision a real VPS — on a never-paid subscription. SECURITY finding
+      // C1 (2026-06-14). The function name's "Pending" means 'pending_provision'
+      // (a post-PAID state), NOT pre-payment 'pending'.
       const { data } = await supabase
         .from('subscriptions')
         .select(
           'id, customer_id, tier, status, xendit_invoice_id, always_on_enabled, hosting_active, next_billing_at',
         )
         .eq('customer_id', customerId)
-        .in('status', ['active', 'pending_provision', 'pending'])
+        .in('status', ['active', 'pending_provision'])
         .order('started_at', { ascending: false })
         .limit(1)
         .maybeSingle()
@@ -93,11 +99,19 @@ export function createOnboardingStore(opts: {
         .update(patch)
         .eq('id', id)
         .select(
-          'id, email, display_name, whatsapp_number, telegram_chat_id, telegram_bot_username, pairing_code, pairing_code_expires_at, soul_md_text',
+          'id, email, display_name, whatsapp_number, telegram_chat_id, telegram_bot_username, pairing_code, pairing_code_expires_at, soul_md_text, agent_slug, greeting_sent_at, genesis_draft',
         )
         .single()
       if (error) throw error
       return data as CustomerRow
+    },
+
+    async saveGenesisDraft(id: string, draft: GenesisDraft): Promise<void> {
+      const { error } = await supabase
+        .from('customers')
+        .update({ genesis_draft: draft })
+        .eq('id', id)
+      if (error) throw new Error(`genesis_draft save: ${error.message}`)
     },
 
     async updateSubscription(id, patch) {
@@ -196,6 +210,53 @@ export function createOnboardingStore(opts: {
         throw new Error(`decrypt_bot_token rpc failed: ${decErr.message}`)
       }
       return typeof plaintext === 'string' ? plaintext : null
+    },
+
+    async clearBotPairing(customer_id) {
+      // Wrong-bot recovery (2026-05-10 P0 fix). Service-role UPDATE wipes
+      // all three bot-pairing fields atomically. Idempotent.
+      const { error } = await supabase
+        .from('customers')
+        .update({
+          telegram_bot_token: null,
+          telegram_bot_username: null,
+          telegram_chat_id: null,
+        })
+        .eq('id', customer_id)
+      if (error) throw error
+    },
+
+    async markGreetingSent(customer_id) {
+      // Bug-1 fix (2026-05-16): stamp the one-time greeting guard.
+      const { error } = await supabase
+        .from('customers')
+        .update({ greeting_sent_at: new Date().toISOString() })
+        .eq('id', customer_id)
+      if (error) throw error
+    },
+
+    async getActiveVPSStatus(customer_id) {
+      // Wait-page race fix (2026-05-16). One row per customer
+      // (vps_instances.customer_id is unique post-PR #75), so a plain
+      // eq + limit(1) is unambiguous. A read failure surfaces as null
+      // to the caller, which the handler treats as "defer" — the safe
+      // direction (the provisioning second-finisher still runs).
+      const { data } = await supabase
+        .from('vps_instances')
+        .select('status')
+        .eq('customer_id', customer_id)
+        .limit(1)
+        .maybeSingle()
+      const status = (data as { status: string } | null)?.status ?? null
+      if (
+        status === 'provisioning' ||
+        status === 'running' ||
+        status === 'stopped' ||
+        status === 'failed'
+      ) {
+        return status
+      }
+      return null
     },
   }
 }

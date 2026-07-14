@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Invoice UMKM {{invoice_number}} — {{client_name}}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #141413; background: #FAF9F5; padding: 48px; line-height: 1.5; }
+  .invoice { max-width: 720px; margin: 0 auto; background: #fff; padding: 48px; border: 1px solid rgba(20, 20, 19, 0.08); }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 28px; padding-bottom: 18px; border-bottom: 1px solid rgba(20, 20, 19, 0.1); }
+  .brand-block .seller-name { font-size: 17px; font-weight: 600; color: #141413; margin-bottom: 4px; }
+  .brand-block .seller-detail { font-size: 12px; color: rgba(20, 20, 19, 0.7); margin-top: 2px; }
+  .brand-block .umkm-badge { display: inline-block; background: #E8F0E5; color: #2A4A1F; padding: 3px 10px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; border-radius: 3px; margin-top: 8px; font-weight: 600; }
+  .invoice-meta { text-align: right; font-size: 13px; color: rgba(20, 20, 19, 0.7); }
+  .invoice-meta .doc-type { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(20, 20, 19, 0.5); margin-bottom: 4px; }
+  .invoice-meta .doc-number { font-size: 15px; font-weight: 600; color: #141413; margin-bottom: 10px; }
+  .meta-row { display: flex; justify-content: flex-end; gap: 12px; margin-top: 3px; }
+  .meta-label { color: rgba(20, 20, 19, 0.5); }
+  .label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(20, 20, 19, 0.5); margin-bottom: 4px; }
+  .parties { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-bottom: 28px; }
+  .party-name { font-size: 14px; font-weight: 600; }
+  .party-detail { font-size: 12px; color: rgba(20, 20, 19, 0.7); margin-top: 2px; }
+  .non-pkp-block { background: #F0F5EE; border-left: 3px solid #2A4A1F; padding: 12px 16px; margin-bottom: 24px; font-size: 12px; color: #2A4A1F; line-height: 1.55; }
+  .non-pkp-block .npb-title { font-weight: 600; margin-bottom: 4px; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+  th { text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(20, 20, 19, 0.5); padding: 10px 8px; border-bottom: 1px solid rgba(20, 20, 19, 0.12); font-weight: 500; }
+  th.right, td.right { text-align: right; }
+  td { font-size: 13px; padding: 12px 8px; border-bottom: 1px solid rgba(20, 20, 19, 0.06); }
+  td.item-desc { font-weight: 500; }
+  .totals { margin-left: auto; width: 280px; margin-top: 8px; }
+  .total-row { display: flex; justify-content: space-between; padding: 8px 8px; font-size: 13px; }
+  .total-row.grand { border-top: 2px solid #141413; margin-top: 6px; padding-top: 14px; font-weight: 600; font-size: 15px; }
+  .payment-block { margin-top: 24px; padding: 16px 20px; background: #F5F5F0; border-left: 3px solid #141413; font-size: 12px; }
+  .payment-block .pay-title { font-weight: 600; margin-bottom: 6px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: rgba(20, 20, 19, 0.7); }
+  .payment-block .pay-row { margin-top: 3px; }
+  .pph-footer { margin-top: 28px; padding-top: 16px; border-top: 1px solid rgba(20, 20, 19, 0.08); font-size: 11px; color: rgba(20, 20, 19, 0.6); line-height: 1.6; }
+  .pph-footer .pf-title { font-weight: 600; color: #141413; margin-bottom: 4px; }
+</style>
+</head>
+<body>
+<div class="invoice">
+
+  <div class="header">
+    <div class="brand-block">
+      <div class="seller-name">{{seller_name}}</div>
+      <div class="seller-detail">{{seller_business_form}}</div>
+      <div class="seller-detail">{{seller_address}}</div>
+      <div class="seller-detail">Telp: {{seller_phone}} &middot; Email: {{seller_email}}</div>
+      <div class="seller-detail">NPWP/NIK: {{seller_npwp_or_nik}}</div>
+      <div class="umkm-badge">UMKM &middot; Bukan Pengusaha Kena Pajak</div>
+    </div>
+    <div class="invoice-meta">
+      <div class="doc-type">Invoice (Non-PPN)</div>
+      <div class="doc-number">{{invoice_number}}</div>
+      <div class="meta-row"><span class="meta-label">Tanggal terbit</span><span>{{issue_date_id}}</span></div>
+      <div class="meta-row"><span class="meta-label">Jatuh tempo</span><span>{{due_date_id}}</span></div>
+    </div>
+  </div>
+
+  <div class="parties">
+    <div>
+      <div class="label">Ditagihkan kepada</div>
+      <div class="party-name">{{client_name}}</div>
+      <div class="party-detail">{{client_address}}</div>
+      <div class="party-detail">Email: {{client_email}}</div>
+      <div class="party-detail">NPWP/NIK: {{client_npwp_or_nik}}</div>
+    </div>
+    <div>
+      <div class="label">Referensi pesanan</div>
+      <div class="party-name">{{order_reference}}</div>
+      <div class="party-detail">Tanggal pesanan: {{order_date_id}}</div>
+    </div>
+  </div>
+
+  <div class="non-pkp-block">
+    <div class="npb-title">Bukan Pengusaha Kena Pajak (Non-PKP)</div>
+    Penjual berstatus UMKM dengan peredaran bruto kurang dari Rp 4.800.000.000,- (empat miliar delapan ratus juta Rupiah) per tahun sesuai
+    UU Nomor 42 Tahun 2009 jo. UU HPP Nomor 7 Tahun 2021 Pasal 4A. Oleh karena itu, penjual tidak memungut PPN 11% atas transaksi ini.
+    Invoice ini bukan faktur pajak.
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Deskripsi barang / jasa</th>
+        <th class="right">Kuantitas</th>
+        <th class="right">Harga satuan</th>
+        <th class="right">Jumlah</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{items_rows}}
+    </tbody>
+  </table>
+
+  <div class="totals">
+    <div class="total-row grand">
+      <span>Total tagihan</span>
+      <span>{{grand_total_formatted}}</span>
+    </div>
+  </div>
+
+  <div class="payment-block">
+    <div class="pay-title">Pembayaran</div>
+    <div class="pay-row">Bank: {{bank_name}}</div>
+    <div class="pay-row">Nomor rekening: {{bank_account_number}}</div>
+    <div class="pay-row">Atas nama: {{bank_account_holder}}</div>
+    <div class="pay-row" style="margin-top:8px;">QRIS / e-wallet (opsional): {{qris_or_ewallet_id}}</div>
+    <div class="pay-row" style="margin-top:8px;">Mohon transfer sesuai nominal di atas. Bukti transfer dapat dikirim via WhatsApp ke {{seller_whatsapp}}.</div>
+  </div>
+
+  <div class="pph-footer">
+    <div class="pf-title">Catatan pajak penghasilan (PPh Final UMKM)</div>
+    Atas peredaran bruto dari transaksi ini, penjual dikenakan PPh Final dengan tarif <strong>0,5%</strong> sesuai
+    Peraturan Pemerintah Nomor 55 Tahun 2022 tentang Penyesuaian Pengaturan di Bidang Pajak Penghasilan
+    (penyempurnaan PP 23/2018). PPh Final disetor sendiri oleh penjual ke kas negara paling lambat tanggal 15 bulan berikutnya.
+    Pemotongan oleh pembeli tidak diperlukan kecuali pembeli berstatus pemungut.
+    <div style="margin-top:6px;">
+      Pertanyaan terkait penagihan: <a href="mailto:{{seller_email}}" style="color: rgba(20,20,19,0.7); text-decoration: none;">{{seller_email}}</a>.
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

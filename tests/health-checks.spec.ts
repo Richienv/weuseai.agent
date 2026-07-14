@@ -37,8 +37,9 @@ function makeDeps(overrides?: Partial<Deps>): Deps {
 
 // ─── Static catalog drift ─────────────────────────────────────────
 
-test('EDGE_FUNCTION_PROBES covers all 9 deployed Edge Functions', () => {
+test('EDGE_FUNCTION_PROBES covers core paid + onboarding flow functions', () => {
   const names = new Set(EDGE_FUNCTION_PROBES.map((p) => p.name))
+  // Phase 1-5 base
   for (const expected of [
     'validate-bot-token',
     'pair-customer-bot-webhook',
@@ -49,6 +50,14 @@ test('EDGE_FUNCTION_PROBES covers all 9 deployed Edge Functions', () => {
     'hermes-kanban-proxy',
     'approval-queue',
     'roadmap-state',
+    // Sesi B P0 #E (2026-05-12): paid + onboarding-critical functions
+    // that previously had no probe — silent failures invisible to
+    // health-check.
+    'create-invoice',
+    'save-onboarding-profile',
+    'reset-bot-pairing',
+    'rotate-pairing-code',
+    'customer-readiness',
   ]) {
     assert.ok(names.has(expected), `EDGE_FUNCTION_PROBES missing ${expected}`)
   }
@@ -74,11 +83,17 @@ test('EXPECTED_TABLES includes all 17 post-Phase 6-1.a tables', () => {
   }
 })
 
-test('CUSTOMER_ROUTES includes the 5 known landing routes', () => {
+test('CUSTOMER_ROUTES includes landing + checkout + legal pages', () => {
   assert.deepEqual([...CUSTOMER_ROUTES].sort(), [
     '/',
     '/checkout',
+    '/contact',
     '/onboarding',
+    '/privacy',
+    '/refund-policy',
+    '/robots.txt',
+    '/sitemap.xml',
+    '/terms',
     '/use-cases',
     '/welcome',
   ])

@@ -256,6 +256,40 @@ test('render: explicit personaSlug="the-pro" produces The Pro scaffold', () => {
   assert.match(out, /pendamping kerja harian/)
 })
 
+test('render: personaFree (bare) renders the neutral vanilla scaffold, not a persona', () => {
+  const out = renderSoulMd({
+    customerName: 'Sarah Tanaka',
+    expectationsClean: sanitizedSample,
+    // personaSlug is ignored when personaFree is set.
+    personaSlug: 'the-pro',
+    personaFree: true,
+  })
+  // Vanilla scaffold markers — base assistant, no The Pro specialty.
+  assert.match(out, /asisten AI pribadi Sarah Tanaka/)
+  assert.match(out, /versi dasar/)
+  // MUST NOT impose the The Pro identity on a persona-free customer.
+  assert.doesNotMatch(out, /I am The Pro, a specialist agent/)
+  assert.doesNotMatch(out, /pendamping kerja harian/)
+  // Customer expectations still woven in.
+  assert.ok(out.includes(sanitizedSample))
+})
+
+test('render: personaFree does not emit an unknown-persona warning', () => {
+  const warnings: string[] = []
+  const origWarn = console.warn
+  console.warn = (...args: unknown[]) => warnings.push(args.map(String).join(' '))
+  try {
+    renderSoulMd({
+      customerName: 'Putri',
+      expectationsClean: sanitizedSample,
+      personaFree: true,
+    })
+    assert.equal(warnings.length, 0, 'persona-free render must not warn')
+  } finally {
+    console.warn = origWarn
+  }
+})
+
 test('render: unknown personaSlug falls back to The Pro + warns', () => {
   const warnings: string[] = []
   const origWarn = console.warn
@@ -347,12 +381,12 @@ test('PERSONA_SLUGS includes all 10 personas', () => {
   for (const slug of [
     'the-pro',
     'deep-researcher',
-    'web-master',
+    'web-app-builder',
     'doc-expert',
     'slide-master',
     'trade-pro',
     'project-conductor',
-    'business-director',
+    'business-agent',
     'video-producer',
     'social-conductor',
   ]) {
@@ -396,13 +430,13 @@ test('drift check: /agent-packs/deep-researcher/SOUL.md matches inlined scaffold
 
 // ─── Web Master ──
 
-test('render: personaSlug="web-master" produces Web Creator scaffold', () => {
-  // Folder slug 'web-master' kept for backwards compat; display name +
+test('render: personaSlug="web-app-builder" produces Web Creator scaffold', () => {
+  // Folder slug 'web-app-builder' kept for backwards compat; display name +
   // scope rewrite to Web Creator (persona v2 REPLACE, 2026-05-09).
   const out = renderSoulMd({
     customerName: 'Sarah Tanaka',
     expectationsClean: sanitizedSample,
-    personaSlug: 'web-master',
+    personaSlug: 'web-app-builder',
   })
   assert.match(
     out,
@@ -414,15 +448,15 @@ test('render: personaSlug="web-master" produces Web Creator scaffold', () => {
   assert.match(out, /deploy ke Vercel/)
 })
 
-test('drift check: /agent-packs/web-master/SOUL.md matches inlined scaffold', () => {
+test('drift check: /agent-packs/web-app-builder/SOUL.md matches inlined scaffold', () => {
   const onDisk = readFileSync(
-    resolve(REPO_ROOT, 'agent-packs/web-master/SOUL.md'),
+    resolve(REPO_ROOT, 'agent-packs/web-app-builder/SOUL.md'),
     'utf8',
   )
   assert.equal(
     onDisk,
     __INTERNAL_WEB_MASTER_SCAFFOLD,
-    'agent-packs/web-master/SOUL.md drifted from WEB_MASTER_SCAFFOLD',
+    'agent-packs/web-app-builder/SOUL.md drifted from WEB_MASTER_SCAFFOLD',
   )
 })
 
@@ -551,11 +585,11 @@ test('drift check: /agent-packs/project-conductor/SOUL.md matches inlined scaffo
 
 // ─── Business Director ──
 
-test('render: personaSlug="business-director" produces Business Director v3 scaffold', () => {
+test('render: personaSlug="business-agent" produces Business Director v3 scaffold', () => {
   const out = renderSoulMd({
     customerName: 'Sarah Tanaka',
     expectationsClean: sanitizedSample,
-    personaSlug: 'business-director',
+    personaSlug: 'business-agent',
   })
   assert.match(
     out,
@@ -572,15 +606,15 @@ test('render: personaSlug="business-director" produces Business Director v3 scaf
   assert.match(out, /Studio/i)
 })
 
-test('drift check: /agent-packs/business-director/SOUL.md matches inlined scaffold', () => {
+test('drift check: /agent-packs/business-agent/SOUL.md matches inlined scaffold', () => {
   const onDisk = readFileSync(
-    resolve(REPO_ROOT, 'agent-packs/business-director/SOUL.md'),
+    resolve(REPO_ROOT, 'agent-packs/business-agent/SOUL.md'),
     'utf8',
   )
   assert.equal(
     onDisk,
     __INTERNAL_BUSINESS_DIRECTOR_SCAFFOLD,
-    'agent-packs/business-director/SOUL.md drifted from BUSINESS_DIRECTOR_SCAFFOLD',
+    'agent-packs/business-agent/SOUL.md drifted from BUSINESS_DIRECTOR_SCAFFOLD',
   )
 })
 

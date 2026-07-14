@@ -29,6 +29,7 @@ import { MockLlmKeyMinter } from '../_shared/mock-llm-key-minter.ts'
 import { OpenRouterKeyMinter } from '../_shared/openrouter-key-minter.ts'
 import { OnboardingProvisioningClient } from '../_shared/onboarding-provisioning-client.ts'
 import { TelegramBotClient } from '../_shared/telegram-client.ts'
+import { sendEmail } from '../_shared/email-delivery.ts'
 import type { ILlmKeyMinter } from '../_shared/types.ts'
 
 // @ts-ignore — Deno global available at runtime
@@ -93,6 +94,9 @@ Deno.serve(async (req) => {
     provisioning,
     telegram,
     publicBase: PUBLIC_BASE,
+    // Sesi B P0 #7 (2026-05-12): welcome email after Hermes activation.
+    // Stub-tolerant — no-ops cleanly when RESEND_API_KEY is unset.
+    sendWelcomeEmail: async (args) => sendEmail(args),
   })
   return withCors(res, req)
 })

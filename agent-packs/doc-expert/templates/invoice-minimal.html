@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Invoice {{invoice_number}} — {{client_name}}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    color: #141413;
+    background: #ffffff;
+    padding: 40px 24px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  .invoice {
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 36px 32px;
+  }
+  .head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 28px;
+  }
+  .sender-name { font-size: 15px; font-weight: 600; color: #141413; }
+  .sender-detail { font-size: 12px; color: rgba(20, 20, 19, 0.65); margin-top: 2px; }
+  .invoice-stamp { text-align: right; }
+  .invoice-stamp .title {
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: rgba(20, 20, 19, 0.55);
+    margin-bottom: 4px;
+  }
+  .invoice-stamp .number { font-size: 15px; font-weight: 600; color: #141413; }
+  .meta { font-size: 12px; color: rgba(20, 20, 19, 0.65); margin-top: 6px; }
+  .meta strong { color: #141413; font-weight: 500; }
+
+  .client-line {
+    padding: 14px 0;
+    border-top: 1px solid rgba(20, 20, 19, 0.12);
+    border-bottom: 1px solid rgba(20, 20, 19, 0.12);
+    margin-bottom: 24px;
+  }
+  .client-label {
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: rgba(20, 20, 19, 0.5);
+    margin-bottom: 4px;
+  }
+  .client-name { font-size: 14px; font-weight: 500; color: #141413; }
+
+  table { width: 100%; border-collapse: collapse; margin-bottom: 18px; }
+  th, td { padding: 10px 0; font-size: 13px; }
+  th {
+    text-align: left;
+    font-weight: 500;
+    color: rgba(20, 20, 19, 0.55);
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    border-bottom: 1px solid rgba(20, 20, 19, 0.12);
+  }
+  th.right, td.right { text-align: right; }
+  td { border-bottom: 1px solid rgba(20, 20, 19, 0.06); color: #141413; }
+
+  .grand-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 14px 0;
+    margin-top: 6px;
+    border-top: 2px solid #141413;
+    font-size: 16px;
+    font-weight: 600;
+    color: #141413;
+  }
+  .grand-row .label-text { letter-spacing: 0.03em; }
+
+  .pay-block {
+    margin-top: 28px;
+    padding: 16px 18px;
+    background: #faf9f5;
+    border: 1px solid rgba(20, 20, 19, 0.08);
+    font-size: 12px;
+    color: rgba(20, 20, 19, 0.75);
+    line-height: 1.7;
+  }
+  .pay-block .pay-label {
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: rgba(20, 20, 19, 0.55);
+    margin-bottom: 6px;
+  }
+  .pay-block strong { color: #141413; font-weight: 500; }
+
+  .foot {
+    margin-top: 24px;
+    font-size: 11px;
+    color: rgba(20, 20, 19, 0.5);
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+<div class="invoice">
+
+  <div class="head">
+    <div>
+      <div class="sender-name">{{sender_name}}</div>
+      <div class="sender-detail">{{sender_email}}</div>
+      <div class="sender-detail">{{sender_phone}}</div>
+    </div>
+    <div class="invoice-stamp">
+      <div class="title">Invoice</div>
+      <div class="number">{{invoice_number}}</div>
+      <div class="meta">Tanggal <strong>{{issue_date}}</strong></div>
+      <div class="meta">Jatuh tempo <strong>{{due_date}}</strong></div>
+    </div>
+  </div>
+
+  <div class="client-line">
+    <div class="client-label">Untuk</div>
+    <div class="client-name">{{client_name}}</div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Deskripsi</th>
+        <th class="right">Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{items_rows}}
+      <!--
+        Format per baris:
+        <tr><td>{{item_name}}</td><td class="right">{{item_total_formatted}}</td></tr>
+      -->
+    </tbody>
+  </table>
+
+  <div class="grand-row">
+    <span class="label-text">Total</span>
+    <span>{{total_formatted}}</span>
+  </div>
+
+  <div class="pay-block">
+    <div class="pay-label">Pembayaran</div>
+    Transfer ke <strong>{{bank_name}}</strong> nomor <strong>{{bank_account_number}}</strong> atas nama <strong>{{bank_account_holder}}</strong>.
+    Sertakan nomor invoice ({{invoice_number}}) di keterangan transfer.
+    Bukti transfer kirim ke {{sender_email}} atau WhatsApp {{sender_phone}}.
+  </div>
+
+  <div class="foot">Terima kasih atas kepercayaannya.</div>
+
+</div>
+</body>
+</html>

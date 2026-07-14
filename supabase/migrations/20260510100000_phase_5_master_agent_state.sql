@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS public.business_roadmap_state (
   current_stage   text not null check (current_stage in ('idea','setup','identity','build','sell')),
   stage_entered_at timestamptz not null default now(),
   -- Per-stage deliverable completion. Keys = locked deliverable IDs from
-  -- agent-packs/business-director/templates/roadmap/5-stage-checklist.md
+  -- agent-packs/business-agent/templates/roadmap/5-stage-checklist.md
   -- (introduced in 5-2.a). Shape: { "idea_market_validated": true,
   --   "setup_pt_incorporated": false, ... }
   deliverables_completed jsonb not null default '{}'::jsonb,
@@ -57,7 +57,7 @@ CREATE TABLE IF NOT EXISTS public.approval_requests (
   )),
   action_summary  text not null,            -- Human-readable for surfacing in Telegram
   action_payload  jsonb not null,           -- Full structured action (passed to executor on approval)
-  proposed_by_agent text not null,          -- e.g. 'business-director' / 'sales-pack' / 'legal-pack'
+  proposed_by_agent text not null,          -- e.g. 'business-agent' / 'sales-pack' / 'legal-pack'
   status          text not null check (status in (
     'pending', 'approved', 'rejected', 'expired'
   )) default 'pending',

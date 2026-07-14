@@ -28,12 +28,12 @@ export type TaskStatus = 'todo' | 'in_progress' | 'review' | 'done' | 'blocked'
 export type PersonaSlug =
   | 'the-pro'
   | 'deep-researcher'
-  | 'web-master'
+  | 'web-app-builder'
   | 'doc-expert'
   | 'slide-master'
   | 'trade-pro'
   | 'project-conductor'
-  | 'business-director'
+  | 'business-agent'
   | 'video-producer'
   | 'social-conductor'
 
@@ -161,19 +161,19 @@ export const DEFAULT_COLUMNS: { title: string; order: number }[] = [
 
 /** Persona owner default mapping — persona-suggester for task-decomposer
  *  output. Mirrors the suggested specialist mapping from
- *  agent-packs/business-director/skills/department-task-spawner/SKILL.md. */
+ *  agent-packs/business-agent/skills/department-task-spawner/SKILL.md. */
 export const TASK_OWNER_DEFAULTS: Partial<Record<string, PersonaSlug>> = {
   // Marketing / brand
   'launch announcement': 'social-conductor',
   'press release': 'doc-expert',
-  'landing page': 'web-master',
+  'landing page': 'web-app-builder',
   'pitch deck': 'slide-master',
   // Tech / build
   'spec document': 'doc-expert',
-  'web app': 'web-master',
+  'web app': 'web-app-builder',
   // Strategy / coordination
   'project plan': 'project-conductor',
-  'kpi tracking': 'business-director',
+  'kpi tracking': 'business-agent',
   // Default fallback
   'research': 'deep-researcher',
   'briefing': 'the-pro',

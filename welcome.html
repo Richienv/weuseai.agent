@@ -6,6 +6,7 @@
   <title>Pembayaran berhasil — weuseai.agent</title>
   <meta name="description" content="Konfirmasi pembayaran weuseai.agent — agent kamu sedang dibangun.">
   <meta name="robots" content="noindex,nofollow" />
+  <link rel="canonical" href="https://weuseai-agent.vercel.app/welcome" />
   <meta name="theme-color" content="#0a0a0a" />
   <link rel="icon" type="image/svg+xml" href="assets/logo.svg" />
   <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png" />
@@ -41,6 +42,27 @@
     }
     .serif { font-family: 'Instrument Serif', 'Times New Roman', serif; font-weight: 400; letter-spacing: -0.02em; }
     .mono { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace; }
+
+    /* ─── State gating (welcome-guard fix, 2026-05-10) ───
+       Sections marked .verified-only render only when payment is confirmed
+       (states B, C, C2, D, F). Sections marked .unverified-only render only
+       in pre-verification or invalid-cid states (A, E, G). The state machine
+       in renderState() drives `body[data-state]`; CSS toggles visibility.
+
+       Default (no data-state set yet) = treat as unverified → guard-friendly,
+       no premature "Pembayaran berhasil" announcement before we've checked. */
+    .verified-only, .unverified-only { display: none; }
+    body[data-state="B"]  .verified-only,
+    body[data-state="C"]  .verified-only,
+    body[data-state="C2"] .verified-only,
+    body[data-state="D"]  .verified-only,
+    body[data-state="F"]  .verified-only { display: revert; }
+    body:not([data-state]) .unverified-only,
+    body[data-state=""]   .unverified-only,
+    body[data-state="A"]  .unverified-only,
+    body[data-state="E"]  .unverified-only,
+    body[data-state="E2"] .unverified-only,
+    body[data-state="G"]  .unverified-only { display: revert; }
 
     /* Layout primitives ------------------------------------------------ */
     .container { max-width: 720px; margin: 0 auto; padding: 0 24px; }
@@ -253,13 +275,336 @@
       outline-offset: 3px;
     }
 
+    /* ════════════════════════════════════════════════════════════
+       WAIT-PAGE REDESIGN (Phase 3, 2026-05-16)
+       Retro/futuristic terminal aesthetic for state B — the
+       provisioning wait view. Monospace, brand colors, rectangle-block
+       loader (NOT a spinner), persistent accumulating log, timeline
+       progress bar with % milestones, blinking cursor, CRT scanlines.
+       ════════════════════════════════════════════════════════════ */
+    :root {
+      --oxblood: #4a1512;
+      --bone: #ece7dd;
+      --term-green: #6fcf7f;
+      --term-amber: #e5aa28;
+    }
+
+    /* Non-dismissible "don't leave / don't refresh" banner */
+    .term-warn {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      letter-spacing: 0.02em;
+      color: var(--bone);
+      background: linear-gradient(90deg, var(--oxblood), rgba(74, 21, 18, 0.55));
+      border: 1px solid var(--signal-red-glow);
+      border-radius: 8px;
+      padding: 11px 14px;
+      display: flex; align-items: center; gap: 10px;
+      line-height: 1.5;
+    }
+    .term-warn .blink-sq {
+      width: 9px; height: 9px; flex-shrink: 0;
+      background: var(--signal-red);
+      box-shadow: 0 0 8px var(--signal-red-glow);
+      animation: sqBlink 1s steps(1) infinite;
+    }
+    @keyframes sqBlink { 0%,49% { opacity: 1; } 50%,100% { opacity: 0.15; } }
+
+    /* Timeline progress bar + big % readout */
+    .term-timeline { margin-top: 18px; }
+    .term-pct-row { display: flex; align-items: baseline; gap: 10px; }
+    .term-pct {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 500;
+      font-size: 40px;
+      line-height: 1;
+      color: var(--signal-red);
+      text-shadow: 0 0 16px var(--signal-red-glow);
+      font-variant-numeric: tabular-nums;
+    }
+    .term-pct-unit { font-family: 'JetBrains Mono', monospace; font-size: 18px; color: var(--muted); }
+    .term-pct-stage {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px; color: rgba(245,245,245,0.78);
+      margin-left: auto; text-align: right; max-width: 55%;
+    }
+    .term-bar {
+      position: relative;
+      height: 14px;
+      margin-top: 12px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--line);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    /* Stepwise rectangle fill — quantised, retro (no smooth gradient slide) */
+    .term-bar-fill {
+      position: absolute; top: 0; bottom: 0; left: 0;
+      width: 5%;
+      background:
+        repeating-linear-gradient(90deg,
+          var(--signal-red) 0, var(--signal-red) 8px,
+          rgba(229,50,45,0.55) 8px, rgba(229,50,45,0.55) 11px);
+      box-shadow: 0 0 12px var(--signal-red-glow);
+      transition: width 600ms steps(12, end);
+    }
+    .term-bar-fill::after {
+      content: ''; position: absolute; top: 0; right: 0; bottom: 0;
+      width: 3px; background: var(--bone);
+      box-shadow: 0 0 10px rgba(236,231,221,0.8);
+    }
+    .term-milestones {
+      display: flex; justify-content: space-between;
+      margin-top: 8px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9.5px; letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: rgba(245,245,245,0.32);
+    }
+    .term-milestones .ms { flex: 1; text-align: center; transition: color 240ms ease; }
+    .term-milestones .ms:first-child { text-align: left; }
+    .term-milestones .ms:last-child { text-align: right; }
+    .term-milestones .ms.reached { color: var(--signal-red); }
+    .term-milestones .ms.done { color: var(--term-green); }
+
+    /* Rectangle-block loader — discrete blocks fill left-to-right in a
+       retro stepwise march. Explicitly NOT a spinner, NOT a smooth bar. */
+    .term-blocks { display: flex; gap: 5px; margin-top: 16px; }
+    .term-blocks .blk {
+      width: 26px; height: 14px;
+      border: 1px solid rgba(229,50,45,0.4);
+      background: rgba(255,255,255,0.03);
+      border-radius: 1px;
+    }
+    .term-blocks .blk.on {
+      background: var(--signal-red);
+      border-color: var(--signal-red);
+      box-shadow: 0 0 9px var(--signal-red-glow);
+    }
+    .term-blocks .blk.scan {
+      animation: blkScan 0.9s steps(1) infinite;
+    }
+    @keyframes blkScan {
+      0%,49% { background: rgba(229,50,45,0.55); border-color: var(--signal-red); }
+      50%,100% { background: rgba(255,255,255,0.03); border-color: rgba(229,50,45,0.4); }
+    }
+
+    /* The terminal screen — persistent accumulating log ("detail teknis") */
+    .term-screen {
+      margin-top: 18px;
+      background: #060606;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      position: relative;
+    }
+    /* CRT scanline overlay */
+    .term-screen::before {
+      content: ''; position: absolute; inset: 0; pointer-events: none;
+      background: repeating-linear-gradient(
+        0deg, rgba(0,0,0,0) 0, rgba(0,0,0,0) 2px,
+        rgba(0,0,0,0.28) 3px, rgba(0,0,0,0) 4px);
+      z-index: 2;
+    }
+    .term-screen-head {
+      display: flex; align-items: center; gap: 7px;
+      padding: 8px 12px;
+      background: #111;
+      border-bottom: 1px solid var(--line);
+    }
+    .term-screen-head .d { width: 9px; height: 9px; border-radius: 50%; }
+    .term-screen-head .d-r { background: #e5322d; }
+    .term-screen-head .d-y { background: #e5aa28; }
+    .term-screen-head .d-g { background: #6fcf7f; }
+    .term-screen-head .t {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px; letter-spacing: 0.13em; text-transform: uppercase;
+      color: rgba(245,245,245,0.45);
+      margin-left: 6px;
+    }
+    .term-body {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11.5px;
+      line-height: 1.7;
+      color: var(--bone);
+      padding: 14px 14px 12px;
+      max-height: 232px;
+      overflow-y: auto;
+      position: relative; z-index: 1;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(229,50,45,0.4) transparent;
+    }
+    .term-body::-webkit-scrollbar { width: 6px; }
+    .term-body::-webkit-scrollbar-thumb { background: rgba(229,50,45,0.4); border-radius: 3px; }
+    .term-line { white-space: pre-wrap; word-break: break-word; }
+    .term-line .pfx { color: rgba(245,245,245,0.34); }
+    .term-line.ok   .gl { color: var(--term-green); }
+    .term-line.work .gl { color: var(--signal-red); }
+    .term-line.warn { color: var(--term-amber); }
+    .term-line .gl { margin-right: 4px; }
+    .term-cursor {
+      display: inline-block; width: 8px; height: 13px;
+      background: var(--signal-red); vertical-align: -2px;
+      margin-left: 2px;
+      box-shadow: 0 0 8px var(--signal-red-glow);
+      animation: curBlink 1s steps(1) infinite;
+    }
+    @keyframes curBlink { 0%,49% { opacity: 1; } 50%,100% { opacity: 0; } }
+    .term-heartbeat {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: rgba(245,245,245,0.38);
+      padding: 7px 14px;
+      border-top: 1px solid var(--line);
+      background: #0c0c0c;
+      position: relative; z-index: 1;
+    }
+
+    /* ════════════════════════════════════════════════════════════
+       EPIC SUCCESS PAGE (Phase 4 + video-treatment pass, 2026-05-17)
+       State C2 — the agent-is-ready moment. The success video is NOT
+       full-bleed: it sits in a thick-padded framed plate, rendered as a
+       red dot-matrix by the same Canvas halftone technique the landing
+       hero uses (DottedVideo). Bigger/dimmer dots + a heavy film-grain
+       overlay so the impression is "a red dot matrix with motion
+       beneath" — the video itself is barely perceptible.
+       ════════════════════════════════════════════════════════════ */
+    body[data-state="C2"] { background: #050505; }
+    #epic-bg { display: none; }
+    body[data-state="C2"] #epic-bg {
+      display: block;
+      /* thick padding — the matrix is a framed plate, not a takeover */
+      position: fixed;
+      inset: clamp(24px, 7.5vmin, 104px);
+      z-index: 0;
+      overflow: hidden;
+      border-radius: 14px;
+      background: #050505;
+      box-shadow:
+        0 0 0 1px rgba(229,50,45,0.16),
+        0 44px 120px -34px rgba(0,0,0,0.92);
+    }
+    /* the canvas IS the render — red dots, luminance-modulated from the
+       hidden source video (same DottedVideo technique as the hero). */
+    #epic-canvas {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      display: block;
+    }
+    /* hidden source video — sampled by the canvas, never shown directly */
+    #epic-bg video {
+      position: absolute; width: 2px; height: 2px;
+      opacity: 0; pointer-events: none;
+    }
+    /* film grain — heavier than the hero's so the video reads as
+       incidental texture under the dot matrix, not a video. */
+    #epic-bg .epic-grain {
+      position: absolute; inset: 0; pointer-events: none;
+      z-index: 2;
+      opacity: 0.62;
+      mix-blend-mode: overlay;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' seed='11'/><feColorMatrix values='0 0 0 0 0.62 0 0 0 0 0.20 0 0 0 0 0.18 0 0 0 0.7 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+      background-size: 200px 200px;
+      animation: epicGrain 0.62s steps(6) infinite;
+    }
+    @keyframes epicGrain {
+      0%   { background-position: 0 0; }
+      100% { background-position: -200px 120px; }
+    }
+    /* dim — oxblood-tinted darkening so the matrix is moodier and the
+       title always reads against it. */
+    #epic-bg .epic-dim {
+      position: absolute; inset: 0; z-index: 1; pointer-events: none;
+      background:
+        radial-gradient(ellipse 86% 72% at center, rgba(5,5,5,0.30) 34%, rgba(40,11,9,0.62) 74%, rgba(5,5,5,0.93) 100%);
+    }
+    /* C2 takeover — hide the normal page chrome */
+    body[data-state="C2"] header.site,
+    body[data-state="C2"] footer.site,
+    body[data-state="C2"] main section.verified-only,
+    body[data-state="C2"] main section.unverified-only { display: none; }
+    body[data-state="C2"] main { padding: 0; }
+    body[data-state="C2"] #status-box {
+      position: relative; z-index: 1;
+      background: none; border: none; border-radius: 0;
+      backdrop-filter: none; -webkit-backdrop-filter: none;
+      min-height: 100vh; min-height: 100dvh;
+      margin: 0; padding: 56px 24px;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      text-align: center;
+    }
+    .epic { max-width: 640px; }
+    .epic .epic-eyebrow {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px; letter-spacing: 0.34em; text-transform: uppercase;
+      color: var(--signal-red);
+      text-shadow: 0 0 20px var(--signal-red-glow);
+    }
+    /* symmetric thin red rules framing the eyebrow */
+    .epic .epic-rule {
+      width: 56px; height: 2px; margin: 0 auto;
+      background: var(--signal-red);
+      box-shadow: 0 0 14px var(--signal-red-glow);
+    }
+    .epic h1.epic-title {
+      font-family: 'Instrument Serif', 'Times New Roman', serif;
+      font-weight: 400; letter-spacing: -0.02em;
+      font-size: clamp(46px, 8.5vw, 88px); line-height: 1.02;
+      color: var(--bone);
+      margin: 22px 0 0;
+      text-shadow: 0 6px 44px rgba(0,0,0,0.78);
+    }
+    .epic .epic-sub {
+      font-size: 16px; line-height: 1.62;
+      color: rgba(236,231,221,0.84);
+      max-width: 440px; margin: 22px auto 0;
+    }
+    @media (min-width: 768px) { .epic .epic-sub { font-size: 17px; } }
+    .epic .epic-cta-wrap { margin-top: 36px; }
+    .epic .epic-note {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11.5px; letter-spacing: 0.02em;
+      color: rgba(236,231,221,0.52);
+      margin-top: 22px;
+    }
+    /* the white CTA — enlarged + lifted for the celebration moment */
+    body[data-state="C2"] #status-box .btn-primary {
+      padding: 16px 32px; font-size: 15px;
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.12), 0 20px 54px -14px rgba(0,0,0,0.85);
+    }
+    .epic-fade { animation: epicFade 720ms cubic-bezier(0.2,0.6,0.2,1) both; }
+    @keyframes epicFade {
+      from { opacity: 0; transform: translateY(14px); }
+      to   { opacity: 1; transform: none; }
+    }
+
     /* Reduce motion */
     @media (prefers-reduced-motion: reduce) {
-      .pulse-dot, .progress-fill, .fade-in { animation: none !important; }
+      .pulse-dot, .progress-fill, .fade-in,
+      .blink-sq, .term-blocks .blk.scan, .term-cursor,
+      .term-bar-fill, .epic-fade,
+      #epic-bg .epic-grain { animation: none !important; transition: none !important; }
     }
   </style>
 </head>
 <body>
+  <!-- Epic success page — state C2. The success video is rendered as a
+       red dot-matrix onto #epic-canvas (the landing hero's DottedVideo
+       Canvas technique). The source <video> is hidden — only sampled,
+       never shown. Thick padding + heavy grain + dim make it read as a
+       red dot matrix with motion beneath, not a video. Revealed only on
+       body[data-state="C2"]; startEpicMatrix() drives the render. -->
+  <div id="epic-bg" aria-hidden="true">
+    <canvas id="epic-canvas"></canvas>
+    <video
+      src="assets/welcome-success.mp4"
+      muted loop playsinline preload="auto" crossorigin="anonymous"
+    ></video>
+    <div class="epic-dim"></div>
+    <div class="epic-grain"></div>
+  </div>
+
   <header class="site">
     <div class="container row">
       <a href="/" class="brand focus-ring">weuseai.agent</a>
@@ -269,8 +614,8 @@
 
   <main>
     <div class="container">
-      <!-- ─── HERO ─── -->
-      <section style="text-align: center;">
+      <!-- ─── HERO (verified) — only when payment confirmed ─── -->
+      <section class="verified-only" style="text-align: center;">
         <span class="pill">
           <span class="dot" aria-hidden="true"></span>
           Pembayaran berhasil
@@ -281,6 +626,21 @@
         </h1>
         <p class="lead">
           Dalam 5–7 menit, satu pesan akan masuk ke Telegram kamu — tanda agent siap bekerja.
+        </p>
+      </section>
+
+      <!-- ─── HERO (unverified) — neutral framing while we check ─── -->
+      <section class="unverified-only" style="text-align: center;">
+        <span class="pill">
+          <span class="dot" aria-hidden="true"></span>
+          Konfirmasi pembayaran
+        </span>
+        <h1 class="serif h-hero">
+          Sebentar.<br />
+          Sedang memeriksa pembayaran kamu.
+        </h1>
+        <p class="lead">
+          Kalau kamu baru saja bayar, status akan muncul di bawah dalam beberapa detik.
         </p>
       </section>
 
@@ -295,8 +655,8 @@
         <!-- Filled by JS: see renderState() -->
       </section>
 
-      <!-- ─── STEPS ─── -->
-      <section style="margin-top: 48px;">
+      <!-- ─── STEPS — only when payment confirmed ─── -->
+      <section class="verified-only" style="margin-top: 48px;">
         <div class="eyebrow" style="margin-bottom: 18px;">Yang akan terjadi</div>
         <ol class="step-list">
           <li>
@@ -308,13 +668,13 @@
           <li>
             <span class="num">02</span>
             <div class="body">
-              <div class="text">Kirim <span class="mono" style="color: rgba(245,245,245,0.95);">/start</span> untuk memperkenalkan diri.</div>
+              <div class="text">Tunggu pesan halo dari agent kamu — otomatis masuk dalam beberapa detik.</div>
             </div>
           </li>
           <li>
             <span class="num">03</span>
             <div class="body">
-              <div class="text">Tunggu pesan halo dari agent kamu.</div>
+              <div class="text">Mulai percakapan dengan membalas, atau kasih tahu prioritas kamu hari ini.</div>
             </div>
           </li>
         </ol>
@@ -341,10 +701,17 @@
       </div>
       <div class="links">
         <a href="/#faq" class="focus-ring">FAQ</a>
-        <a href="/syarat" class="focus-ring">syarat</a>
-        <a href="/privasi" class="focus-ring">privasi</a>
-        <a href="/kontak" class="focus-ring">kontak</a>
+        <a href="/terms" class="focus-ring">syarat</a>
+        <a href="/privacy" class="focus-ring">privasi</a>
+        <a href="/refund-policy" class="focus-ring">pengembalian</a>
+        <a href="/contact" class="focus-ring">kontak</a>
       </div>
+    </div>
+    <div class="container row" style="margin-top: 14px;">
+      <p style="margin: 0; font-size: 11px; color: rgba(245,245,245,0.55); line-height: 1.5;">
+        Dioperasikan oleh Richie Kidnovell, berbasis di Jakarta.
+        Kontak: <a href="mailto:support@weuseai.agent" class="focus-ring" style="color: rgba(245,245,245,0.75);">support@weuseai.agent</a>.
+      </p>
     </div>
   </footer>
 
@@ -373,6 +740,60 @@
     let currentState = null;
     let pollTimer = null;
     let startedAt = Date.now();
+    // B1 (audit §P1-CF-4, 2026-05-13): timeout anchor.
+    //
+    // Pre-fix: TIMEOUT_MS measured wall-clock from page load, so a
+    // customer who paid 10 min ago and reopened welcome.html got a
+    // fresh 15 min window — even though the server-side timer had
+    // already half-elapsed. Worse, a customer who paid 20 min ago
+    // and JUST landed got 15 fresh minutes despite the subscription
+    // being long-stale.
+    //
+    // Fix: anchor to subscription.started_at (returned by pollOnce).
+    // This field is null until the first pollOnce surfaces a row;
+    // tick() handles null by falling back to page-load `startedAt`
+    // for the very first poll (same behaviour as pre-B1 in the brief
+    // initial moment). After the first successful poll the anchor
+    // sticks and the timer reflects reality.
+    //
+    // The page-load `startedAt` above is still used by the
+    // LONGER_THAN_USUAL_MS panel (PR #95) — different concern,
+    // page-relative not subscription-relative.
+    let subscriptionStartedAtMs = null;
+
+    // welcome-guard fix (2026-05-10), expanded by C1 (audit §P1-CF-3,
+    // 2026-05-13) into a three-tier adaptive grace. If cid is present
+    // but pollOnce returns null, the Xendit webhook is in flight; the
+    // pre-C1 single 30 s cliff said "salah link" too early for slow-
+    // webhook cases, leaving legit paying customers with a literal
+    // "wrong link" message.
+    //
+    // Tiers now:
+    //   0–30 s   (< NULL_GRACE_SLOW_MS) — state A, default label.
+    //   30–90 s  (< NULL_GRACE_HARD_MS) — state A, slow-confirmation
+    //                                     label "Konfirmasi pembayaran
+    //                                     sedang lambat. Sebentar lagi…"
+    //   90 s +   (>= NULL_GRACE_HARD_MS) — state E2 (new): webhook
+    //                                      definitely missing, prefilled
+    //                                      WA escalation with cid +
+    //                                      check-email guidance.
+    //
+    // State E (current copy) now ONLY fires when cid is missing /
+    // malformed entirely — i.e. when there's no UUID at all in the
+    // URL. The cid-present-but-webhook-late case routes to E2.
+    // Without this, a legit paying customer who lands on welcome.html
+    // before the webhook fires sees the "salah link" guard for one cycle
+    // (10s) which is alarming enough to bounce.
+    // C1 grace tiers (audit §P1-CF-3). Pre-C1 was a single
+    // NULL_GRACE_MS = 30_000 that flipped state A → state E at 30 s.
+    const NULL_GRACE_SLOW_MS = 30_000;  // label switches to slow-confirmation
+    const NULL_GRACE_HARD_MS = 90_000;  // escalate to state E2 (webhook missing)
+
+    // Customer's per-bot Telegram username — populated lazily by
+    // ensureBotUsername() the first time we render state C2 (the
+    // "Buka Telegram" CTA). Cached after first successful read so
+    // re-renders don't re-fetch.
+    let botUsername = null;
 
     // Pre-fill WhatsApp message with cid when present
     (function injectCidIntoWhatsApp() {
@@ -390,38 +811,211 @@
       return `https://wa.me/6282154902561?text=${encodeURIComponent(msg)}`;
     }
 
+    // ─── Epic success page — red dot-matrix renderer ──────────
+    //
+    // Video-treatment pass (2026-05-17). Ports the landing hero's
+    // DottedVideo Canvas technique: sample the hidden success video
+    // frame-by-frame, draw each cell as a red dot whose radius tracks
+    // that cell's luminance. Tuned vs the hero — bigger cells (thicker
+    // dots) + lower alpha (dimmer) — so combined with the heavy grain
+    // overlay the result reads as a red dot matrix with motion beneath,
+    // not a video. Idempotent: first state-C2 render starts it.
+    let epicMatrixStarted = false;
+    function startEpicMatrix() {
+      if (epicMatrixStarted) return;
+      const wrap = document.getElementById('epic-bg');
+      const video = wrap && wrap.querySelector('video');
+      const canvas = document.getElementById('epic-canvas');
+      if (!wrap || !video || !canvas) return;
+      epicMatrixStarted = true;
+
+      const ctx = canvas.getContext('2d');
+      const sample = document.createElement('canvas');
+      const sampleCtx = sample.getContext('2d', { willReadFrequently: true });
+
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const isMobile = window.matchMedia('(max-width: 767px)').matches;
+      const CELL = isMobile ? 13 : 10;   // hero uses 6 — bigger = thicker dots
+      const THRESHOLD = 0.085;           // dark cells drop out → matrix feel
+      const DOT_ALPHA = 0.74;            // dimmer than the hero's solid fill
+      const frameModulo = isMobile ? 3 : 2;
+
+      function resize() {
+        const r = wrap.getBoundingClientRect();
+        canvas.width = Math.max(1, Math.floor(r.width));
+        canvas.height = Math.max(1, Math.floor(r.height));
+      }
+      resize();
+      window.addEventListener('resize', resize);
+
+      function draw() {
+        if (video.readyState < 2) return;
+        const w = canvas.width, h = canvas.height;
+        const cols = Math.ceil(w / CELL), rows = Math.ceil(h / CELL);
+        if (sample.width !== cols) sample.width = cols;
+        if (sample.height !== rows) sample.height = rows;
+        const vw = video.videoWidth, vh = video.videoHeight;
+        if (!vw || !vh) return;
+        const scale = Math.max(cols / vw, rows / vh);
+        const dw = vw * scale, dh = vh * scale;
+        sampleCtx.drawImage(video, (cols - dw) / 2, (rows - dh) / 2, dw, dh);
+        let data;
+        try {
+          data = sampleCtx.getImageData(0, 0, cols, rows).data;
+        } catch { return; }  // tainted-canvas guard (never on same-origin)
+        ctx.clearRect(0, 0, w, h);
+        ctx.fillStyle = 'rgba(229,50,45,' + DOT_ALPHA + ')';
+        const half = CELL / 2, maxR = half * 0.92;
+        for (let y = 0; y < rows; y++) {
+          for (let x = 0; x < cols; x++) {
+            const i = (y * cols + x) * 4;
+            const lum = (0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]) / 255;
+            if (lum < THRESHOLD) continue;
+            ctx.beginPath();
+            ctx.arc(x * CELL + half, y * CELL + half, lum * maxR, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      }
+
+      const p = video.play();
+      if (p && p.catch) p.catch(() => {});
+
+      if (reduced) {
+        // Honour reduced-motion: render one static matrix frame, no loop.
+        if (video.readyState >= 2) draw();
+        else video.addEventListener('loadeddata', draw, { once: true });
+        return;
+      }
+      let frame = 0;
+      (function tick() {
+        requestAnimationFrame(tick);
+        if ((frame++ % frameModulo) !== 0) return;
+        draw();
+      })();
+    }
+
     // ─── State renderers ──────────────────────────────────────
 
     const StatusBox = document.getElementById('status-box');
 
     function renderState(state, opts = {}) {
       currentState = state;
+      // welcome-guard fix (2026-05-10): drives the .verified-only /
+      // .unverified-only CSS gate so the success HERO + STEPS only show
+      // for verified states (B/C/C2/D/F), and the neutral HERO shows
+      // pre-verification (A) + invalid-cid (E) + network-error (G).
+      // Prevents the bug where the success messaging and the "salah link"
+      // guard rendered simultaneously.
+      document.body.dataset.state = state;
       let html = '';
 
       switch (state) {
-        case 'A': // LOADING — initial poll in flight
+        case 'A': { // LOADING — initial poll in flight
+          // C1 adaptive grace (audit §P1-CF-3): when the null-poll has
+          // crossed NULL_GRACE_SLOW_MS but is still below the hard
+          // cliff, tick() passes { slow: true } so the label switches
+          // to a calm "konfirmasi pembayaran sedang lambat" message
+          // instead of leaving the customer with the same generic
+          // loading text for 60+ seconds.
+          const aLabel = opts.slow
+            ? 'Konfirmasi pembayaran sedang lambat. Sebentar lagi…'
+            : 'Memeriksa status pembayaran kamu...';
           html = `
             <div class="fade-in" style="display:flex; align-items:center; gap:12px; color:rgba(245,245,245,0.85);">
               <span class="pulse-dot" aria-hidden="true"></span>
-              <span style="font-size:14px;">Memeriksa status pembayaran kamu...</span>
+              <span style="font-size:14px;">${aLabel}</span>
             </div>
           `;
           break;
+        }
 
-        case 'B': // pending / pending_provision
+        case 'B': { // pending / pending_provision — RETRO TERMINAL WAIT VIEW
+          // Phase 3 redesign (2026-05-16). The provisioning wait is now a
+          // retro/futuristic terminal: a non-dismissible "don't refresh"
+          // banner, a timeline progress bar with % milestones, a
+          // rectangle-block loader (deliberately NOT a spinner / smooth
+          // bar), and a persistent accumulating log ("detail teknis")
+          // fed by REAL backend lines (customer-progress-proxy). The
+          // stale-tab refresh reconstructs the full log from server
+          // state on the first poll. The old "Hubungi tim" WhatsApp
+          // button is gone — the wait page is calm + self-resolving.
+          //
+          // DOM nodes are emitted as placeholders here; applyStageProgressToB
+          // + renderProgressOverlay (driven by tick()) fill them live.
           html = `
             <div class="fade-in">
-              <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
-                <span class="pulse-dot" aria-hidden="true"></span>
-                <span id="b-label" style="font-size:14px; color:rgba(245,245,245,0.85);">VPS sedang disiapkan...</span>
+              <!-- (B) non-dismissible warning -->
+              <div class="term-warn">
+                <span class="blink-sq" aria-hidden="true"></span>
+                <span>Jangan tinggalin halaman ini atau refresh selama proses jalan — agent kamu lagi disiapkan.</span>
               </div>
-              <div class="progress-track" role="progressbar" aria-label="Progress provisioning agent" aria-valuemin="0" aria-valuemax="100">
-                <div class="progress-fill" style="width: 35%;"></div>
+
+              <!-- (F) timeline progress bar + % milestones -->
+              <div class="term-timeline">
+                <div class="term-pct-row">
+                  <div><span class="term-pct" id="b-pct">5</span><span class="term-pct-unit">%</span></div>
+                  <div class="term-pct-stage" id="b-label">Memeriksa status agent…</div>
+                </div>
+                <div class="term-bar" role="progressbar" aria-label="Progress provisioning agent" aria-valuemin="0" aria-valuemax="100" aria-valuenow="5">
+                  <div id="b-progress-fill" class="term-bar-fill" style="width:5%;"></div>
+                </div>
+                <div class="term-milestones" id="b-milestones">
+                  <span class="ms" data-pct="5">bayar</span>
+                  <span class="ms" data-pct="15">sistem</span>
+                  <span class="ms" data-pct="40">otak</span>
+                  <span class="ms" data-pct="62">skill</span>
+                  <span class="ms" data-pct="85">telegram</span>
+                  <span class="ms" data-pct="100">siap</span>
+                </div>
               </div>
-              <div style="margin-top:14px; font-size:12px; color:rgba(245,245,245,0.45);">Estimasi 5–7 menit total. Kamu boleh tutup tab ini — kami kabari via email.</div>
+
+              <!-- (E) rectangle-block retro loader — populated by JS -->
+              <div class="term-blocks" id="b-blocks" aria-hidden="true"></div>
+
+              <!-- (C)+(D) detail teknis — persistent accumulating terminal log -->
+              <div class="term-screen" id="b-progress-line">
+                <div class="term-screen-head">
+                  <span class="d d-r" aria-hidden="true"></span>
+                  <span class="d d-y" aria-hidden="true"></span>
+                  <span class="d d-g" aria-hidden="true"></span>
+                  <span class="t">detail teknis · setup.log</span>
+                </div>
+                <div class="term-body" id="b-log" aria-live="polite"></div>
+                <div class="term-heartbeat" id="b-progress-heartbeat">menyambung ke sistem…</div>
+              </div>
+
+              <!-- calm escalation — no WhatsApp button (removed per redesign) -->
+              <div id="b-soft-hint" hidden style="margin-top:12px; padding:10px 12px; background:rgba(229,170,40,0.07); border:1px solid rgba(229,170,40,0.22); border-radius:6px; font-family:'JetBrains Mono',monospace; font-size:11.5px; color:rgba(229,170,40,0.95); line-height:1.55;">
+                Prosesnya sedang lebih lama dari biasanya. Tetap di halaman ini — agent kamu akan otomatis siap saat selesai.
+              </div>
+              <div id="b-longer-than-usual" hidden style="margin-top:12px; padding:12px 14px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.12); border-radius:6px; font-size:13px; color:rgba(245,245,245,0.85);">
+                <div style="font-weight:500; margin-bottom:6px;">Setup-nya sedang berjalan, kali ini lebih lama dari biasanya.</div>
+                <div style="font-size:12px; color:rgba(245,245,245,0.65); line-height:1.55;">Tetap di halaman ini. Agent kamu akan otomatis siap saat selesai — nggak perlu refresh.</div>
+                <details id="b-longer-than-usual-details" style="margin-top:10px;">
+                  <summary style="cursor:pointer; font-size:12px; color:rgba(245,245,245,0.75); padding:4px 0;">Mengapa lebih lama?</summary>
+                  <div style="margin-top:10px; font-size:12px; color:rgba(245,245,245,0.65); line-height:1.6;">Agent kamu butuh beberapa konfigurasi sebelum siap menerima pesan pertama. Beberapa langkah memang memakan waktu lebih lama tergantung kepadatan jaringan saat itu. Yang penting jalan, bukan cepat.</div>
+                </details>
+              </div>
+
+              <!-- sample prompts + founder note (kept from prior build) -->
+              <div id="b-wait-content" style="margin-top:18px; padding:14px 16px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px; font-size:13px; color:rgba(245,245,245,0.78); line-height:1.6;">
+                <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color:rgba(245,245,245,0.45); margin-bottom:8px;">Sambil menunggu</div>
+                <div style="margin-bottom:12px;">Begitu agent kamu siap, kamu bisa langsung coba dari Telegram. Beberapa contoh untuk mulai:</div>
+                <ul style="margin:0 0 12px 18px; padding:0; line-height:1.7;">
+                  <li>Coba: kirim <em>"briefing pagi untuk hari ini"</em> ke agent kamu.</li>
+                  <li>Coba: <em>"rangkum artikel ini singkat: &lt;tempel URL&gt;"</em>.</li>
+                  <li>Coba: <em>"bantuin balas email ini dengan nada profesional"</em>.</li>
+                </ul>
+                <div style="font-size:12px; color:rgba(245,245,245,0.6); padding-top:10px; border-top:1px solid rgba(255,255,255,0.06);">
+                  Dibuat di Jakarta untuk pengguna Indonesia. Pertanyaan teknis langsung ke saya: <a href="mailto:kidnovell.richie@gmail.com" style="color:rgba(245,245,245,0.75); text-decoration:underline;">kidnovell.richie@gmail.com</a> — Richie
+                </div>
+              </div>
+              <!-- end b-wait-content -->
             </div>
           `;
           break;
+        }
 
         case 'C': // active, no &job → CTA to onboarding
           html = `
@@ -441,25 +1035,54 @@
           `;
           break;
 
-        case 'C2': // active, with &job → ready for Telegram
-          html = `
-            <div class="fade-in">
-              <div style="font-size:14px; color:rgba(245,245,245,0.85); margin-bottom:18px; line-height:1.6;">
-                <span style="color:#fff; font-weight:500;">Agent kamu siap.</span>
-                Buka Telegram dan kirim <span class="mono" style="color:rgba(245,245,245,0.95);">/start</span> ke bot kamu.
-              </div>
+        case 'C2': { // active, with &job → ready for Telegram
+          // Build the deeplink from the cached bot username (resolved
+          // by ensureBotUsername() in tick()). If still null, show a
+          // disabled CTA + a loading hint instead of sending the
+          // customer to telegram.org generic.
+          const tgHref = botUsername
+            ? `https://t.me/${encodeURIComponent(botUsername)}`
+            : null;
+          const ctaInner = tgHref
+            ? `
               <a
-                href="https://t.me/"
+                href="${tgHref}"
+                data-bot-deeplink
                 class="btn-primary focus-ring"
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                Buka Telegram
+                Buka Telegram @${botUsername}
                 <span aria-hidden="true">→</span>
               </a>
+            `
+            : `
+              <div data-bot-deeplink-loading style="font-size:13px; color:rgba(245,245,245,0.55); display:flex; align-items:center; gap:10px;">
+                <span class="pulse-dot" aria-hidden="true"></span>
+                Mengambil link bot kamu…
+              </div>
+            `;
+          // Phase 4 (2026-05-17): the epic success page. State C2 is the
+          // last screen before Telegram — a full-bleed cinematic moment.
+          // The video + halftone + vignette live in #epic-bg (revealed by
+          // the body[data-state="C2"] CSS); this is the centred panel on
+          // top of it. Copy stays aligned with the Bug-3 fix: the agent
+          // greets first, the customer just opens Telegram.
+          html = `
+            <div class="epic epic-fade">
+              <div class="epic-rule" aria-hidden="true"></div>
+              <div class="epic-eyebrow" style="margin-top:14px;">Setup selesai</div>
+              <h1 class="epic-title">Agent kamu<br />sudah hidup.</h1>
+              <p class="epic-sub">
+                Buka Telegram — agent kamu menyapa kamu lebih dulu,
+                otomatis dalam beberapa detik.
+              </p>
+              <div class="epic-cta-wrap">${ctaInner}</div>
+              <div class="epic-note">Nggak perlu kirim /start. Cukup buka, lalu mulai.</div>
             </div>
           `;
           break;
+        }
 
         case 'D': // failed
           html = `
@@ -470,7 +1093,7 @@
                   Ada kendala teknis di sisi kami.
                 </div>
                 <p>
-                  Tim kami sudah dapat notifikasi otomatis dan akan menghubungi via email dalam 30 menit. Kamu juga bisa langsung kontak tim untuk dipercepat.
+                  Hubungi tim via WhatsApp atau email — kami bantu pulihkan agent kamu manual.
                 </p>
                 <div class="alert-actions">
                   <a href="${waRecoveryHref('gagal di-provision')}" target="_blank" rel="noopener noreferrer" class="btn-primary focus-ring">
@@ -486,22 +1109,76 @@
           `;
           break;
 
-        case 'E': // INVALID_CID
+        case 'E': { // MISSING_CID — no UUID in URL at all
+          // C1 (audit §P1-CF-5, 2026-05-13): state E now fires ONLY
+          // when cid is absent from the URL (no UUID present), so its
+          // copy serves the lost-cid recovery flow: "I paid but the
+          // welcome link is gone." Receipt email (PR #99) contains
+          // the cid-embedded URL; this state reminds the customer.
+          // For shape-valid-cid-with-late-webhook the new state E2
+          // takes over.
+          const eWaHref = 'https://wa.me/6282154902561?text=' + encodeURIComponent(
+            'Halo tim, saya sudah bayar tapi link onboarding hilang. Email pembayaran saya: '
+          );
           html = `
             <div class="fade-in">
               <div style="font-size:14px; color:rgba(245,245,245,0.85); margin-bottom:8px; line-height:1.6;">
-                Halaman ini hanya untuk konfirmasi pembayaran.
+                Sudah bayar tapi link kamu hilang?
               </div>
-              <div style="font-size:13px; color:rgba(245,245,245,0.55); margin-bottom:18px; line-height:1.6;">
-                Mungkin kamu salah link, atau session-nya kadaluarsa.
+              <div style="font-size:13px; color:rgba(245,245,245,0.65); margin-bottom:18px; line-height:1.6;">
+                Cek email — struk pembayaran berisi link ke setup. Atau hubungi tim — kami bantu pulihkan dengan email kamu.
               </div>
-              <a href="/" class="btn-secondary focus-ring">
-                Kembali ke beranda
-                <span aria-hidden="true">→</span>
-              </a>
+              <div style="display:flex; flex-wrap:wrap; gap:10px;">
+                <a href="${eWaHref}" target="_blank" rel="noopener noreferrer" class="btn-primary focus-ring">
+                  Hubungi tim via WhatsApp
+                  <span aria-hidden="true">→</span>
+                </a>
+                <a href="/" class="btn-secondary focus-ring">
+                  Kembali ke beranda
+                  <span aria-hidden="true">→</span>
+                </a>
+              </div>
             </div>
           `;
           break;
+        }
+
+        case 'E2': { // WEBHOOK_MISSING — cid present, subscription row never arrived
+          // C1 (audit §P1-CF-3, 2026-05-13): hard escalation when
+          // null-poll passes NULL_GRACE_HARD_MS. The customer-side
+          // signal is "I paid but the welcome page still shows
+          // loading after 90+ seconds." The founder-side signal is
+          // a webhook that never landed; manual reconcile required.
+          // The WA prefill includes the cid so the founder can look
+          // up the Xendit invoice directly.
+          const e2WaText = 'Halo tim, saya sudah bayar tapi halaman konfirmasi belum berubah.'
+            + (cid ? ' Customer ID: ' + cid + '.' : '')
+            + ' Mohon bantu cek.';
+          const e2WaHref = 'https://wa.me/6282154902561?text=' + encodeURIComponent(e2WaText);
+          html = `
+            <div class="fade-in">
+              <div class="alert">
+                <div class="alert-title">
+                  <span class="icon" aria-hidden="true">i</span>
+                  Kami belum menerima konfirmasi pembayaran kamu.
+                </div>
+                <p>
+                  Cek email untuk struk dari Xendit. Kalau strukmu sudah masuk tapi halaman ini belum berubah, hubungi tim via WhatsApp — kami bantu reconcile manual.
+                </p>
+                <div class="alert-actions">
+                  <a href="${e2WaHref}" target="_blank" rel="noopener noreferrer" class="btn-primary focus-ring">
+                    Hubungi tim via WhatsApp
+                    <span aria-hidden="true">→</span>
+                  </a>
+                  <button type="button" class="btn-secondary focus-ring" id="e2-retry">
+                    Cek lagi
+                  </button>
+                </div>
+              </div>
+            </div>
+          `;
+          break;
+        }
 
         case 'F': // timeout
           html = `
@@ -512,7 +1189,7 @@
                   Provisioning butuh waktu lebih lama dari biasanya.
                 </div>
                 <p>
-                  Kami sudah dapat notifikasi otomatis. Tim kami akan menghubungi via email dalam 30 menit. Kalau ingin dipercepat, kontak tim via WhatsApp di bawah.
+                  Hubungi tim via WhatsApp untuk update langsung — kami bantu cek status agent kamu manual. Atau klik "Cek lagi" kalau masih sabar nunggu.
                 </p>
                 <div class="alert-actions">
                   <a href="${waRecoveryHref('lambat di-provision')}" target="_blank" rel="noopener noreferrer" class="btn-primary focus-ring">
@@ -528,26 +1205,59 @@
           `;
           break;
 
-        case 'G': // POLL_ERROR — silent retry, render same B layout with note
+        case 'G': // POLL_ERROR — neutral retry, do NOT imply payment verified
           html = `
-            <div class="fade-in">
-              <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
-                <span class="pulse-dot" aria-hidden="true"></span>
-                <span style="font-size:14px; color:rgba(245,245,245,0.85);">VPS sedang disiapkan...</span>
-              </div>
-              <div class="progress-track" role="progressbar" aria-label="Progress provisioning agent">
-                <div class="progress-fill" style="width: 35%;"></div>
-              </div>
-              <div style="margin-top:14px; font-size:12px; font-style:italic; color:rgba(245,245,245,0.4);">Memeriksa koneksi...</div>
+            <div class="fade-in" style="display:flex; align-items:center; gap:12px; color:rgba(245,245,245,0.85);">
+              <span class="pulse-dot" aria-hidden="true"></span>
+              <span style="font-size:14px;">Koneksi sedang lambat. Mencoba lagi...</span>
             </div>
           `;
           break;
       }
       StatusBox.innerHTML = html;
 
+      // Phase 3 redesign: re-hydrate the terminal wait view. renderState
+      // wipes StatusBox on every tick, so the accumulated log, the
+      // rectangle-block loader and the timeline must be re-painted from
+      // module-scope state on each B render. This is also exactly what
+      // makes a stale-tab refresh reconstruct the full log: termLog is
+      // rebuilt from the server's progress_lines on the first poll, then
+      // re-painted here.
+      if (state === 'B') {
+        renderTimeline(displayPct);
+        termRenderLog();
+        if (lastProbe && lastProbe.progress) applyStageProgressToB(lastProbe.progress);
+        if (lastProgressSnapshot) renderProgressOverlay(lastProgressSnapshot);
+      }
+
+      // Phase 4 + video-treatment (2026-05-17): the epic success page
+      // renders the success video as a red dot-matrix on a Canvas.
+      // startEpicMatrix() is idempotent — first C2 render kicks it off.
+      if (state === 'C2') startEpicMatrix();
+
       // Wire up F-state retry
       if (state === 'F') {
         document.getElementById('retry-now')?.addEventListener('click', () => {
+          // B1: reset BOTH anchors. Without re-arming the subscription
+          // anchor, the next pollOnce immediately re-hits the timeout
+          // and renders F again. Same for the page-load anchor (used
+          // by the LONGER_THAN_USUAL_MS panel). Also clear the
+          // telemetry-fired flag so a subsequent timeout on this
+          // session logs once, not zero times.
+          startedAt = Date.now();
+          subscriptionStartedAtMs = null;
+          stateFTelemetryFired = false;
+          renderState('A');
+          tick();
+        });
+      }
+
+      // Wire up E2-state retry (C1, audit §P1-CF-3). Same pattern as F:
+      // reset the page-load anchor so the adaptive-grace tiers re-start
+      // from zero. The subscription anchor is irrelevant here (no
+      // subscription row has been seen yet).
+      if (state === 'E2') {
+        document.getElementById('e2-retry')?.addEventListener('click', () => {
           startedAt = Date.now();
           renderState('A');
           tick();
@@ -555,19 +1265,332 @@
       }
     }
 
-    // Rotate the state-B label between three lines while polling
-    const B_LABELS = [
-      'VPS sedang disiapkan...',
-      'Hermes sedang dipasang...',
-      'Skill kamu di-tune...',
-    ];
-    let bLabelIdx = 0;
+    // ─── Stage-aware B-state (Track 2 observability 2026-05-10) ──
+    //
+    // Pre-fix: the `B_LABELS` array cycled three hardcoded strings on a
+    // 3.5s setInterval — pure animation, no connection to actual stage.
+    // A customer stuck for 30 seconds saw the same cycle as one stuck
+    // for 8 hours. See docs/investigation/2026-05-10-stuck-tuning-observability.md.
+    //
+    // Now: the probe's `progress.current_stage` drives the label, the
+    // progress bar reflects `stages_completed.length / total_stages`,
+    // and per-stage elapsed time fires two soft escalation tiers:
+    //   - 1.5x expected_current_stage_duration_seconds → yellow "lebih
+    //     lama dari biasanya" hint inline
+    //   - 3x expected_current_stage_duration_seconds → red WhatsApp
+    //     escalation card
+    // Existing 15-min F-state hard cliff in tick() retained as last
+    // resort.
+    //
+    // Stage labels are static here (no localization runtime) — founder
+    // can edit the strings via PR review without touching probe code.
+
+    /** Bahasa label per stage. Founder-tunable. Premium-feeling BI for
+     *  average-joe customers — no backend tech terms (VPS) visible.
+     *  Updated 2026-05-13. */
+    const STAGE_LABEL = {
+      vps_provisioning: 'Menyiapkan sistem infrastruktur…',
+      vps_booting:      'Menyalakan sistem…',
+      hermes_starting:  'Memasang otak agent…',
+      persona_writing:  'Menulis kepribadian agent…',
+      pairing_approval: 'Menyambungkan Telegram…',
+      ready:            'Siap.',
+    };
+
+    /**
+     * Canonical forward order for monotonic-clamp (pre-scout 2026-05-13).
+     *
+     * The probe can return an earlier stage on a snapshot RACE — e.g.
+     * the readiness probe at t=N saw `hermes_starting` but at t=N+10s
+     * a stale read from a replica returns `vps_booting`. Pre-fix the
+     * label + progress bar would jump backwards, breaking customer
+     * trust ("did I lose progress?"). Post-fix: we clamp against the
+     * high-water-mark in lastShownStageIndex below — stage indexes
+     * only ever advance.
+     *
+     * Drift gate: tests/welcome-trust-signals-prescout.spec.ts pins
+     * this exact array; re-ordering breaks the clamp.
+     */
+    const STAGE_ORDER = ['vps_provisioning', 'vps_booting', 'hermes_starting', 'persona_writing', 'pairing_approval', 'ready'];
+
+    /** Phase 3 redesign: each stage maps to a milestone % band so the
+     *  timeline bar + big % readout advance in honest, named steps —
+     *  Invoice paid 5 · VPS provisioned 15 · setup running 15-70 ·
+     *  setup COMPLETE 70 · pairing 85 · auto-greet 100. */
+    const STAGE_PCT = {
+      vps_provisioning: 8,
+      vps_booting:      15,
+      hermes_starting:  40,
+      persona_writing:  62,
+      pairing_approval: 85,
+      ready:            100,
+    };
+
+    // ─── Terminal log accumulator (Phase 3 redesign 2026-05-16) ──────
+    //
+    // The wait view's "detail teknis" terminal shows REAL backend lines.
+    // customer-progress-proxy.progress_lines is the setup-script log
+    // tail; each poll's lines are merged into an ordered, deduped master
+    // list. Milestone markers are synthesized only from genuine state
+    // transitions — never faked progress.
+    //
+    // termLog lives at module scope, so a stale-tab refresh rebuilds the
+    // whole log from the first poll's progress_lines (server is the
+    // source of truth), and every renderState('B') re-render re-paints
+    // the full log into the freshly-created DOM.
+    const termLog = [];             // [{ kind, text }]
+    const termLogSeen = new Set();  // dedup by text
+
+    // ─── Loading-indicator smoothing (Item 2, 2026-05-17) ───────────
+    //
+    // The milestone bands are coarse (5/15/40/62/85/100) and the longest
+    // setup stage spans minutes — pre-fix the % jumped 8→40 in one step
+    // and felt stuck. Now: targetPct is the CEILING (the next milestone
+    // band); displayPct is the eased value actually rendered. displayPct
+    // climbs toward targetPct from two real signals — a gentle time
+    // creep + a nudge per genuinely-new setup-script log line — so the
+    // bar always looks alive without ever overshooting a real milestone.
+    // PURELY COSMETIC: nothing here touches the setup-script or its
+    // logging cadence (founder constraint — never slow the real run).
+    let targetPct = 5;
+    let displayPct = 5;
+
+    /** @returns true when a genuinely new line was appended. */
+    function termAppend(kind, text) {
+      const t = (text || '').trim();
+      if (!t || termLogSeen.has(t)) return false;
+      termLogSeen.add(t);
+      termLog.push({ kind, text: t });
+      return true;
+    }
+
+    /** Classify a raw setup-script log line into a render kind. */
+    function termClassify(line) {
+      if (/⚠|warn|error|fail|gagal/i.test(line)) return 'warn';
+      if (/✓|complete|done|installed|berhasil|selesai/i.test(line)) return 'ok';
+      return 'plain';
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"]/g, (c) =>
+        ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    }
+
+    /** Paint termLog into the #b-log screen. The newest line carries the
+     *  blinking cursor; the screen auto-scrolls to it. */
+    function termRenderLog() {
+      const $body = document.getElementById('b-log');
+      if (!$body) return;
+      if (termLog.length === 0) {
+        $body.innerHTML =
+          '<div class="term-line"><span class="pfx">&gt;</span> menunggu sinyal dari sistem' +
+          '<span class="term-cursor" aria-hidden="true"></span></div>';
+        return;
+      }
+      const rows = termLog.map((e, i) => {
+        const last = i === termLog.length - 1;
+        const glyph =
+          e.kind === 'ok' ? '✓' : e.kind === 'warn' ? '⚠'
+          : e.kind === 'work' ? '▸' : '·';
+        const cursor = last ? '<span class="term-cursor" aria-hidden="true"></span>' : '';
+        return `<div class="term-line ${e.kind}">` +
+          `<span class="gl">${glyph}</span>${escapeHtml(e.text)}${cursor}</div>`;
+      });
+      $body.innerHTML = rows.join('');
+      $body.scrollTop = $body.scrollHeight;
+    }
+
+    /** Rectangle-block loader: blocks fill to match pct; the leading
+     *  edge block "scans" in a retro stepwise march (not a spinner). */
+    const TERM_BLOCK_COUNT = 14;
+    function renderTermBlocks(pct) {
+      const $blocks = document.getElementById('b-blocks');
+      if (!$blocks) return;
+      const p = Math.min(100, Math.max(0, pct));
+      const filled = Math.round((p / 100) * TERM_BLOCK_COUNT);
+      let html = '';
+      for (let i = 0; i < TERM_BLOCK_COUNT; i++) {
+        const cls = i < filled ? 'blk on'
+          : (i === filled && p < 100 ? 'blk scan' : 'blk');
+        html += `<span class="${cls}"></span>`;
+      }
+      $blocks.innerHTML = html;
+    }
+
+    /** Light milestone labels: passed = green (done), current = red. */
+    function renderTermMilestones(pct) {
+      const $ms = document.getElementById('b-milestones');
+      if (!$ms) return;
+      const items = [...$ms.querySelectorAll('.ms')];
+      let curIdx = 0;
+      items.forEach((el, i) => {
+        if (pct >= Number(el.dataset.pct || 0)) curIdx = i;
+      });
+      items.forEach((el, i) => {
+        el.classList.remove('done', 'reached');
+        if (i < curIdx) el.classList.add('done');
+        else if (i === curIdx) el.classList.add(pct >= 100 ? 'done' : 'reached');
+      });
+    }
+
+    /** Paint the whole timeline (big %, bar fill, blocks, milestones)
+     *  at the given percentage. Single render path for the loader so
+     *  the smoothing creep, the log-line nudge and applyStageProgressToB
+     *  all stay in sync. */
+    function renderTimeline(pct) {
+      const p = Math.min(100, Math.max(5, Math.round(pct)));
+      const $pct = document.getElementById('b-pct');
+      const $fill = document.getElementById('b-progress-fill');
+      if ($pct) $pct.textContent = String(p);
+      if ($fill) {
+        $fill.style.width = p + '%';
+        const $bar = $fill.parentElement;
+        if ($bar) $bar.setAttribute('aria-valuenow', String(p));
+      }
+      renderTermBlocks(p);
+      renderTermMilestones(p);
+    }
+
+    /** Item 2: nudge displayPct on real activity — each genuinely-new
+     *  setup-script log line moves the bar a little, capped so it can
+     *  never overshoot the next real milestone (targetPct). */
+    function nudgeProgress(newLineCount) {
+      if (currentState !== 'B' || newLineCount <= 0) return;
+      displayPct = Math.min(targetPct, displayPct + 0.8 * newLineCount);
+      renderTimeline(displayPct);
+    }
+
+    // Seed line — a true statement (the customer is on welcome.html
+    // post-payment-redirect). Everything after this is real backend log.
+    termAppend('ok', 'Sesi penyiapan agent dimulai');
+
+    /** Last probe response captured by tick(). renderState('B') reads
+     *  from this; per-stage elapsed-tracker uses the timestamp. */
+    let lastProbe = null;
+    let currentStageStartedAt = null;
+    let lastSeenStage = null;
+
+    /** Monotonic-clamp high-water mark (pre-scout 2026-05-13).
+     *
+     * lastShownStageIndex defaults to -1 so the first probe seen wins.
+     * It persists across applyStageProgressToB calls and renderState('B')
+     * re-renders — module scope (NOT inside the function) — so a fresh
+     * state-B render after a network hiccup doesn't reset it. (The
+     * Phase 4 smoothing rework, 2026-05-17, retired the separate
+     * stages-completed high-water mark: displayPct is now the monotonic
+     * value and it only ever rises.) */
+    let lastShownStageIndex = -1;
+
+    /**
+     * Fold the latest probe.progress snapshot into the B-state DOM:
+     *   - update label + progress bar from current_stage
+     *   - reset the per-stage start time when current_stage changes
+     *   - fire 1.5x / 3x escalation hints based on elapsed
+     * Pure DOM update — safe to call from tick() AND from a UI
+     * keep-alive interval that doesn't re-poll the probe.
+     */
+    function applyStageProgressToB(progress) {
+      if (currentState !== 'B' || !progress) return;
+      const $label = document.getElementById('b-label');
+      const $soft  = document.getElementById('b-soft-hint');
+
+      // Monotonic clamp (pre-scout 2026-05-13). Probe snapshots can race —
+      // a stale replica read after a fresh probe returned `hermes_starting`
+      // could return `vps_booting`, flipping the label / bar backwards.
+      // We index the probe stage against STAGE_ORDER and clamp upward
+      // against the lastShownStageIndex high-water mark.
+      const probeIdx = STAGE_ORDER.indexOf(progress.current_stage);
+      if (probeIdx >= 0) {
+        lastShownStageIndex = Math.max(probeIdx, lastShownStageIndex);
+      }
+      const clampedStage = lastShownStageIndex >= 0
+        ? STAGE_ORDER[lastShownStageIndex]
+        : progress.current_stage;
+
+      // Reset per-stage timer on stage transition + log the new stage as
+      // a milestone line in the terminal. Uses RAW current_stage so the
+      // hint timing reflects the actual current stage's elapsed window.
+      if (lastSeenStage !== progress.current_stage) {
+        lastSeenStage = progress.current_stage;
+        currentStageStartedAt = Date.now();
+        if ($soft) $soft.hidden = true;
+        const stageLabel = STAGE_LABEL[clampedStage];
+        if (stageLabel && clampedStage !== 'ready') termAppend('work', stageLabel);
+      }
+
+      if ($label) {
+        $label.textContent =
+          STAGE_LABEL[clampedStage] ?? 'Sedang menyiapkan agent…';
+      }
+
+      // Timeline % (Item 2 smoothing 2026-05-17). targetPct = the NEXT
+      // milestone band — the ceiling displayPct climbs toward while this
+      // stage runs. Reaching a stage snaps displayPct up to at least
+      // that stage's own band (the milestone is honestly hit); between
+      // stages the gentle creep + per-log-line nudges carry it upward,
+      // so the bar never jumps and never looks stuck.
+      const bandFloor = STAGE_PCT[clampedStage] ?? 5;
+      const sIdx = STAGE_ORDER.indexOf(clampedStage);
+      const ceilPct = (sIdx >= 0 && sIdx < STAGE_ORDER.length - 1)
+        ? STAGE_PCT[STAGE_ORDER[sIdx + 1]]
+        : 100;
+      targetPct = Math.min(100, Math.max(targetPct, ceilPct));
+      displayPct = Math.min(targetPct, Math.max(displayPct, bandFloor));
+      renderTimeline(displayPct);
+
+      // Soft escalation only — the wait page is calm + self-resolving;
+      // the old 3x "Hubungi tim via WhatsApp" hard card was removed in
+      // the Phase 3 redesign.
+      const expected = (progress.expected_current_stage_duration_seconds || 0) * 1000;
+      const elapsed = Date.now() - (currentStageStartedAt || Date.now());
+      if (expected > 0 && $soft) {
+        $soft.hidden = !(elapsed > 1.5 * expected);
+      }
+    }
+
+    /**
+     * UI keep-alive: re-evaluate escalation hints every 5s using the
+     * last probe snapshot. Without this, the soft/hard hint timing
+     * would only refresh on each 10s probe poll — too coarse for the
+     * "lebih lama dari biasanya" perception of progress.
+     */
     setInterval(() => {
-      if (currentState !== 'B') return;
-      bLabelIdx = (bLabelIdx + 1) % B_LABELS.length;
-      const el = document.getElementById('b-label');
-      if (el) el.textContent = B_LABELS[bLabelIdx];
-    }, 3500);
+      if (currentState !== 'B' || !lastProbe?.progress) return;
+      applyStageProgressToB(lastProbe.progress);
+    }, 5000);
+
+    // Item 2 (2026-05-17): loading-indicator smoothing creep. A gentle
+    // time-based climb of displayPct toward targetPct so the bar looks
+    // alive even between log lines. The per-log-line nudge (nudgeProgress)
+    // does the bulk of the movement on real activity; this is the floor.
+    // Capped at targetPct — never overshoots the real next milestone.
+    setInterval(() => {
+      if (currentState !== 'B' || displayPct >= targetPct) return;
+      displayPct = Math.min(targetPct, displayPct + 0.12);
+      renderTimeline(displayPct);
+    }, 1200);
+
+    /**
+     * Pre-scout 2026-05-13: elapsed-time fallback.
+     *
+     * Independent of the per-stage soft/hard hints (those fire when a
+     * SINGLE stage takes 1.5x / 3x its expected duration). This timer
+     * fires when TOTAL wait exceeds the threshold — a different signal
+     * useful for fresh customers whose every stage is borderline OK
+     * but cumulatively still feel slow.
+     *
+     * 300_000 ms = 5 min. Sesi D's customer-flow audit may tune.
+     */
+    const LONGER_THAN_USUAL_MS = 300_000;
+    setInterval(() => {
+      const $longer = document.getElementById('b-longer-than-usual');
+      if (!$longer) return;
+      if (currentState !== 'B') {
+        $longer.hidden = true;
+        return;
+      }
+      $longer.hidden = !(Date.now() - startedAt > LONGER_THAN_USUAL_MS);
+    }, 5000);
 
     // ─── Polling ──────────────────────────────────────────────
 
@@ -590,28 +1613,418 @@
       });
       if (!r.ok) throw new Error(`poll failed: ${r.status}`);
       const rows = await r.json();
-      return rows[0]?.status ?? null;
+      // B1 (audit §P1-CF-4, 2026-05-13): surface started_at so the
+      // timeout check in tick() can anchor against subscription origin
+      // instead of page load. Returns an object now; bare scalar was
+      // the pre-B1 shape.
+      return {
+        status: rows[0]?.status ?? null,
+        started_at: rows[0]?.started_at ?? null,
+      };
+    }
+
+    /**
+     * Resolve the customer's per-bot Telegram username so the
+     * "Buka Telegram" CTA in state C2 deeplinks to t.me/<their-bot>
+     * instead of telegram.org generic.
+     *
+     * Pre-fix bug (2026-05-10): state C2 hardcoded `href="https://t.me/"`,
+     * sending paying customers to telegram.org with no idea which bot
+     * to talk to.
+     *
+     * X-CID header per Sesi D P0-2 RLS — without it the SELECT
+     * returns 0 rows even for the row that matches.
+     *
+     * Returns null if cid is missing, fetch fails, or the customer row
+     * has no username yet (which would be a legit pre-validate-bot-token
+     * race, though state C2 should only fire after step 2 ran).
+     */
+    /**
+     * Poll the customer-readiness Edge Fn for the agent's actual readiness.
+     *
+     * Track 1 of post-pair UX polish (2026-05-10). Founder feedback from
+     * fresh-customer test: welcome page said "agent ready" before agent
+     * was actually ready → user clicked Buka Telegram, sent /start, sat
+     * waiting in confused silence. This helper gates the C2 transition
+     * on `ready === true` (critical checks: hermes_systemd_active,
+     * hermes_pairing_approved, soul_md_present).
+     *
+     * Returns { ready: boolean, checks?: object } or null on error.
+     * Best-effort — null is treated as "still building" (state B), not
+     * an error, so a transient probe failure doesn't bounce the user
+     * out of the wait state.
+     */
+    async function pollReadinessProbe() {
+      if (!cid) return null;
+      try {
+        const r = await fetch(
+          `${SUPABASE_URL}/functions/v1/customer-readiness`,
+          {
+            method: 'POST',
+            headers: {
+              apikey: SUPABASE_ANON_KEY,
+              Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+              'X-CID': cid,
+              'content-type': 'application/json',
+            },
+            body: JSON.stringify({ customer_id: cid }),
+          }
+        );
+        if (!r.ok) return null;
+        const j = await r.json();
+        if (!j || typeof j !== 'object') return null;
+        // Track 2 observability (2026-05-10): include the full progress
+        // object so renderState('B') can drive the label + progress bar
+        // from real stage state instead of the cosmetic B_LABELS cycle.
+        // Fresh-customer-stuck fix (2026-05-11): forward vps_id so the
+        // pending_provision branch can disambiguate "no VPS yet, customer
+        // hasn't onboarded" (vps_id=null) from "real provisioning in
+        // flight" (vps_id set).
+        return {
+          ready: j.ready === true,
+          checks: j.checks ?? {},
+          progress: j.progress ?? null,
+          vps_id: j.vps_id ?? null,
+        };
+      } catch {
+        return null;
+      }
+    }
+
+    /**
+     * Phase 2 (2026-05-13): poll customer-progress-proxy to surface
+     * real-time setup-script progress. Welcome page shows actual log
+     * lines + heartbeat-age below the stage label so customers see
+     * what's happening on their VPS instead of a black-box 8-min wait.
+     *
+     * Returns null on transient failure (caller treats as "skip update,
+     * try again next tick"). Best-effort — never blocks state machine.
+     */
+    let lastProgressSnapshot = null;
+    async function pollCustomerProgress() {
+      if (!cid) return null;
+      try {
+        const r = await fetch(
+          `${SUPABASE_URL}/functions/v1/customer-progress-proxy`,
+          {
+            method: 'POST',
+            headers: {
+              apikey: SUPABASE_ANON_KEY,
+              Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+              'X-CID': cid,
+              'content-type': 'application/json',
+            },
+            body: JSON.stringify({ customer_id: cid }),
+          },
+        );
+        if (!r.ok) return null;
+        const j = await r.json();
+        if (!j || j.ok !== true) return null;
+        return {
+          vps_ip_pending: j.vps_ip_pending === true,
+          progress_lines: Array.isArray(j.progress_lines) ? j.progress_lines : [],
+          heartbeat_age_sec: typeof j.heartbeat_age_sec === 'number' ? j.heartbeat_age_sec : null,
+          heartbeat_stale: j.heartbeat_stale === true,
+          inferred_stage: typeof j.inferred_stage === 'string' ? j.inferred_stage : 'unknown',
+        };
+      } catch {
+        return null;
+      }
+    }
+
+    const STAGE_LABEL_DETAIL = {
+      apt_install:      'Memasang paket dasar sistem…',
+      hermes_install:   'Memasang otak agent (proses paling lama, sekitar 3–6 menit)…',
+      hermes_verifying: 'Memverifikasi pemasangan…',
+      // Pre-scout 2026-05-13: 'skill bundle' → 'keterampilan agent'
+      // (calm BI, no English dev jargon).
+      bundle_install:   'Memasang keterampilan agent…',
+      gateway_install:  'Memasang servis Telegram…',
+      gateway_starting: 'Menjalankan servis Telegram…',
+      // Pre-scout 2026-05-13: 'Setup' + 'pairing' both English jargon.
+      // Refined to pure BI that names the customer-action framing.
+      setup_complete:   'Hampir siap. Menunggu kamu menyapa di Telegram…',
+      unknown:          '',
+    };
+
+    /**
+     * DOM update for the Phase 2 progress overlay. Pure function over
+     * the latest snapshot. Called from tick() after pollCustomerProgress().
+     */
+    function renderProgressOverlay(snapshot) {
+      // Phase 3 redesign: the progress snapshot feeds the persistent
+      // terminal log. customer-progress-proxy.progress_lines are the
+      // REAL setup-script log tail — merged (deduped) into termLog so
+      // the terminal accumulates rather than showing only the last
+      // line, and a stale-tab refresh rebuilds the whole log from here.
+      const $screen = document.getElementById('b-progress-line');
+      if (!$screen || !snapshot) return;
+
+      // Count genuinely-new log lines this poll — each is real activity
+      // and nudges the smoothed progress bar (Item 2).
+      let newLines = 0;
+      if (snapshot.vps_ip_pending) {
+        if (termAppend('work', 'Menunggu alokasi alamat IP…')) newLines++;
+      } else {
+        const detail = STAGE_LABEL_DETAIL[snapshot.inferred_stage] ?? '';
+        if (detail && termAppend('work', detail)) newLines++;
+        for (const line of snapshot.progress_lines) {
+          // Strip a leading ISO timestamp the setup-script prefixes —
+          // the terminal renders its own glyph; the raw stamp is noise.
+          const clean = String(line).replace(/^\[[-0-9T:Z.]+\]\s*/, '');
+          if (termAppend(termClassify(clean), clean)) newLines++;
+        }
+      }
+      termRenderLog();
+      nudgeProgress(newLines);
+
+      const $hb = document.getElementById('b-progress-heartbeat');
+      if ($hb) {
+        if (snapshot.heartbeat_age_sec === null) {
+          $hb.textContent = 'sistem aktif · menunggu log berikutnya';
+          $hb.style.color = 'rgba(245,245,245,0.38)';
+        } else if (snapshot.heartbeat_stale) {
+          $hb.textContent = `⚠ tidak ada aktivitas ${snapshot.heartbeat_age_sec}s — masih nyambung, jangan refresh`;
+          $hb.style.color = 'rgba(229,170,40,0.95)';
+        } else {
+          $hb.textContent = `● aktivitas terakhir ${snapshot.heartbeat_age_sec}s lalu`;
+          $hb.style.color = 'rgba(111,207,127,0.78)';
+        }
+      }
+    }
+
+    async function ensureBotUsername() {
+      if (botUsername) return botUsername;
+      if (!cid) return null;
+      try {
+        const r = await fetch(
+          `${SUPABASE_URL}/rest/v1/customers?id=eq.${encodeURIComponent(cid)}` +
+            `&select=telegram_bot_username`,
+          {
+            headers: {
+              apikey: SUPABASE_ANON_KEY,
+              Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+              'X-CID': cid,
+            },
+          }
+        );
+        if (!r.ok) return null;
+        const rows = await r.json();
+        const u = rows[0]?.telegram_bot_username;
+        if (u) botUsername = u;
+        return botUsername;
+      } catch {
+        return null;
+      }
     }
 
     function isTerminal(state) {
-      return state === 'C' || state === 'C2' || state === 'D' || state === 'E' || state === 'F';
+      // C1 adds 'E2' to the terminal set. Like E, F: once we've decided
+      // the webhook truly missed, stop polling. Manual retry ("Cek lagi"
+      // button in E2) re-enters polling via the button handler.
+      return state === 'C' || state === 'C2' || state === 'D'
+        || state === 'E' || state === 'E2' || state === 'F';
+    }
+
+    /**
+     * B1 (audit §P1-CF-4, 2026-05-13): timeout-anchor helper.
+     *
+     * Returns true when the customer has been waiting > TIMEOUT_MS
+     * relative to subscription.started_at. Falls back to page-load
+     * `startedAt` only when subscriptionStartedAtMs is null (the
+     * very first poll, before pollOnce has resolved). Fires a
+     * telemetry breadcrumb on the FIRST transition into state F per
+     * page-load so the founder can grep Vercel logs for failure
+     * volume without log spam.
+     */
+    let stateFTelemetryFired = false;
+    function isTimedOut() {
+      const anchorMs = (typeof subscriptionStartedAtMs === 'number' && subscriptionStartedAtMs > 0)
+        ? subscriptionStartedAtMs
+        : startedAt;
+      const timedOut = Date.now() - anchorMs > TIMEOUT_MS;
+      if (timedOut && !stateFTelemetryFired) {
+        stateFTelemetryFired = true;
+        const elapsedMinutes = Math.round((Date.now() - anchorMs) / 60_000);
+        console.log('[welcome] state_F_reached', { cid, elapsedMinutes });
+      }
+      return timedOut;
     }
 
     async function tick() {
       try {
-        const status = await pollOnce();
+        const poll = await pollOnce();
+        const status = poll.status;
+        // Cache the subscription anchor as soon as pollOnce returns
+        // it. Once set, the anchor sticks across subsequent polls so
+        // a flapping started_at value can't reset the timer (it
+        // shouldn't, but defensive — server-side truth wins once).
+        if (poll.started_at && !subscriptionStartedAtMs) {
+          const parsed = Date.parse(poll.started_at);
+          if (!Number.isNaN(parsed)) subscriptionStartedAtMs = parsed;
+        }
         if (status === 'active') {
-          renderState(job ? 'C2' : 'C');
+          // Probe-first state machine (2026-05-10 onboarding-loop fix).
+          //
+          // The customer-readiness probe is the source of truth for
+          // "is this agent actually ready to chat?" — it doesn't depend
+          // on URL params. We call it BEFORE branching on &job so that
+          // already-onboarded customers (bookmark, tab refresh, browser
+          // back-button, complete-onboarding 409 redirect) are routed
+          // to state C2 rather than the "Lengkapi profil" CTA which
+          // would loop them back through onboarding.
+          //
+          // History: pre-fix the &job URL param was a proxy for "we
+          // know provisioning was kicked off." Reliable for fresh
+          // customers but broke for already-onboarded ones because
+          // their landing URL has no &job. See
+          // docs/investigation/2026-05-10-onboarding-loop.md.
+          //
+          // Decision tree on probe result:
+          //   probe.ready=true            → C2 (Buka Telegram CTA)
+          //   probe.ready=false + job set → wait state (B / F on timeout)
+          //   probe.ready=false, no job   → C (genuinely needs onboarding)
+          //   probe call failed (null)    → preserve original behavior
+          //                                  (job ? B : C) so a network
+          //                                  blip doesn't strand the
+          //                                  customer on the wrong screen
+          const probe = await pollReadinessProbe();
+          // Track 2 observability (2026-05-10): cache the latest probe
+          // snapshot so the B-state DOM updater can read progress without
+          // re-polling. Cleared on terminal-state transitions.
+          lastProbe = probe;
+          if (probe && probe.ready) {
+            // Agent is genuinely ready — show "Buka Telegram" regardless
+            // of how the customer arrived here.
+            await ensureBotUsername();
+            renderState('C2');
+          } else if (probe && !probe.ready) {
+            // Probe responded but says not ready yet.
+            if (job) {
+              // Provisioning was kicked off — show wait state until
+              // ready or until we hit timeout (B1: timer anchored to
+              // subscription.started_at, falls back to page-load
+              // startedAt only on the very first poll).
+              if (Date.now() - (subscriptionStartedAtMs ?? startedAt) > TIMEOUT_MS) {
+                if (!stateFTelemetryFired) {
+                  stateFTelemetryFired = true;
+                  const elapsedMinutes = Math.round((Date.now() - (subscriptionStartedAtMs ?? startedAt)) / 60_000);
+                  console.log('[welcome] state_F_reached', { cid, elapsedMinutes });
+                }
+                renderState('F');
+              } else {
+                renderState('B');
+                applyStageProgressToB(probe.progress);
+                // Phase 2 (2026-05-13): poll real-time progress overlay.
+                pollCustomerProgress().then((snapshot) => {
+                  lastProgressSnapshot = snapshot;
+                  renderProgressOverlay(snapshot);
+                });
+              }
+            } else {
+              // No job kicked off yet AND probe says not ready → the
+              // customer genuinely hasn't completed onboarding.
+              renderState('C');
+            }
+          } else {
+            // Probe call failed (null). Fall back to pre-fix behavior
+            // so a transient network issue doesn't break the page.
+            // Customer can retry by waiting for the next 10s tick.
+            if (job) {
+              if (Date.now() - (subscriptionStartedAtMs ?? startedAt) > TIMEOUT_MS) {
+                if (!stateFTelemetryFired) {
+                  stateFTelemetryFired = true;
+                  const elapsedMinutes = Math.round((Date.now() - (subscriptionStartedAtMs ?? startedAt)) / 60_000);
+                  console.log('[welcome] state_F_reached', { cid, elapsedMinutes });
+                }
+                renderState('F');
+              } else {
+                renderState('B');
+                // No progress data this tick — keep the placeholder
+                // label. Next successful poll will update it.
+              }
+            } else {
+              renderState('C');
+            }
+          }
         } else if (status === 'failed') {
           renderState('D');
         } else if (status === 'pending_provision' || status === 'pending') {
-          if (Date.now() - startedAt > TIMEOUT_MS) {
+          // Fresh-customer-stuck fix (2026-05-11). pending_provision
+          // fires from two distinct lifecycle moments:
+          //   (1) Right after xendit-webhook creates the subscription —
+          //       no vps_instances row, no SOUL.md, customer hasn't
+          //       started onboarding yet. Should see state C "Lengkapi
+          //       profil agent" CTA → /onboarding.
+          //   (2) After complete-onboarding called spinUp but before
+          //       the subscription.status='active' flip — vps_instances
+          //       row exists, real provisioning in progress. State B
+          //       with stage-aware progress is correct.
+          //
+          // Pre-fix: this branch unconditionally renderState('B') with
+          // no probe call, so case (1) customers sat at the placeholder
+          // "Memeriksa status agent…" label until the 15-min TIMEOUT_MS
+          // cliff flipped them to the misleading state F. Their email
+          // was the only profile field set; they had no path to the
+          // onboarding CTA.
+          //
+          // Now: probe disambiguates. vps_id=null + current_stage=
+          // 'vps_provisioning' means "no VPS row yet" → state C.
+          // Otherwise → state B (with progress data so labels +
+          // escalation tiers work for in-progress customers too).
+          // See docs/investigation/2026-05-11-fresh-customer-stuck.md.
+          const probe = await pollReadinessProbe();
+          lastProbe = probe;
+          if (
+            probe &&
+            !probe.vps_id &&
+            probe.progress?.current_stage === 'vps_provisioning'
+          ) {
+            // Case 1: fresh customer, no VPS row yet — they need the
+            // onboarding CTA, not the wait state.
+            renderState('C');
+          } else if (Date.now() - (subscriptionStartedAtMs ?? startedAt) > TIMEOUT_MS) {
+            if (!stateFTelemetryFired) {
+              stateFTelemetryFired = true;
+              const elapsedMinutes = Math.round((Date.now() - (subscriptionStartedAtMs ?? startedAt)) / 60_000);
+              console.log('[welcome] state_F_reached', { cid, elapsedMinutes });
+            }
             renderState('F');
           } else {
             renderState('B');
+            if (probe?.progress) applyStageProgressToB(probe.progress);
+            // Phase 2 (2026-05-13): also fetch real-time setup-script
+            // progress + heartbeat age, render below the stage label.
+            // Best-effort — never await blocks renderState.
+            pollCustomerProgress().then((snapshot) => {
+              lastProgressSnapshot = snapshot;
+              renderProgressOverlay(snapshot);
+            });
           }
         } else if (status == null) {
-          renderState('E');
+          // Subscription row not yet visible. Three customer scenarios:
+          //   (1) Xendit webhook hasn't fired/landed → race, will resolve.
+          //   (2) cid is fabricated/malformed → never resolves.
+          //   (3) cid is shape-valid but for a customer that doesn't exist
+          //       (X-CID mismatch, or random UUID typed in) → never resolves.
+          //
+          // C1 (audit §P1-CF-3, 2026-05-13): three-tier adaptive grace.
+          // Pre-C1 the single 30 s cliff dumped (1) cases into state E
+          // saying "wrong link" which read as dismissal. New grace:
+          //   < 30 s        → A (default label)
+          //   30 – 90 s     → A with slow-confirmation label
+          //   >= 90 s + cid → E2 (webhook definitely missing, WA escalation)
+          //   >= 90 s + no cid → E (legit "no link" / lost-link recovery)
+          const elapsed = Date.now() - startedAt;
+          if (elapsed < NULL_GRACE_SLOW_MS) {
+            renderState('A');
+          } else if (elapsed < NULL_GRACE_HARD_MS) {
+            renderState('A', { slow: true });
+          } else if (cid) {
+            renderState('E2');
+          } else {
+            renderState('E');
+          }
         } else {
           // Unknown status — treat as still pending
           renderState('B');

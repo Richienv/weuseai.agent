@@ -1,14 +1,15 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "doc-expert",
-  "version": "2.0.0",
-  "description_id": "Bundle skill + template Doc Expert v2. Bikin invoice, plus academic docs (skripsi BAB I-V, thesis, tugas, abstract) dengan citation styles APA/MLA/Chicago — konvensi Indonesia.",
+  "version": "2.3.0",
+  "description_id": "Bundle skill + template Doc Expert v2.2. Invoice (7 styles termasuk PPN-11% + UMKM non-PPN + W-INVOICE + minimal + recurring + PT/CV), kuitansi resmi Indonesia, kontrak freelance Bahasa + sewa-menyewa KUHPerdata + draft layanan, surat keterangan domisili usaha OSS-RBA, proposal layanan + fixed-bid, report 3 panjang, email 4 register, surat formal + memo internal, plus academic docs (skripsi BAB I-V, thesis, tugas, abstract) konvensi Indonesia.",
   "skills": [
     {
       "id": "invoice-generator",
-      "description_id": "Bikin invoice profesional dari list item dan info klien. Output HTML + PDF (Phase 2E-3 pipeline) siap kirim atau cetak.",
-      "description_en": "Generate professional invoice from itemized client info. Returns HTML + PDF (Phase 2E-3 pipeline).",
-      "templates_used": ["invoice-pro.html"],
+      "description_id": "Bikin invoice profesional dari list item dan info klien. Output HTML + PDF (Phase 2E-3 pipeline) siap kirim atau cetak. Lima style template tersedia: invoice-pro (default), invoice-w-professional (W-style premium), invoice-minimal (single-page), invoice-recurring (subscription).",
+      "description_en": "Generate professional invoice from itemized client info. Returns HTML + PDF (Phase 2E-3 pipeline). Five style templates available: invoice-pro (default), invoice-w-professional (W-style premium), invoice-minimal (single-page), invoice-recurring (subscription).",
+      "templates_used": ["invoice-pro.html", "invoice-w-professional.html", "invoice-minimal.html", "invoice-recurring.html"],
+      "template_fetch_required": true,
       "execution": "edge-function",
       "handler_ref": "edge-fn:invoice-generator-handler",
       "enabled_for_tiers": ["starter", "pro", "studio"]
@@ -24,6 +25,7 @@
         "academic/assignment.md",
         "academic/abstract-bilingual.md"
       ],
+      "template_fetch_required": true,
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:academic-doc-builder",
       "enabled_for_tiers": ["pro", "studio"]
@@ -36,14 +38,170 @@
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:extend-capabilities",
       "enabled_for_tiers": ["starter", "pro", "studio"]
+    },
+    {
+      "id": "invoice-cycle",
+      "skill_kind": "playbook",
+      "description_id": "Playbook siklus invoicing bulanan — agregasi project Done, match ke klien, draft invoice pakai template PPN/UMKM default, checkpoint review untuk batch besar, kirim, log ke receivables tracker, follow-up aging invoice. Cron tanggal 1 setiap bulan atau on-demand.",
+      "description_en": "Monthly invoicing cycle — aggregate done projects, match clients, draft invoices using default PPN/UMKM template, review checkpoint for large batches, send, log to receivables, follow up on aging invoices. Cron 1st of each month or on-demand.",
+      "templates_used": ["invoice-ppn-11pct.html", "invoice-umkm-non-ppn.html"],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:invoice-cycle",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
+      "id": "proposal-cycle",
+      "skill_kind": "playbook",
+      "description_id": "Playbook 7-langkah siklus proposal layanan — intake brief klien, riset cepat profil, draft lima seksi (cover letter, scope, timeline, pricing IDR, terms) pakai template default, checkpoint review customer, final polish dan render, kirim ke klien, lalu pasang tracker open dan respon. Pricing IDR pakai format titik thousand tanpa desimal. Template default proposal-services atau proposal-fixed-bid.",
+      "description_en": "Seven-step service proposal cycle — intake client brief, quick profile research, draft five sections (cover letter, scope, timeline, pricing IDR, terms) using default template, customer review checkpoint, final polish and render, send to client, then attach open and response tracker. Pricing IDR uses dot-thousand format without decimals. Default template proposal-services or proposal-fixed-bid.",
+      "templates_used": ["proposal-services.md", "proposal-fixed-bid.md", "email-formal.md"],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:proposal-cycle",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
+      "id": "contract-review-cycle",
+      "skill_kind": "playbook",
+      "description_id": "Playbook 6-langkah review kontrak yang customer terima dari pihak lain — parse dokumen ke struktur klausul, identifikasi red-flag pakai lens KUHPerdata (Pasal 1320 syarat sah, Pasal 1338 asas kebebasan, Pasal 1266/1267 waiver), susun counter-language, render mark-up dengan highlight per severity, checkpoint review customer, lalu kembalikan artefak final atau kirim mark-up ke pihak lawan. Output WAJIB diverifikasi advokat sebelum tanda tangan — playbook ini draft awal, bukan opini hukum.",
+      "description_en": "Six-step contract review cycle for contracts received from third parties — parse into clause structure, identify red flags using Indonesian KUHPerdata lens (Art. 1320 validity, 1338 freedom-of-contract, 1266/1267 waiver), draft counter-language, render markup with severity highlights, customer review checkpoint, then deliver artifacts or send markup. Output MUST be lawyer-verified before signing — starting draft, not legal opinion.",
+      "templates_used": ["email-formal.md"],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:contract-review-cycle",
+      "enabled_for_tiers": ["pro", "studio"]
     }
   ],
   "templates": [
     {
       "id": "invoice-pro.html",
       "kind": "invoice",
-      "description_id": "Invoice profesional dengan PPN 11%, slot NPWP, footer brand weuseai.agent. Fit klien PT/CV (badan usaha) di Indonesia.",
-      "best_for": "Klien PT/CV (badan usaha)"
+      "description_id": "Invoice profesional default dengan PPN 11%, slot NPWP, footer brand weuseai.agent. Fit klien PT/CV (badan usaha) di Indonesia.",
+      "best_for": "Klien PT/CV (badan usaha) — default invoice"
+    },
+    {
+      "id": "invoice-w-professional.html",
+      "kind": "invoice",
+      "description_id": "Invoice W-style premium dengan serif header + INVOICE prominent kanan-atas, contact block, BILL TO + PROJECT DETAILS dua-kolom, tabel deliverables header gelap, TOTAL DUE menonjol, payment methods Indonesia (BCA / Mandiri / GoPay / OVO / DANA), terms + signature lines. Untuk freelancer / agency yang butuh tampilan business-grade.",
+      "best_for": "Premium business invoice — freelancer / agency klien B2B kelas korporat"
+    },
+    {
+      "id": "invoice-minimal.html",
+      "kind": "invoice",
+      "description_id": "Invoice single-page bare minimum — line items, total, info bank. Tanpa branding berat, tanpa PPN block, tanpa signature line. Untuk transaksi kecil yang nggak perlu invoice formal.",
+      "best_for": "Micro-merchant / freelancer untuk transaksi kecil sederhana"
+    },
+    {
+      "id": "invoice-recurring.html",
+      "kind": "invoice",
+      "description_id": "Invoice untuk subscription bulanan — billing period, next-bill-date, auto-renew note, slot untuk recurring item dengan periode jelas. Pas untuk SaaS, retainer bulanan, sewa.",
+      "best_for": "Subscription / retainer bulanan — explicit periodicity"
+    },
+    {
+      "id": "invoice-ppn-11pct.html",
+      "kind": "invoice",
+      "description_id": "Invoice PPN 11% B2B dengan slot NPWP penjual + pembeli, blok faktur pajak readiness (nomor seri e-Faktur Coretax), DPP eksplisit, masa pajak, dan footer dasar hukum UU PPN 42/2009 jo. UU HPP 7/2021 + PER-03/PJ/2022. Untuk seller berstatus PKP (omzet > Rp 4.8M/tahun) yang harus terbit faktur pajak elektronik.",
+      "best_for": "Penjual PKP (omzet > Rp 4.8M/tahun) yang harus terbit faktur pajak"
+    },
+    {
+      "id": "invoice-umkm-non-ppn.html",
+      "kind": "invoice",
+      "description_id": "Invoice UMKM Non-PKP — eksplisit menyatakan 'Bukan Pengusaha Kena Pajak' sesuai UU HPP 7/2021, tanpa PPN, plus footer disclosure PPh Final 0,5% sesuai PP 55/2022. Untuk UMKM dengan peredaran bruto < Rp 4.8M/tahun yang tidak memungut PPN.",
+      "best_for": "UMKM Non-PKP (omzet < Rp 4.8M/tahun) — disclosure PPh Final 0,5%"
+    },
+    {
+      "id": "kuitansi-resmi.md",
+      "kind": "receipt",
+      "description_id": "Kuitansi resmi konvensi Indonesia — 'Telah terima dari', 'Untuk pembayaran', slot Materai Rp 10.000 untuk nominal >Rp 5jt sesuai UU Bea Materai 10/2020 jo. PP 86/2021, nominal dieja + angka, tanda tangan penerima dengan NPWP/NIK. Bukan generic receipt.",
+      "best_for": "Bukti penerimaan pembayaran formal — UMKM / freelancer / sewa-menyewa / honor"
+    },
+    {
+      "id": "kontrak-freelance-bahasa.md",
+      "kind": "contract",
+      "description_id": "Draft kontrak freelance / pekerja lepas dalam register hukum Bahasa Indonesia. Referensi Pasal 1320 + 1338 KUHPerdata, klausul force majeure dengan konteks Indonesia (bencana alam + kebijakan pemerintah + pandemi), eksplisit menyatakan BUKAN hubungan kerja per UU Cipta Kerja 6/2023 (no BPJS / THR / pesangon), no minimum term, slot materai Rp 10.000, domisili Pengadilan Negeri. WAJIB direview advokat.",
+      "best_for": "Freelancer + klien untuk proyek desain / dev / konsultasi / fotografi — alternatif PKWT"
+    },
+    {
+      "id": "surat-perjanjian-sewa.md",
+      "kind": "contract",
+      "description_id": "Draft perjanjian sewa-menyewa properti (rumah / kantor / kios / ruko / gudang) sesuai Pasal 1548-1600 KUHPerdata. Klausul deposit (1-2 bulan), pembagian biaya listrik + air + IPL, ketentuan perpanjangan tertulis (bukan otomatis), peruntukan + pembatasan sub-leasing, kenaikan sewa cap BPS, slot materai Rp 10.000, domisili Pengadilan Negeri. WAJIB direview advokat / notaris.",
+      "best_for": "Sewa properti konvensi Indonesia — bukan western lease"
+    },
+    {
+      "id": "surat-keterangan-domisili-usaha-template.md",
+      "kind": "legal-form",
+      "description_id": "Template Surat Keterangan Domisili Usaha (SKDU) untuk registrasi NIB di OSS-RBA / pembukaan rekening usaha / pendaftaran NPWP Badan. Header kop kelurahan + kecamatan + kota, data pemohon lengkap (NIK + KTP), data usaha lengkap (KBLI 2020), RT/RW eksplisit, lampiran wajib (KTP + KK + pengantar RT/RW), referensi Permendagri 19/2018 + PP 5/2021 (OSS-RBA) + UU 20/2008 (UMKM). Catatan khusus DKI vs daerah lain.",
+      "best_for": "Pelaku UMKM yang ngurus NIB OSS / buka rekening usaha — pengantar ke kelurahan"
+    },
+    {
+      "id": "proposal-services.md",
+      "kind": "proposal",
+      "description_id": "Proposal layanan untuk klien B2B yang sudah punya minat awal tapi belum committed. Struktur: problem → approach → scope → timeline → investment → next steps. Markdown untuk LLM-filling mudah.",
+      "best_for": "B2B service proposal — decision-maker UMKM / corporate"
+    },
+    {
+      "id": "proposal-fixed-bid.md",
+      "kind": "proposal",
+      "description_id": "Proposal harga tetap (fixed-price) untuk proyek scope-jelas dengan milestone + deliverable per milestone. Cocok kalau klien butuh kepastian budget dan timeline.",
+      "best_for": "Fixed-price project proposal — milestone-driven"
+    },
+    {
+      "id": "report-brief.md",
+      "kind": "report",
+      "description_id": "Laporan eksekutif 1-halaman: TL;DR + 3 temuan kunci + rekomendasi. Audience: executive / decision-maker yang punya <5 menit baca.",
+      "best_for": "1-page exec brief — quick decision input"
+    },
+    {
+      "id": "report-standard.md",
+      "kind": "report",
+      "description_id": "Laporan standar 3-5 halaman: executive summary + temuan terstruktur + detail + langkah berikutnya + appendix. Untuk middle management / cross-functional stakeholder.",
+      "best_for": "3-5 page standard report — middle management"
+    },
+    {
+      "id": "report-full.md",
+      "kind": "report",
+      "description_id": "Laporan long-form 10+ halaman: cover, exec summary, metodologi, temuan, analisis mendalam, kesimpulan, appendix, sitasi. Untuk auditor / regulator / board / akademisi.",
+      "best_for": "Long-form full report — auditor / regulator / board"
+    },
+    {
+      "id": "email-formal.md",
+      "kind": "email",
+      "description_id": "Email bisnis formal untuk korespondensi resmi — first contact, surat menyurat antar institusi, atau email ke pihak yang belum dikenal. Anda form, no contractions, full sign-off.",
+      "best_for": "Formal first-contact business email — Anda form"
+    },
+    {
+      "id": "email-casual.md",
+      "kind": "email",
+      "description_id": "Email casual-profesional untuk hubungan kerja yang sudah cair — kolega di perusahaan lain, klien lama, partner kerja, freelancer langganan. Kamu form, conversational, brief.",
+      "best_for": "Casual professional email — known contact, kamu form"
+    },
+    {
+      "id": "email-urgent.md",
+      "kind": "email",
+      "description_id": "Email untuk minta tindakan cepat dengan deadline jelas — persetujuan tertunda, dokumen blocking, response <24 jam. Untuk stakeholder yang sudah dikenal, bukan first contact.",
+      "best_for": "Urgent action-required email — clear ask + deadline"
+    },
+    {
+      "id": "email-apology.md",
+      "kind": "email",
+      "description_id": "Email permohonan maaf / pengakuan kesalahan — keterlambatan, kesalahan teknis, miskomunikasi. Own the issue, fix yang ditawarkan, janji prevent-recurrence, tanpa berlebihan.",
+      "best_for": "Apology / problem-acknowledgment email"
+    },
+    {
+      "id": "letter-formal.md",
+      "kind": "letter",
+      "description_id": "Surat formal Bahasa Indonesia lengkap dengan Kop Surat, Nomor Surat, Salam Pembuka, Isi, Salam Penutup, dan tanda tangan. Untuk pihak eksternal yang butuh dokumen tertulis resmi (instansi pemerintah, mitra korporat, klien institusional).",
+      "best_for": "Formal Indonesian letter — institutional correspondence"
+    },
+    {
+      "id": "memo-internal.md",
+      "kind": "memo",
+      "description_id": "Memo internal untuk komunikasi resmi antar-divisi atau dari atasan ke bawahan dalam satu organisasi. Format Kepada / Dari / Perihal / Tanggal + body. Audit-trail-ready.",
+      "best_for": "Internal organizational memo — directive or notice"
+    },
+    {
+      "id": "contract-draft-services.md",
+      "kind": "contract",
+      "description_id": "Draft perjanjian kerja sama layanan untuk dua pihak (penyedia jasa + pengguna jasa) di yurisdiksi Indonesia. Para pihak, scope, fee, timeline, IP, terminasi, yurisdiksi. WAJIB direview oleh advokat sebelum tanda tangan — bukan nasihat hukum.",
+      "best_for": "Services contract DRAFT — pre-lawyer-review starting point only"
     },
     {
       "id": "academic/skripsi-bab-i.md",

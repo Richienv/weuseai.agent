@@ -1,4 +1,4 @@
-// Integration tests for api/admin/observability/customer.ts.
+// Integration tests for api/_shared/observability/customer.ts (moved 2026-06-11, Hobby function-cap consolidation).
 //
 // Exercises the request lifecycle end-to-end except for the actual
 // PostgREST round-trip: auth check → arg validation → snapshot fetch →
@@ -43,14 +43,14 @@ function fakeRes() {
 async function loadHandler() {
   // Cache-bust: add a query string so subsequent imports re-evaluate.
   const url = new URL(
-    '../api/admin/observability/customer.ts?bust=' + Date.now(),
+    '../api/_shared/observability/customer.ts?bust=' + Date.now(),
     import.meta.url,
   ).href
   const mod = (await import(url)) as { default: Function }
   return mod.default
 }
 
-describe('api/admin/observability/customer — auth & arg validation', () => {
+describe('api/_shared/observability/customer — auth & arg validation', () => {
   beforeEach(() => {
     delete process.env.OBSERVABILITY_ADMIN_SECRET
     delete process.env.SUPABASE_URL
@@ -161,7 +161,7 @@ describe('api/admin/observability/customer — auth & arg validation', () => {
   })
 })
 
-describe('api/admin/observability/customer — fetch failures bubble as 502', () => {
+describe('api/_shared/observability/customer — fetch failures bubble as 502', () => {
   it('502 fetch_failed when PostgREST is unreachable', async () => {
     process.env.OBSERVABILITY_ADMIN_SECRET = 'right'
     process.env.SUPABASE_URL = 'http://127.0.0.1:1' // closed port

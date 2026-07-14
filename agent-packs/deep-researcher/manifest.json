@@ -1,0 +1,167 @@
+{
+  "$schema": "../_manifest.schema.json",
+  "agent_slug": "deep-researcher",
+  "version": "2.3.0",
+  "description_id": "Bundle skill + template Deep Researcher v2.3. Riset topik kompleks dari banyak sumber, evaluasi kredibilitas per sumber, citation rapi per claim, dan sintesis jadi laporan terstruktur. Template batch: research brief + question decomposition, market sizing (TAM/SAM/SOM dengan rentang sensitivitas), competitor matrix + deep dive, citation APA + Chicago konvensi Indonesia, exec summary satu halaman, plus paket Indonesia-deep (source-list berita bisnis ID, source-list data pemerintah ID, research brief pasar ID, regulasi ID, konsumen ID, kompetitor ID).",
+  "skills": [
+    {
+      "id": "web-research",
+      "description_id": "Riset topik dari sumber web — pecah topik jadi sub-pertanyaan, web search + scraping per sub-pertanyaan, kumpulkan source set dengan metadata. Prioritas paper akademik, laporan resmi, reporting jurnalistik.",
+      "description_en": "Research a topic from web sources — decompose into sub-questions, web search + scrape per sub-question, gather a source set with metadata. Prioritizes academic papers, official reports, journalistic reporting.",
+      "templates_used": [],
+      "template_fetch_required": true,
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:web-research",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
+      "id": "source-evaluator",
+      "description_id": "Nilai kredibilitas tiap sumber pakai rubrik lima dimensi (authority, recency, primary/secondary, bias, corroboration). Output tier A-D per sumber sebagai pegangan untuk sintesis.",
+      "description_en": "Grade each source's credibility on a five-dimension rubric (authority, recency, primary/secondary, bias, corroboration). Outputs an A-D tier per source to anchor synthesis.",
+      "templates_used": ["source-credibility-rubric.md"],
+      "template_fetch_required": true,
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:source-evaluator",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
+      "id": "citation-builder",
+      "description_id": "Format citation + susun daftar pustaka dari source set — footnote-numbered (default), APA, atau author-date. Tandai metadata yang tidak lengkap, tidak menebak field yang tidak diketahui.",
+      "description_en": "Format citations + build a reference list from a source set — footnote-numbered (default), APA, or author-date. Flags incomplete metadata, never guesses unknown fields.",
+      "templates_used": [],
+      "template_fetch_required": true,
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:citation-builder",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
+      "id": "synthesis-report",
+      "description_id": "Susun laporan riset terstruktur dari source set yang sudah dinilai dan di-citation — TL;DR, key findings dengan evidence, detail, konflik antar sumber, gaps. Brief-memo, executive-summary, atau full-report.",
+      "description_en": "Compose a structured research report from a graded, cited source set — TL;DR, key findings with evidence, detail, source conflicts, gaps. Brief-memo, executive-summary, or full-report.",
+      "templates_used": ["synthesis-structure.md"],
+      "template_fetch_required": true,
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:synthesis-report",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
+      "id": "market-research",
+      "skill_kind": "playbook",
+      "description_id": "Playbook riset pasar enam langkah — intake scope, kumpulkan sumber, grading kredibilitas, checkpoint tinjau sumber bersama customer, susun citation, lalu sintesis laporan. Merangkai web-research, source-evaluator, citation-builder, dan synthesis-report jadi satu alur yang tahan jeda antar pesan.",
+      "description_en": "Six-step market-research playbook — scope intake, source gathering, credibility grading, a customer checkpoint to review the graded source set, citation building, then report synthesis. Orchestrates web-research, source-evaluator, citation-builder, and synthesis-report into one gap-resilient flow.",
+      "templates_used": ["source-credibility-rubric.md", "synthesis-structure.md"],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:market-research",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
+      "id": "extend-capabilities",
+      "description_id": "Generate skill / template baru saat customer minta sesuatu yang belum ada di inventory. Pakai LLM customer (BYOK), simpan ke /var/lib/weuseai/customer-grown/.",
+      "description_en": "Generate a new skill or template at runtime when the customer asks for something not in inventory.",
+      "templates_used": [],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:extend-capabilities",
+      "enabled_for_tiers": ["pro", "studio"]
+    }
+  ],
+  "templates": [
+    {
+      "id": "source-credibility-rubric.md",
+      "kind": "reference",
+      "description_id": "Rubrik penilaian kredibilitas sumber — lima dimensi (authority, recency, primary/secondary, bias, corroboration) plus tier akhir A-D.",
+      "best_for": "source-evaluator grading rubric"
+    },
+    {
+      "id": "synthesis-structure.md",
+      "kind": "reference",
+      "description_id": "Kerangka tetap laporan riset — TL;DR, key findings, detail, konflik antar sumber, gaps, sumber. Tiga format: brief-memo, executive-summary, full-report.",
+      "best_for": "synthesis-report report skeleton"
+    },
+    {
+      "id": "research-brief.md",
+      "kind": "research-brief",
+      "description_id": "Brief scoping pra-riset — research question utama, why-now, scope in/out, periode, geografi, source preference, deadline. Customer isi sebelum playbook riset besar dijalankan supaya scope tidak melebar di tengah jalan.",
+      "best_for": "pre-playbook scope lock"
+    },
+    {
+      "id": "research-question-decomposition.md",
+      "kind": "research-brief",
+      "description_id": "Worksheet memecah pertanyaan riset fuzzy jadi 3-6 sub-pertanyaan tertutup — masing-masing dengan search angle, tipe sumber utama, dan evidence threshold. Cocok dipakai setelah research brief saat pertanyaan utama masih terlalu luas untuk satu pass.",
+      "best_for": "fuzzy question to search-ready sub-questions"
+    },
+    {
+      "id": "market-sizing.md",
+      "kind": "sizing",
+      "description_id": "Kerangka market sizing TAM / SAM / SOM dengan rentang low-mid-high, tabel asumsi eksplisit lengkap source + tingkat ketidakpastian per asumsi, sensitivity note, dan caveats. Memaksa ketidakpastian ditampilkan, bukan disembunyikan di balik satu angka.",
+      "best_for": "TAM/SAM/SOM with explicit uncertainty ranges"
+    },
+    {
+      "id": "competitor-analysis.md",
+      "kind": "competitor",
+      "description_id": "Matrix komparasi 5-10 kompetitor di axis pricing, positioning, market share, kekuatan, kelemahan, GTM, plus narasi landscape summary yang menyebut clustering positioning + gap kosong + tren. Untuk landscape-level scan.",
+      "best_for": "landscape-level competitor matrix + narrative"
+    },
+    {
+      "id": "competitor-deep-dive.md",
+      "kind": "competitor",
+      "description_id": "Profil mendalam satu kompetitor — history, produk core + adjacent, pricing publik + sinyal negosiasi, GTM motion + channel, organisasi + key people, financials (kalau publik), customer base + voice signals, kekuatan + kelemahan dengan evidence, aksi 12 bulan terakhir, open questions.",
+      "best_for": "single-competitor mendalam profile"
+    },
+    {
+      "id": "citation-format-apa.md",
+      "kind": "citation",
+      "description_id": "Reference format APA edisi ke-7 dengan contoh per tipe sumber (jurnal dengan/tanpa DOI, buku, buku terjemahan, laporan lembaga, website, berita, wawancara, working paper, skripsi/tesis, dataset, podcast, konferensi) + konvensi Indonesia (nama satu kata, gelar akademik, lembaga sebagai penulis, bulan dalam Bahasa Indonesia).",
+      "best_for": "APA 7 reference list — Indonesian conventions"
+    },
+    {
+      "id": "citation-format-chicago.md",
+      "kind": "citation",
+      "description_id": "Reference format Chicago Manual of Style edisi ke-17, gaya Notes-Bibliography (NB) dengan footnote + bibliography. Contoh full note, short note, dan bibliography entry per tipe sumber + konvensi Indonesia.",
+      "best_for": "Chicago Notes-Bibliography 17th ed reference list"
+    },
+    {
+      "id": "exec-summary-findings.md",
+      "kind": "summary",
+      "description_id": "Exec summary satu halaman — TL;DR 3-5 kalimat + 3 temuan utama dengan evidence + source ref + caveat per temuan + rekomendasi konkret + pertanyaan lanjutan + confidence level. Untuk pembaca yang hanya punya 60 detik tapi butuh inti laporan riset yang lebih panjang.",
+      "best_for": "1-page exec summary of research findings"
+    },
+    {
+      "id": "source-list-id-business-news.md",
+      "kind": "source-list",
+      "description_id": "Daftar sumber berita bisnis Indonesia terkurasi — Kontan, Bisnis Indonesia, Kompas Bisnis, Tempo, Katadata, DDTC News, DealStreetAsia ID, Bareksa. Tiap sumber dengan cakupan editorial, kedalaman, status paywall, kedalaman arsip, gaya kutipan, plus cross-check matrix per tipe klaim (corporate action IDX, funding round, kebijakan fiskal, investigasi BUMN, kinerja reksa dana).",
+      "best_for": "riset bisnis pasar Indonesia — first-stop daftar sumber lokal"
+    },
+    {
+      "id": "source-list-id-government-data.md",
+      "kind": "source-list",
+      "description_id": "Daftar portal + dataset resmi pemerintah Indonesia untuk riset makro + sektoral — BPS (Sensus, Sakernas, Susenas, PDB), Bank Indonesia (SEKI, SSPI, IKK), OJK (SPI, statistik fintech, daftar penyelenggara), Kemenkeu (APBN, realisasi), DJP, BKPM (realisasi PMA + PMDN), Kemenperin, IDX. Tiap sumber dengan akses (API / portal), update cadence, format, dan cross-check matrix per indikator makro.",
+      "best_for": "grounding data resmi pemerintah Indonesia untuk market sizing + sektoral"
+    },
+    {
+      "id": "research-brief-pasar-id.md",
+      "kind": "research-brief",
+      "description_id": "Brief riset pasar Indonesia dengan grounding wajib BPS + regulasi UU/PP/Permen + sizing IDR + SES Nielsen. Empat bagian: lanskap (ukuran pasar IDR + sumber BPS + CAGR + segmentasi SES), regulasi (rantai UU → PP → Permen → SE dengan pasal eksplisit + regulator), pemain utama (incumbent + challenger + BUMN + PMA), proyeksi 3-5 tahun dengan asumsi makro BI / Kemenkeu eksplisit + skenario base/optimis/pesimis.",
+      "best_for": "riset pasar Indonesia — go/no-go dengan grounding lokal"
+    },
+    {
+      "id": "research-brief-regulasi-id.md",
+      "kind": "research-brief",
+      "description_id": "Brief riset lanskap regulasi Indonesia — memetakan rantai UU → PP → Permen/POJK/PBI → SE/juknis dengan pasal spesifik + regulator yang owns enforcement + sanksi + tren regulasi 12-24 bulan (RUU di Prolegnas + draft Permen di konsultasi publik). Anti-pola eksplisit: skip Surat Edaran, kutip pasal tanpa nomor, pakai berita Hukumonline sebagai dasar hukum primer.",
+      "best_for": "compliance + legal mapping sebelum masuk sektor regulated Indonesia"
+    },
+    {
+      "id": "research-brief-konsumen-id.md",
+      "kind": "research-brief",
+      "description_id": "Brief riset konsumen Indonesia dengan segmentasi SES Nielsen (A1, A2, B, C1, C2, D, E) + grounding BPS Susenas + source mix Nielsen Retail Audit / Kantar Worldpanel / Snapcart / Populix / Bank Indonesia IKK / APJII / OJK Literasi Keuangan. Empat bagian: profil demografi + ekonomi segmen, perilaku kategori (penetrasi, frekuensi, channel mix, spend per occasion, brand awareness), driver + barrier pembelian per SES, tabel sumber dengan sample size + akses.",
+      "best_for": "riset konsumen Indonesia — segmentasi SES + perilaku kategori"
+    },
+    {
+      "id": "research-brief-kompetitor-id.md",
+      "kind": "research-brief",
+      "description_id": "Brief riset kompetitor Indonesia berbasis jejak publik resmi — disclosure IDX (kalau listed), daftar OJK (kalau fintech), realisasi BKPM (kalau PMA), kontrak LKPP (kalau B2G), funding DealStreetAsia + portofolio VC lokal (AC Ventures, East Ventures, Alpha JWC, Intudo). Tujuh bagian: klasifikasi, trail funding, trail finansial, trail compliance, trail kontrak, positioning publik, sinyal customer. Anti-pola: SWOT generik, klaim funding tanpa sumber, skip BUMN sebagai kompetitor.",
+      "best_for": "competitor research Indonesia — jejak publik resmi per tipe pemain"
+    }
+  ],
+  "self_extend": true,
+  "extension_dir": "/var/lib/weuseai/customer-grown/"
+}

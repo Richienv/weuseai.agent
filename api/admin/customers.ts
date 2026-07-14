@@ -21,6 +21,8 @@
  *     5/6 access, raise per-customer LLM cap.
  */
 
+import { isValidBearer } from '../_shared/timing-safe-bearer.js'
+
 const ADMIN_SECRET = process.env.OBSERVABILITY_ADMIN_SECRET ?? ''
 const SUPABASE_URL = process.env.SUPABASE_URL ?? ''
 const SUPABASE_SERVICE_KEY =
@@ -233,7 +235,8 @@ export default async function handler(
     res.status(500).json({ error: 'misconfigured', detail: 'OBSERVABILITY_ADMIN_SECRET unset' })
     return
   }
-  if (auth !== `Bearer ${ADMIN_SECRET}`) {
+  // Sesi D pass-2 P1: timing-safe bearer comparison (was plain `!==`).
+  if (!isValidBearer(auth, ADMIN_SECRET)) {
     res.status(401).json({ error: 'unauthorized' })
     return
   }

@@ -1,0 +1,34 @@
+# Docker build context root = monorepo root (the provisioning service's
+# Dockerfile builds from here). buildkit reads .dockerignore from the
+# CONTEXT ROOT — so this file, not services/provisioning/.dockerignore,
+# is the one that actually applies.
+
+node_modules
+**/node_modules
+.worktrees
+.git
+.vercel
+.next
+dist
+**/dist
+*.log
+.env
+.env.local
+coverage
+
+# macOS resource-fork sidecars. The repo lives on an exFAT external SSD
+# (/Volumes/Extreme SSD) which generates `._*` AppleDouble files; the
+# Docker build sender errors with "failed to xattr ... operation not
+# permitted" on them. Exclude recursively.
+.DS_Store
+**/.DS_Store
+._*
+**/._*
+
+tests
+**/*.spec.ts
+**/*.test.ts
+supabase/.temp
+supabase/.branches
+.fly
+fly.toml.bak

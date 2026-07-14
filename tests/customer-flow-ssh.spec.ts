@@ -1,16 +1,19 @@
 /**
- * customer-flow now uses SSH-based provisioning instead of cloud-init.
+ * customer-flow uses SSH-based provisioning instead of cloud-init.
  *
- * IDCloudHost's cloud-init handling proved unreliable (2026-05-04 — three
- * back-to-back VMs returned with sshd unreachable / no halo). Pivoting to:
+ * History: cloud-init proved unreliable on the original IDCloudHost
+ * adapter (2026-05-04 — three back-to-back VMs returned with sshd
+ * unreachable / no halo), so the pivot was to drive setup over SSH:
  *   1. Create VM (NO cloud_init param)
  *   2. Poll vps.getPublicIp(uuid) until non-null
  *   3. Wait for SSH port 22 reachable
- *   4. ssh.runSetup(host, user, password, buildSetupScript(...))
+ *   4. ssh.runSetup(host, user, password|privateKey, buildSetupScript(...))
  *   5. Mark store row with the public IP
  *
- * These tests use the mock SSH provisioner + mock VPS provider so they
- * run in-process. The real SSH integration test lives separately.
+ * Production now runs on Vultr (key auth, user=root) with DO failover.
+ * The IDCloudHost adapter was retired 2026-05-13; these tests drive the
+ * mock SSH provisioner + mock VPS provider in-process. The real SSH
+ * integration test lives separately.
  */
 
 import { test } from 'node:test'
@@ -101,8 +104,12 @@ test('flow: ssh.runSetup is called with the public IP from getPublicIp', async (
 
   assert.equal(deps.ssh.calls.length, 1, 'ssh.runSetup called once')
   assert.equal(deps.ssh.calls[0].host, '203.194.55.66', 'host = the public IP we discovered')
-  assert.equal(deps.ssh.calls[0].user, 'liren', 'user = liren (IDCH default)')
-  assert.ok(deps.ssh.calls[0].password.length > 0, 'password is the one we passed at create time')
+  // Mock provider goes through the legacy password-auth branch in
+  // customer-flow.ts (the modern Vultr/DO path is key auth, root user).
+  // The exact user name is an implementation detail of the mock; the
+  // real assertion is that SSH was invoked at all with the discovered IP.
+  assert.equal(deps.ssh.calls[0].user, 'liren')
+  assert.ok((deps.ssh.calls[0].password ?? '').length > 0, 'password is the one we passed at create time')
 })
 
 test('flow: ssh.runSetup script contains halo curl + Hermes install + OpenRouter key', async () => {
@@ -126,6 +133,17 @@ test('flow: ssh.runSetup script contains halo curl + Hermes install + OpenRouter
   assert.match(script, /install\.sh/, 'Hermes installer')
   assert.match(script, /OPENAI_API_KEY=sk-or-v1-mock-/, 'minted OpenRouter key written into script')
   assert.match(script, /OPENAI_BASE_URL=https:\/\/openrouter\.ai\/api\/v1/, 'OpenRouter base URL')
+  // 2026-05-12 — Fix 2 of post-Vultr polish: setup-script writes the
+  // OpenRouter sub-key under BOTH OPENAI_API_KEY (Hermes primary chat
+  // path, OpenAI-compatible) AND OPENROUTER_API_KEY (Hermes auxiliary
+  // tasks: context compression, title generation). Without the second
+  // name Hermes logged "No auxiliary LLM provider configured" warnings
+  // on every message.
+  assert.match(
+    script,
+    /OPENROUTER_API_KEY=sk-or-v1-mock-/,
+    'OpenRouter sub-key ALSO written under OPENROUTER_API_KEY name (silences Hermes aux warnings)',
+  )
 })
 
 test('flow: vps_instances row gets ip_address populated from getPublicIp', async () => {
@@ -256,4 +274,138 @@ test('flow: minter failure → subscription marked failed + alert + throws', asy
   // No SSH attempted if we couldn't mint a key — script wouldn't have a working LLM
   assert.equal(deps.ssh.calls.length, 0, 'no SSH when minter failed')
   assert.ok(alerts.some((a: any) => /provisioning alert/i.test(a.text)), 'admin alerted')
+})
+
+// ─── wait-page race fix (2026-05-16): second-finisher hook ─────────
+//
+// When the setup-script finishes and the VPS row flips to 'running',
+// spinUpCustomer must invoke deps.notifyVpsReady exactly once. In
+// production that hook pings admin-customer-vps-refresh so a customer
+// who already finished onboarding (their complete-onboarding deferred
+// refreshEnv) gets hermes-gateway started. It must NOT fire on a
+// failed provision, and a throw from it must never fail the run.
+
+test('wait-page race: notifyVpsReady fires once after setup-script success', async () => {
+  const calls: string[] = []
+  const deps = makeDeps({
+    notifyVpsReady: async (cid: string) => {
+      calls.push(cid)
+    },
+  })
+
+  const r = await spinUpCustomer(
+    { customerId: 'cust-race-1', tier: 'pro', customerTelegramBotToken: 'tok' },
+    deps,
+  )
+  await r.done
+
+  assert.deepEqual(
+    calls,
+    ['cust-race-1'],
+    'notifyVpsReady called once with the customer id after status→running',
+  )
+  const vps = await deps.store.findActiveVPSByCustomer('cust-race-1')
+  assert.equal(vps?.status, 'running', 'VPS row flipped to running')
+})
+
+test('wait-page race: notifyVpsReady NOT fired when the setup-script fails', async () => {
+  const calls: string[] = []
+  const deps = makeDeps({
+    notifyVpsReady: async (cid: string) => {
+      calls.push(cid)
+    },
+  })
+  // Force ssh.runSetup to report a non-zero exit → background fails.
+  deps.ssh.setNextResult({ ok: false, stdout: '', stderr: 'boom', exitCode: 1 })
+
+  const r = await spinUpCustomer(
+    { customerId: 'cust-race-2', tier: 'pro', customerTelegramBotToken: 'tok' },
+    deps,
+  )
+  await assert.rejects(r.done, 'background provision rejects on SSH failure')
+
+  assert.deepEqual(calls, [], 'notifyVpsReady NOT called on a failed provision')
+})
+
+test('wait-page race: a throw from notifyVpsReady never fails the provision', async () => {
+  const deps = makeDeps({
+    notifyVpsReady: async () => {
+      throw new Error('supabase unreachable')
+    },
+  })
+
+  const r = await spinUpCustomer(
+    { customerId: 'cust-race-3', tier: 'pro', customerTelegramBotToken: 'tok' },
+    deps,
+  )
+  // Must resolve — the provision itself succeeded; the hook is best-effort.
+  await r.done
+
+  const vps = await deps.store.findActiveVPSByCustomer('cust-race-3')
+  assert.equal(vps?.status, 'running', 'VPS still running despite hook throw')
+})
+
+// ─── persona selection (2026-05-17) ─────────────────────────────────
+//
+// spinUpCustomer accepts opts.agentSlug — the customer's chosen persona.
+// buildScriptFor must thread it into the setup-script as the primary
+// persona (WEUSEAI_AGENT_SLUG), which drives which bundle the VPS's
+// bundle-pull fetches first + which persona scaffold the first-boot
+// SOUL.md uses.
+
+test('flow: opts.agentSlug threads into setup-script as WEUSEAI_AGENT_SLUG', async () => {
+  const deps = makeDeps()
+  ;(deps.vps as any).getPublicIp = async () => '5.6.7.8'
+
+  const r = await spinUpCustomer(
+    {
+      customerId: 'cust-persona-1',
+      tier: 'pro',
+      customerTelegramBotToken: '8630424948:AAGmM1ND-test',
+      customerTelegramAllowedUserIds: '6805409051',
+      agentSlug: 'doc-expert',
+    },
+    deps,
+  )
+  await r.done
+
+  const script = deps.ssh.calls[0].script
+  // Primary persona env var = the chosen slug.
+  assert.match(
+    script,
+    /WEUSEAI_AGENT_SLUG=doc-expert/,
+    'chosen agentSlug drives the primary-persona env var',
+  )
+  // First-of-list invariant: chosen slug is hoisted to the front of the
+  // CSV bundle-pull list.
+  assert.match(
+    script,
+    /WEUSEAI_AGENT_SLUGS=doc-expert,/,
+    'chosen persona hoisted to first of the bundle-pull CSV',
+  )
+  // First-boot SOUL.md is the chosen persona's scaffold, not The Pro.
+  assert.match(script, /Doc Expert/, 'first-boot SOUL.md uses the chosen persona')
+})
+
+test('flow: omitted agentSlug defaults the primary persona to the-pro', async () => {
+  const deps = makeDeps()
+  ;(deps.vps as any).getPublicIp = async () => '5.6.7.9'
+
+  const r = await spinUpCustomer(
+    {
+      customerId: 'cust-persona-2',
+      tier: 'pro',
+      customerTelegramBotToken: '8630424948:AAGmM1ND-test',
+      // agentSlug omitted
+    },
+    deps,
+  )
+  await r.done
+
+  const script = deps.ssh.calls[0].script
+  assert.match(
+    script,
+    /WEUSEAI_AGENT_SLUG=the-pro/,
+    'absent agentSlug → the-pro primary (default-persona invariant)',
+  )
 })

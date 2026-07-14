@@ -8,6 +8,7 @@
 
 import type {
   CustomerRow,
+  GenesisDraft,
   IOnboardingStore,
   SubscriptionRow,
 } from '../../supabase/functions/_shared/types.ts'
@@ -34,6 +35,14 @@ export class FakeOnboardingStore implements IOnboardingStore {
   /** When true, getDecryptedBotToken throws (simulates RPC failure
    *  / encryption-key misconfiguration). */
   throwOnDecryptBotToken = false
+  /** Wait-page race fix (2026-05-16): the status getActiveVPSStatus
+   *  returns. Defaults to 'running' so pre-existing tests (which never
+   *  seed a VPS) keep exercising the refreshEnv path unchanged. Tests
+   *  of the deferral path call seedVPSStatus('provisioning'). */
+  vpsStatus: 'provisioning' | 'running' | 'stopped' | 'failed' | null = 'running'
+  /** When true, getActiveVPSStatus throws (simulates a status-read
+   *  failure — the handler must defer, not crash). */
+  throwOnGetActiveVPSStatus = false
 
   // ── seeders ─────────────────────────────────────────────────────
 
@@ -48,9 +57,25 @@ export class FakeOnboardingStore implements IOnboardingStore {
       pairing_code: c.pairing_code ?? null,
       pairing_code_expires_at: c.pairing_code_expires_at ?? null,
       soul_md_text: c.soul_md_text ?? null,
+      // Persona selection (2026-05-17): mirrors the DB default 'the-pro'
+      // (migration 20260517000000) so tests that don't care about persona
+      // get a valid-in-every-tier slug. Tests of the picker seed an
+      // explicit value.
+      agent_slug: c.agent_slug ?? 'the-pro',
+      greeting_sent_at: c.greeting_sent_at ?? null,
+      genesis_draft: c.genesis_draft ?? null,
     }
     this.customers.set(c.id, row)
     return row
+  }
+
+  /** Genesis Onboarding (2026-06-13): persisted drafts, for assertions. */
+  genesisDrafts: { customer_id: string; draft: GenesisDraft }[] = []
+
+  async saveGenesisDraft(customer_id: string, draft: GenesisDraft): Promise<void> {
+    const existing = this.customers.get(customer_id)
+    if (existing) this.customers.set(customer_id, { ...existing, genesis_draft: draft })
+    this.genesisDrafts.push({ customer_id, draft })
   }
 
   seedSubscription(
@@ -68,6 +93,14 @@ export class FakeOnboardingStore implements IOnboardingStore {
     }
     this.subscriptions.set(s.id, row)
     return row
+  }
+
+  /** Wait-page race fix (2026-05-16): set the status getActiveVPSStatus
+   *  will return for this store. */
+  seedVPSStatus(
+    status: 'provisioning' | 'running' | 'stopped' | 'failed' | null,
+  ): void {
+    this.vpsStatus = status
   }
 
   // ── IOnboardingStore impl ───────────────────────────────────────
@@ -89,7 +122,8 @@ export class FakeOnboardingStore implements IOnboardingStore {
     for (const s of this.subscriptions.values()) {
       if (
         s.customer_id === customerId &&
-        (s.status === 'active' || s.status === 'pending_provision' || s.status === 'pending')
+        // Mirror the real store: pre-payment 'pending' is NOT billable (C1).
+        (s.status === 'active' || s.status === 'pending_provision')
       ) {
         return s
       }
@@ -173,5 +207,38 @@ export class FakeOnboardingStore implements IOnboardingStore {
     const ciphertext = this.botTokensCiphertext.get(customer_id)
     if (!ciphertext) return null
     return ciphertext.startsWith('enc:') ? ciphertext.slice(4) : null
+  }
+
+  async markGreetingSent(customer_id: string): Promise<void> {
+    const existing = this.customers.get(customer_id)
+    if (existing) {
+      this.customers.set(customer_id, {
+        ...existing,
+        greeting_sent_at: new Date().toISOString(),
+      })
+    }
+  }
+
+  async getActiveVPSStatus(
+    _customer_id: string,
+  ): Promise<'provisioning' | 'running' | 'stopped' | 'failed' | null> {
+    if (this.throwOnGetActiveVPSStatus) {
+      throw new Error('fake-store: simulated getActiveVPSStatus failure')
+    }
+    return this.vpsStatus
+  }
+
+  async clearBotPairing(customer_id: string): Promise<void> {
+    // Mirror the production UPDATE: wipes ciphertext + telegram_bot_username
+    // + telegram_chat_id. Idempotent.
+    this.botTokensCiphertext.delete(customer_id)
+    const existing = this.customers.get(customer_id)
+    if (existing) {
+      this.customers.set(customer_id, {
+        ...existing,
+        telegram_bot_username: null,
+        telegram_chat_id: null,
+      })
+    }
   }
 }

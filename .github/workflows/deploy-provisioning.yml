@@ -1,0 +1,56 @@
+name: Deploy provisioning service (Fly)
+
+# Deploys services/provisioning to the Fly app `weuseai-provisioning`.
+#
+# Why this exists (2026-06-07): there was NO Fly deploy automation — a fix
+# could merge to main yet never reach the running service, which is exactly
+# how the config.yaml model-block bug stayed live after PR #223 merged. This
+# workflow runs the build on a GitHub runner (which can reach Fly's remote
+# builder) so the deploy never depends on a particular operator's network.
+#
+# Trigger manually from the Actions tab or:
+#   gh workflow run deploy-provisioning.yml --ref main
+#
+# Requires repo secret FLY_API_TOKEN (a Fly deploy/personal access token).
+
+on:
+  # Auto-deploy when a provisioning fix (or this workflow) merges to main, so a
+  # merged fix can never sit undeployed — the exact failure mode this workflow
+  # was created to close (config.yaml model-block bug stayed live after #223).
+  push:
+    branches: [main]
+    paths:
+      - 'services/provisioning/**'
+      - '.github/workflows/deploy-provisioning.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-provisioning
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: fly deploy weuseai-provisioning
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Deploy
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          flyctl deploy \
+            --config services/provisioning/fly.toml \
+            --dockerfile services/provisioning/Dockerfile \
+            --remote-only \
+            -a weuseai-provisioning
+
+      - name: Report release
+        if: always()
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: flyctl releases -a weuseai-provisioning | head -5

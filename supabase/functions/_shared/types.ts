@@ -1,17 +1,61 @@
 // Shared types for create-invoice and xendit-webhook.
 // Pure TypeScript — works in Deno (Edge Functions) and Node (tests).
 
+import { TIERS } from './tier-personas.ts'
+
 export type Tier = 'starter' | 'pro' | 'studio'
 
+/**
+ * Every plan slug create-invoice accepts: the v1.4 canonical tiers
+ * (self-serve checkout, Mission 2 Phase 0.3) PLUS the legacy v1.2 slugs the
+ * live checkout.html still emits. `enterprise` is intentionally absent —
+ * contact-sales only, never self-serve.
+ */
+export type PurchasablePlan =
+  | 'bare'
+  | 'solo'
+  | 'voice-starter'
+  | 'library-full'
+  | 'done-for-you'
+  | Tier
+
 export type PlanCatalog = Record<
-  Tier,
-  { setupIdr: number; setupOldIdr: number; displayName: string }
+  PurchasablePlan,
+  { setupIdr: number; setupOldIdr?: number; displayName: string }
 >
 
-// Server-authoritative pricing — single source of truth, matches CLAUDE.md
-// Business Model v1.1. Front-end PLANS object must mirror these numbers
-// (display only; charge amount is recomputed here per request).
+// Server-authoritative pricing — charge amount is recomputed here per
+// request; the front-end PLANS object is display only.
+//
+// v1.4 canonical entries are DERIVED from tier-personas.ts (the founder-
+// locked catalog) so there is no mirror to drift. `setupOldIdr` maps to the
+// display-only strikethrough anchor (library-full 999k — NEVER charged).
+//
+// Legacy entries are FROZEN at the v1.2 prices the live checkout.html still
+// displays: server-authoritative pricing means display and charge must move
+// together, so legacy slugs keep charging exactly what the legacy page
+// shows until the checkout v1.4 flip lands (held PR — see Mission 2 Phase
+// 0.3). That flip remaps legacy plan params to canonical slugs client-side
+// and retires these entries.
+function canonicalPlan(
+  slug: 'bare' | 'solo' | 'voice-starter' | 'library-full' | 'done-for-you',
+): { setupIdr: number; setupOldIdr?: number; displayName: string } {
+  const t = TIERS[slug]
+  return {
+    // Non-null: every non-enterprise tier has a fixed setup fee.
+    setupIdr: t.setup_fee_idr as number,
+    ...(t.setup_fee_anchor_idr ? { setupOldIdr: t.setup_fee_anchor_idr } : {}),
+    displayName: t.label_id,
+  }
+}
+
 export const PLANS: PlanCatalog = {
+  bare: canonicalPlan('bare'),
+  solo: canonicalPlan('solo'),
+  'voice-starter': canonicalPlan('voice-starter'),
+  'library-full': canonicalPlan('library-full'),
+  'done-for-you': canonicalPlan('done-for-you'),
+  // Legacy v1.2 (frozen — see note above).
   starter: { setupIdr: 399_000, setupOldIdr: 699_000, displayName: 'Starter' },
   pro: { setupIdr: 1_290_000, setupOldIdr: 2_500_000, displayName: 'Pro' },
   studio: { setupIdr: 5_900_000, setupOldIdr: 10_900_000, displayName: 'Studio' },
@@ -39,6 +83,10 @@ export const PAYMENT_METHOD_FEES: Record<PaymentMethodId, PaymentMethodFee> = {
 // to @supabase/supabase-js; tests inject a fake.
 export interface IInvoiceStore {
   findCustomerByEmail(email: string): Promise<{ id: string; email: string } | null>
+  /** Sesi B P0 #7 (2026-05-12): customer lookup by id for receipt email. */
+  findCustomerById(
+    customerId: string,
+  ): Promise<{ id: string; email: string; display_name: string | null } | null>
   insertCustomer(input: {
     email: string
     display_name?: string
@@ -49,7 +97,9 @@ export interface IInvoiceStore {
   ): Promise<SubscriptionRow | null>
   insertSubscription(input: {
     customer_id: string
-    tier: Tier
+    // Canonical v1.4 slug or frozen legacy slug — whatever the customer
+    // bought. The DB column is text; downstream resolves via resolveTier().
+    tier: SubscriptionTier
     always_on_enabled: boolean
     status: 'pending' | 'active' | 'failed'
     xendit_invoice_id?: string
@@ -74,12 +124,85 @@ export interface IInvoiceStore {
   ): Promise<void>
 
   addStarterCredits(customerId: string, cents: number): Promise<void>
+
+  /**
+   * HF-1 (2026-05-12): wipe stale pair state on `customers` row.
+   * Called by xendit-webhook.handlePaid on every pending → active
+   * subscription transition. Founder Q1 lock: "new subscription = clean
+   * wipe" — covers BOTH the email-reused test case AND the renewed-
+   * after-cancel case. The idempotent retry path (already-active sub)
+   * short-circuits BEFORE this is called, so persona-refresh flow
+   * preserved.
+   *
+   * Wipes (per founder cascade brief):
+   *   - telegram_bot_token (encrypted column)
+   *   - telegram_bot_username
+   *   - telegram_chat_id
+   *   - soul_md_text
+   *   - pairing_code
+   *   - pairing_code_expires_at
+   *
+   * Service-role only; anon callers can't trigger this through any path.
+   * Best-effort: caller (xendit-webhook handler) catches throws so a
+   * wipe failure does not turn into a 5xx that would Xendit-retry.
+   */
+  clearStalePairState(customerId: string): Promise<void>
+
+  /**
+   * Phase E Option 2 part 2 (2026-05-14): decrypt the customer's
+   * existing bot token. Returns null when customer has no stored token
+   * (new customer) or when decryption fails for any reason (production
+   * stores wrap pgcrypto's decrypt RPC — best-effort). Called by
+   * xendit-webhook-handler BEFORE clearStalePairState to snapshot the
+   * pre-wipe value, which is then passed to spinUp as
+   * customerTelegramBotToken so setup-script's hasTelegram=true branch
+   * starts the gateway directly (avoids the refresh-env race that bit
+   * Renita 2026-05-14).
+   *
+   * Throws are caught + treated as null by the caller — a snapshot
+   * failure must NOT block the webhook from returning 200.
+   */
+  getDecryptedBotToken(customerId: string): Promise<string | null>
+
+  /**
+   * Sesi D pass-3 P0 (2026-05-13): append one row to the consent_events
+   * table. Called by create-invoice for both 'tos' (required) and
+   * 'marketing' (optional) acceptance. The handler captures
+   * ip_address + user_agent from request headers and forwards them
+   * here so we satisfy UU PDP Art. 22(1)'s "demonstrate consent"
+   * requirement + give Xendit chargeback evidence we can produce.
+   *
+   * Service-role only; the consent_events table is RLS-locked.
+   */
+  insertConsentEvent(input: {
+    customer_id: string
+    consent_type: 'tos' | 'marketing'
+    accepted_at: string  // ISO8601
+    ip_address: string | null
+    user_agent: string | null
+    version?: string  // policy version; defaults to 'v1.0' at DB level
+  }): Promise<{ id: string }>
 }
+
+/**
+ * Any tier slug a subscription row may carry: the legacy spec-class slugs
+ * (Tier) PLUS the v1.4 canonical slugs. The DB column stores whichever the
+ * producer wrote (checkout still emits legacy; admin manual-provision emits
+ * canonical). Resolve to behavior via personasForTier() / creditLimitForTier()
+ * — both accept the full set.
+ */
+export type SubscriptionTier =
+  | Tier
+  | 'bare'
+  | 'solo'
+  | 'voice-starter'
+  | 'library-full'
+  | 'done-for-you'
 
 export type SubscriptionRow = {
   id: string
   customer_id: string
-  tier: Tier
+  tier: SubscriptionTier
   status: 'pending' | 'active' | 'pending_provision' | 'paused' | 'canceled' | 'failed'
   xendit_invoice_id: string | null
   always_on_enabled: boolean
@@ -104,7 +227,7 @@ export interface IXenditClient {
 export interface IProvisioningClient {
   spinUp(input: {
     customerId: string
-    tier: Tier
+    tier: SubscriptionTier
     customerTelegramBotToken?: string
     customerTelegramAllowedUserIds?: string
     alwaysOnEnabled: boolean
@@ -136,6 +259,20 @@ export type XenditInvoiceEvent = {
 // 20260509200000_telegram_bot_per_customer.sql) and the row would be a leak
 // risk if accidentally serialized to logs. Access via dedicated store
 // methods setBotTokenAndUsername / getDecryptedBotToken instead.
+/** Genesis Onboarding (2026-06-13): a draft distilled from work samples the
+ *  customer forwarded into their bot during onboarding. Persisted on the
+ *  customer row so the web onboarding form can pre-fill from it. NO SOUL /
+ *  provisioning state — just the confirmable draft. */
+export type GenesisDraft = {
+  expectations_paragraph: string
+  recommended_persona: string | null
+  persona_name: string | null
+  voice_note: string | null
+  summary_bahasa: string
+  /** ISO timestamp — also drives the per-customer distill cooldown. */
+  created_at: string
+}
+
 export type CustomerRow = {
   id: string
   email: string
@@ -148,6 +285,25 @@ export type CustomerRow = {
   pairing_code: string | null
   pairing_code_expires_at: string | null   // ISO timestamp
   soul_md_text: string | null
+  /** Persona selection (2026-05-17): the persona slug the customer chose
+   *  at onboarding — one of personasForTier(tier). Defaults to 'the-pro'
+   *  at the DB level (migration 20260517000000). complete-onboarding
+   *  validates the submitted slug against the tier before persisting it
+   *  here, then threads it into spinUp + renderSoulMd.
+   *  v1.4: NULL for the persona-free `bare` tier (vanilla Hermes, no
+   *  persona) — complete-onboarding persists null and renders the neutral
+   *  SOUL instead of a persona scaffold. */
+  agent_slug: string | null
+  /** Bug-1 fix (2026-05-16): set the first time the proactive greeting
+   *  is delivered. Idempotency guard so the greeting fires exactly once
+   *  whether complete-onboarding's happy path OR the provisioning
+   *  second-finisher (admin-customer-vps-refresh) is the one that
+   *  completes the gateway-start sequence. Null = not yet greeted. */
+  greeting_sent_at: string | null
+  /** Genesis Onboarding (2026-06-13): draft distilled from forwarded
+   *  samples, or null. Optional in the type because most reads don't
+   *  select it. */
+  genesis_draft?: GenesisDraft | null
 }
 
 // Data-store contract for the onboarding handlers.
@@ -165,6 +321,11 @@ export interface IOnboardingStore {
     id: string,
     patch: Partial<Omit<CustomerRow, 'id' | 'email'>>,
   ): Promise<CustomerRow>
+
+  /** Genesis Onboarding (2026-06-13): persist a distilled draft. Optional
+   *  capability — handlers feature-detect it, and fakes that don't need it
+   *  can omit it. */
+  saveGenesisDraft?(customer_id: string, draft: GenesisDraft): Promise<void>
 
   // Subscription status flip after provisioning succeeds.
   updateSubscription(
@@ -200,6 +361,45 @@ export interface IOnboardingStore {
   // their VPS .env. Calls SQL decrypt_bot_token(). Service-role only.
   // Returns null if the customer has no bot token set yet.
   getDecryptedBotToken(customer_id: string): Promise<string | null>
+
+  // Wrong-bot recovery (2026-05-10 P0 fix): clears all three bot-pairing
+  // fields atomically (telegram_bot_token, telegram_bot_username,
+  // telegram_chat_id). Used by reset-bot-pairing edge fn so a customer
+  // who pasted a wrong-bot token can re-paste a different one. Idempotent
+  // — safe to call when fields are already null.
+  clearBotPairing(customer_id: string): Promise<void>
+
+  /**
+   * Wait-page race fix (2026-05-16). Returns the status of the
+   * customer's vps_instances row, or null when no row exists yet.
+   *
+   * complete-onboarding-handler gates its step-8a refreshEnv on this.
+   * refreshEnv SSHes the VPS + runs the install-if-missing block, which
+   * hits `exit 4` when the setup-script hasn't installed the hermes
+   * binary yet (status still 'provisioning'). A fast customer who
+   * finishes the onboarding form (~2 min) before their VPS finishes
+   * provisioning (~6 min) would trip that race → gateway never starts →
+   * welcome.html stuck on the provisioning view forever. When
+   * status !== 'running' the handler DEFERS refreshEnv; the provisioning
+   * service runs it itself the moment the setup-script completes
+   * (customer-flow.ts notifyVpsReady → admin-customer-vps-refresh).
+   *
+   * Service-role read; one row per customer (vps_instances.customer_id
+   * unique post-PR #75).
+   */
+  getActiveVPSStatus(
+    customer_id: string,
+  ): Promise<'provisioning' | 'running' | 'stopped' | 'failed' | null>
+
+  /**
+   * Bug-1 fix (2026-05-16): stamp customers.greeting_sent_at = now().
+   * Called once, by whichever path actually delivers the proactive
+   * greeting (complete-onboarding step 8c OR the admin-customer-vps-
+   * refresh second-finisher). The other path reads greeting_sent_at on
+   * the customer row and skips when it is already set — so the customer
+   * is greeted exactly once. Idempotent: a second call just re-stamps.
+   */
+  markGreetingSent(customer_id: string): Promise<void>
 }
 
 // ─── LLM key minter (decoupled from Phase 2A merge) ───
@@ -232,12 +432,44 @@ export interface ILlmKeyMinter {
   revoke(hash: string): Promise<RevokeResult>
 }
 
-// Tier → credit-cap map. Single source of truth. Used by complete-onboarding
-// to translate `subscriptions.tier` into a mint limit.
+// Tier → credit-cap map (legacy spec-classes). Single source of truth for
+// the mint limit. Keyed by the three resource spec-classes; canonical v1.4
+// slugs resolve to one of these via creditLimitForTier() below.
 export const TIER_CREDIT_USD_CENTS: Record<Tier, number> = {
   starter: 300,    // $3
   pro: 500,        // $5
   studio: 3000,    // $30
+}
+
+/**
+ * Credit cap (USD cents) for any subscription tier slug — v1.4 canonical
+ * (bare/solo/voice-starter/library-full/done-for-you) OR the deprecated
+ * legacy slugs (starter/pro/studio).
+ *
+ * Mirrors services/provisioning/src/customer-flow.ts `resolveTierToSpecClass`
+ * (the founder-locked v1.4 mapping, PR #226): bare/solo/voice-starter size to
+ * the smallest box ($3); done-for-you sizes like pro ($5); library-full sizes
+ * like studio ($30). This is wiring to that existing decision, NOT a new
+ * pricing call. Before this, `TIER_CREDIT_USD_CENTS[canonicalSlug]` returned
+ * `undefined` → a canonical-slug subscription minted with an undefined cap.
+ */
+export function creditLimitForTier(tier: string): number {
+  switch (tier) {
+    case 'starter':
+    case 'bare':
+    case 'solo':
+    case 'voice-starter':
+      return TIER_CREDIT_USD_CENTS.starter
+    case 'pro':
+    case 'done-for-you':
+      return TIER_CREDIT_USD_CENTS.pro
+    case 'studio':
+    case 'library-full':
+      return TIER_CREDIT_USD_CENTS.studio
+    default:
+      // Unknown slug → smallest cap (fail-safe, never undefined).
+      return TIER_CREDIT_USD_CENTS.starter
+  }
 }
 
 // ─── Telegram bot client (for webhook reply) ───
@@ -275,6 +507,14 @@ export interface ITelegramClient {
 
   /** Call /deleteWebhook on an arbitrary token. Idempotent. */
   deleteWebhook(botToken: string): Promise<void>
+
+  /** Call /getWebhookInfo on an arbitrary token. Used by
+   *  properDeleteWebhook to verify a delete actually cleared the
+   *  webhook (Telegram's deleteWebhook is "fire and forget" — there
+   *  are observed cases where it returns ok but the webhook url is
+   *  still set on subsequent reads). Returns at minimum `{ url: '' }`
+   *  when no webhook is configured. */
+  getWebhookInfo(botToken: string): Promise<{ url: string }>
 
   /** Send text as a specific bot. Used for the pairing-success reply
    *  on the customer's own bot. */
@@ -315,7 +555,7 @@ export interface ITelegramClient {
 
 export type SpinUpInput = {
   customerId: string
-  tier: Tier
+  tier: SubscriptionTier
   telegramChatId: string
   /** Customer's own bot token (per Option A — pair-flow 2026-05-09).
    *  Provisioning writes this to /home/weuseai/.hermes/.env as
@@ -325,12 +565,95 @@ export type SpinUpInput = {
   openrouterApiKey: string
   soulMdContent: string
   alwaysOnEnabled: boolean
+  /** Persona selection (2026-05-17): the customer's chosen persona slug.
+   *  Provisioning forwards this to the /spin-up route → spinUpCustomer's
+   *  opts.agentSlug → setup-script WEUSEAI_AGENT_SLUG, which drives which
+   *  bundle the VPS's bundle-pull fetches as the primary persona.
+   *  Optional for back-compat; complete-onboarding always supplies it
+   *  post-picker (defaults to 'the-pro' when omitted, downstream). */
+  agentSlug?: string
 }
 
 export type SpinUpResult =
   | { ok: true; jobId: string }
   | { ok: false; status: number; body: string }
 
+// Track 3b (2026-05-10): self-healing for cloud-init env drift.
+// Caller (complete-onboarding step 8a, admin rescue) supplies the
+// env values directly — provisioning service is a "dumb pipe", does
+// NOT decrypt or source values. Per the pivot in design doc:
+// docs/design/2026-05-10-vps-config-refresh.md.
+export type RefreshEnvInput = {
+  customerId: string
+  envValues: {
+    TELEGRAM_BOT_TOKEN?: string
+    // Phase E Option 2 part 1 (2026-05-14): TELEGRAM_ALLOWED_USERS
+    // gets pushed alongside TELEGRAM_BOT_TOKEN by the admin handler
+    // when the customer has a telegram_chat_id. Without it, Hermes
+    // gateway restarts with a bot token but denies every customer
+    // /start (Renita Stage 5 bug class). The atomic write semantics
+    // are guaranteed by the refresh-env bash script's `set -euo pipefail`
+    // gate — restart happens only if all rewrites succeed.
+    TELEGRAM_ALLOWED_USERS?: string
+    // Same value, two names: Hermes's primary chat path reads
+    // OPENAI_API_KEY; auxiliary tasks (compression / title generation)
+    // read OPENROUTER_API_KEY. Both should be set to the OpenRouter
+    // sub-key to silence aux warnings on every message (2026-05-12).
+    OPENAI_API_KEY?: string
+    OPENROUTER_API_KEY?: string
+    // Bug-2 fix (2026-05-16): TELEGRAM_HOME_CHANNEL is the customer's
+    // own chat_id. Hermes upstream reads this env var (gateway/config.py
+    // load_gateway_config) and sets it as the platform home channel —
+    // which (a) suppresses the "No home channel is set for Telegram…
+    // type /sethome" prompt that otherwise leaks to the customer on
+    // first message, and (b) makes cron / cross-platform delivery route
+    // to their chat. Config-only — no upstream Hermes patch.
+    TELEGRAM_HOME_CHANNEL?: string
+  }
+  /** Optional: SOUL.md persona content. When provided, written to
+   *  /home/weuseai/.hermes/SOUL.md on the VPS before hermes-gateway
+   *  restart. Closes the dry-run Stage 7 gap (xendit-webhook's first
+   *  spinUp doesn't have soulMdContent yet, so SOUL.md was empty on
+   *  disk — Hermes had no persona to load on first start). */
+  soulMdContent?: string
+  /** Optional: pre-approve customer's Telegram chat_id. When provided,
+   *  written into /home/weuseai/.hermes/pairing/telegram-approved.json
+   *  before hermes-gateway restart so the customer's first /start
+   *  lands directly on the in-character agent (skips Hermes upstream's
+   *  pairing-code prompt). Idempotent. */
+  telegramChatId?: string
+  /** Optional: cosmetic display name for the pre-approve entry.
+   *  Defaults to 'Customer' when omitted. */
+  telegramUserName?: string
+  /** Caller-supplied UUID for idempotency. Same id within 10 min →
+   *  cached outcome instead of re-SSH. */
+  requestId: string
+}
+
+export type RefreshEnvResult =
+  | {
+      ok: true
+      vpsId: string
+      ipAddress: string
+      applied: {
+        TELEGRAM_BOT_TOKEN?: 'updated' | 'unchanged'
+        TELEGRAM_ALLOWED_USERS?: 'updated' | 'unchanged'
+        TELEGRAM_HOME_CHANNEL?: 'updated' | 'unchanged'
+        OPENAI_API_KEY?: 'updated' | 'unchanged'
+        OPENROUTER_API_KEY?: 'updated' | 'unchanged'
+      }
+      hermesRestartAt: string
+    }
+  | {
+      ok: false
+      status: number
+      body: string
+      error?: string
+    }
+
 export interface IOnboardingProvisioningClient {
   spinUp(input: SpinUpInput): Promise<SpinUpResult>
+  /** Track 3b 2026-05-10: refresh customer's VPS .env + restart hermes
+   *  to close the spinUp-idempotency-doesn't-update-env gap. */
+  refreshEnv(input: RefreshEnvInput): Promise<RefreshEnvResult>
 }

@@ -2,7 +2,7 @@
 // graduate writes to agent-packs/<persona>/skills/<id>/SKILL.md.
 //
 // Mirrors the SKILL.md pattern from Persona v2 (see e.g.
-// agent-packs/web-master/skills/landing-page-builder/SKILL.md).
+// agent-packs/web-app-builder/skills/landing-page-builder/SKILL.md).
 
 import type { SkillSpec, ManifestSkillEntry, SkillParameter, ReplayStep } from '../types.ts'
 import { toPlaywrightLocator } from './selector-rank.ts'

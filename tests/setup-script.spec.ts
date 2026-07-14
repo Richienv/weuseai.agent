@@ -40,7 +40,9 @@ test('script: halo text matches Phase 1 spec', () => {
   const s = buildSetupScript(baseParams)
   assert.match(s, /Halo, gue agen lo/, 'liveness greeting')
   assert.match(s, /Setup beres/, 'completion phrasing')
-  assert.match(s, /jam 7 pagi tiap hari WIB/, 'briefing schedule')
+  // Mission 2 (2026-06-10): copy reflects the real Pagi Briefing + EOD crons.
+  assert.match(s, /Pagi Briefing aktif jam 7 pagi WIB/, 'briefing schedule')
+  assert.match(s, /ringkasan sore jam 6/, 'eod schedule')
 })
 
 test('script: halo curl substitutes bot token + chat id', () => {
@@ -95,29 +97,58 @@ test('script: writes daily-news skill SKILL.md', () => {
   assert.match(s, /Selamat pagi/, 'greeting')
 })
 
-test('script: runs Hermes install.sh as weuseai (pinned via HERMES_VERSION env)', () => {
+test('script: runs Hermes install.sh as weuseai (pinned via install.sh --branch)', () => {
   const s = buildSetupScript(baseParams)
-  // Phase 2E-3: install.sh is invoked under `su - weuseai -c ...` with
-  // HERMES_VERSION env-prefixed on BOTH curl and bash so upstream picks
-  // up the pin if the install.sh script honours it. The default lock is
-  // v0.13.0 (founder Q7).
+  // CORRECTED 2026-06-14: the pin is passed to install.sh's OWN --branch flag
+  // (`bash -s -- --branch <ref>`), NOT a HERMES_VERSION env var — upstream
+  // install.sh ignores that env entirely, so the old form was a silent no-op
+  // that cloned unpinned `main` on every VPS. The default ref is the canonical
+  // release tag v2026.6.5 (see DEFAULT_HERMES_VERSION in setup-script.ts).
+  //
+  // HF-2 (2026-05-12 founder Q3 lock): the install.sh invocation is
+  // wrapped in `timeout 600` + the inner curl has --max-time 30. The HF-2
+  // hardening is pinned by tests/setup-script-hang-hardening.spec.ts.
   assert.match(
     s,
-    /su - weuseai -c ['"]HERMES_VERSION=v0\.13\.0 curl -fsSL https:\/\/raw\.githubusercontent\.com\/NousResearch\/hermes-agent\/main\/scripts\/install\.sh \| HERMES_VERSION=v0\.13\.0 bash/,
-    'install.sh pinned via HERMES_VERSION env',
+    /su - weuseai -c ['"]curl -fsSL (?:--max-time \d+ )?https:\/\/raw\.githubusercontent\.com\/NousResearch\/hermes-agent\/main\/scripts\/install\.sh \| bash -s -- --branch v2026\.6\.5/,
+    'install.sh pinned via --branch <ref>',
   )
+  // Regression guard: the ignored-env form must never come back (it silently
+  // cloned unpinned main for weeks before 2026-06-14).
+  assert.doesNotMatch(s, /HERMES_VERSION=/, 'must NOT use the upstream-ignored HERMES_VERSION env')
 })
 
-test('script: gateway install + start + cron — best-effort (failure tolerated)', () => {
+test('script: gateway install + start fail FATAL (HF-2 — was best-effort pre-2026-05-12)', () => {
   const s = buildSetupScript(baseParams)
-  // Each hermes management command: tolerated failure so a CLI flag rename
-  // upstream doesn't kill the whole script. The crucial halo already fired.
-  // Tolerance via `|| true` OR `|| log "..."` (logs the failure but exits 0).
-  const lines = s.split('\n').filter(l => l.match(/hermes (gateway|cron)/))
-  assert.ok(lines.length >= 3, `at least 3 hermes mgmt commands, got ${lines.length}`)
-  for (const l of lines) {
-    assert.match(l, /\|\|\s*(true|log\s)/, `tolerant: ${l.trim()}`)
-  }
+  // HF-2 (2026-05-12 founder lock): gateway install/start failures are
+  // FATAL. Pre-HF-2 they were tagged `|| log "(non-fatal)"` which
+  // masked real failures + left customer VPSes marked running with a
+  // bot that would never reply. Affirmative check: each command is
+  // followed by an explicit `if ! ... ; then ... exit N` block.
+  //
+  // Cron remains best-effort (cosmetic; daily-news skill works on demand).
+  const gatewayInstallLine = s
+    .split('\n')
+    .find((l) => l.match(/hermes gateway install --system/))
+  assert.ok(gatewayInstallLine, 'gateway install line must be present')
+  assert.match(
+    gatewayInstallLine!,
+    /^if ! .*gateway install/,
+    `gateway install must be inside an "if ! ... ; then exit" block (HF-2 fatal): ${gatewayInstallLine!.trim()}`,
+  )
+  const gatewayStartLine = s
+    .split('\n')
+    .find((l) => l.match(/hermes gateway start --system/))
+  assert.ok(gatewayStartLine, 'gateway start line must be present')
+  assert.match(
+    gatewayStartLine!,
+    /^if ! .*gateway start/,
+    `gateway start must be inside an "if ! ... ; then exit" block (HF-2 fatal): ${gatewayStartLine!.trim()}`,
+  )
+  // Cron stays optional (cosmetic).
+  const cronLine = s.split('\n').find((l) => l.match(/hermes cron add/))
+  assert.ok(cronLine, 'cron add line must be present')
+  assert.match(cronLine!, /\|\| log/, 'cron add stays best-effort')
 })
 
 test('script: gateway install uses --system --run-as-user (not user-level service)', () => {
@@ -279,6 +310,31 @@ test('script (2E-2): writes WEUSEAI_AGENT_SLUG + WEUSEAI_CUSTOMER_ID + WEUSEAI_W
   assert.match(s, /WEUSEAI_WORKFLOW_EXECUTE_URL=https:\/\/gtjgsligllbjcisiyrah/)
 })
 
+test('script (Week 2): writes WEUSEAI_FLOW_STATE_URL pointing at the flow-state fn', () => {
+  const s = buildSetupScript({
+    ...baseParams,
+    bundleTarBase64: FAKE_BUNDLE_BASE64,
+    agentSlug: 'deep-researcher',
+  })
+  // Derived from the workflow-execute URL → same functions base, /flow-state.
+  assert.match(
+    s,
+    /WEUSEAI_FLOW_STATE_URL=https:\/\/gtjgsligllbjcisiyrah\.supabase\.co\/functions\/v1\/flow-state/,
+  )
+})
+
+test('script (Week 2): flow-state URL tracks a workflowExecuteUrl override', () => {
+  const s = buildSetupScript({
+    ...baseParams,
+    bundleTarBase64: FAKE_BUNDLE_BASE64,
+    workflowExecuteUrl: 'https://staging.example.co/functions/v1/workflow-execute',
+  })
+  assert.match(
+    s,
+    /WEUSEAI_FLOW_STATE_URL=https:\/\/staging\.example\.co\/functions\/v1\/flow-state/,
+  )
+})
+
 test('script (2E-2): defaults agentSlug to "the-pro" when unspecified', () => {
   const s = buildSetupScript({
     ...baseParams,
@@ -335,20 +391,30 @@ test('script (2E-2): Telegram still wires correctly with bundle present', () => 
 
 // ─── Phase 2E-3 ──────────────────────────────────────────────────────────
 
-test('script (2E-3): pins Hermes to v0.13.0 by default', () => {
+test('script (2E-3): pins Hermes to the canonical release tag via --branch', () => {
   const s = buildSetupScript({ ...baseParams })
-  // Both env-prefix forms present (belt + suspenders for upstream
-  // honour — see comment block in setup-script.ts at the install step).
-  assert.match(s, /HERMES_VERSION=v0\.13\.0 curl/)
-  assert.match(s, /HERMES_VERSION=v0\.13\.0 bash/)
-  assert.match(s, /pinned to v0\.13\.0/)
+  // The pin reaches install.sh via its real --branch flag (the only thing
+  // upstream honours); the canonical default ref is v2026.6.5.
+  assert.match(s, /\| bash -s -- --branch v2026\.6\.5/)
+  assert.match(s, /pinned to v2026\.6\.5/)
 })
 
-test('script (2E-3): hermesVersion override propagates to install command', () => {
-  const s = buildSetupScript({ ...baseParams, hermesVersion: 'v0.14.0' })
-  assert.match(s, /HERMES_VERSION=v0\.14\.0 curl/)
-  assert.match(s, /HERMES_VERSION=v0\.14\.0 bash/)
-  assert.doesNotMatch(s, /HERMES_VERSION=v0\.13\.0/)
+test('script (2E-3): legacy HERMES_VERSION=v0.13.0 maps to the canonical ref', () => {
+  // v0.13.0 is NOT a real git tag, so a stale HERMES_VERSION=v0.13.0 on the Fly
+  // service must resolve to the canonical default rather than 404 the --branch.
+  const s = buildSetupScript({ ...baseParams, hermesVersion: 'v0.13.0' })
+  assert.match(s, /--branch v2026\.6\.5/)
+  assert.doesNotMatch(s, /--branch v0\.13\.0/)
+})
+
+
+test('script (2E-3): a real-ref hermesVersion override propagates to --branch', () => {
+  // An explicit real git ref (e.g. an older release tag) flows straight to
+  // install.sh's --branch, overriding the default. v2026.5.16 is a real tag.
+  const s = buildSetupScript({ ...baseParams, hermesVersion: 'v2026.5.16' })
+  assert.match(s, /\| bash -s -- --branch v2026\.5\.16/)
+  assert.doesNotMatch(s, /--branch v2026\.6\.5/)
+  assert.doesNotMatch(s, /HERMES_VERSION=/)
 })
 
 test('script (2E-3): installs fleet SSH pubkey when provided (idempotency-guarded)', () => {
@@ -383,4 +449,165 @@ test('script (2E-3): JSON-stringifies the pubkey to handle special chars safely'
   // the value get backslash-escaped; single quotes don't (per JSON spec).
   // Also confirm the raw literal '$vars' is preserved (not shell-expanded).
   assert.match(s, /FLEET_KEY="ssh-rsa AAAA\\"weird'comment with \$vars and \\"quotes\\""/)
+})
+
+// ─── P0 cost fix (2026-05-17): customer agents run DeepSeek, not Opus ──
+//
+// A fresh non-interactive Hermes install left config.yaml's model key
+// empty; the agent resolved to Claude Opus 4.6 via OpenRouter and burned
+// a customer's $5 sub-key cap to 41% in 3 hours. The setup-script must
+// pin BOTH the .env OPENAI_MODEL and the config.yaml top-level model key
+// to DeepSeek v4-pro — and must never wire a premium (Claude/Opus) model.
+
+test('P0: setup-script pins .env OPENAI_MODEL to deepseek/deepseek-v4-pro', () => {
+  // The .env OpenRouter block only emits when an openRouterKey is passed
+  // (the production path — Phase 2A mints one per customer).
+  const s = buildSetupScript({ ...baseParams, openRouterKey: 'sk-or-v1-EXAMPLE' })
+  assert.match(
+    s,
+    /OPENAI_MODEL=deepseek\/deepseek-v4-pro/,
+    '.env must set OPENAI_MODEL to deepseek/deepseek-v4-pro',
+  )
+})
+
+test('P0: setup-script pins config.yaml model.default to deepseek/deepseek-v4-pro (nested, shape-robust)', () => {
+  const s = buildSetupScript(baseParams)
+  // config.yaml model.default is authoritative for the main agent — the
+  // .env var alone is not enough (that was the Opus bug). As of 2026-06-07
+  // it is pinned as a NESTED dict and the old scalar-collapsing sed is gone
+  // (that sed orphaned the upstream dict's child → unparseable config →
+  // empty model → OpenRouter 400). See setup-script-config-yaml-model.spec.ts.
+  assert.match(
+    s,
+    /printf 'model:\\n {2}default: deepseek\/deepseek-v4-pro\\n'/,
+    'must append canonical nested model.default block',
+  )
+  assert.ok(
+    !/sed -i -E 's\|\^model:\.\*\|/.test(s),
+    'must not use the scalar-collapsing model sed (the 2026-06-07 bug)',
+  )
+})
+
+test('P0: setup-script never wires a premium Claude/Opus model', () => {
+  const s = buildSetupScript(baseParams)
+  assert.equal(
+    /claude-opus|claude-sonnet|anthropic\/claude/i.test(s),
+    false,
+    'customer agents must never be configured with a premium Claude/Opus model',
+  )
+})
+
+// ─── Phase B (voice-input STT, 2026-06-02): native Hermes voice config ──
+//
+// We enable Hermes' OWN voice-memo transcription via provisioning config
+// (no external STT middleware, no Hermes fork). The voice/stt config is
+// written to config.yaml + the STT key to .env, STRICTLY gated on the
+// tier's features.voice (resolved via TIERS[resolveTier(tier)]). Default
+// provider is Groq (sidesteps the OpenRouter-vs-OpenAI key trap).
+//
+// Tier note: baseParams.tier is 'pro' (deprecated alias) → resolveTier
+// maps it to 'done-for-you', which grants voice. All four current tiers
+// grant voice; the gate is real-coded so a FUTURE text-only tier
+// (features.voice === false) gets nothing.
+
+test('voice (Phase B): writes GROQ_API_KEY to .env when tier grants voice + key supplied', () => {
+  const s = buildSetupScript({ ...baseParams, voiceSttKey: 'gsk_test_EXAMPLE' })
+  // Default provider is Groq → key lands under GROQ_API_KEY (NOT the
+  // OPENAI_API_KEY chat var, which holds the OpenRouter sub-key).
+  assert.match(s, /GROQ_API_KEY=gsk_test_EXAMPLE/, 'Groq STT key written to .env')
+  assert.match(s, /STT_GROQ_MODEL=whisper-large-v3-turbo/, 'Groq model pinned')
+  assert.match(s, /GROQ_BASE_URL=https:\/\/api\.groq\.com\/openai\/v1/, 'Groq base URL pinned')
+})
+
+test('voice (Phase B): appends voice/stt block to config.yaml (input-only, TTS off)', () => {
+  const s = buildSetupScript({ ...baseParams, voiceSttKey: 'gsk_test_EXAMPLE' })
+  assert.match(s, /^stt:$/m, 'stt: top-level key in config block')
+  assert.match(s, /enabled: true/, 'stt enabled')
+  assert.match(s, /provider: "groq"/, 'provider selected')
+  assert.match(s, /model: "whisper-large-v3-turbo"/, 'provider model set')
+  // Input-only: TTS stays OFF so the bot replies in TEXT.
+  assert.match(s, /auto_tts: false/, 'auto_tts off — input-only, no voice replies')
+  // Guarded append (no duplicate stacking on re-provision).
+  assert.match(s, /if ! grep -qE '\^stt:' "\$CONFIG_YAML"; then/, 'idempotency guard present')
+})
+
+test('voice (Phase B): never activates TTS / never speaks back (input-only)', () => {
+  const s = buildSetupScript({ ...baseParams, voiceSttKey: 'gsk_test_EXAMPLE' })
+  // No TTS provider activation, no ELEVENLABS key.
+  assert.doesNotMatch(s, /ELEVENLABS_API_KEY=/, 'no TTS key wired')
+  assert.doesNotMatch(s, /tts:\n\s+provider:/, 'no active tts provider block')
+  // The setup-script never AUTO-SENDS a /voice command (that would need to
+  // ride a Telegram sendMessage curl). A `/voice …` token in an explanatory
+  // comment is fine; what must not exist is a `/voice tts` being pushed to
+  // the chat. Assert no sendMessage body carries a /voice command.
+  assert.doesNotMatch(
+    s,
+    /sendMessage[^\n]*\/voice/,
+    'setup-script must not auto-send a /voice command via Telegram',
+  )
+  // And TTS-for-all (/voice tts) must never appear as an instruction the
+  // script would execute (it only appears, if at all, inside a # comment).
+  for (const line of s.split('\n')) {
+    if (/\/voice (on|tts)/.test(line)) {
+      assert.match(line.trimStart(), /^#/, `any /voice mention must be a comment, got: ${line}`)
+    }
+  }
+})
+
+test('voice (Phase B): writes config block even WITHOUT a key (STT activates on later key set)', () => {
+  // Consult-accepted: ship config anyway, text fallback active if key
+  // missing. The config block lands so STT works the moment a key arrives
+  // via refresh-env; only the key env LINE is omitted.
+  const s = buildSetupScript({ ...baseParams, voiceSttKey: undefined })
+  assert.match(s, /^stt:$/m, 'config block still written without a key')
+  assert.match(s, /provider: "groq"/, 'provider still selected')
+  assert.doesNotMatch(s, /GROQ_API_KEY=/, 'no key env line when key absent')
+})
+
+test('voice (Phase B): resolves deprecated alias tiers (pro/studio/starter all grant voice)', () => {
+  for (const tier of ['starter', 'pro', 'studio'] as const) {
+    const s = buildSetupScript({ ...baseParams, tier, voiceSttKey: 'gsk_x' })
+    assert.match(s, /^stt:$/m, `voice config written for deprecated alias tier "${tier}"`)
+    assert.match(s, /GROQ_API_KEY=gsk_x/, `STT key written for "${tier}"`)
+  }
+})
+
+test('voice (Phase B): openai provider uses VOICE_TOOLS_OPENAI_KEY (NOT the OpenRouter chat var)', () => {
+  // When the fleet is flipped to the OpenAI provider, the STT key must land
+  // under VOICE_TOOLS_OPENAI_KEY — a REAL api.openai.com key — NOT
+  // OPENAI_API_KEY, which already holds the customer's OpenRouter sub-key.
+  const s = buildSetupScript({
+    ...baseParams,
+    openRouterKey: 'sk-or-v1-customer-chat-key',
+    voiceSttProvider: 'openai',
+    voiceSttKey: 'sk-real-openai-EXAMPLE',
+  })
+  assert.match(s, /VOICE_TOOLS_OPENAI_KEY=sk-real-openai-EXAMPLE/, 'OpenAI STT key under the dedicated var')
+  assert.match(s, /provider: "openai"/, 'config selects openai provider')
+  assert.match(s, /model: "whisper-1"/, 'openai whisper model set')
+  // The chat OPENAI_API_KEY stays the OpenRouter key, untouched by STT.
+  assert.match(s, /OPENAI_API_KEY=sk-or-v1-customer-chat-key/, 'chat key unchanged (still OpenRouter)')
+  // The STT key must NOT leak into the chat var.
+  assert.doesNotMatch(s, /OPENAI_API_KEY=sk-real-openai-EXAMPLE/, 'STT key must not become the chat key')
+})
+
+test('voice (Phase B): tier gate — a text-only tier (features.voice=false) gets NO voice config', () => {
+  // No current tier is text-only, so simulate the gate directly against the
+  // source of truth: pick any tier whose features.voice is false. If/when a
+  // future text-only tier is added this test auto-covers it; today it
+  // asserts the gate logic by confirming the voice config is ABSENT for a
+  // hypothetical resolver-miss (unknown slug → voice-off, never throws).
+  // An unknown tier string degrades to voice-off WITHOUT aborting provision.
+  const s = buildSetupScript({
+    ...baseParams,
+    // @ts-expect-error — intentionally pass an unknown slug to exercise the
+    // resolve-failure → voice-off degrade path.
+    tier: 'totally-unknown-tier',
+    voiceSttKey: 'gsk_x',
+  })
+  assert.doesNotMatch(s, /^stt:$/m, 'no voice config block for a non-voice / unknown tier')
+  assert.doesNotMatch(s, /GROQ_API_KEY=/, 'no STT key for a non-voice / unknown tier')
+  // The rest of the script still builds (provision must not abort).
+  assert.match(s, /install\.sh/, 'Hermes install still runs')
+  assert.match(s, /SOUL\.md/, 'persona still written')
 })

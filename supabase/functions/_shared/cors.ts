@@ -15,7 +15,13 @@
 // apply to non-browser callers anyway.
 
 const ALLOWED_HEADERS =
-  'authorization, x-client-info, apikey, content-type, x-callback-token, x-telegram-bot-api-secret-token'
+  // x-cid added 2026-05-10 — welcome.html sends X-CID alongside body
+  // customer_id when calling /functions/v1/customer-readiness so the
+  // handler can defense-in-depth verify URL-level cid matches the
+  // body. Pre-fix the browser preflight returned without x-cid in
+  // Allow-Headers, blocking every probe call → welcome.html stuck on
+  // "Memeriksa status agent..." indefinitely.
+  'authorization, x-client-info, apikey, content-type, x-callback-token, x-telegram-bot-api-secret-token, x-cid'
 const ALLOWED_METHODS = 'POST, OPTIONS'
 const MAX_AGE = '86400'
 

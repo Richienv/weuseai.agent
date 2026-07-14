@@ -1,7 +1,7 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "social-conductor",
-  "version": "2.0.0",
+  "version": "2.5.0",
   "description_id": "Bundle skill + template Social Conductor v2 (Option B scope). Content calendar, post drafting cross-platform, engagement log, voice-consistency checker. NO scraping, NO auto-post — kamu yang submit ke platform.",
   "skills": [
     {
@@ -18,6 +18,7 @@
       "description_id": "Susun content calendar lintas platform (TikTok, Reels, X, LinkedIn, blog). Slot terjadwal di local DB, bukan di platform 3rd-party. Output bisa di-export ke .ics atau Google Calendar manual.",
       "description_en": "Build cross-platform content calendar in local DB.",
       "templates_used": ["calendar-schema.md", "weekly-cadence-presets.md"],
+      "template_fetch_required": true,
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:content-calendar-builder",
       "enabled_for_tiers": ["pro", "studio"]
@@ -27,6 +28,7 @@
       "description_id": "Draft post copy per platform — caption length-adjusted (TikTok ~150, Reels ~125, X ~280, LinkedIn ~700). Voice-fit scored. Customer copy-paste ke platform manual.",
       "description_en": "Draft platform-optimal post copy in locked voice.",
       "templates_used": ["platform-length-rules.md"],
+      "template_fetch_required": true,
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:post-drafter",
       "enabled_for_tiers": ["pro", "studio"]
@@ -36,6 +38,7 @@
       "description_id": "Log comment / DM / mention yang customer input manual. Track yang belum dibalas, surface daily digest. Draft reply siap customer kirim manual.",
       "description_en": "Manual-input engagement log + reply drafting.",
       "templates_used": ["engagement-schema.md", "reply-pattern-library.md"],
+      "template_fetch_required": true,
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:engagement-log-tracker",
       "enabled_for_tiers": ["pro", "studio"]
@@ -54,8 +57,19 @@
       "description_id": "Multi-week campaign plan (produk launch, content series, seasonal push). Output: calendar entries + post drafts pre-staged + engagement triggers.",
       "description_en": "Multi-week campaign plan with calendar + drafts.",
       "templates_used": ["campaign-template.md"],
+      "template_fetch_required": true,
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:campaign-planner",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
+      "id": "campaign-execution",
+      "skill_kind": "playbook",
+      "description_id": "Playbook 8 langkah yang menjalankan satu campaign multi-minggu dari plan sampai semua slot terposting dan engagement tertangani. Dua titik henti: customer approve plan di awal, lalu reminder H-2 per slot sebelum jam posting target. Posting tetap kamu yang submit, aku draft dan ingatkan.",
+      "description_en": "8-step playbook running one multi-week campaign from plan through all slots posted and engagement tracked. Two checkpoints: plan approval at start, then recurring H-2 reminder per slot before posting time. Customer submits posts; agent drafts and reminds.",
+      "templates_used": ["campaign-template.md", "calendar-schema.md", "platform-length-rules.md", "voice-fit-rubric.md", "engagement-schema.md"],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:campaign-execution",
       "enabled_for_tiers": ["pro", "studio"]
     },
     {
@@ -65,6 +79,26 @@
       "templates_used": [],
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:extend-capabilities",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
+      "id": "voice-onboarding",
+      "skill_kind": "playbook",
+      "description_id": "Playbook enam langkah yang menyetel voice brand customer sebelum draft mode aktif — intake, kumpulkan minimum 20 sample, lock profile via voice-locker, generate 5 draft uji coba, checkpoint rate-fit, lalu aktifkan atau re-lock berdasarkan rating.",
+      "description_en": "Six-step playbook that locks the customer's brand voice before drafting goes live — intake, collect at least 20 samples, lock the profile via voice-locker, generate 5 test drafts, a rate-the-fit checkpoint, then activate or re-lock based on the rating.",
+      "templates_used": [],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:voice-onboarding",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
+      "id": "crisis-comms",
+      "skill_kind": "playbook",
+      "description_id": "Playbook sembilan langkah untuk satu siklus komunikasi krisis — intake, assess crisis vs noise, identifikasi stakeholder, draft holding statement BI (acknowledge + commit to update), checkpoint review, publish, monitor respon, draft follow-up update, checkpoint review, publish update. Dua checkpoint untuk copy publik. Register acknowledge Indonesia, hindari trigger SARA, sadar waktu adzan.",
+      "description_en": "Nine-step playbook for one crisis-comms cycle — intake, assess crisis vs noise, stakeholder ID, draft BI holding statement (acknowledge + commit to update), checkpoint review, publish, monitor, draft follow-up update, checkpoint review, publish update. Two checkpoints for public-facing copy. Indonesian acknowledge register, avoids SARA triggers, adzan-aware.",
+      "templates_used": ["engagement-reply-comment-bahasa.md"],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:crisis-comms",
       "enabled_for_tiers": ["pro", "studio"]
     }
   ],
@@ -116,6 +150,96 @@
       "kind": "reference",
       "description_id": "Campaign plan template — phase, week-by-week deliverables, KPI hooks.",
       "best_for": "campaign-planner output frame"
+    },
+    {
+      "id": "platforms/instagram-post.md",
+      "kind": "post-template",
+      "description_id": "Template caption Instagram — hook line (≤220 char preview), body 2-4 paragraf pendek, CTA satu kalimat, 3-5 hashtag, max 1 emoji. Tone guide IG-aware: scroll-stopper hook, soft CTA, hindari forced engagement-bait.",
+      "best_for": "post-drafter saat platform=instagram (carousel atau single image)"
+    },
+    {
+      "id": "platforms/tiktok-script.md",
+      "kind": "post-template",
+      "description_id": "Template script TikTok 3-4 beat — hook ≤3 detik dengan visual + audio cue, setup, payoff, optional CTA. Caption terpisah ikut platform-length-rules. Tone guide TikTok-aware: 3-second rule, cut antar beat, voice dominan di beat hook.",
+      "best_for": "post-drafter saat platform=tiktok dan customer butuh script video, bukan caption only"
+    },
+    {
+      "id": "platforms/linkedin-post.md",
+      "kind": "post-template",
+      "description_id": "Template LinkedIn long-form — hook line drives see-more click, hook expansion, 3-4 paragraf single-sentence dengan line break, closer reflection atau soft CTA, 3-5 hashtag professional. Sweet spot 600-1300 char. Tone guide LinkedIn-aware: claim-driven opening, calm-reflective register.",
+      "best_for": "post-drafter saat platform=linkedin dan customer mau long-form post"
+    },
+    {
+      "id": "platforms/twitter-thread.md",
+      "kind": "post-template",
+      "description_id": "Template Twitter (X) thread — 1 hook tweet dengan 🧵 indikator, 5-10 body tweet bernomor, 1 CTA tweet dengan /end. Tiap tweet ≤280 char, target 250-280. Tone guide X-aware: satu ide per tweet, hashtag minimal (0-2), CTA opt-in.",
+      "best_for": "post-drafter saat platform=x dan customer minta thread, bukan single tweet"
+    },
+    {
+      "id": "content-calendar.md",
+      "kind": "calendar",
+      "description_id": "Template content calendar 4 minggu × 7 hari — grid markdown dengan kolom tanggal, hari, platform, post type, tema, status (draft→scheduled→posted), owner, copy URL. Bisa di-paste ke Google Sheets atau Notion database. Default sort by date asc, secondary platform.",
+      "best_for": "content-calendar-builder saat customer minta render-out yang bisa di-share atau di-paste"
+    },
+    {
+      "id": "campaign-brief.md",
+      "kind": "brief",
+      "description_id": "Template campaign brief satu halaman — goal, audience, key message, 3-5 deliverables × platform × count × due, 2-4 KPI dengan target + cara ukur, timeline + milestone, budget optional, voice profile reference, risks + mitigations. Brief operational, bukan pitch deck.",
+      "best_for": "campaign-planner saat mulai campaign baru dan butuh brief singkat sebelum plan multi-week disusun"
+    },
+    {
+      "id": "content-angle-worksheet.md",
+      "kind": "angle",
+      "description_id": "Worksheet ideation angle — satu topic dipecah ke 10 frame berbeda: educational, contrarian, behind-the-scenes, data-led, customer-story, how-to, mistake-to-avoid, list, quote, question. Tiap angle: frame, hook contoh, format suggestion, fit platform. Inventory ide, bukan plan final.",
+      "best_for": "post-drafter atau campaign-planner saat customer punya satu topic dan butuh variasi angle lintas platform"
+    },
+    {
+      "id": "engagement-response.md",
+      "kind": "response",
+      "description_id": "Template balasan comment dan DM dengan 5 tone variant — helpful (default pertanyaan teknis), curious (POV berbeda), playful (audience reguler, pakai hemat), firm (clarify misinterpretasi), redirect-to-DM (pricing, detail sensitif). Maksimal 3 baris per variant supaya feel natural di reply chain. Tiap variant opens dengan kalimat berbeda.",
+      "best_for": "engagement-log-tracker saat draft reply siap kirim manual"
+    },
+    {
+      "id": "caption-tiktok-id-viral-hook.md",
+      "kind": "caption",
+      "description_id": "Caption TikTok-id dengan hook 10-karakter pertama, register casual ('nggak', 'banget', 'lagi viral'), CTA selalu ke 'follow buat tips serupa'. Disesuaikan ritme TikTok Indonesia 7-detik attention. Hashtag mix Indonesian trending + niche + micro-local kota. Reference packet trend Indonesia: joget challenge, food review Jakarta, tutorial harian, curhat storytime.",
+      "best_for": "Creator Indonesia yang post di TikTok untuk audience domestik (bukan TikTok global)"
+    },
+    {
+      "id": "caption-instagram-id-feed.md",
+      "kind": "caption",
+      "description_id": "Caption IG feed Indonesian creator standard — first line hook ≤125 karakter (visible tanpa 'more'), 3-paragraph structure (hook + value + CTA), hashtag mix 5 trending Indonesian + 5 niche Indonesian + 5 micro-local kota-spesifik. Calm-premium register, bukan influencer-shouting. Dot-spacer sebelum hashtag block.",
+      "best_for": "post-drafter saat platform=instagram dan customer target audience Indonesia"
+    },
+    {
+      "id": "whatsapp-broadcast-campaign.md",
+      "kind": "broadcast",
+      "description_id": "Template WA broadcast campaign per Meta WhatsApp Business API conventions — header + body + footer + CTA, kategori jelas (marketing / utility / authentication), opt-in wajib (UU PDP 27/2022 + Meta policy), frekuensi max 1x/minggu marketing supaya nggak kena block, opt-out path eksplisit ('balas STOP'). IDR formatting titik thousand. Tanggal format Indonesia.",
+      "best_for": "campaign-planner saat customer kirim broadcast WA ke list pelanggan Indonesia"
+    },
+    {
+      "id": "content-calendar-id-monthly.md",
+      "kind": "calendar",
+      "description_id": "Calendar bulanan aware Indonesian calendar — mark hari libur nasional, hari besar agama (Idul Fitri, Natal, Nyepi, Waisak, Imlek), event budaya (HUT RI 17 Agustus, Sumpah Pemuda, Hari Pahlawan), event komersial (Harbolnas 12.12 / 11.11 / 9.9), seasonal shift (Ramadhan, mudik Lebaran). Calendar tag enumerated set untuk filter slot terkait event.",
+      "best_for": "content-calendar-builder saat customer butuh planning bulanan dengan awareness Indonesian calendar"
+    },
+    {
+      "id": "post-linkedin-id-thought-leadership.md",
+      "kind": "post",
+      "description_id": "Template LinkedIn-id thought leadership — register formal-tapi-tidak-kaku (BI executive standard, mixing English business term yang umum di ekosistem Jakarta), struktur pengamatan → konteks → opini → undangan diskusi. Bukan LinkedIn-US 'carousel performance hack' — audience LI Indonesia baca untuk substansi, bukan hook trick. Sweet spot 800-1500 karakter.",
+      "best_for": "post-drafter saat platform=linkedin dan audience adalah eksekutif / founder Indonesia"
+    },
+    {
+      "id": "caption-shopee-tiktok-shop.md",
+      "kind": "caption",
+      "description_id": "Caption Shopee Live / TikTok Shop conversion-optimized untuk e-commerce Indonesia. Bahasa konversi Indonesia: 'Diskon X% pakai voucher Y', 'Gratis ongkir minimal pembelian Z', 'Cashback A%', 'Garansi resmi/toko'. Permendag 31/2023 disclosure: harga akurat, stok jujur, deskripsi tidak exaggerate. IDR titik thousand, voucher code copy-paste friendly.",
+      "best_for": "post-drafter saat customer punya listing produk di Shopee Live / TikTok Shop / Shopee Listing"
+    },
+    {
+      "id": "engagement-reply-comment-bahasa.md",
+      "kind": "response",
+      "description_id": "Reply komen TikTok / IG akun Indonesia — tiga register variant: super-casual ('Makasih ya kak'), professional-friendly ('Terima kasih atas masukan kamu'), defusing-criticism ('Saya ngerti maksudmu, mari saya jelaskan'). Sapaan Indonesia per audience (kak / first name / Mbak-Mas). Platform default register: TikTok casual, LinkedIn professional.",
+      "best_for": "engagement-log-tracker saat reply komen platform Indonesia, butuh pilih register sesuai konteks"
     }
   ],
   "self_extend": true,

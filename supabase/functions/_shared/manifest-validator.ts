@@ -21,10 +21,31 @@ import {
 
 export type SkillTier = 'starter' | 'pro' | 'studio'
 
+/**
+ * Discriminates a single-shot skill from a multi-step playbook.
+ * Absent ⇒ 'skill' (a single-shot capability — the legacy default).
+ * 'playbook' ⇒ the skill's SKILL.md carries a `## Langkah-langkah`
+ * section of ordered, gated steps and is driven by the flow-state
+ * state-machine engine (Phase 1 Week 2, 2026-05-18 consult).
+ */
+export type SkillKind = 'skill' | 'playbook'
+
 export type ManifestSkill = {
   id: string
   description_id: string
   description_en?: string
+  /** Defaults to 'skill' when absent. */
+  skill_kind?: SkillKind
+  /**
+   * P1 strict template-fetch flow (2026-05-22 consult). When true, the
+   * skill's SKILL.md must instruct the agent to consult its persona's
+   * template library before improvising — the body must carry a
+   * `## Fetch template` section. The template-fetch-required drift gate
+   * (`tests/template-fetch-required-drift.spec.ts`) enforces the
+   * SKILL.md body shape. Defaults to false when absent (legacy skills
+   * not yet migrated; opt-in per skill as templates land).
+   */
+  template_fetch_required?: boolean
   templates_used?: string[]
   execution: 'edge-function' | 'hermes-skill' | 'composite' | 'external-api'
   handler_ref: string
@@ -103,12 +124,12 @@ export type Manifest = {
 export const KNOWN_PERSONA_SLUGS = [
   'the-pro',
   'deep-researcher',
-  'web-master',          // display name "Web Creator" in v2; slug retained
+  'web-app-builder',          // display name "Web Creator" in v2; slug retained
   'doc-expert',
   'slide-master',
   'trade-pro',
   'project-conductor',   // v2 — renamed from 'macro-strategist'
-  'business-director',
+  'business-agent',
   'video-producer',
   'social-conductor',
 ] as const
@@ -148,6 +169,8 @@ export const MANIFEST_SCHEMA = {
           id: { type: 'string', pattern: '^[a-z][a-z0-9-]+$' },
           description_id: { type: 'string', minLength: 10, maxLength: 500 },
           description_en: { type: 'string', minLength: 10, maxLength: 500 },
+          skill_kind: { type: 'string', enum: ['skill', 'playbook'] },
+          template_fetch_required: { type: 'boolean' },
           templates_used: { type: 'array', items: { type: 'string' } },
           execution: {
             type: 'string',
@@ -192,14 +215,29 @@ export type ManifestValidateOk = { ok: true; manifest: Manifest }
 export type ManifestValidateErr = { ok: false; errors: string[] }
 export type ManifestValidateResult = ManifestValidateOk | ManifestValidateErr
 
+export type ValidateManifestOpts = {
+  /**
+   * Persona Genesis (2026-06-10): per-customer generated personas carry a
+   * `custom-<customer_id>` slug that is intentionally NOT in
+   * KNOWN_PERSONA_SLUGS. Callers validating a GENERATED manifest pass the
+   * exact slug(s) they minted here; every other caller gets the unchanged
+   * known-slug gate. This is an explicit opt-in, never a default — the
+   * curated-persona gate stays intact.
+   */
+  allowAgentSlugs?: readonly string[]
+}
+
 /**
  * Validate a parsed manifest object. Performs schema validation +
  * cross-field invariants:
- *   - agent_slug must be a known persona slug
+ *   - agent_slug must be a known persona slug (or explicitly allow-listed)
  *   - every skill.templates_used reference must exist in templates[]
  *   - extension_dir must be absolute path
  */
-export function validateManifest(input: unknown): ManifestValidateResult {
+export function validateManifest(
+  input: unknown,
+  opts: ValidateManifestOpts = {},
+): ManifestValidateResult {
   // Discard $schema field if present (it's reference metadata, not part
   // of the runtime manifest contract).
   const stripped = stripSchemaField(input)
@@ -217,7 +255,11 @@ export function validateManifest(input: unknown): ManifestValidateResult {
   // Cross-field invariants
   const errors: string[] = []
 
-  if (!(KNOWN_PERSONA_SLUGS as readonly string[]).includes(m.agent_slug)) {
+  const allowedSlugs = opts.allowAgentSlugs ?? []
+  if (
+    !(KNOWN_PERSONA_SLUGS as readonly string[]).includes(m.agent_slug) &&
+    !allowedSlugs.includes(m.agent_slug)
+  ) {
     errors.push(
       `agent_slug "${m.agent_slug}" is not a known persona — must be one of ${KNOWN_PERSONA_SLUGS.join(', ')}`,
     )

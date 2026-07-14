@@ -1,15 +1,34 @@
 # Fly.io config — weuseai-provisioning
 #
 # Sized to spec (2026-05-02 founder review):
-#   - Region sin (Singapore) — closest Fly POP to IDCloudHost jkt01
+#   - Region sin (Singapore) — Vultr sgp is the primary provider
 #   - shared-cpu-1x / 256MB → ~$1.94/mo if always-on
 #   - auto_stop_machines + min=0/max=1 → effectively $0/mo at MVP traffic
 #     and hard-capped at one machine if traffic spikes
 #
 # Secrets set separately via `fly secrets set` (NOT in this file):
-#   IDCLOUDHOST_API_KEY, IDCLOUDHOST_BILLING_ACCOUNT_ID, IDCLOUDHOST_REGION,
-#   TELEGRAM_BOT_TOKEN, DEFAULT_TELEGRAM_CHAT_ID, PROVISIONING_AUTH_TOKEN,
-#   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, RICHIE_CHAT_ID
+#   Provider routing (Vultr primary since 2026-05-11 cutover; IDCloudHost
+#   adapter retired 2026-05-13 after the historical rows stopped):
+#     VPS_PROVIDER                    # 'vultr' (default) | 'digitalocean' (hot-swap) | 'mock' (dry-run)
+#     VULTR_API_KEY                   # generated at my.vultr.com/settings/#settingsapi
+#     VULTR_REGION                    # 'sgp' (Singapore — capacity-stable since 2014)
+#     VULTR_FLEET_SSH_KEY_ID          # uuid from POST /v2/ssh-keys (FLEET_SSH_PUBKEY upload)
+#     DIGITALOCEAN_API_KEY            # for failover when Vultr capacity exhausted
+#     DIGITALOCEAN_REGION             # 'sgp1' (DO Singapore — NOTE: NOT same code as Vultr's 'sgp')
+#     DIGITALOCEAN_FLEET_SSH_KEY_ID   # id from POST /v2/account/keys
+#   Service auth + Telegram + Supabase (unchanged):
+#     TELEGRAM_BOT_TOKEN, DEFAULT_TELEGRAM_CHAT_ID, PROVISIONING_AUTH_TOKEN,
+#     SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, RICHIE_CHAT_ID,
+#     FLEET_SSH_PRIVATE_KEY, FLEET_SSH_PUBKEY
+#   Phase B (voice-input STT, 2026-06-02) — native Hermes voice-memo STT on
+#   voice-tier VPSes. Single fleet-wide key; Hermes calls the provider
+#   internally on each customer VPS. Default provider is Groq:
+#     VOICE_STT_GROQ_KEY              # free at console.groq.com/keys
+#     VOICE_STT_OPENAI_KEY           # only if fleet flips to OpenAI Whisper
+#                                    # (REAL api.openai.com key, NOT OpenRouter)
+#
+# Retired secrets — safe to `fly secrets unset` after this PR ships:
+#     IDCLOUDHOST_API_KEY, IDCLOUDHOST_BILLING_ACCOUNT_ID, IDCLOUDHOST_REGION
 
 app = "weuseai-provisioning"
 primary_region = "sin"

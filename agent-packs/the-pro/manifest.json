@@ -1,7 +1,7 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "the-pro",
-  "version": "1.0.0",
+  "version": "1.5.0",
   "description_id": "Bundle skill + template The Pro. Briefing pagi, ingatan lintas sesi, pendamping kerja harian.",
   "skills": [
     {
@@ -9,6 +9,7 @@
       "description_id": "Rangkum kalender, email penting, dan headline berita pagi jadi satu briefing markdown. Default ke timezone Asia/Jakarta.",
       "description_en": "Aggregates calendar + email + news into a single morning briefing. Defaults to Asia/Jakarta timezone.",
       "templates_used": ["mocks/calendar/typical-day.json", "mocks/gmail/typical-day.json"],
+      "template_fetch_required": true,
       "execution": "edge-function",
       "handler_ref": "edge-fn:daily-briefing-handler",
       "enabled_for_tiers": ["starter", "pro", "studio"]
@@ -20,6 +21,36 @@
       "templates_used": [],
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:extend-capabilities",
+      "enabled_for_tiers": ["starter", "pro", "studio"]
+    },
+    {
+      "id": "customer-reply",
+      "skill_kind": "playbook",
+      "description_id": "Playbook lima langkah untuk menyusun balasan pesan masuk dalam gaya nulis customer. Klasifikasi, ingat thread, draft, lalu gerbang keras: kirim hanya setelah customer approve eksplisit.",
+      "description_en": "Five-step playbook that drafts a reply to an incoming message in the customer's learned voice. Classify, recall thread, draft, then a hard gate: sends only after explicit customer approval.",
+      "templates_used": [],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:customer-reply",
+      "enabled_for_tiers": ["starter", "pro", "studio"]
+    },
+    {
+      "id": "morning-briefing-cycle",
+      "skill_kind": "playbook",
+      "description_id": "Playbook lima langkah siklus briefing pagi harian. Intake tanggal dan klasifikasi konteks hari (libur nasional, cuti bersama, Ramadhan, hari kerja), pull outstanding dari kemarin, pull konteks pagi (berita, cuaca, meeting), assemble pakai template morning-briefing varian yang tepat, lalu auto-deliver ke Telegram customer. Cron 07:00 WIB default, customer juga bisa minta on-demand.",
+      "description_en": "Five-step playbook for the daily morning briefing cycle. Intake date and classify day context (national holiday, joint leave, Ramadan, working day), pull yesterday's outstanding, fetch morning context (news, weather, meetings), assemble using the right morning-briefing template variant, then auto-deliver to the customer's Telegram. Cron 07:00 WIB default, on-demand also supported.",
+      "templates_used": ["briefings/morning-briefing.md", "briefings/morning-briefing-hari-libur.md", "briefings/morning-briefing-puasa.md"],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:morning-briefing-cycle",
+      "enabled_for_tiers": ["starter", "pro", "studio"]
+    },
+    {
+      "id": "end-of-day-summary",
+      "skill_kind": "playbook",
+      "description_id": "Playbook enam langkah siklus ringkasan akhir hari operasional. Intake tanggal dan jadwal meeting selesai, pull task tuntas hari ini, identifikasi outstanding untuk besok, flag item perlu-konfirmasi (nama pihak, ping terakhir, follow-up recommendation), assemble pakai template end-of-day-summary-bahasa, lalu auto-deliver ke Telegram. Cron 18:00 WIB default, on-demand juga bisa.",
+      "description_en": "Six-step playbook for the operational end-of-day summary cycle. Intake date and completed meetings, pull today's done items, identify outstanding for tomorrow, flag perlu-konfirmasi items (counterparty name, last ping, follow-up recommendation), assemble using end-of-day-summary-bahasa template, then auto-deliver to Telegram. Cron 18:00 WIB default, on-demand also supported.",
+      "templates_used": ["end-of-day-summary-bahasa.md"],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:end-of-day-summary",
       "enabled_for_tiers": ["starter", "pro", "studio"]
     }
   ],
@@ -35,6 +66,138 @@
       "kind": "fixture",
       "description_id": "Mock Gmail fixture (10 emails: 3 important + 5 noise + 2 follow-up).",
       "best_for": "Demo + integration testing"
+    },
+    {
+      "id": "mocks/calendar/empty.json",
+      "kind": "fixture",
+      "description_id": "Mock calendar fixture untuk skenario hari kosong (tidak ada acara). Pasangan typical-day untuk menguji jalur briefing tanpa kalender.",
+      "best_for": "Empty-state testing — briefing path with no calendar events"
+    },
+    {
+      "id": "mocks/gmail/empty.json",
+      "kind": "fixture",
+      "description_id": "Mock Gmail fixture untuk skenario kotak masuk kosong (tidak ada email). Pasangan typical-day untuk menguji jalur briefing tanpa email.",
+      "best_for": "Empty-state testing — briefing path with no email"
+    },
+    {
+      "id": "briefings/morning-briefing.md",
+      "kind": "briefing",
+      "description_id": "Template briefing pagi harian — kalender, email penting, follow-up, berita, plus satu reflection prompt. Dipakai tiap pagi default 07:00 WIB. Audiens: customer sendiri.",
+      "best_for": "Daily morning briefing — mirrors daily-briefing skill output shape with a reflection prompt at the end"
+    },
+    {
+      "id": "briefings/weekly-recap.md",
+      "kind": "briefing",
+      "description_id": "Template recap mingguan — yang selesai, yang slip, tiga komitmen minggu depan, satu hal yang sengaja di-drop. Dipakai Jumat sore atau Minggu malam. Audiens: customer sendiri.",
+      "best_for": "End-of-week reset — what shipped, what slipped, next commitments, intentional drops"
+    },
+    {
+      "id": "briefings/monthly-review.md",
+      "kind": "briefing",
+      "description_id": "Template tinjauan bulanan — wins, losses, tema bulan, lookahead, dan satu pertanyaan reflektif untuk dibawa beberapa hari. Audiens: customer sendiri di akhir bulan.",
+      "best_for": "End-of-month reflective review — deeper than weekly, surfaces patterns across weeks"
+    },
+    {
+      "id": "replies/reply-friendly.md",
+      "kind": "reply",
+      "description_id": "Template balasan nada hangat-akrab untuk kontak dekat. Sapaan ringan, kalimat singkat, optional baris personal. Di-draft lewat playbook customer-reply, kirim hanya setelah customer approve.",
+      "best_for": "Replies to close contacts — warm, conversational, kamu form"
+    },
+    {
+      "id": "replies/reply-professional.md",
+      "kind": "reply",
+      "description_id": "Template balasan nada profesional netral untuk konteks business standar. Struktur jelas: konteks, jawaban, langkah berikutnya, penutup. Tanda tangan eksplisit.",
+      "best_for": "Standard business replies — neutral, structured, clear next step"
+    },
+    {
+      "id": "replies/reply-decline.md",
+      "kind": "reply",
+      "description_id": "Template balasan untuk menolak permintaan dengan elegan — empati, pernyataan menolak yang jelas, alasan singkat, alternatif kalau ada, penutup tetap hangat.",
+      "best_for": "Graceful decline — close the door without burning the bridge"
+    },
+    {
+      "id": "replies/reply-follow-up.md",
+      "kind": "reply",
+      "description_id": "Template follow-up lembut untuk thread yang stall. Anchor ke percakapan sebelumnya, check-in yang menawarkan jalan keluar, value offer, penutup netral tanpa nagih.",
+      "best_for": "Gentle follow-up — re-surface stalled thread without nagging"
+    },
+    {
+      "id": "replies/reply-handoff.md",
+      "kind": "reply",
+      "description_id": "Template handoff ke kolega, vendor, atau channel lain yang lebih tepat. Acknowledgment singkat, alasan handoff, nama + kontak penerima baru, jaminan konteks sudah diteruskan.",
+      "best_for": "Redirect to a more appropriate person/channel with context already passed along"
+    },
+    {
+      "id": "meeting-prep.md",
+      "kind": "meeting",
+      "description_id": "Template persiapan meeting — peserta, tujuan, tiga talking point, pertanyaan terbuka, materi checklist, plus slot log keputusan dan action item untuk diisi setelah meeting.",
+      "best_for": "Pre-meeting prep + post-meeting log in one file"
+    },
+    {
+      "id": "status-update.md",
+      "kind": "status",
+      "description_id": "Template status update singkat untuk stakeholder — done, next, blockers, asks. Maksimum 5 baris isi. Cocok untuk laporan mingguan ke atasan, investor, klien, atau partner.",
+      "best_for": "5-line stakeholder status update — done / next / blockers / asks"
+    },
+    {
+      "id": "daily-summary.md",
+      "kind": "summary",
+      "description_id": "Template penutup hari untuk customer sendiri — accomplishments, fokus besok, langkah pertama besok pagi, dan satu kemenangan kecil untuk diingat. Bukan untuk dikirim ke orang lain.",
+      "best_for": "End-of-day closing ritual — accomplishments + tomorrow + one moment to remember"
+    },
+    {
+      "id": "commitment-tracker.md",
+      "kind": "tracker",
+      "description_id": "Template tracker append-only untuk semua janji yang customer buat ke orang lain. Tanggal, isi komitmen, kepada siapa, due, sumber, status, catatan. Di-review di weekly recap.",
+      "best_for": "Append-only ledger of cross-thread commitments — nothing falls through"
+    },
+    {
+      "id": "one-on-one-notes.md",
+      "kind": "notes",
+      "description_id": "Template catatan 1-on-1 dengan manager atau direct report. Pra-meeting: what worked, what didn't, asks, tema. Post-meeting: ringkasan, komitmen baru, hal yang dibawa ke pertemuan berikutnya.",
+      "best_for": "1-on-1 prep + after-the-fact log so themes carry across sessions"
+    },
+    {
+      "id": "replies/reply-tough-client-bahasa.md",
+      "kind": "reply",
+      "description_id": "Phase B2 Indonesia-deep — balasan email kepada klien Indonesia (B2B senior, Bapak/Ibu) yang frustrasi atau marah. Register hangat-tegas: akui spesifik tanpa membela diri, satu kata maaf maksimum, langkah konkret dengan jam WIB tertentu. Bukan diplomatic-reply ala English business school.",
+      "best_for": "Balasan ke klien Indonesia senior yang marah atau komplain berat — B2B context"
+    },
+    {
+      "id": "briefings/morning-briefing-hari-libur.md",
+      "kind": "briefing",
+      "description_id": "Phase B2 Indonesia-deep — briefing pagi sadar hari libur. Klasifikasi tanggal hari ini sebagai libur nasional (Kepmen Menaker/Agama), cuti bersama (SKB tiga menteri), akhir pekan, atau hari kerja, lalu surface 'yang ditunda karena libur' dan 'yang harus dibahas hari kerja berikutnya'. Eksplisit kasih izin istirahat.",
+      "best_for": "Briefing pagi pada hari libur nasional, cuti bersama, atau akhir pekan — anti-hustle, sediakan jembatan ke hari kerja berikutnya"
+    },
+    {
+      "id": "replies/reply-bos-late-night-wa.md",
+      "kind": "reply",
+      "description_id": "Phase B2 Indonesia-deep — balasan WhatsApp atasan di luar jam kerja. Tiga register variant: super_senior (komisaris/direksi), peer_senior (atasan langsung dekat), startup_flat (sesama founder). Komit jam besok, bukan auto-reply 'siap Pak langsung dikerjakan' yang merusak batas hidup-kerja.",
+      "best_for": "Respon WhatsApp atasan malam atau akhir pekan — push ke besok dengan jam jelas, tanpa over-promise"
+    },
+    {
+      "id": "email-permohonan-cuti-formal.md",
+      "kind": "letter",
+      "description_id": "Phase B2 Indonesia-deep — surat permohonan cuti formal ke HR atau atasan langsung. Referensi Pasal 79 (cuti tahunan), Pasal 82 (cuti melahirkan), Pasal 93 (cuti penting/sakit/haji) UU Ketenagakerjaan No. 13/2003. Struktur kepegawaian formal: identitas, dasar hukum, handover ke PIC pengganti, lampiran sesuai jenis cuti.",
+      "best_for": "Pengajuan cuti formal yang masuk arsip kepegawaian — cuti tahunan, melahirkan, penting, sakit, atau haji"
+    },
+    {
+      "id": "replies/balasan-customer-marah-bahasa.md",
+      "kind": "reply",
+      "description_id": "Phase B2 Indonesia-deep — balasan customer service untuk pelanggan retail (B2C) yang marah. Register CS Indonesia: 'Saya mengerti rasa frustrasi' bukan 'we apologize for any inconvenience'. Timeline realistis (jam WIB spesifik), jujur soal eskalasi dengan nama supervisor. Cocok untuk Bapak/Ibu formal atau Mas/Mbak casual brand.",
+      "best_for": "CS reply untuk pelanggan retail Indonesia yang komplain — B2C context, beda dari B2B tough-client template"
+    },
+    {
+      "id": "briefings/morning-briefing-puasa.md",
+      "kind": "briefing",
+      "description_id": "Phase B2 Indonesia-deep — briefing pagi selama bulan Ramadhan. Surface waktu imsak/subuh/ashar/maghrib WIB, jam kantor yang disesuaikan kalau perusahaan ikut pola Ramadhan, rekomendasi deep work pagi pasca-subuh, hindari rapat strategis window ashar-maghrib. Pembuka 'Assalamu alaikum' untuk customer Muslim yang berpuasa.",
+      "best_for": "Briefing pagi selama Ramadhan — schedule yang menghormati ritme ibadah dan kapasitas tubuh saat puasa"
+    },
+    {
+      "id": "end-of-day-summary-bahasa.md",
+      "kind": "summary",
+      "description_id": "Phase B2 Indonesia-deep — ringkasan akhir hari dalam register executive-assistant Bahasa Indonesia. Section khas: 'yang sudah dikerjakan', 'yang masih outstanding', 'perlu konfirmasi' (item menunggu respon stakeholder dengan kapan terakhir di-ping plus kapan follow-up). Section perlu-konfirmasi dirancang khusus untuk pace Jakarta business di mana follow-up lintas hari sering slip.",
+      "best_for": "Penutup hari operasional (Jakarta-pace) — beda dari daily-summary yang reflektif-personal, ini lebih dekat ke handover catatan untuk EA atau asisten admin"
     }
   ],
   "self_extend": true,

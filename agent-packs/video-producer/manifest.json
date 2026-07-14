@@ -1,14 +1,15 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "video-producer",
-  "version": "2.1.0",
-  "description_id": "Bundle skill + template Video Producer v2.1. Script TikTok dan Reels, hashtag research, sound trend tracking, caption drafting, HyperFrames storyboard spec, dan HyperFrames render execution (Runway primary + Pika fallback) — output mp4 ke kamu, bukan storyboard JSON.",
+  "version": "2.4.1",
+  "description_id": "Bundle Video Producer v2.4. Script TikTok dan Reels, hashtag research, sound trend, caption, HyperFrames storyboard + render (Runway primary, Pika fallback). Template pack: short/long/voiceover scripts, shot list, shoot plan, b-roll, description, thumbnail brief. Phase B9 Indonesia-deep: hijab-aware framing, UGC creator brief, TikTok-ID 7s-hook, BI end-card CTA, warung setting. Phase C2 dua playbook flow: script-to-publish dan ugc-collab.",
   "skills": [
     {
       "id": "tiktok-script-builder",
       "description_id": "Hermes generate JSON script (hook + body + CTA + visual scenes + sound + hashtags) pakai LLM customer, lalu validate di edge function untuk pastiin format match schema.",
       "description_en": "Hermes generates JSON script using customer's LLM, then validates against locked schema via edge function.",
       "templates_used": ["tiktok-script-format.md"],
+      "template_fetch_required": true,
       "execution": "edge-function",
       "handler_ref": "edge-fn:tiktok-script-handler",
       "enabled_for_tiers": ["pro", "studio"]
@@ -18,6 +19,7 @@
       "description_id": "Susun HyperFrames JSON — storyboard per-scene siap di-feed ke Runway/Sora/CapCut. Scene berisi visual_prompt, motion_hint, duration_sec, audio_cue, transition_to_next. Phase 4-2 menambahkan execution path: hyperframes-render skill yang convert storyboard ini jadi mp4.",
       "description_en": "Build HyperFrames JSON storyboard. Pair with hyperframes-render (Phase 4-2) for actual mp4 output.",
       "templates_used": ["hyperframes-storyboard-format.md"],
+      "template_fetch_required": true,
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:hyperframes-storyboard",
       "enabled_for_tiers": ["pro", "studio"]
@@ -45,6 +47,7 @@
       "description_id": "Research hashtag mix per niche/topic — emerging tags (volume rendah, upside tinggi), peak tags (saturated), branded tags. Output mix yang fit goal customer.",
       "description_en": "Research hashtag mix per niche with stage labels.",
       "templates_used": ["hashtag-mix-strategy.md"],
+      "template_fetch_required": true,
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:hashtag-research",
       "enabled_for_tiers": ["pro", "studio"]
@@ -54,6 +57,7 @@
       "description_id": "Draft / iterate caption sesuai brand voice + algoritma platform. CTA terselip natural, bukan 'follow us' generik. Length-optimal per platform (TikTok ~150 char, Reels ~125, Shorts ~100).",
       "description_en": "Draft platform-optimal captions in brand voice.",
       "templates_used": ["caption-patterns.md"],
+      "template_fetch_required": true,
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:caption-optimizer",
       "enabled_for_tiers": ["pro", "studio"]
@@ -65,6 +69,26 @@
       "templates_used": [],
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:extend-capabilities",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
+      "id": "script-to-publish",
+      "skill_kind": "playbook",
+      "description_id": "Playbook 8-langkah dari brief video sampai bundle siap publish — intake brief, draft script (pakai template TikTok-ID 7s-hook kalau format TikTok), checkpoint review script, assemble shot list, draft caption, research hashtag, assemble publish-ready bundle, checkpoint approval sebelum publish. Dua gerbang checkpoint, tidak ada publish otomatis.",
+      "description_en": "8-step playbook from video brief to publish-ready bundle. Two checkpoint gates — script review and final publish approval.",
+      "templates_used": ["indonesia/script-template-tiktok-id-7sec-hook.md", "indonesia/shot-list-hijab-aware-framing.md"],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:script-to-publish",
+      "enabled_for_tiers": ["pro", "studio"]
+    },
+    {
+      "id": "ugc-collab",
+      "skill_kind": "playbook",
+      "description_id": "Playbook 8-langkah kolaborasi UGC creator Indonesia — intake brand brief, susun shortlist (kriteria Indonesia-relevant / format-fit / budget-fit), draft outreach per creator, susun contract terms pakai template creator-brief-ugc-id, checkpoint creator selection, kirim kickoff brief, review asset hasil produksi, checkpoint final usage approval. Dua gerbang checkpoint, tidak ada outreach atau usage approval otomatis.",
+      "description_en": "8-step UGC creator collaboration playbook for Indonesia market. Two checkpoint gates — creator selection and final usage approval.",
+      "templates_used": ["indonesia/creator-brief-ugc-id.md"],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:ugc-collab",
       "enabled_for_tiers": ["pro", "studio"]
     }
   ],
@@ -98,6 +122,84 @@
       "kind": "reference",
       "description_id": "Caption pattern library — hook openers, CTA variants per platform, length guidelines.",
       "best_for": "Reference saat draft / iterate caption"
+    },
+    {
+      "id": "scripts/short-form-script.md",
+      "kind": "script",
+      "description_id": "Template skrip short-form (TikTok / Reels / Shorts) — 4 beat: hook 3 detik, setup, payoff, CTA. Per-beat visual cue dan audio cue terpisah biar editor langsung eksekusi tanpa nebak intent.",
+      "best_for": "Draft skrip 15-90s vertical, batch output harian"
+    },
+    {
+      "id": "scripts/long-form-script.md",
+      "kind": "script",
+      "description_id": "Template skrip long-form YouTube 8-15 menit — hook 30 detik, intro, 3-5 segmen dengan retention check, CTA, outro. Timecode summary auto-generate buat description chapters.",
+      "best_for": "YouTube horizontal 8-15 menit dengan struktur retention-aware"
+    },
+    {
+      "id": "scripts/voiceover-script.md",
+      "kind": "script",
+      "description_id": "Template skrip voiceover-only (product video, explainer, ads) — paragraph chunks, tone note per paragraf, pause cue, dan pronunciation sheet buat term BI/EN yang tricky.",
+      "best_for": "Product walkthrough, explainer, atau ads tanpa on-cam talent"
+    },
+    {
+      "id": "production/shot-list.md",
+      "kind": "production",
+      "description_id": "Shot list sortable grid — scene, shot type (wide / medium / close / insert), camera move, duration, subject, notes. Termasuk legend shot type, legend camera move, priority marker, dan coverage check 3-shot rule.",
+      "best_for": "Hari shoot — handoff DP / camera op tanpa briefing ulang"
+    },
+    {
+      "id": "production/shot-plan.md",
+      "kind": "production",
+      "description_id": "Full shoot plan multi-lokasi atau multi-hari — locations dengan access notes, shoot order optimized per light dan travel, gear list, crew call sheet, schedule per hari, dan 4 contingency wajib (cuaca, talent, gear, lokasi).",
+      "best_for": "Production yang lebih dari 1 lokasi atau 1 hari shoot"
+    },
+    {
+      "id": "production/b-roll-brief.md",
+      "kind": "production",
+      "description_id": "B-roll capture brief — subject, narrative purpose, 5-10 shot spesifik dengan komposisi + lighting note per shot, safety captures (room tone, establish, negative space), dan anti-pattern guard.",
+      "best_for": "B-roll session terpisah dari main shoot — biar editor punya overlay yang punya rencana"
+    },
+    {
+      "id": "publishing/video-description.md",
+      "kind": "publishing",
+      "description_id": "Template description / caption per platform — 4 varian (YouTube long, YouTube Shorts, TikTok, IG Reels). Hook line, ringkasan, chapter timecode untuk long-form, link section, dan hashtag count per platform.",
+      "best_for": "Publish hari yang sama, lintas platform — caption yang berdiri sendiri tanpa nonton dulu"
+    },
+    {
+      "id": "publishing/thumbnail-brief.md",
+      "kind": "thumbnail",
+      "description_id": "Brief desain thumbnail YouTube atau cover Reels / TikTok — main subject + posisi, emosi tunggal, teks overlay maksimal 4 kata, palet 60/30/10, reference image, mobile preview test, dan anti-pattern list (clickbait cliche yang sudah saturated).",
+      "best_for": "Handoff ke designer atau self-design — thumbnail yang klik-able tanpa visual cliche"
+    },
+    {
+      "id": "indonesia/shot-list-hijab-aware-framing.md",
+      "kind": "shot-list",
+      "description_id": "Shot list dengan panduan framing untuk talent berhijab — framing kepala-dada preferred, lighting respects siluet hijab, varian fashion shot untuk segi empat / pashmina / instan / bergo / khimar. Modesty sebagai parameter kreatif, bukan story-line.",
+      "best_for": "Produksi video dengan talent Muslim Indonesia berhijab — fashion, lifestyle, brand campaign"
+    },
+    {
+      "id": "indonesia/creator-brief-ugc-id.md",
+      "kind": "brief",
+      "description_id": "Brief UGC creator Indonesia — tone peer-to-peer (bukan talent-for-hire), payment IDR dengan breakdown (script / production / usage rights fee, format titik thousand), usage rights time-bounded (default 6 bulan in-platform + 3 bulan out-of-platform), do's & don'ts kalibrasi Indonesia (agama / politik / disclosure / attribution convention).",
+      "best_for": "Engage creator UGC Indonesia untuk kolaborasi brand — contract-ready brief sebelum production"
+    },
+    {
+      "id": "indonesia/script-template-tiktok-id-7sec-hook.md",
+      "kind": "script",
+      "description_id": "Script TikTok-ID dengan struktur 7-second-hook (kompromi antara 3-detik US convention dan attention pacing Indonesia). Beat: 0-2s hook + 2-7s setup, 7-22s body, 22-27s payoff, 27-30s CTA + brand callout. Register BI casual TikTok-ID, library pilihan kata yang fit / hindari, dan reference creator Indonesia.",
+      "best_for": "Script TikTok 30-60s untuk audience Indonesia — edukasi-ringan, lifestyle, niche storytelling, promo non-hard-sell"
+    },
+    {
+      "id": "indonesia/end-card-bahasa-cta.md",
+      "kind": "end-card",
+      "description_id": "End card CTA Bahasa Indonesia untuk TikTok / Reels / Shorts — library CTA per intent (Save / Share / Comment / Follow / Link / DM), engagement signal per platform, brand callout convention, dan anti-pattern (no 'Subscribe + Like + Notification Bell' US YouTube convention).",
+      "best_for": "Penutup 3-5 detik video vertical Indonesia — CTA yang fit ke platform feed-based dan register Indonesia"
+    },
+    {
+      "id": "indonesia/shot-list-warung-makan-product.md",
+      "kind": "shot-list",
+      "description_id": "Shot list product video di setting otentik warung makan / kafe Indonesia — pilihan jenis warung (warteg / warkop / kafe indie / PKL / warmindo), prop drink cultural-fit (kopi tubruk vs latte), lighting compensation tropical bright + dim indoor, sound strategy (keep-ambient / clean-VO-redub / partial-mix), respect adzan + pemilik warung.",
+      "best_for": "Product video setting warung Indonesia otentik — bukan studio bertema, lokasi real dengan operasi hidup"
     }
   ],
   "self_extend": true,

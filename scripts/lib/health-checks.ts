@@ -93,6 +93,20 @@ export const EDGE_FUNCTION_PROBES: {
   // Phase 5-3.b
   { name: 'approval-queue', method: 'GET', expectedStatuses: [400] },
   { name: 'roadmap-state', method: 'GET', expectedStatuses: [400] },
+  // Sesi B P0 #E (2026-05-12): paid + onboarding critical flows previously
+  // unmonitored. Expected statuses verified by hitting deployed prod
+  // functions with empty bodies / wrong methods so the auth/method/param
+  // gate fires before the handler does real work.
+  //  - create-invoice: anon JWT required (verify-jwt ON) → 401 on empty POST
+  //  - save-onboarding-profile: 400 on missing customer_id field
+  //  - reset-bot-pairing: 400 on missing customer_id
+  //  - rotate-pairing-code: 400 on missing customer_id
+  //  - customer-readiness: 400 on missing customer_id
+  { name: 'create-invoice', method: 'POST', expectedStatuses: [400, 401] },
+  { name: 'save-onboarding-profile', method: 'POST', expectedStatuses: [400, 401] },
+  { name: 'reset-bot-pairing', method: 'POST', expectedStatuses: [400, 401] },
+  { name: 'rotate-pairing-code', method: 'POST', expectedStatuses: [400, 401] },
+  { name: 'customer-readiness', method: 'GET', expectedStatuses: [400, 401] },
 ]
 
 /** Schema tables expected to exist on prod (post-Phase 6-1.a). */
@@ -123,13 +137,23 @@ export const EXPECTED_TABLES: readonly string[] = [
   'persona_memories',
 ] as const
 
-/** Customer-facing routes — each must return 200. */
+/** Customer-facing routes — each must return 200.
+ *
+ * Sesi B P0 #E (2026-05-12): expanded to include the new legal-pack
+ * pages (privacy / terms / refund-policy / contact) + sitemap.xml +
+ * robots.txt — these are launch-blockers if they 404. */
 export const CUSTOMER_ROUTES: readonly string[] = [
   '/',
   '/checkout',
   '/onboarding',
   '/welcome',
   '/use-cases',
+  '/privacy',
+  '/terms',
+  '/refund-policy',
+  '/contact',
+  '/sitemap.xml',
+  '/robots.txt',
 ] as const
 
 // ─── Per-check runners ─────────────────────────────────────────────

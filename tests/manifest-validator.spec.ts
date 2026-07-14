@@ -91,6 +91,28 @@ test('manifest with $schema field stripped silently', () => {
   assert.equal(r.ok, true)
 })
 
+// ─── skill_kind discriminator (Phase 1 Week 2) ─────────────────────────
+
+test('skill with skill_kind "playbook" validates', () => {
+  const m: Manifest = {
+    ...VALID_BASE,
+    skills: [{ ...VALID_BASE.skills[0], skill_kind: 'playbook' }],
+  }
+  assert.equal(validateManifest(m).ok, true)
+})
+
+test('skill with an unknown skill_kind is rejected', () => {
+  const m = {
+    ...VALID_BASE,
+    skills: [{ ...VALID_BASE.skills[0], skill_kind: 'bogus' }],
+  }
+  assert.equal(validateManifest(m).ok, false)
+})
+
+test('skill_kind is optional — absent still validates (legacy default)', () => {
+  assert.equal(validateManifest(VALID_BASE).ok, true)
+})
+
 // ─── schema-level errors ───────────────────────────────────────────────
 
 test('rejects missing agent_slug', () => {
@@ -408,30 +430,58 @@ test('every pilot manifest skill handler_ref points to a known edge function, he
   // separate drift test.
   const knownHermesSkills = new Set([
     'extend-capabilities',
+    // The Pro (playbook)
+    'customer-reply',
+    // The Pro (Phase C3 playbooks)
+    'morning-briefing-cycle',
+    'end-of-day-summary',
     // Web Creator (v2)
+    'site-launch',
     'landing-page-builder',
     'multi-page-site-builder',
     'blog-post-creator',
     'domain-advisory',
+    // Web Creator (v2.5 — Phase C5 feature shipping playbook)
+    'feature-shipping',
     // Doc Expert (v2)
     'academic-doc-builder',
+    // Doc Expert (v2.3 — Phase C1 playbooks)
+    'invoice-cycle',
+    'proposal-cycle',
+    'contract-review-cycle',
     // Slide Master (v2)
     'narrative-arc-deck-builder',
     'template-deck-builder',
+    'pitch-deck',
     // Trade Pro (v2)
     'market-briefing',
     'alert-watcher',
     'earnings-summarizer',
     'idr-bi-rate-watcher',
+    // Trade Pro (v2.2 — playbook)
+    'bitget-onboarding',
+    // Trade Pro (v2.5 — Phase C7 playbook)
+    'daily-trade-discipline',
     // Project Conductor (v2 — REPLACE+RENAME from macro-strategist)
     'kanban-orchestrator',
     'task-decomposer',
     'multi-agent-router',
     'progress-monitor',
+    // Project Conductor (Phase 2/3 playbooks)
+    'project-orchestration',
+    'pt-perorangan-registration',
+    'weekly-recap-cycle',
     // Business Director (v2.1 — Phase 5-2 dept packs replace department-task-spawner)
     'business-roadmap-tracker',
     'incorporation-advisor',
     'compliance-checker',
+    // Business Director (v3.1 — Phase 2 playbook)
+    'compliance-cycle',
+    // Business Director (v3.2 — Phase 3 playbook)
+    'finance-cycle',
+    // Business Director (Phase C4 — review playbooks)
+    'monthly-review',
+    'quarterly-strategy-review',
     'sales-dispatch',
     'marketing-dispatch',
     'engineering-dispatch',
@@ -442,6 +492,9 @@ test('every pilot manifest skill handler_ref points to a known edge function, he
     'sound-trend-tracker',
     'hashtag-research',
     'caption-optimizer',
+    // Video Producer (Phase C2 playbooks)
+    'script-to-publish',
+    'ugc-collab',
     // Social Conductor (v2 EXPAND — Option B, no scraping)
     'voice-locker',
     'content-calendar-builder',
@@ -449,6 +502,11 @@ test('every pilot manifest skill handler_ref points to a known edge function, he
     'engagement-log-tracker',
     'voice-consistency-checker',
     'campaign-planner',
+    // Social Conductor (Phase 3 playbooks)
+    'voice-onboarding',
+    'campaign-execution',
+    // Social Conductor (Phase C6 crisis-comms playbook)
+    'crisis-comms',
     // Phase 4-3 seed skills (DRAFT) — single shared handler-ref;
     // Hermes routes by skill_id from the customer message.
     'autobrowse-replay',
@@ -466,11 +524,11 @@ test('every pilot manifest skill handler_ref points to a known edge function, he
     'doc-expert',
     'the-pro',
     'video-producer',
-    'web-master',
+    'web-app-builder',
     'slide-master',
     'trade-pro',
     'project-conductor',
-    'business-director',
+    'business-agent',
     'social-conductor',
   ]) {
     const m = readJson(`agent-packs/${slug}/manifest.json`) as Manifest

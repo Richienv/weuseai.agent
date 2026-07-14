@@ -3,7 +3,7 @@
  *
  * Asserts:
  *   1. Each of the 6 seed-skill SKILL.md files exists at the expected
- *      path under agent-packs/web-master/skills/.
+ *      path under agent-packs/web-app-builder/skills/.
  *   2. Each is marked DRAFT in its body.
  *   3. The web-master manifest contains a matching entry per seed
  *      with handler_ref hermes-skill:autobrowse-replay and tier
@@ -24,7 +24,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT = resolve(__dirname, '..')
 const WEB_MASTER_MANIFEST = resolve(
   REPO_ROOT,
-  'agent-packs/web-master/manifest.json',
+  'agent-packs/web-app-builder/manifest.json',
 )
 
 const SEED_SKILLS = [
@@ -62,7 +62,7 @@ for (const slug of SEED_SKILLS) {
   test(`seed skill exists on disk: ${slug}/SKILL.md`, () => {
     const path = resolve(
       REPO_ROOT,
-      `agent-packs/web-master/skills/${slug}/SKILL.md`,
+      `agent-packs/web-app-builder/skills/${slug}/SKILL.md`,
     )
     assert.equal(
       existsSync(path),
@@ -78,7 +78,7 @@ for (const slug of SEED_SKILLS) {
   test(`seed skill ${slug} is marked DRAFT in heading`, () => {
     const path = resolve(
       REPO_ROOT,
-      `agent-packs/web-master/skills/${slug}/SKILL.md`,
+      `agent-packs/web-app-builder/skills/${slug}/SKILL.md`,
     )
     const text = readFileSync(path, 'utf8')
     // Header contains "Phase 4-3 seed skill (DRAFT)"
@@ -102,7 +102,7 @@ for (const slug of SEED_SKILLS) {
   test(`seed skill ${slug} documents the Autobrowse graduation flow`, () => {
     const path = resolve(
       REPO_ROOT,
-      `agent-packs/web-master/skills/${slug}/SKILL.md`,
+      `agent-packs/web-app-builder/skills/${slug}/SKILL.md`,
     )
     const text = readFileSync(path, 'utf8')
     // Mentions Autobrowse capture as the graduation path.
@@ -190,7 +190,7 @@ for (const slug of SEED_SKILLS) {
   test(`seed skill ${slug} respects CLAUDE.md voice rules (no Anda, no exclamation in body)`, () => {
     const path = resolve(
       REPO_ROOT,
-      `agent-packs/web-master/skills/${slug}/SKILL.md`,
+      `agent-packs/web-app-builder/skills/${slug}/SKILL.md`,
     )
     const text = readFileSync(path, 'utf8')
     // 'Anda' as a standalone word violates the address-form rule.

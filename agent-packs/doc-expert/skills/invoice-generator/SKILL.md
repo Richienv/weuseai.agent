@@ -79,6 +79,12 @@ Sudah aku susun invoice untuk PT Acme Indonesia.
 
 Kalau perlu ubah nominal, alamat, atau format, kasih tahu sebelum kamu kirim.
 
+## Fetch template
+
+Sebelum compose invoice, panggil `bundle-fetch` dengan `agent_slug` `doc-expert` dan filter `kind` ke `invoice`. Kalau template registry punya entry yang cocok (mis. `invoice-pro.html` untuk klien PT/CV standar, `invoice-w-professional.html` untuk premium business, `invoice-minimal.html` untuk transaksi kecil, `invoice-recurring.html` untuk subscription bulanan), pakai itu sebagai starting frame. Kalau registry tidak punya match, log ke `template_no_match_log` lewat `template-no-match-log` Edge Function dengan `persona_slug`, `skill_id`, `requested_deliverable`, dan `match_context` — terus compose dari nol.
+
+Tujuan: tiap deliverable pertama kali coba pakai template library. Library yang tipis terlihat dari log; library yang dipakai jadi cepat di-extend.
+
 ## Hard limits
 
 - Tidak send invoice ke klien atas nama customer tanpa eksplisit approval per-pesan

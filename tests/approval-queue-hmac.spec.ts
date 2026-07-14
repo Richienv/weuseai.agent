@@ -63,7 +63,7 @@ const validBody = {
   action_kind: 'incorporate',
   action_summary: 'sign akta',
   action_payload: { kind: 'pt' },
-  proposed_by_agent: 'business-director',
+  proposed_by_agent: 'business-agent',
 }
 
 // ─── create mode HMAC ────────────────────────────────────────────
@@ -178,7 +178,7 @@ test('decide: HMAC NOT required (decide reaches via Telegram callback)', async (
       action_kind: 'incorporate',
       action_summary: 'x',
       action_payload: {},
-      proposed_by_agent: 'business-director',
+      proposed_by_agent: 'business-agent',
       status: 'approved',
       approved_by: 'customer',
       approved_at: NOW,

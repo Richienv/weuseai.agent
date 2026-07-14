@@ -22,10 +22,23 @@ import type {
 class FakeProvisioning implements IOnboardingProvisioningClient {
   calls: SpinUpInput[] = []
   next: SpinUpResult = { ok: true, jobId: 'job-test-1' }
+  // Track 3b 2026-05-10: refreshEnv calls captured + tunable response.
+  refreshCalls: import('../supabase/functions/_shared/types.ts').RefreshEnvInput[] = []
+  refreshNext: import('../supabase/functions/_shared/types.ts').RefreshEnvResult = {
+    ok: true,
+    vpsId: 'vps-test-1',
+    ipAddress: '10.0.0.1',
+    applied: { TELEGRAM_BOT_TOKEN: 'updated' },
+    hermesRestartAt: '2026-05-10T08:00:00Z',
+  }
 
   async spinUp(input: SpinUpInput): Promise<SpinUpResult> {
     this.calls.push(input)
     return this.next
+  }
+  async refreshEnv(input: import('../supabase/functions/_shared/types.ts').RefreshEnvInput) {
+    this.refreshCalls.push(input)
+    return this.refreshNext
   }
 }
 
@@ -54,6 +67,7 @@ class FakeTelegram implements ITelegramClient {
   // Phase 5-5b: no-op stubs.
   async sendMessageWithButtonsAs() {}
   async answerCallbackQuery() {}
+  async getWebhookInfo(_token: string): Promise<{ url: string }> { return { url: '' } }
 }
 
 const PUBLIC_BASE = 'https://weuseai-agent.vercel.app'
@@ -61,7 +75,7 @@ const PUBLIC_BASE = 'https://weuseai-agent.vercel.app'
 // Per-customer bot token used in test setups. Mirrors the format
 // founder-pasted in the diagnostic step so tests track production-shape.
 const TEST_BOT_TOKEN = '8734001154:AAGGTR0PRNCy03aaVPb5qi9hWzxCe5yr_Ek'
-const TEST_BOT_USERNAME = 'welcomeuseaibot'
+const TEST_BOT_USERNAME = 'weuseai_e2e_fixture_bot'
 
 function buildReq(body: unknown, method = 'POST'): Request {
   const init: RequestInit = {
@@ -218,19 +232,51 @@ test('happy path: tier-specific credit cap (starter=300, studio=3000)', async ()
 
 // ─── idempotency (edit G) ──────────────────────────────────────────
 
-test('idempotent: already-onboarded returns 409 with redirect, no double mint', async () => {
+// Helper for the branched-idempotency tests: render a SOUL.md from the
+// SAME template + inputs the handler will use, so we can pre-seed
+// customer.soul_md_text matching what the handler will compute on
+// re-submit. Without this the hash check at line 4b in the handler
+// can't see "no change" and falls through to persona-refresh.
+async function renderSeedSoulMd(args: { customerName: string; expectationsText: string }): Promise<string> {
+  const { renderSoulMd, sanitizeExpectations } = await import(
+    '../supabase/functions/_shared/soul-md-template.ts'
+  )
+  const sanitized = sanitizeExpectations(args.expectationsText)
+  if (!sanitized.ok) throw new Error(`renderSeedSoulMd: invalid input — ${sanitized.reason}`)
+  return renderSoulMd({
+    customerName: args.customerName,
+    expectationsClean: sanitized.clean,
+  })
+}
+
+test('idempotent: re-submit with SAME expectations returns 409 + &job, no double mint, no refreshEnv', async () => {
+  // Track 1 persona-refinement (2026-05-10): the binary 409 short-circuit
+  // is now branched. Same-text re-submit (tab refresh, double-click
+  // Lanjut) still 409s because the freshly-rendered SOUL.md hash matches
+  // the persisted one. NEW-text re-submit takes the persona-refresh
+  // path (tested below).
   const db = new FakeOnboardingStore()
   const minter = new MockLlmKeyMinter()
   const provisioning = new FakeProvisioning()
   const telegram = new FakeTelegram()
+
+  const expectations = 'Bantu saya untuk briefing pagi dan email triage harian.'
+  // Seed soul_md_text matching what renderSoulMd would produce for these
+  // inputs — that's how the handler detects "no change" and 409s.
+  const seededSoul = await renderSeedSoulMd({
+    customerName: 'Already Done',
+    expectationsText: expectations,
+  })
 
   db.seedCustomer({
     id: 'cust-X',
     email: 'x@example.com',
     display_name: 'Already Done',
     telegram_chat_id: '111',
-    soul_md_text: '# About me\n…already rendered…',
+    telegram_bot_username: TEST_BOT_USERNAME,
+    soul_md_text: seededSoul,
   })
+  await db.setBotTokenAndUsername('cust-X', TEST_BOT_TOKEN, TEST_BOT_USERNAME)
   db.seedSubscription({
     id: 'sub-X',
     customer_id: 'cust-X',
@@ -242,7 +288,7 @@ test('idempotent: already-onboarded returns 409 with redirect, no double mint', 
     buildReq({
       customer_id: 'cust-X',
       whatsapp: '08123456789',
-      expectations_text: 'tries to onboard again',
+      expectations_text: expectations,  // identical to seed
     }),
     { db, minter, provisioning, telegram, publicBase: PUBLIC_BASE },
   )
@@ -250,11 +296,94 @@ test('idempotent: already-onboarded returns 409 with redirect, no double mint', 
   assert.equal(res.status, 409)
   const data = await readJson(res)
   assert.equal(data.error, 'already_onboarded')
-  assert.equal(data.redirect, `${PUBLIC_BASE}/welcome.html?cid=cust-X`)
+  // 2026-05-10 onboarding-loop fix: redirect must include &job synthetic
+  // marker so welcome.html's tick() doesn't fall into state C "Lengkapi
+  // profil agent" and bounce the customer back into the loop.
+  assert.equal(
+    data.redirect,
+    `${PUBLIC_BASE}/welcome.html?cid=cust-X&job=already-onboarded`,
+  )
 
-  // No new mint, no new provisioning call
+  // No new mint, no new provisioning call, NO refreshEnv call —
+  // truly idempotent path skips everything.
   assert.equal(minter.minted.length, 0)
   assert.equal(provisioning.calls.length, 0)
+  assert.equal(provisioning.refreshCalls.length, 0)
+})
+
+test('persona-refresh: re-submit with NEW expectations writes new soul_md + calls refreshEnv, no spinUp/mint/webhook/greeting', async () => {
+  // Track 1 persona-refinement (2026-05-10): the missing capability
+  // founder hit on e282ce25 — edit step 4 expectations to refine the
+  // agent persona, expect the new persona to land on the VPS.
+  // Pre-fix: silent discard, SOUL.md mtime stays at first-onboarding
+  // time, customer's edits never reach disk.
+  const db = new FakeOnboardingStore()
+  const minter = new MockLlmKeyMinter()
+  const provisioning = new FakeProvisioning()
+  const telegram = new FakeTelegram()
+
+  // Seed with the OLD persona text.
+  const oldExpectations = 'Briefing pagi saja.'
+  const oldSoul = await renderSeedSoulMd({
+    customerName: 'Sarah Test',
+    expectationsText: oldExpectations,
+  })
+
+  db.seedCustomer({
+    id: 'cust-X',
+    email: 'sarah@example.com',
+    display_name: 'Sarah Test',
+    telegram_chat_id: '6805409051',
+    telegram_bot_username: TEST_BOT_USERNAME,
+    soul_md_text: oldSoul,
+  })
+  await db.setBotTokenAndUsername('cust-X', TEST_BOT_TOKEN, TEST_BOT_USERNAME)
+  db.seedSubscription({
+    id: 'sub-X',
+    customer_id: 'cust-X',
+    tier: 'pro',
+    status: 'active',
+  })
+
+  // Submit NEW expectations.
+  const newExpectations = 'Briefing pagi DAN code review harian, plus content drafting.'
+  const res = await handleCompleteOnboarding(
+    buildReq({
+      customer_id: 'cust-X',
+      whatsapp: '08123456789',
+      expectations_text: newExpectations,
+    }),
+    { db, minter, provisioning, telegram, publicBase: PUBLIC_BASE },
+  )
+
+  assert.equal(res.status, 200, 'persona-refresh path returns 200, not 409')
+  const data = await readJson(res)
+  assert.equal(data.persona_refreshed, true)
+  assert.equal(data.provisioning_job_id, 'persona-refresh')
+  assert.equal(
+    data.redirect_url,
+    `${PUBLIC_BASE}/welcome.html?cid=cust-X&job=persona-refresh`,
+  )
+  assert.ok(typeof data.soul_md_sha256 === 'string' && data.soul_md_sha256.length === 64)
+
+  // DB row updated with new SOUL.md.
+  const updated = await db.findCustomerById('cust-X')
+  assert.notEqual(updated?.soul_md_text, oldSoul, 'soul_md_text must change')
+  assert.match(updated?.soul_md_text ?? '', /code review/, 'new persona must contain new expectations text')
+
+  // refreshEnv called with NEW soul_md content + chat_id pre-approve.
+  assert.equal(provisioning.refreshCalls.length, 1)
+  const refreshCall = provisioning.refreshCalls[0]
+  assert.equal(refreshCall.customerId, 'cust-X')
+  assert.equal(refreshCall.envValues.TELEGRAM_BOT_TOKEN, TEST_BOT_TOKEN)
+  assert.match(refreshCall.soulMdContent ?? '', /code review/)
+  assert.equal(refreshCall.telegramChatId, '6805409051')
+  assert.equal(refreshCall.telegramUserName, 'Sarah Test')
+
+  // One-time-cost stages MUST NOT be re-run on persona refresh.
+  assert.equal(minter.minted.length, 0, 'no second OpenRouter key mint')
+  assert.equal(provisioning.calls.length, 0, 'no second spinUp call')
+  assert.equal(telegram.deleteWebhookCalls.length, 0, 'no second deleteWebhook call')
 })
 
 // ─── pairing precondition ─────────────────────────────────────────
@@ -320,21 +449,34 @@ test('happy path also calls deleteWebhook on customer bot after spinUp ACK', asy
   assert.equal(provisioning.calls[0].telegramBotToken, TEST_BOT_TOKEN)
 })
 
-test('deleteWebhook failure does not fail onboarding (Hermes retries on its own boot)', async () => {
+test('deleteWebhook 5xx → properDeleteWebhook retries → onboarding still 200', async () => {
+  // 2026-05-10: replaced the prior safeDeleteWebhook (silent swallow)
+  // with properDeleteWebhook (3 attempts + getWebhookInfo verify).
+  // Failing the first attempt should now trigger a retry and ultimately
+  // succeed without blocking onboarding.
   const { db, minter, provisioning, telegram } = setupHappyPath()
-  telegram.failNextDeleteWebhook = true
+  telegram.failNextDeleteWebhook = true   // attempt 1 throws, attempt 2 ok
   const res = await handleCompleteOnboarding(
     buildReq({
       customer_id: 'cust-1',
       whatsapp: '08123456789',
       expectations_text: 'Bantu briefing pagi.',
     }),
-    { db, minter, provisioning, telegram, publicBase: PUBLIC_BASE },
+    {
+      db,
+      minter,
+      provisioning,
+      telegram,
+      publicBase: PUBLIC_BASE,
+      webhookDeleteSleepMs: () => {},   // skip the 2s backoff in test
+    },
   )
-  // Still 200 — onboarding succeeded; webhook will be cleaned up
-  // defensively when Hermes calls deleteWebhook on VPS boot.
   assert.equal(res.status, 200)
-  assert.equal(telegram.deleteWebhookCalls.length, 1)
+  // Two attempts: attempt 1 throws (5xx), attempt 2 succeeds.
+  assert.equal(telegram.deleteWebhookCalls.length, 2)
+  const body = (await res.json()) as { webhook_warning?: unknown }
+  // Retry succeeded → no warning.
+  assert.equal(body.webhook_warning, undefined)
 })
 
 test('not paired: 409 telegram_not_paired', async () => {
@@ -548,6 +690,78 @@ test('provisioning unreachable: 503, rolls back OpenRouter key, parks subscripti
   assert.ok(c?.soul_md_text)
 })
 
+test('vps_capacity_exhausted: 503 with distinct error code when provisioning body matches IDCloudHost capacity message (2026-05-11 honest-error fix)', async () => {
+  // Pre-fix: every spinUp failure surfaced as generic 'provisioning_unreachable'
+  // → onboarding.html rendered "Belum jadi. Ada kendala teknis." which read
+  // as "you did something wrong." But IDCloudHost's "Compute resources
+  // temporarily unavailable" is a transient platform issue (Jakarta region
+  // full). Customer should be told it's not their fault. Customer e282ce25 +
+  // a3827996 hit this in fresh-customer e2e testing 2026-05-10/11.
+  // See docs/investigation/2026-05-11-pair-failure.md.
+  const { db, minter, provisioning, telegram } = setupHappyPath()
+  provisioning.next = {
+    ok: false,
+    status: 500,
+    // Verbatim IDCloudHost server message (passed through by provisioning service).
+    body: 'IDCloudHost POST /vm -> 500: {"errors": {"Error": "Compute resources temporarily unavailable due to high demand. If possible, choose a different region or location."}}',
+  }
+
+  const res = await handleCompleteOnboarding(
+    buildReq({
+      customer_id: 'cust-1',
+      whatsapp: '08123456789',
+      expectations_text: 'Bantu briefing pagi.',
+    }),
+    { db, minter, provisioning, telegram, publicBase: PUBLIC_BASE },
+  )
+
+  assert.equal(res.status, 503)
+  const data = await readJson(res)
+  assert.equal(
+    data.error,
+    'vps_capacity_exhausted',
+    'must return distinct code (not generic provisioning_unreachable)',
+  )
+
+  // Same rollback semantics as other spinUp failures.
+  assert.equal(minter.minted.length, 1)
+  assert.equal(minter.wasRevoked(minted(minter, 0).hash), true)
+  const sub = await db.findActiveOrPendingSubscriptionByCustomer('cust-1')
+  assert.equal(sub?.status, 'pending_provision')
+})
+
+test('isProviderCapacityError: positive + negative across Vultr + DO (legacy IDCH phrasing kept defensively)', async () => {
+  const { isProviderCapacityError } = await import(
+    '../supabase/functions/_shared/complete-onboarding-handler.ts'
+  )
+  // Positive: legacy IDCloudHost phrasing kept defensively — historical
+  // error messages may still surface from old log paths even though the
+  // IDCH adapter was retired 2026-05-13.
+  assert.equal(
+    isProviderCapacityError(
+      'IDCloudHost POST /vm -> 500: {"errors": {"Error": "Compute resources temporarily unavailable due to high demand. If possible, choose a different region or location."}}',
+    ),
+    true,
+  )
+  // Positive: Vultr documented capacity phrasings.
+  assert.equal(
+    isProviderCapacityError('Vultr POST /v2/instances -> 503: "plan and region combination is unavailable"'),
+    true,
+  )
+  assert.equal(isProviderCapacityError('vc2-1c-1gb is out of stock in sgp'), true)
+  assert.equal(isProviderCapacityError('insufficient capacity in region'), true)
+  // Positive: DigitalOcean.
+  assert.equal(isProviderCapacityError('Droplet size is not available in this region'), true)
+  assert.equal(isProviderCapacityError('region is not available'), true)
+  assert.equal(isProviderCapacityError('Sold out'), true)
+  // Negative: other 5xx provisioning failures (must NOT misclassify and
+  // hide real bugs behind the friendly capacity copy).
+  assert.equal(isProviderCapacityError('connection refused'), false)
+  assert.equal(isProviderCapacityError('SSH auth failed'), false)
+  assert.equal(isProviderCapacityError(''), false)
+  assert.equal(isProviderCapacityError('Vultr POST /v2/instances -> 401: unauthorized'), false)
+})
+
 test('mint failure: 502, no provisioning called, no key persisted', async () => {
   const { db, provisioning, telegram } = setupHappyPath()
   // Minter that always throws
@@ -599,3 +813,409 @@ function minted(m: MockLlmKeyMinter, i: number) {
   if (!m.minted[i]) throw new Error(`no minted entry at index ${i}`)
   return m.minted[i]
 }
+
+// ─── wait-page race fix (2026-05-16) ───────────────────────────────
+//
+// THE RACE: a fast customer finishes the onboarding form before their
+// VPS setup-script finishes provisioning. Pre-fix, step 8a refreshEnv
+// SSHed the half-built VPS → `exit 4` → hermes-gateway never started →
+// welcome.html stuck. The handler now gates refreshEnv on
+// vps_instances.status === 'running'. See complete-onboarding-handler
+// step 8-pre + customer-flow.ts notifyVpsReady (the second-finisher).
+
+test('wait-page race — onboard BEFORE VPS ready: defers refreshEnv, waiting_for_vps:true, still persists onboarding', async () => {
+  const { db, minter, provisioning, telegram } = setupHappyPath()
+  db.seedVPSStatus('provisioning') // VPS still building when the form lands
+
+  const res = await handleCompleteOnboarding(
+    buildReq({
+      customer_id: 'cust-1',
+      whatsapp: '08123456789',
+      expectations_text: 'Bantu briefing pagi dan ringkas berita.',
+    }),
+    { db, minter, provisioning, telegram, publicBase: PUBLIC_BASE },
+  )
+
+  assert.equal(res.status, 200)
+  const data = await readJson(res)
+
+  // refreshEnv deferred — NOT called against the half-built VPS.
+  assert.equal(
+    provisioning.refreshCalls.length,
+    0,
+    'refreshEnv NOT called while VPS is still provisioning',
+  )
+  assert.equal(data.waiting_for_vps, true, 'waiting_for_vps flag set')
+  // Deferral is expected — no failure warning.
+  assert.equal(
+    data.vps_refresh_warning,
+    undefined,
+    'no vps_refresh_warning — a deferral is not a failure',
+  )
+  // Greeting deferred (the /start skill greets once the gateway starts).
+  assert.equal(data.greeting.ok, false)
+  assert.equal(data.greeting.source, 'deferred_vps')
+
+  // Onboarding state is still fully persisted.
+  const c = await db.findCustomerById('cust-1')
+  assert.ok(
+    c?.soul_md_text?.includes('Bantu briefing pagi dan ringkas berita.'),
+    'SOUL.md persisted despite the deferral',
+  )
+  const sub = await db.findActiveOrPendingSubscriptionByCustomer('cust-1')
+  assert.equal(sub?.status, 'active', 'subscription still flipped active')
+  assert.equal(sub?.hosting_active, true)
+})
+
+test('wait-page race — onboard AFTER VPS ready: refreshEnv runs normally, waiting_for_vps:false', async () => {
+  const { db, minter, provisioning, telegram } = setupHappyPath()
+  db.seedVPSStatus('running') // setup-script already finished
+
+  const res = await handleCompleteOnboarding(
+    buildReq({
+      customer_id: 'cust-1',
+      whatsapp: '08123456789',
+      expectations_text: 'Bantu briefing pagi dan ringkas berita.',
+    }),
+    { db, minter, provisioning, telegram, publicBase: PUBLIC_BASE },
+  )
+
+  assert.equal(res.status, 200)
+  const data = await readJson(res)
+
+  assert.equal(
+    provisioning.refreshCalls.length,
+    1,
+    'refreshEnv called once when the VPS is already running',
+  )
+  assert.equal(data.waiting_for_vps, false, 'waiting_for_vps cleared')
+  assert.notEqual(
+    data.greeting.source,
+    'deferred_vps',
+    'greeting not deferred when the VPS is ready',
+  )
+})
+
+test('wait-page race — getActiveVPSStatus read failure defers safely (no crash)', async () => {
+  const { db, minter, provisioning, telegram } = setupHappyPath()
+  db.throwOnGetActiveVPSStatus = true // status read blows up
+
+  const res = await handleCompleteOnboarding(
+    buildReq({
+      customer_id: 'cust-1',
+      whatsapp: '08123456789',
+      expectations_text: 'Bantu briefing pagi dan ringkas berita.',
+    }),
+    { db, minter, provisioning, telegram, publicBase: PUBLIC_BASE },
+  )
+
+  // A status-read failure must not 5xx the onboarding — it defers.
+  assert.equal(res.status, 200)
+  const data = await readJson(res)
+  assert.equal(data.waiting_for_vps, true, 'read failure → safe defer')
+  assert.equal(provisioning.refreshCalls.length, 0)
+})
+
+// ─── Bug-1 + Bug-2 fixes (2026-05-16) ───────────────────────────────
+
+test('Bug-2: happy path pushes TELEGRAM_HOME_CHANNEL = customer chat_id', async () => {
+  const { db, minter, provisioning, telegram } = setupHappyPath()
+  db.seedVPSStatus('running')
+
+  await handleCompleteOnboarding(
+    buildReq({
+      customer_id: 'cust-1',
+      whatsapp: '08123456789',
+      expectations_text: 'Bantu briefing pagi dan ringkas berita.',
+    }),
+    { db, minter, provisioning, telegram, publicBase: PUBLIC_BASE },
+  )
+
+  assert.equal(provisioning.refreshCalls.length, 1)
+  assert.equal(
+    provisioning.refreshCalls[0].envValues.TELEGRAM_HOME_CHANNEL,
+    '987654321',
+    'home channel pushed so Hermes never prompts /sethome',
+  )
+})
+
+test('Bug-1: happy-path greeting fires once + stamps greeting_sent_at', async () => {
+  const { db, minter, provisioning, telegram } = setupHappyPath()
+  db.seedVPSStatus('running')
+
+  const res = await handleCompleteOnboarding(
+    buildReq({
+      customer_id: 'cust-1',
+      whatsapp: '08123456789',
+      expectations_text: 'Bantu briefing pagi dan ringkas berita.',
+    }),
+    { db, minter, provisioning, telegram, publicBase: PUBLIC_BASE },
+  )
+  const data = await readJson(res)
+  assert.equal(data.greeting.ok, true, 'greeting delivered on the happy path')
+  const c = await db.findCustomerById('cust-1')
+  assert.ok(c?.greeting_sent_at, 'greeting_sent_at stamped — second-finisher will now skip')
+})
+
+test('Bug-1 idempotency: customer already greeted → complete-onboarding skips greeting', async () => {
+  const { db, minter, provisioning, telegram } = setupHappyPath()
+  db.seedVPSStatus('running')
+  // Simulate the second-finisher already greeted this customer.
+  await db.updateCustomer('cust-1', { greeting_sent_at: '2026-05-16T10:00:00Z' })
+
+  const res = await handleCompleteOnboarding(
+    buildReq({
+      customer_id: 'cust-1',
+      whatsapp: '08123456789',
+      expectations_text: 'Bantu briefing pagi dan ringkas berita.',
+    }),
+    { db, minter, provisioning, telegram, publicBase: PUBLIC_BASE },
+  )
+  const data = await readJson(res)
+  assert.equal(
+    data.greeting.source,
+    'skipped',
+    'greeting not re-sent when greeting_sent_at is already set',
+  )
+})
+
+// ─── persona selection (2026-05-17) ─────────────────────────────────
+//
+// The onboarding picker submits agent_slug. The handler must:
+//   1. validate it ∈ personasForTier(subscription.tier) — reject 403
+//      tier_does_not_grant_persona otherwise (same gate as bundle-fetch),
+//   2. persist it to customers.agent_slug,
+//   3. thread it into the spinUp call as agentSlug,
+//   4. render the chosen persona's SOUL.md (personaSlug → renderSoulMd).
+
+test('persona: valid-in-tier agent_slug persists + threads into spinUp', async () => {
+  const { db, minter, provisioning, telegram } = setupHappyPath()
+  // tier=pro grants doc-expert.
+  const res = await handleCompleteOnboarding(
+    buildReq({
+      customer_id: 'cust-1',
+      whatsapp: '08123456789',
+      expectations_text: 'Bantu draft laporan dan proposal klien.',
+      agent_slug: 'doc-expert',
+    }),
+    { db, minter, provisioning, telegram, publicBase: PUBLIC_BASE },
+  )
+  assert.equal(res.status, 200, 'valid-in-tier persona accepted')
+  // Persisted on the customers row.
+  const customer = await db.findCustomerById('cust-1')
+  assert.equal(customer?.agent_slug, 'doc-expert', 'agent_slug persisted')
+  // Threaded into the spinUp call.
+  assert.equal(provisioning.calls.length, 1, 'spinUp called once')
+  assert.equal(
+    provisioning.calls[0].agentSlug,
+    'doc-expert',
+    'chosen agentSlug forwarded to spinUp',
+  )
+  // The rendered SOUL.md is the chosen persona's scaffold, not The Pro.
+  assert.match(
+    customer?.soul_md_text ?? '',
+    /Doc Expert/,
+    'SOUL.md rendered for the chosen persona',
+  )
+})
+
+test('persona: not-in-tier agent_slug rejected 403 tier_does_not_grant_persona', async () => {
+  const { db, minter, provisioning, telegram } = setupHappyPath()
+  // setupHappyPath seeds tier=pro; business-agent is studio-only.
+  const res = await handleCompleteOnboarding(
+    buildReq({
+      customer_id: 'cust-1',
+      whatsapp: '08123456789',
+      expectations_text: 'Bantu briefing pagi dan ringkas berita.',
+      agent_slug: 'business-agent',
+    }),
+    { db, minter, provisioning, telegram, publicBase: PUBLIC_BASE },
+  )
+  assert.equal(res.status, 403, 'out-of-tier persona rejected')
+  const data = await readJson(res)
+  assert.equal(data.error, 'tier_does_not_grant_persona')
+  // Nothing provisioned / persisted past the gate.
+  assert.equal(provisioning.calls.length, 0, 'spinUp not called')
+  const customer = await db.findCustomerById('cust-1')
+  assert.equal(customer?.agent_slug, 'the-pro', 'agent_slug unchanged (default)')
+})
+
+test('persona: unknown agent_slug rejected 403 (not in any tier)', async () => {
+  const { db, minter, provisioning, telegram } = setupHappyPath()
+  const res = await handleCompleteOnboarding(
+    buildReq({
+      customer_id: 'cust-1',
+      whatsapp: '08123456789',
+      expectations_text: 'Bantu briefing pagi dan ringkas berita.',
+      agent_slug: 'not-a-real-persona',
+    }),
+    { db, minter, provisioning, telegram, publicBase: PUBLIC_BASE },
+  )
+  assert.equal(res.status, 403, 'unknown slug rejected')
+  assert.equal((await readJson(res)).error, 'tier_does_not_grant_persona')
+})
+
+test('persona: omitted agent_slug falls back to the-pro (back-compat)', async () => {
+  const { db, minter, provisioning, telegram } = setupHappyPath()
+  const res = await handleCompleteOnboarding(
+    buildReq({
+      customer_id: 'cust-1',
+      whatsapp: '08123456789',
+      expectations_text: 'Bantu briefing pagi dan ringkas berita.',
+      // agent_slug intentionally omitted — Phase F harness / pre-picker.
+    }),
+    { db, minter, provisioning, telegram, publicBase: PUBLIC_BASE },
+  )
+  assert.equal(res.status, 200, 'omitted persona still onboards')
+  assert.equal(provisioning.calls[0].agentSlug, 'the-pro', 'defaults to the-pro')
+  const customer = await db.findCustomerById('cust-1')
+  assert.equal(customer?.agent_slug, 'the-pro', 'agent_slug defaulted')
+})
+
+test('persona: bare (persona-free) tier onboards with neutral SOUL + null persona', async () => {
+  const { db, minter, provisioning, telegram } = setupHappyPath()
+  // v1.4 bare: persona-free. personasForTier('bare') === [].
+  db.seedSubscription({
+    id: 'sub-1',
+    customer_id: 'cust-1',
+    tier: 'bare',
+    status: 'pending_provision',
+    always_on_enabled: false,
+  })
+  const res = await handleCompleteOnboarding(
+    buildReq({
+      customer_id: 'cust-1',
+      whatsapp: '08123456789',
+      expectations_text: 'Bantu jawab pertanyaan dan susun draft harian.',
+      // Even if the client sends a persona, bare grants none — it must not 403.
+      agent_slug: 'the-pro',
+    }),
+    { db, minter, provisioning, telegram, publicBase: PUBLIC_BASE },
+  )
+  assert.equal(res.status, 200, 'bare onboards (no tier_does_not_grant_persona 403)')
+  const customer = await db.findCustomerById('cust-1')
+  // No persona persisted (vanilla Hermes).
+  assert.equal(customer?.agent_slug, null, 'bare persists null agent_slug')
+  // SOUL is the neutral vanilla scaffold — not The Pro.
+  assert.doesNotMatch(customer?.soul_md_text ?? '', /I am The Pro, a specialist agent/)
+  assert.match(customer?.soul_md_text ?? '', /versi dasar/, 'neutral vanilla SOUL rendered')
+  // spinUp forwarded with no persona → empty WEUSEAI_AGENT_SLUGS downstream.
+  assert.equal(provisioning.calls[0].agentSlug, undefined, 'no persona forwarded to spinUp')
+  // Credit cap resolves to the $3 starter-class for bare (not undefined).
+  const k = db.openrouterKeys.get('cust-1')
+  assert.equal(k?.credit_limit_usd_cents, 300, 'bare mints at $3 starter-class cap')
+})
+
+test('persona: starter tier rejects a pro-only persona', async () => {
+  const { db, minter, provisioning, telegram } = setupHappyPath()
+  // Re-seed the subscription as starter (only the-pro/doc-expert/slide-master).
+  db.seedSubscription({
+    id: 'sub-1',
+    customer_id: 'cust-1',
+    tier: 'starter',
+    status: 'pending_provision',
+    always_on_enabled: false,
+  })
+  const res = await handleCompleteOnboarding(
+    buildReq({
+      customer_id: 'cust-1',
+      whatsapp: '08123456789',
+      expectations_text: 'Bantu riset mendalam dan banding sumber.',
+      agent_slug: 'deep-researcher', // pro-only
+    }),
+    { db, minter, provisioning, telegram, publicBase: PUBLIC_BASE },
+  )
+  assert.equal(res.status, 403, 'starter cannot pick a pro-only persona')
+})
+
+// ─── security: C1 — never provision/mint on an unpaid subscription ───────
+
+test('C1 root: a pre-payment `pending` subscription is NOT billable → 404, no mint, no provision', async () => {
+  // The exploit: an unauthenticated caller who knows a customer_id drives
+  // complete-onboarding on a subscription still in the pre-payment `pending`
+  // state (created by create-invoice, never confirmed by the PAID webhook).
+  // The lookup must exclude `pending`, so the handler rejects BEFORE spending
+  // any money.
+  const db = new FakeOnboardingStore()
+  const minter = new MockLlmKeyMinter()
+  const provisioning = new FakeProvisioning()
+  const telegram = new FakeTelegram()
+
+  db.seedCustomer({
+    id: 'cust-1',
+    email: 'attacker@example.com',
+    display_name: 'Mallory',
+    telegram_chat_id: '987654321',
+    telegram_bot_username: TEST_BOT_USERNAME,
+    pairing_code: '123456',
+    pairing_code_expires_at: '2099-01-01T00:00:00.000Z',
+  })
+  void db.setBotTokenAndUsername('cust-1', TEST_BOT_TOKEN, TEST_BOT_USERNAME)
+  db.seedSubscription({
+    id: 'sub-1',
+    customer_id: 'cust-1',
+    tier: 'pro',
+    status: 'pending', // <-- never paid
+    always_on_enabled: false,
+  })
+
+  const res = await handleCompleteOnboarding(
+    buildReq({
+      customer_id: 'cust-1',
+      whatsapp: '0812 3456 7890',
+      expectations_text: 'Bantu briefing pagi dan ringkas berita.',
+    }),
+    { db, minter, provisioning, telegram, publicBase: PUBLIC_BASE },
+  )
+
+  assert.equal(res.status, 404, 'unpaid (pending) subscription must be rejected')
+  assert.equal(minter.minted.length, 0, 'must NOT mint an LLM key for an unpaid sub')
+  assert.equal(provisioning.calls.length, 0, 'must NOT provision a VPS for an unpaid sub')
+})
+
+test('C1 guard: even if a `pending` sub reaches the handler, it 402s before minting', async () => {
+  // Defense-in-depth: pin the "paid only" invariant at the money-spending
+  // handler. Override the lookup to (wrongly) return a pending sub — the
+  // explicit guard must still block provisioning + minting.
+  const db = new FakeOnboardingStore()
+  const minter = new MockLlmKeyMinter()
+  const provisioning = new FakeProvisioning()
+  const telegram = new FakeTelegram()
+
+  db.seedCustomer({
+    id: 'cust-1',
+    email: 'attacker@example.com',
+    display_name: 'Mallory',
+    telegram_chat_id: '987654321',
+    telegram_bot_username: TEST_BOT_USERNAME,
+    pairing_code: '123456',
+    pairing_code_expires_at: '2099-01-01T00:00:00.000Z',
+  })
+  void db.setBotTokenAndUsername('cust-1', TEST_BOT_TOKEN, TEST_BOT_USERNAME)
+  // Bypass the (now-fixed) lookup filter to prove the handler-level guard.
+  db.findActiveOrPendingSubscriptionByCustomer = async () => ({
+    id: 'sub-1',
+    customer_id: 'cust-1',
+    tier: 'pro',
+    status: 'pending',
+    xendit_invoice_id: null,
+    always_on_enabled: false,
+    hosting_active: false,
+    next_billing_at: null,
+  })
+
+  const res = await handleCompleteOnboarding(
+    buildReq({
+      customer_id: 'cust-1',
+      whatsapp: '0812 3456 7890',
+      expectations_text: 'Bantu briefing pagi dan ringkas berita.',
+    }),
+    { db, minter, provisioning, telegram, publicBase: PUBLIC_BASE },
+  )
+
+  assert.equal(res.status, 402, 'pending sub reaching the handler must 402')
+  const data = await readJson(res)
+  assert.equal(data.error, 'payment_not_confirmed')
+  assert.equal(minter.minted.length, 0, 'guard must block minting')
+  assert.equal(provisioning.calls.length, 0, 'guard must block provisioning')
+})

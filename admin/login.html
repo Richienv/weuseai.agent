@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow, noarchive" />
+  <title>Masuk admin — weuseai.agent</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Instrument+Serif&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/admin/assets/admin.css" />
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel" data-presets="env,react">
+    const { useState } = React;
+
+    function LoginPage() {
+      const [password, setPassword] = useState('');
+      const [err, setErr] = useState(null);
+      const [busy, setBusy] = useState(false);
+
+      async function onSubmit(e) {
+        e.preventDefault();
+        setErr(null);
+        setBusy(true);
+        try {
+          const r = await fetch('/api/admin/session', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password }),
+          });
+          if (r.status === 200) {
+            window.location.replace('/admin/manual-provision');
+            return;
+          }
+          if (r.status === 401) {
+            setErr('Password salah. Coba lagi.');
+          } else if (r.status === 500) {
+            setErr('Admin belum dikonfigurasi. Set OBSERVABILITY_ADMIN_SECRET di Vercel.');
+          } else {
+            setErr('Gagal masuk (HTTP ' + r.status + ').');
+          }
+        } catch (e) {
+          setErr('Gagal terhubung. Cek koneksi internet kamu.');
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      return (
+        <div className="card" style={{ maxWidth: 400, margin: '60px auto' }}>
+          <h1>Masuk admin</h1>
+          <p className="muted" style={{ marginBottom: 24 }}>
+            Akses internal — masukkan password admin untuk lanjut.
+          </p>
+          {err ? <div className="alert error" role="alert">{err}</div> : null}
+          <form onSubmit={onSubmit} noValidate>
+            <div className="field">
+              <label htmlFor="password">Password admin</label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                autoComplete="current-password"
+                required
+                autoFocus
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+            <button type="submit" className="btn" disabled={busy || !password}>
+              {busy ? 'Memproses...' : 'Masuk'} <span className="arrow">↗</span>
+            </button>
+          </form>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<LoginPage />);
+  </script>
+</body>
+</html>

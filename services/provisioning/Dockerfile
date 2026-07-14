@@ -33,7 +33,8 @@ COPY services/provisioning/package.json ./services/provisioning/
 COPY services/hermes/package.json ./services/hermes/
 COPY services/proxy/package.json ./services/proxy/
 COPY services/payment/package.json ./services/payment/
-COPY services/test-idcloudhost/package.json ./services/test-idcloudhost/
+# services/test-idcloudhost/ workspace removed 2026-05-13 alongside the
+# IDCloudHost adapter retirement (PR #90).
 # packages/shared/ is a placeholder (.gitkeep only) — no package.json yet,
 # add a COPY line here once it's populated.
 
@@ -43,6 +44,23 @@ RUN npm ci --include=dev && npm cache clean --force
 # Source.
 COPY services/ ./services/
 COPY packages/ ./packages/
+# customer-flow.ts imports signCustomerToken from supabase/functions/_shared/
+# hermes-instance-auth (Phase 5-3.c HMAC token rollout). Production hotfix
+# 2026-05-10: image was missing supabase/, causing crashloop on first
+# /spin-up call (hidden because auto_stop_machines kept the broken image
+# dormant — surfaced when Track 3a deploy woke the machine).
+COPY supabase/ ./supabase/
+# HF-2c (2026-05-13): customer-flow.ts reads agent-packs/_bootstrap-bundle.tar.gz
+# at module load. Pre-HF-2c the image did NOT copy agent-packs/, so the
+# read failed with ENOENT, BOOTSTRAP_BUNDLE_BASE64 was empty, and every
+# customer's setup-script ran without bundleTarBase64 → no
+# WEUSEAI_AGENT_SLUG env, no bundle-pull script install, no persona
+# bundles ever installed. The first sign was the recurring Fly log line
+# "[customer-flow] Bootstrap bundle missing or unreadable: ENOENT" — but
+# the install-if-missing self-heal in refresh-env masked the bigger
+# problem until the multi-persona MVP + race-condition surfaced both
+# together 2026-05-13.
+COPY agent-packs/ ./agent-packs/
 COPY tsconfig.json ./
 
 EXPOSE 8081

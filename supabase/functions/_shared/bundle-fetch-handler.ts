@@ -13,7 +13,7 @@
 import {
   KNOWN_PERSONA_SLUGS,
 } from './manifest-validator.ts'
-import { TIER_ORDINAL, type WorkflowTier } from './workflow-types.ts'
+import { personasForTier, resolveTier } from './tier-personas.ts'
 
 // ─── input + output ────────────────────────────────────────────────────
 
@@ -46,7 +46,13 @@ export type BundleFetchResult = BundleFetchOk | BundleFetchErr
 
 export type CustomerInfo = {
   id: string
-  tier: WorkflowTier
+  /**
+   * Tier slug as stored on the subscription. Accepts both the canonical
+   * Phase A slugs (voice-starter / library-full / done-for-you /
+   * enterprise) AND the deprecated count-based slugs (starter / pro /
+   * studio) — resolveTier() normalizes either via the alias map.
+   */
+  tier: string
   bundle_versions: Record<string, string>
   bundle_update_policy: 'pin' | 'latest' | 'staged'
 }
@@ -66,6 +72,15 @@ export type BundleFetchDeps = {
     path: string
     expirySeconds: number
   }) => Promise<{ url: string; expiresAt: string } | { error: string }>
+  /**
+   * Persona Genesis (2026-06-10): the customer's generated persona, when
+   * one exists AND is active. Optional — entries that don't wire it simply
+   * 404 every custom-slug request (back-compat).
+   */
+  customPersonaLookup?: (customerId: string) => Promise<{
+    version: string
+    status: 'generating' | 'active' | 'failed'
+  } | null>
 }
 
 // ─── version resolver ──────────────────────────────────────────────────
@@ -114,6 +129,13 @@ export async function bundleFetchHandler(
   if (!input.agent_slug || typeof input.agent_slug !== 'string') {
     return { ok: false, status: 400, error: 'invalid_agent_slug' }
   }
+  // Persona Genesis (2026-06-10): `custom-<customer_id>` slugs take a
+  // dedicated path with STRICTER isolation than the curated library — the
+  // slug must name the requesting customer exactly, so customer A can never
+  // mint a URL for customer B's generated persona.
+  if (input.agent_slug.startsWith('custom-')) {
+    return await fetchCustomPersonaBundle(input, deps)
+  }
   if (!(KNOWN_PERSONA_SLUGS as readonly string[]).includes(input.agent_slug)) {
     return {
       ok: false,
@@ -127,13 +149,47 @@ export async function bundleFetchHandler(
   if (!customer) {
     return { ok: false, status: 404, error: 'customer_not_found' }
   }
-  // Tier sanity (defense in depth — every paid customer should have a tier).
-  if (!TIER_ORDINAL[customer.tier]) {
+  // Tier sanity (defense in depth — every paid customer should have a tier
+  // slug that resolves to a known tier). resolveTier() accepts both the
+  // canonical Phase A slugs and the deprecated count-based aliases; an
+  // unrecognized slug throws → 403.
+  let canonicalTier: ReturnType<typeof resolveTier>
+  try {
+    canonicalTier = resolveTier(customer.tier)
+  } catch {
     return {
       ok: false,
       status: 403,
       error: 'invalid_customer_tier',
       detail: customer.tier,
+    }
+  }
+
+  // Sesi D pass-3 P1-1 (2026-05-13): tier-personas enforcement.
+  //
+  // Source: docs/audit/2026-05-13-pass-3-multi-persona-and-progress.md §P1-PASS3-1
+  //
+  // Pre-fix: handler only checked agent_slug ∈ KNOWN_PERSONA_SLUGS (typo
+  // catch) and never compared against the customer's tier — so a lower
+  // tier customer with an active subscription could mint a signed URL for
+  // any higher-tier-only persona bundle (web-app-builder, business-agent)
+  // and download the prompt-IP. tier-personas.ts is the single source of
+  // truth used by setup-script + bundle-pull; mirroring it here closes the
+  // privilege-escalation gap.
+  //
+  // Phase A: `enterprise` has a CUSTOM persona set (no fixed roster), so
+  // the persona-membership gate is skipped for enterprise — the agent_slug
+  // ∈ KNOWN_PERSONA_SLUGS check above still bounds it to the real library,
+  // so this never widens beyond the 10 known personas.
+  if (canonicalTier !== 'enterprise') {
+    const allowedSlugs = personasForTier(customer.tier)
+    if (!allowedSlugs.includes(input.agent_slug)) {
+      return {
+        ok: false,
+        status: 403,
+        error: 'tier_does_not_grant_persona',
+        detail: `agent_slug "${input.agent_slug}" not available on tier "${customer.tier}"`,
+      }
     }
   }
 
@@ -189,6 +245,70 @@ export async function bundleFetchHandler(
     status: 200,
     body: {
       version: targetVersion,
+      signed_url: signResult.url,
+      expires_at: signResult.expiresAt,
+    },
+  }
+}
+
+// ─── Persona Genesis custom-bundle path ──────────────────────────────────
+
+// Mirrors GENESIS_TIERS in persona-genesis-handler.ts (import would be
+// circular-ish for entries that only wire bundle-fetch; the drift test
+// tests/bundle-fetch-custom-persona.spec.ts pins the two sets equal).
+const CUSTOM_BUNDLE_TIERS: ReadonlySet<string> = new Set(['done-for-you', 'enterprise'])
+
+async function fetchCustomPersonaBundle(
+  input: BundleFetchInput,
+  deps: BundleFetchDeps,
+): Promise<BundleFetchResult> {
+  // Ownership: the ONLY custom slug a customer may fetch is their own.
+  if (input.agent_slug !== `custom-${input.customer_id}`) {
+    return {
+      ok: false,
+      status: 403,
+      error: 'custom_persona_not_owned',
+      detail: 'custom personas are fetchable only by their owner',
+    }
+  }
+
+  const customer = await deps.customerLookup(input.customer_id)
+  if (!customer) {
+    return { ok: false, status: 404, error: 'customer_not_found' }
+  }
+  let canonicalTier: ReturnType<typeof resolveTier>
+  try {
+    canonicalTier = resolveTier(customer.tier)
+  } catch {
+    return { ok: false, status: 403, error: 'invalid_customer_tier', detail: customer.tier }
+  }
+  if (!CUSTOM_BUNDLE_TIERS.has(canonicalTier)) {
+    return {
+      ok: false,
+      status: 403,
+      error: 'tier_does_not_grant_persona',
+      detail: `custom personas not available on tier "${customer.tier}"`,
+    }
+  }
+
+  if (!deps.customPersonaLookup) {
+    return { ok: false, status: 404, error: 'custom_persona_not_found' }
+  }
+  const custom = await deps.customPersonaLookup(input.customer_id)
+  if (!custom || custom.status !== 'active') {
+    return { ok: false, status: 404, error: 'custom_persona_not_found' }
+  }
+
+  const path = `bundles/${input.agent_slug}/${custom.version}.tar.gz`
+  const signResult = await deps.signUrl({ path, expirySeconds: SIGNED_URL_EXPIRY_SECONDS })
+  if ('error' in signResult) {
+    return { ok: false, status: 500, error: 'sign_url_failed', detail: signResult.error }
+  }
+  return {
+    ok: true,
+    status: 200,
+    body: {
+      version: custom.version,
       signed_url: signResult.url,
       expires_at: signResult.expiresAt,
     },
