@@ -53,4 +53,55 @@
     if (DEAD[t] && el.getAttribute && el.getAttribute('href') === '#') { e.preventDefault(); }
     // FAQ accordion buttons (question text) are left to the runtime.
   }, true);
+
+  // ── Launch-batch counter — REAL numbers only ────────────────────────────
+  // Honesty lock: this band shows the live paid-customer count from
+  // /api/public/subscription-count, or it shows NOTHING. It never invents a
+  // number and never renders a clock — the price rise is tied to the batch
+  // count (1.000), which create-invoice actually enforces (library-full setup
+  // flips 799rb → 999rb at paid >= 1000), so the claim on the page is true.
+  //
+  // The band ships `hidden`. It only un-hides once a real count is in hand.
+  // A failed/blocked fetch leaves it hidden forever — the page just omits it.
+  var BATCH_LIMIT = 1000;
+  var batchCount = null; // null until a real number arrives
+
+  function paintBatch() {
+    var band = document.querySelector('[data-batch]');
+    if (!band) return; // the runtime may not have rendered this section yet
+    // No real number yet (still loading, or the fetch failed) → the band must be
+    // INVISIBLE. Enforce it in JS: the runtime re-renders the template and drops
+    // the `hidden` attribute, which would otherwise leave an empty "— / 1.000"
+    // scarcity band on screen. Hide via style too, since `hidden` alone loses to
+    // the element's own display rule.
+    if (batchCount === null) {
+      band.hidden = true;
+      band.style.display = 'none';
+      return;
+    }
+    var countEl = band.querySelector('[data-batch-count]');
+    var leftEl = band.querySelector('[data-batch-left]');
+    var barEl = band.querySelector('[data-batch-bar]');
+    var left = Math.max(0, BATCH_LIMIT - batchCount);
+    var pct = Math.max(0, Math.min(100, (batchCount / BATCH_LIMIT) * 100));
+    if (countEl) countEl.textContent = batchCount.toLocaleString('id-ID');
+    if (leftEl) leftEl.textContent = left.toLocaleString('id-ID') + ' slot';
+    if (barEl) barEl.style.width = pct + '%';
+    band.hidden = false;
+    band.style.display = '';
+  }
+
+  fetch('/api/public/subscription-count', { headers: { accept: 'application/json' } })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (j) {
+      var n = j && j.paid_customers;
+      if (typeof n !== 'number' || !isFinite(n) || n < 0) return; // stay hidden
+      batchCount = Math.floor(n);
+      paintBatch();
+    })
+    .catch(function () { /* stay hidden — never fabricate */ });
+
+  // The DC runtime replaces template DOM on re-render, so re-apply onto whichever
+  // node is current. Cheap, and a no-op until a real count exists.
+  setInterval(paintBatch, 500);
 })();
