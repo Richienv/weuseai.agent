@@ -96,6 +96,12 @@ set +a
 
 CID="\${WEUSEAI_CUSTOMER_ID:-${p.customerId}}"
 TIER="\${WEUSEAI_TIER:-starter}"
+# Phase 5-3.c: per-customer HMAC instance token, sent to bundle-fetch as
+# Authorization: Bearer so the server can verify this VPS owns $CID (security
+# finding H2/H3, 2026-06-14). Sourced from .env (written by setup-script as
+# HERMES_INSTANCE_TOKEN). Empty on VPSes provisioned before this change — the
+# server fails open when its HMAC key is unset, so omission is safe.
+INSTANCE_TOKEN="\${HERMES_INSTANCE_TOKEN:-}"
 
 # D1 multi-persona: WEUSEAI_AGENT_SLUGS is the CSV list of personas at
 # this customer's tier (e.g. "the-pro,doc-expert,slide-master"). Falls
@@ -272,8 +278,13 @@ pull_bundle() {
   local fetch_body
   fetch_body=$(fetch_body_json "$slug")
   local response
+  local -a auth_args=()
+  if [ -n "$INSTANCE_TOKEN" ]; then
+    auth_args=(-H "Authorization: Bearer $INSTANCE_TOKEN")
+  fi
   response=$(curl -fsS -X POST "${fetchUrl}" \\
     -H "Content-Type: application/json" \\
+    "\${auth_args[@]}" \\
     -d "$fetch_body" \\
     --max-time ${FETCH_TIMEOUT_SEC} 2>>"$LOG") || {
       local duration=$(( $(date +%s%3N) - start_ms ))

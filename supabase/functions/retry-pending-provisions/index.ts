@@ -35,10 +35,8 @@ import { createClient } from 'jsr:@supabase/supabase-js@2'
 import {
   retryPendingProvisionsHandler,
   PENDING_STALE_AGE_MS,
-  buildSpinUpInput as buildSpinUpInputFromDb,
   type PendingProvisionRow,
   type RetryAttempt,
-  type RetryDbClient,
   type RetryHandlerDeps,
   type SetupHelpNotification,
 } from '../_shared/retry-pending-provisions-handler.ts'
@@ -148,10 +146,50 @@ async function findLatestAttempt(subscriptionId: string): Promise<RetryAttempt |
 }
 
 async function buildSpinUpInput(row: PendingProvisionRow): Promise<SpinUpInput | null> {
-  // Delegates to the shared (Deno-free, unit-tested) implementation so the
-  // customer SELECT + decrypt_bot_token RPC call shape is covered by tests,
-  // not just the handler. See retry-pending-provisions-handler.ts.
-  return buildSpinUpInputFromDb(supabase as unknown as RetryDbClient, row, BOT_TOKEN_ENC_KEY)
+  // Read customer row + decrypt bot token. Mirrors what
+  // complete-onboarding-handler.ts does at first spin-up time.
+  const { data: cust, error: custErr } = await supabase
+    .from('customers')
+    .select('id, telegram_chat_id, telegram_bot_token, soul_md_text')
+    .eq('id', row.customer_id)
+    .maybeSingle()
+  if (custErr || !cust) return null
+
+  // Decrypt bot token via RPC (same two-step path as xendit-webhook /
+  // complete-onboarding): pass the row's encrypted ciphertext, not a
+  // customer id. The RPC signature is decrypt_bot_token(encrypted text,
+  // enc_key text) — there is no cust_id overload.
+  const { data: tokRows, error: tokErr } = await supabase
+    .rpc('decrypt_bot_token', {
+      encrypted: cust.telegram_bot_token,
+      enc_key: BOT_TOKEN_ENC_KEY,
+    })
+  if (tokErr) return null
+  const telegramBotToken = (tokRows && typeof tokRows === 'string') ? tokRows : ''
+
+  // OpenRouter key from customer_openrouter_keys.
+  const { data: orRow } = await supabase
+    .from('customer_openrouter_keys')
+    .select('api_key')
+    .eq('customer_id', row.customer_id)
+    .maybeSingle()
+  const openrouterApiKey = (orRow as { api_key?: string } | null)?.api_key ?? ''
+
+  // Sanity: missing critical fields → return null so the worker logs
+  // a one-time "skipped_invalid" + doesn't loop forever.
+  if (!telegramBotToken || !cust.telegram_chat_id || !cust.soul_md_text || !openrouterApiKey) {
+    return null
+  }
+
+  return {
+    customerId: row.customer_id,
+    tier: row.tier,
+    telegramChatId: cust.telegram_chat_id,
+    telegramBotToken,
+    openrouterApiKey,
+    soulMdContent: cust.soul_md_text,
+    alwaysOnEnabled: row.always_on_enabled,
+  }
 }
 
 async function insertAttempt(input: {

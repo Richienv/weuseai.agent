@@ -1,0 +1,146 @@
+# Overnight autonomous run — 2026-06-17 (founder away ~6h)
+
+Orchestrated by Opus 4.8 in a self-paced `/loop`, using ultracode workflows for the big/fuzzy items and direct builds for specced phases. **Mission:** take the weuseai.id landing + its safe frontend surfaces from "good" to "exceptional, conversion-tuned, Instagram-ready," and ship as much verified value as possible — compressing weeks of design+dev iteration into one night.
+
+## Hard limits (never crossed, unsupervised)
+- **Branches only.** Never merge a PR. Never push to `main`. Never deploy to prod (Vercel main / `supabase functions deploy`).
+- **No backend / payments.** Never touch `supabase/`, `services/`, edge functions, Xendit, `tier-personas.ts` price fields/slugs, `checkout.html`/`onboarding.html` logic, or any secret.
+- **Gate-green or revert.** Every commit must pass freshness + honesty + pricing-drift, with zero exclamation marks / banned words in copy. If a phase can't pass, `git checkout -- .` it and move on.
+- **No new npm packages.** Reuse existing primitives.
+- Each iteration = one coherent, verified, committed improvement. No half-baked sprawl.
+
+## Scope (allowed)
+`index.html` + `assets/app.jsx` (+ generated `app.js`/`tw.css`) + landing assets; **new** static pages (`faq.html`); cosmetic-only `use-cases.html`; landing tests (additive); `docs/`; the `weuseai-shipping` skill description (#273). Funnel pages (checkout/onboarding/welcome) are OFF-LIMITS this run.
+
+## Prioritized backlog
+1. **Finish flashy-minimal landing** (PR #271) — ✅ hero circuit + minimal copy · ✅ centerpiece/origin slash · ✅ pricing ValueSlider + hero trim · ⏳ how-it-works motion · carousel→tags · FAQ 17→7 · pricing bullets · global gloss (hover/CTA-sheen/scroll-reveal).
+2. **Apply optimizer `best_description`** → `.claude/skills/weuseai-shipping/SKILL.md` (PR #273).
+3. **Ultracode QA + conversion audit** — parallel agents on copy-brevity, visual/animation consistency, responsive (14"/13"/mobile), a11y, perf, honesty/brand, IG-conversion → fix findings iteratively.
+4. **Build `/faq` page** — relocate the cut FAQ rows + a full FAQ, in the new flashy-minimal style.
+5. **`use-cases.html` cosmetic redesign** toward the new style (no logic).
+6. **Performance pass** — landing asset sizes, lazy-load, CSS bloat.
+7. **a11y pass** — alt text, aria, focus states, reduced-motion coverage, contrast.
+8. **Final full-page Playwright QA** (desktop + mobile + reduced-motion) + screenshots + polish round.
+9. **Additive landing tests** — content/structure guards (no behavior change).
+
+## Shipped log (append per iteration)
+- `75fd81e` [#271] Pricing ValueSlider (interactive, honest) + hero trim — verified, gates 10/10.
+- `253ac16` [#271] Hero circuit-flow bg + minimal color-split copy.
+- `0e39045` [#271] Centerpiece + origin copy slashed to one-liners.
+- `f254482` [#271] How-it-works: 4 step bodies → one-liners + alternating slide-in motion.
+- `d169cf1` [#271] Carousel: 12 descs → 2-4-word capability tags (cleaner cards).
+- `330d019` [#271] FAQ: 17 → 7 tightened Q&As + leaner sub-line (the ~10 cut rows pending the /faq page, backlog #4).
+- `f39a165` [#271] Pricing cards: outcomes trimmed to 3 short bullets each (prices/slugs untouched, drift gate green). LLM-credit detail now lives in the FAQ.
+- _(next)_ [#271] Global gloss: hover-lift + red rim on cards, glossy sheen-sweep `.cta-pulse` on the featured pricing CTA (navbar Mulai intentionally left un-pulsed — a perpetual sticky-header glow would nag). **Backlog #1 (flashy-minimal landing) COMPLETE.**
+- `ebfd21d` [#271] Global gloss: hover-lift + red rim on cards, sheen-sweep on the featured CTA. **Backlog #1 (flashy-minimal landing) COMPLETE.**
+- **Item 2 (optimizer description) — RESOLVED, no change.** Read the optimizer result: its `best_description` (held-out 4/8) was the *original conditional* wording ("Read this BEFORE… non-trivial work"); later iterations overfit train. But #273 already carries the *aggressive* variant ("Use this skill for ANY work… including small routine UI edits… Fire it the instant a request mentions weuseai"), which serves the founder's explicit "always use it" directive better than the optimizer's pick on a noisy 4/8 eval. Kept the aggressive description; no downgrade committed.
+- _(next)_ Launched ultracode QA + IG-conversion audit (item 3) — parallel agents auditing the flashy landing; findings → fixed in subsequent iterations.
+- `3b230f7` [#271] Night-log: item 2 (optimizer desc) resolved.
+- QA audit (`wsvv1mbhv`, 5 agents) → findings saved to `docs/plans/2026-06-17-landing-qa-findings.md`. Hard gates confirmed CLEAN (no exclamation/banned in rendered copy, demo-honesty intact, no pricing drift). One true honesty violation (School Expert shipping live).
+- _(next)_ [#271] **QA P0 batch:** School Expert `live`→`segera` + future-tense msg (the honesty fix); `agen lo`→`agen kamu` ×15 (banned register); CommunitySection header de-overclaimed ("terus kami tambah"); hero `h2`→`h1` + BlurText default `h1`→`h2` (single top-level heading); deleted the 1.32 MB `new-hero.mp4` preload; generic `.live-dot` (IntegrationsSpine dots were zero-size); 4 dead mockup buttons → `tabIndex=-1`+`aria-hidden`. All gate-green, verified.
+
+### ⚑ Flagged for founder (NOT auto-applied — conversion/structure/design calls):
+- **QA P0 hero-circuit z-index**: audit wants `z-1` (behind dim) but founder explicitly wanted the circuit *noticeable* — KEPT at `z-2` (headline+frame at z-3 stay legible). Revert to z-1 if you prefer it subtler.
+- **QA P0 two above-fold hero CTAs**: audit says collapse to one + demote consult to a text link. Left as-is (both buttons) — your call on conversion.
+- **QA P0 render order / OriginSection**: audit recommends compressing OriginSection to a slim strip + moving Pricing earlier (hero→apps→price). NOT done — you explicitly wanted OriginSection restored as a full section; reordering is a real conversion experiment for you to approve.
+- `12eea3e` [#271] QA P0 batch (honesty + a11y, see above).
+- _(next)_ [#271] **QA P1 reduced-motion batch:** one hardened global RM reset (`prefers-reduced-motion: reduce` → animation 0.01ms / iteration 1 / **fill-mode forwards** / transition 0.01ms) that neutralizes all ~109 perpetual decorative loops (pulses, grain, marquees, radar, caret/typing, carousel scenes, how/pv/cap/uc) in one safe block — verified both modes render ALL content (fill-mode:forwards prevents hidden mount-ins). Gates 10/10.
+- `23f5c4e` [#271] QA P1a: hardened global reduced-motion reset.
+- _(next)_ [#271] **QA P1b contrast:** eyebrow red `#E5322D`→`#FF6B66` (.db-eyebrow-pill + .vslider-eyebrow), .db-sub-micro + .is-tile-micro rgba .4/.42→.62, strikethrough anchor price white/35→white/55, community meta white/40→white/55. Decorative separators left muted. Gates 10/10.
+- `206a32f` [#271] QA P1b: contrast fixes (eyebrow red, micro text, strikethrough/meta).
+- _(next)_ [#271] **QA P1c aria + landmarks:** real `<main>` wrapper + decorative mockup `<main>`→`div role=presentation` (now exactly 1 main); CtaFooter `<section>`→`<footer>`; FAQ `aria-controls`/`id`/`role=region`/`aria-labelledby` + `aria-hidden` toggling on panels; ValueSlider `aria-valuetext` + readout `aria-live=polite`; carousel dots → 24×24 touch targets (visual dot via ::before); logo `alt=""` (link already labeled). Verified 1512px: 1 main / 1 footer / 1 h1, dots 24px, gates 10/10, 0 JS errors.
+- `e7fa9ad` [#271] QA P1c: aria + landmarks (see above).
+- _(next)_ [#271] **QA P1d perf:** carousel isShotFade 12s→6s + overlapping crossfade (kills loop-seam black flash; quick IG viewer sees motion); carousel videos `preload="metadata"`→`"none"` (IntersectionObserver flips to auto on-screen — stops ~19 concurrent metadata fetches at first paint). **Skipped/reverted with reasons:** framer-motion `.min.js` is 404 at that version → left the standard UMD (don't crash the app on a bad URL); `content-visibility:auto` caused height-drift + anchor-scroll jank → reverted; Noto Serif SC trim deferred (cosmetic hanzi risk, low value, already display=swap). Gates 10/10.
+- `252e31f` [#271] QA P1d: perf (slideshow 6s + lazy carousel videos).
+- `3f6ceed` [#271] QA P2: trimmed StartSection + CtaFooter subs.
+- Round-2 ultracode QA+conversion audit (`wkctxdbu4`) → findings saved to `docs/plans/2026-06-17-landing-qa-findings-r2.md`. **Verdict: ~95% ready** — round-1 fixes hold, gates clean, no pricing drift. New P0s found: VelvetSection honesty over-claims, 8-vs-5-menit clash, CDN white-screen risk.
+- _(next)_ [#271] **Round-2 P0 honesty:** VelvetSection — stripped vendor name "via Firecrawl", genericized "Integrasi native Home Assistant"→"Kontrol rumah pintar lewat perintah biasa", "Beresin Google Docs"→"Beresin dokumen" (no live Google Docs claim). Gates 10/10.
+
+### ⚑ NEW flag for founder (round-2):
+- **8 vs 5 menit:** OriginSection shows "Aktif 8 menit" (headline) + "Setup 5 menit" (sub) in one viewport; meta/og + FeaturesGrid say 8. These are arguably DISTINCT metrics (setup 5 min, fully active 8 min — you've shipped both together before in the original hero), so I did NOT auto-change a number. If you want them unified, say which is canonical and I'll align all references; or I can reword to "Setup 5 menit, aktif penuh 8 menit" to disambiguate.
+- `bfed144` [#271] round-2 P0: VelvetSection honesty over-claims fixed.
+- `20bb301` [#271] round-2 P0: self-hosted React/ReactDOM/framer-motion under assets/vendor/ + ErrorBoundary + Mot passthrough fallback (China white-screen robustness). Verified app mounts + framer works from self-host.
+- _(next)_ [#271] **round-2 P1a:** dropped dead render-blocking Noto Serif SC from the Google Fonts URL (no font-hanzi usage); IntegrationsSpine sub now specific ("Konten, keuangan, latihan — dikerjakan langsung di app-nya…"); BlurText reduced-motion gate (headlines render settled — the CSS RM reset can't reach framer JS). Both motion modes verified, gates 10/10.
+- `f78e546` [#271] round-2 P1a: dead font + spine sub + BlurText reduced-motion.
+- _(next)_ [#271] **round-2 P1b:** PriceBreakdownModal focus trap (Tab cycles within the dialog, focus restored to trigger on close) + verified modal opens with focus inside, 0 JS errors. **Hero-video defer NOT done — flagged:** DottedVideo is a shared component (used in ~6 sections); a global rAF-defer would regress them, and a hero-only prop is fiddly for a modest gain (it already has an IntersectionObserver + mobile throttling). Left as-is.
+- `04f0b70` [#271] round-2 P1b: PriceBreakdownModal focus trap.
+- _(next)_ [#271] **round-2 P2 cluster:** dropped the unverifiable "v0.12.0" version claim; ChatVsAgent "weuseai.agent Pro"→"weuseai.agent" (no Pro tier); FAQ gak→nggak (×2, unify); micro-label contrast .pc-setup-sub + .db-stat .lbl white/0.45→0.55; decorative db-cursor SVG aria-hidden. priceStrike dead branch left untouched (founder's anchor decision). Gates 10/10.
+- _(next)_ [#271] **Backlog #4 — /faq page SHIPPED.** New standalone `faq.html`: zero-JS native `<details>`/`<summary>` accordion, self-contained inline `<style>` reusing brand tokens (#0a0a0a / #E5322D / Inter + Instrument Serif + JetBrains Mono) so it needs NO tw.css and sits outside all landing gates (lowest-risk path). Header (wordmark + "← Beranda"), FAQ pill, Instrument-Serif headline with red color-split ("Pertanyaan yang **sering muncul**."), all **16** Q&As (the 7 landing rows + the ~9 cut ones, pulled from `330d019~1`), CTA → the real `cal.com/weuseai.agent/15min`, footer (terms/privacy/refund-policy/contact — all verified to exist). Copy lightly cleaned porting in: `gak`→`nggak`; support answer **genericized** to drop the deprecated tier names ("Pro dan Studio / Starter") + the unverifiable "12 menit median" → "Support lewat Telegram langsung… channel khusus". 0 exclamation / 0 banned words. Vercel cleanUrls auto-serves it at `/faq`. Landing FAQ section got a "Lihat semua pertanyaan → /faq" pill link (`.faq-all-link`, hover-lift + arrow-nudge). Verified Playwright @1512 + @390: 16 details / 1 open / accordion interactive / headline red-split renders / bg #0a0a0a / **0 console errors** both viewports; landing link text+href correct. Gates 10/10, no pricing drift.
+- `a5e68e6` [#271] /faq page (faq.html) + landing "lihat semua" link — verified, gates 10/10.
+- _(next)_ [#271] **Backlog #5 — use-cases.html.** Assessed first: the page is ALREADY on the brand visual system (dark, Instrument-Serif clamp headlines, USE CASES pill, category-pill nav, stat tiles) — a heavy "flashy-minimal redesign" would be high-regression-risk for little visual gain. The REAL defect was brand-voice: it addressed the reader as **"lo" 146×** (99 lowercase + 47 capitalized) + **"gue" 1×** — the banned lo/gue register (CLAUDE.md locks voice to `kamu`, never lo/gue). Fixed: every standalone `lo`/`Lo`→`kamu`/`Kamu`, the one user-quote `gue`→`aku`, leaving `kalo` (×2) + all non-pronoun text untouched (147 word changes, copy-only, zero logic/markup/style change). Confirmed the 58 `!` are all `<!--`/`<!DOCTYPE` openers — ZERO real exclamation marks. Verified Playwright @1512 + @390: renders, 0 console errors, h1 now "40 cara AI bikin hidup **kamu** lebih enak."
+- `e267ebc` [#271] use-cases: off-brand register fix (lo/gue → kamu/aku).
+
+### ⚑ NEW flag for founder (use-cases.html):
+- **use-cases.html loads `https://cdn.tailwindcss.com` (the runtime Tailwind compiler)** — the SAME render-block + China white-screen risk we just eliminated on index.html (round-2 P0: self-hosted vendor + precompiled tw.css). Fixing it properly = adding `./use-cases.html` to the build pipeline's content-scan + precompiling its own stylesheet (or self-hosting), which is a build-pipeline change (NOT cosmetic) with real breakage surface on a 1443-line page that uses arbitrary Tailwind classes. I did NOT auto-apply it. If you want it hardened the same way as the landing, say so and I'll do it carefully under the gate.
+- _(next)_ [#271] **Final full-page Playwright QA — PASS.** index.html at 1512 + 390 + reduced-motion: exactly 1 h1 / 1 main / 1 footer each; NO horizontal overflow (scrollWidth === clientWidth at both widths); 0 page errors (no JS exceptions); reduced-motion renders ALL content (headline settles via the BlurText RM gate, #pricing present, body text ~24k chars in every mode); .faq-all-link present. Mobile hero verified visually (color-split headline, eyebrow, 2 CTAs, dashboard demo + content card + stat tiles, clean at 390). Only console noise = the `subscription-count` live-counter API 404 (resolves on Vercel) + lazy `preload="none"` video ERR_ABORTED off-screen — both pre-existing environment artifacts under the bare http.server, NOT regressions.
+- **Round-3 ultracode QA+conversion audit LAUNCHED** (background workflow `wt58y23b6`): 7 grounded dimension auditors (honesty/brand, conversion/IG, copy-brevity, a11y, responsive, perf, new-page-consistency) → adversarial verify of each P0/P1 → synthesis with ship-readiness verdict. Each finding must quote verbatim source; the known founder-decisions are excluded from re-flagging. Findings → triaged + fixed in following iterations, then FINAL wind-down summary.
+- **Round-3 audit (`wt58y23b6`, 16 agents) → findings saved to `docs/plans/2026-06-17-landing-qa-findings-r3.md`.** Verdict: shipReady=false but "no brand-lock or broken-page issues" — 0 material P0, 5 P1, 12 P2 (22 confirmed). Triaged: 17 FIXED (below), 1 P0/P1 FLAGGED (funnel/checkout), 1 P2 FLAGGED (risk-reversal), 2 P2 KEPT (FAQ standalone-answer overlap is correct for a jump-to page).
+- `895c3f1` [#271] **R3 faq.html:** 404 favicon (`/assets/favicon.svg`→real logo.svg+PNG block); base-hosting answer dropped "jalan terus 24/7" (24/7 now only on the Always-On answer); added OG/Twitter/theme-color; footer contrast .45→.62. Verified: favicon 200, 0 errors.
+- `1cfcd56` [#271] **R3 use-cases.html:** canonical/og:url/og:image/twitter:image → weuseai.id (was vercel.app; og:url also dropped stale .html); cost card "Total buat semua 5 use case"→"Operasional bulanan biasa"; hero ~35-word italic re-intro compressed to one line. Verified @390: no overflow, 0 errors.
+- `e76a23f` [#271] **R3 honesty+a11y (app.jsx+index.html):** 3 base-tier "24/7" uptime overclaims reworded ("VPS dedicated, bukan shared" / "kerja tiap hari" / "Jalan di server pribadi kamu, bukan shared" — legit 24/7 on Always-On/support/comparison-axis kept); 5 prose `text-white/45`→`/55` (AA); AgentCarousel dots `role=tablist/tab`→`role=group`; BlurText headings get `aria-label`+`aria-hidden` word spans; `.db-input-typed` nowrap + box overflow:hidden (mobile no-wrap). Gates 10/10; verified 12 headings expose aria-label, dots role=group, no overflow, 0 JS errors.
+- `5ad5def` [#271] **R3 perf (app.jsx+index.html):** DottedVideo `preload="metadata"`→`"none"` (in-view gate already calls play(); verified hero canvas still paints, readyState 4); preconnect `stream.mux.com` + dns-prefetch `cdn.jsdelivr.net`; deleted dead `HERO_VIDEO` const. Gates 10/10.
+- _(next)_ **Final full-page Playwright QA — PASS.** index@1512/390/reduced-motion + faq@1512/390 + use-cases@1512/390: exactly 1 h1 each, NO horizontal overflow anywhere, faq+use-cases 0 console errors, index only the pre-existing subscription-count 404. Independent ultracode re-verification launched (`w5s2gw8ql`) — confirm fixes resolved + no regressions, then wind down.
+
+### ⚑ NEW flags for founder (round-3 — NOT auto-applied, see findings-r3.md):
+- **CTA funnel split (P0/P1) — RESOLVED on the landing (`551832d`).** Hero/footer/sticky CTAs now → `#pricing` (founder-approved). Remaining checkout.html stale-price flash + the stale app.jsx:4004-4010 comment are still open for the founder (checkout.html off-limits).
+- **No risk-reversal at the pay CTA (P2):** nothing near the buy button reduces perceived risk on the upfront setup fee — could echo the already-true "Setup tetap kamu punya kalau berhenti". Marketing/conversion call.
+- **Sitewide canonical sweep (out of scope):** checkout/welcome/contact/privacy/terms/onboarding/refund-policy.html still carry vercel.app canonical/OG URLs (only index+faq+use-cases on weuseai.id now).
+- **Independent re-verification (`w5s2gw8ql`, 4 agents) → shipReady=TRUE.** All 18 round-3 fixes confirmed verbatim in current source; 0 regressions, 0 new P0/P1, 0 brand-lock violations; `node --check assets/app.js` parses (build in sync); prices match v1.4 catalog exactly; no Anda/lo/gue, no body exclamations, no banned words across all 4 files. **Loop wound down here.**
+
+---
+
+## ☀️ FINAL SUMMARY — morning review (loop complete)
+
+**Bottom line:** the weuseai.id landing is redesigned (flashy-minimal, IG-ready), a new **/faq** page shipped, **use-cases** cleaned, and the page survived **three** QA rounds (2 prior + this round-3) plus an independent re-verification that returned **ship-ready**. Everything is on branch `landing/phase-1-domain-china` (**PR #271**) — gates 10/10, zero exclamation/banned words, no pricing drift. Nothing merged, nothing deployed, no backend/payments touched.
+
+### What shipped this session (high level)
+1. **Flashy-minimal landing redesign** (konten.com-style): hero circuit + color-split copy, slashed centerpiece/origin copy, how-it-works motion, carousel→capability tags, FAQ 17→7, pricing ValueSlider + 3-bullet cards, global gloss/hover/CTA sheen, real R2 app screenshots in iPhone frames, restored OriginSection + video hero bg, dropped Bare from the pricing display.
+2. **/faq page** (`faq.html`) — standalone zero-JS `<details>` accordion, all 16 Q&As, brand-styled; landing "Lihat semua pertanyaan" link.
+3. **use-cases.html** — off-brand `lo/gue`→`kamu/aku` (147 swaps), weuseai.id canonical/OG, 2 copy tightenings.
+4. **QA round 1 + 2** — honesty (School Expert, VelvetSection), self-hosted React/framer vendor (China white-screen), reduced-motion reset, contrast/aria/landmarks, perf (lazy carousel videos), focus trap.
+5. **QA round 3** (this session) — favicon 404, base-tier "24/7" honesty ×4, OG/Twitter meta, AA contrast, carousel ARIA, BlurText aria-label, mobile input no-wrap, DottedVideo lazy-load, Mux preconnect, dead-const cleanup.
+
+### ⚑ Needs YOUR decision (I deliberately did NOT touch these)
+- **A. CTA funnel split — landing side DONE (`551832d`); checkout side still on you.** Founder chose "point hero CTAs at `#pricing`". Hero + footer + sticky "Aktifkan asisten kamu" now scroll to the 4-tier grid instead of bare `checkout.html` (which defaulted to the priciest Rp 1.299jt tier) — cold traffic picks a tier first, WhatsApp pricing cards are the single commit path. Verified: scrolls to #pricing, no navigation away, gates 10/10. STILL ON YOU (off-limits to me): `checkout.html` flashes stale v1.2 prices (Rp 2.500.000→1.290.000, "Pro plan") pre-JS, and the now-false comment at app.jsx:4004-4010.
+- **B. Risk-reversal at the pay CTA** — nothing near the buy button reduces perceived risk on the upfront setup fee. Could echo the already-true "Setup tetap kamu punya kalau berhenti". Marketing call.
+- **C. Sitewide canonical sweep** — checkout/welcome/contact/privacy/terms/onboarding/refund-policy.html still on vercel.app. Off-limits funnel/legal pages → separate task.
+- **D. Earlier conversion/design flags (still open):** hero-circuit z-index (kept at 2 per your "noticeable"), two above-fold hero CTAs, OriginSection-not-reordered, "8 vs 5 menit" metric, hero-video-not-deferred, use-cases.html cdn.tailwindcss.com.
+
+### What remains
+- Merge #271 when you're happy (I never merge/deploy).
+- Decide A–D above; A is the one I'd act on first for conversion.
+- Optional: a sitewide canonical-domain sweep + the checkout.html stale-price fix (both need your go-ahead).
+
+---
+
+## 🌤️ Post-loop — founder morning session (2026-06-18, interactive)
+
+Founder reviewed the live cards and directed several changes. Shipped to #271:
+- `551832d` — flag A resolved on the landing side: hero/footer/sticky CTAs → `#pricing` (cold traffic chooses a tier before any payment screen; unifies the funnel).
+- `afc828b` — pricing CTAs now go to **self-serve checkout** (`checkout.html?plan=<slug>`, tier pre-selected) instead of WhatsApp; decluttered each card (dropped the italic tagline, the "Untuk siapa" block, the "Bulan 2 dst" row, the "Diskon launch" micro-label; bigger titles; "Yang kamu dapat" outcomes emphasized). Verified "Ambil Library Lengkap" → `/checkout.html?plan=library-full`.
+- `63aae2d` — **Siap Pakai is now the flagship** ("Rekomendasi kami" badge + glow + pulse moved off Library Lengkap), led by its web-app differentiator ("Web app + dashboard sendiri" first).
+
+### ⚑ Persona re-tier — INVESTIGATED, then deliberately NOT done (founder chose reframe)
+Founder initially wanted Library Lengkap → 6 personas and Siap Pakai → 10 (to make the pricier tier the best). I mapped the full blast radius (workflow `wxqgxwtx9`, **61 touchpoints**) before touching anything and surfaced three blockers:
+1. **P0 "shell" personas:** moving `web-app-builder` + `business-agent` into Siap Pakai (spec-class `pro`) ships them with **11 of 13 skills stripped** (those skills are gated to spec-class `studio` in their agent-pack manifests; `bundle-pull-script.ts` skips them). Same class as the #226 P0, and `bundle-pull-tier-filter.spec.ts` stays green so the suite wouldn't catch it. Avoiding it needs either upsizing every Siap Pakai VPS to 16GB/$30-cap (real per-customer infra cost) or relaxing the skill gates.
+2. **Value incoherence:** at 6 personas / no web_app / no genesis, library-full becomes *strictly dominated* by done-for-you on every axis except price — no reason to pick it.
+3. **61 touchpoints** incl. the bundle-fetch **security contract**, ~18 tests, both catalog mirrors, the legacy-alias re-grading (pro→10/studio→6), already-provisioned-customer drift, and off-limits `checkout.html` + `onboarding.html`.
+
+**Decision (founder):** keep the catalog exactly as-is (library-full=10/no-web-app, done-for-you=8/web-app — the deliberate v1.4 matrix) and make Siap Pakai read as flagship via **positioning** instead (`63aae2d`). Zero backend risk, zero cost. The catalog matrix is intentional; re-tiering is a genuine multi-day backend project, not a card tweak — revisit only with the spec-class cost decision made up front.
+
+---
+
+## 🎨 Landing finalization (2026-06-18, founder-directed) — branch ready to merge live
+
+Founder approved finishing the landing before merging #271 (merging main auto-deploys to Vercel). Applied the generated work + the founder's calls:
+- `583a6ab` — **Premium hero**: replaced the "cheap CSS" circuit with a "living aurora" — volumetric red-on-black glow (drifting blurred pools + conic sheen + grain), CSS-only/GPU/mobile-light/reduced-motion-safe, masked so the headline + demo stay legible.
+- `b1229fe` — **Pricing**: moved "Rekomendasi kami" back to **Library Lengkap** (founder's pick) + rewrote every tier's outcomes from terse bullets to concrete benefits (the personas + what they do: briefing pagi, 190+ templates, riset, voice, memory). Siap Pakai stays premium on its web app. Prices/slugs untouched.
+- `344bc64` — **Scarcity + honest price-rise**: the existing 1.000-batch counter (reads the REAL paid count, renders nothing if the API fails) now ticks via CountUp + states the genuine rise (library-full setup **Rp 799rb → Rp 999rb after the first 1.000**). No fake time-clock (would be a false deadline) — the seats ARE the countdown.
+- CLAUDE.md "Launch FOMO" lock UPDATED: the price-rise is now REAL (supersedes the old "prices never rise" for library-full).
+
+**Final QA:** index @1512/390/reduced-motion — 1 h1, aurora renders, flagship=Library Lengkap, seats banner renders, no overflow, 0 errors; gates 10/10.
+
+### ⚑ Required follow-up before the 1000th sale (UNWIRED):
+`create-invoice` must flip the library-full charge 799→999 once `paid_customers ≥ 1000`, or the page advertises a rise that doesn't happen. Tracked in `docs/plans/2026-06-18-go-live-readiness.md`.
+
+**#271 is now finished + merge-ready.** Merging it auto-deploys the landing live (Vercel tracks main). The payment go-live is a SEPARATE sequence (recovery branch `fix/provision-recovery-chain` + #272 + Xendit rotation + first-payment watch).

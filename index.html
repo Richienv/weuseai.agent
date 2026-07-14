@@ -5,15 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>weuseai.agent — Asisten yang nge-chat kamu duluan, tiap pagi jam 7.</title>
   <meta name="description" content="Asisten AI pribadi di Telegram kamu — bukan aplikasi baru yang harus dipelajari. Dia yang menyesuaikan ke cara kerja kamu. Aktif kurang lebih 8 menit setelah bayar.">
-  <link rel="canonical" href="https://weuseai-agent.vercel.app/" />
+  <link rel="canonical" href="https://weuseai.id/" />
 
   <!-- Open Graph -->
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="weuseai.agent">
   <meta property="og:title" content="weuseai.agent — Asisten yang nge-chat kamu duluan, tiap pagi jam 7.">
   <meta property="og:description" content="Asisten AI pribadi di Telegram kamu — bukan aplikasi baru yang harus dipelajari. Dia yang menyesuaikan ke cara kerja kamu. Aktif kurang lebih 8 menit setelah bayar.">
-  <meta property="og:url" content="https://weuseai-agent.vercel.app/">
-  <meta property="og:image" content="https://weuseai-agent.vercel.app/assets/og-image.png">
+  <meta property="og:url" content="https://weuseai.id/">
+  <meta property="og:image" content="https://weuseai.id/assets/og-image.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta property="og:image:alt" content="weuseai.agent — Asisten yang nge-chat kamu duluan, tiap pagi jam 7">
@@ -22,7 +22,7 @@
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="weuseai.agent — Asisten yang nge-chat kamu duluan, tiap pagi jam 7.">
   <meta name="twitter:description" content="Asisten AI pribadi di Telegram kamu — bukan aplikasi baru yang harus dipelajari. Dia yang menyesuaikan ke cara kerja kamu. Aktif kurang lebih 8 menit setelah bayar.">
-  <meta name="twitter:image" content="https://weuseai-agent.vercel.app/assets/og-image.png">
+  <meta name="twitter:image" content="https://weuseai.id/assets/og-image.png">
 
   <!-- Theme + favicon -->
   <meta name="theme-color" content="#0a0a0a">
@@ -33,15 +33,19 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&family=Noto+Serif+SC:wght@400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
-  <!-- Hero video preload — LCP candidate, surfaces first frame faster. -->
-  <link rel="preload" as="video" href="assets/new-hero.mp4" type="video/mp4">
+  <!-- Warm DNS+TLS for the Stats Mux HLS stream + hls.js CDN (non-Safari path loads both on hydration). -->
+  <link rel="preconnect" href="https://stream.mux.com" crossorigin>
+  <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+
 
   <!-- React production builds — faster runtime, smaller payload than dev builds. -->
-  <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin defer></script>
-  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin defer></script>
-  <script src="https://unpkg.com/framer-motion@11.11.17/dist/framer-motion.js" defer></script>
+  <!-- Self-hosted vendor (rev 2026-06-17): no unpkg dependency — avoids a white
+       screen if the CDN is blocked/slow (China-targeted) + one fewer DNS/TLS hop. -->
+  <script src="/assets/vendor/react.production.min.js" defer></script>
+  <script src="/assets/vendor/react-dom.production.min.js" defer></script>
+  <script src="/assets/vendor/framer-motion.js" defer></script>
   <link rel="stylesheet" href="/assets/tw.css">
 
   <!-- Persona detail content (shared between landing + /persona dedicated page) -->
@@ -63,6 +67,74 @@
                     0 0 110px -22px rgba(229,50,45,0.55);
       }
     }
+
+    /* ── Utility-meter: the Rp 99rb/bulan recurring line reads like a live
+          electricity meter ("bayar kayak listrik"). Legibility first;
+          the price text never moves. (Pricing rev 2026-06-16.) ── */
+    .utility-meter { display: inline-flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+    .utility-meter__label { letter-spacing: -0.01em; }
+    .utility-meter__track {
+      position: relative; display: block;
+      width: 88px; height: 5px; border-radius: 999px; overflow: hidden;
+      background: rgba(255,255,255,0.08);
+      box-shadow: inset 0 0 0 1px rgba(229,50,45,0.18);
+    }
+    .utility-meter__fill {
+      position: absolute; inset: 0;
+      background: linear-gradient(90deg, rgba(229,50,45,0) 0%, rgba(229,50,45,0.55) 40%, #E5322D 70%, rgba(255,170,160,0.95) 85%, #E5322D 100%);
+      transform-origin: left center;
+      animation: utilMeterDraw 2.6s cubic-bezier(0.4,0,0.2,1) infinite;
+    }
+    .utility-meter__fill::after {
+      content: ''; position: absolute; top: 0; bottom: 0; width: 26%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.85), transparent);
+      animation: utilMeterShimmer 2.6s linear infinite;
+    }
+    @keyframes utilMeterDraw { 0% { transform: scaleX(0.18); opacity: 0.65; } 55% { transform: scaleX(1); opacity: 1; } 100% { transform: scaleX(0.18); opacity: 0.65; } }
+    @keyframes utilMeterShimmer { 0% { left: -30%; } 100% { left: 110%; } }
+    #pricing .pc-card-featured .utility-meter__track { box-shadow: inset 0 0 0 1px rgba(229,50,45,0.4); }
+    @media (prefers-reduced-motion: reduce) {
+      .utility-meter__fill { animation: none; transform: scaleX(0.85); opacity: 1; }
+      .utility-meter__fill::after { display: none; }
+    }
+
+    /* Interactive value slider (rev 2026-06-17) — konten-style toy: drag to see
+       how much one agent absorbs; hosting price stays flat. Honest, no invented Rp. */
+    .vslider { max-width: 560px; margin: 0 auto 40px; text-align: center; position: relative; }
+    .vslider-eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: #FF6B66; margin-bottom: 14px; }
+    .vslider-readout { font-family: 'Inter', sans-serif; font-weight: 300; font-size: 16px; line-height: 1.5; color: rgba(245,245,245,0.85); margin-bottom: 20px; }
+    .vslider-readout b { color: #fff; font-weight: 600; }
+    .vslider-readout .vslider-flat { color: #E5322D; }
+    .vslider-track { position: relative; height: 6px; border-radius: 999px; background: rgba(255,255,255,0.08); overflow: hidden; box-shadow: inset 0 0 0 1px rgba(229,50,45,0.18); }
+    .vslider-fill { position: absolute; inset: 0 auto 0 0; width: var(--vpct, 40%); border-radius: 999px; background: linear-gradient(90deg, rgba(229,50,45,0.5), #E5322D); transition: width 0.12s cubic-bezier(0.4,0,0.2,1); }
+    .vslider-fill::after { content: ''; position: absolute; top: 0; bottom: 0; right: -2px; width: 14px; background: radial-gradient(circle, rgba(255,170,160,0.95), transparent 70%); animation: vsliderGlow 1.8s ease-in-out infinite; }
+    .vslider-input { position: absolute; left: 0; right: 0; bottom: -10px; width: 100%; height: 26px; opacity: 0; cursor: grab; margin: 0; }
+    .vslider-input:active { cursor: grabbing; }
+    @keyframes vsliderGlow { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
+    @media (prefers-reduced-motion: reduce) { .vslider-fill::after { animation: none; opacity: 0.8; } .vslider-fill { transition: none; } }
+
+    /* Global gloss (rev 2026-06-17) — konten-style micro-interactions: hover lift +
+       red rim on cards, glossy sheen-sweep on the featured pricing CTA. */
+    .pc-card:not(.pc-card-featured), .how-mockbox { transition: transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease; will-change: transform; }
+    .pc-card:not(.pc-card-featured):hover, .how-mockbox:hover { transform: translateY(-4px); box-shadow: 0 18px 50px -28px rgba(229,50,45,0.5); border-color: rgba(229,50,45,0.4); }
+    .cta-pulse { position: relative; overflow: hidden; animation: ctaPulse 3.4s ease-in-out infinite; }
+    .cta-pulse::after { content: ''; position: absolute; top: 0; bottom: 0; left: -60%; width: 40%; transform: skewX(-20deg); background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.7) 50%, transparent 100%); animation: ctaSheen 3.4s ease-in-out infinite; pointer-events: none; }
+    @keyframes ctaPulse { 0%,100% { box-shadow: 0 0 0 0 rgba(229,50,45,0); } 50% { box-shadow: 0 0 28px -2px rgba(229,50,45,0.55); } }
+    @keyframes ctaSheen { 0% { left: -60%; } 60%,100% { left: 130%; } }
+    @media (prefers-reduced-motion: reduce) {
+      .pc-card:not(.pc-card-featured):hover, .how-mockbox:hover { transform: none; box-shadow: none; }
+      .cta-pulse { animation: none; } .cta-pulse::after { display: none; }
+    }
+
+    /* Phase 4 — laptop full-viewport fit for the 4-card pricing grid.
+       Keyed by height so it targets laptops, not tall desktop monitors. */
+    @media (max-height: 820px) and (min-width: 1024px) {
+      #pricing .pc-section-head h2 { font-size: 2.5rem; }
+      #pricing .pc-price-month1 { font-size: 1.5rem; }
+      #pricing .pc-card { padding: 1.25rem 1.25rem; }
+      #pricing .pc-outcomes li { line-height: 1.4; }
+    }
+
     :root {
       --background: 0 0% 0%;
       --foreground: 0 0% 100%;
@@ -136,7 +208,7 @@
     .pc-setup-sub {
       font-family: 'JetBrains Mono', monospace;
       font-size: 9.5px; letter-spacing: 0.18em; text-transform: uppercase;
-      color: rgba(255,255,255,0.45); margin-top: 4px;
+      color: rgba(255,255,255,0.55); margin-top: 4px;
     }
     @media (min-width: 768px) { .pc-setup-sub { font-size: 10.5px; } }
 
@@ -244,6 +316,17 @@
       max-width: 64ch;
     }
     @media (min-width: 768px) { .faq-body-inner { font-size: 15px; } }
+    .faq-all-link {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: 'Inter', sans-serif; font-weight: 500; font-size: 14px;
+      color: rgba(255,255,255,0.7); text-decoration: none;
+      padding: 11px 20px; border: 1px solid rgba(255,255,255,0.16);
+      border-radius: 999px;
+      transition: color 0.24s ease, border-color 0.24s ease, transform 0.24s ease;
+    }
+    .faq-all-link:hover { color: #fff; border-color: rgba(229,50,45,0.5); transform: translateY(-2px); }
+    .faq-all-link svg { transition: transform 0.24s ease; }
+    .faq-all-link:hover svg { transform: translateX(3px); }
 
     /* ─── DASHBOARD DEMO (12-scene cycle, 72s total) ─── */
     .db-section {
@@ -251,6 +334,234 @@
       padding: 80px 16px 100px;
       background: #050505;
       overflow: hidden;
+    }
+    /* When DashboardDemo is the top hero (Phase 2 swap), clear the floating navbar. */
+    .db-section--hero { padding-top: 118px; }
+    @media (min-width: 768px) { .db-section--hero { padding-top: 150px; } }
+
+    /* Headline color-split + a tiny honest micro-line under the hero sub. */
+    .hl-em { color: #E5322D; }
+    .db-sub-micro { margin-top: 6px; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(245,245,245,0.62); }
+
+    /* Hero "living aurora" background (rev 2026-06-20) — premium volumetric
+       red-on-black glow: drifting blurred light pools + a slow conic sheen +
+       fine grain. CSS-only, GPU transforms (translate/scale/opacity), masked
+       so it never fights the headline or chat demo. Replaces the thin circuit.
+       z-2: above the dim, below the content. */
+    .hero-aurora {
+      position: absolute; inset: 0; z-index: 2; pointer-events: none; overflow: hidden;
+      -webkit-mask-image: radial-gradient(ellipse 120% 92% at 50% 32%, #000 38%, transparent 86%);
+              mask-image: radial-gradient(ellipse 120% 92% at 50% 32%, #000 38%, transparent 86%);
+    }
+    .hero-aurora .ha-pool {
+      position: absolute; border-radius: 50%; filter: blur(46px);
+      mix-blend-mode: screen; opacity: 0.55; will-change: transform, opacity;
+      transform: translateZ(0); backface-visibility: hidden;
+    }
+    .hero-aurora .ha-1 {
+      width: 58vw; height: 58vw; max-width: 760px; max-height: 760px; left: -8%; top: -14%;
+      background: radial-gradient(circle at 50% 50%, rgba(229,50,45,0.62), rgba(229,50,45,0.16) 46%, transparent 70%);
+      animation: haDrift1 26s ease-in-out infinite;
+    }
+    .hero-aurora .ha-2 {
+      width: 52vw; height: 52vw; max-width: 680px; max-height: 680px; right: -10%; top: -6%;
+      background: radial-gradient(circle at 50% 50%, rgba(255,92,70,0.5), rgba(229,50,45,0.12) 48%, transparent 72%);
+      animation: haDrift2 32s ease-in-out infinite;
+    }
+    .hero-aurora .ha-3 {
+      width: 64vw; height: 64vw; max-width: 820px; max-height: 820px; left: 24%; top: 8%;
+      background: radial-gradient(circle at 50% 50%, rgba(180,28,24,0.5), rgba(120,18,16,0.1) 50%, transparent 74%);
+      animation: haDrift3 38s ease-in-out infinite;
+    }
+    .hero-aurora .ha-sheen {
+      position: absolute; inset: -20%; mix-blend-mode: screen; opacity: 0.22;
+      will-change: transform; transform: translateZ(0);
+      background: conic-gradient(from 200deg at 50% 38%, transparent 0deg, rgba(255,120,98,0) 60deg, rgba(255,120,98,0.55) 120deg, rgba(229,50,45,0) 200deg, transparent 360deg);
+      -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 30%, #000, transparent 72%);
+              mask-image: radial-gradient(ellipse 80% 60% at 50% 30%, #000, transparent 72%);
+      animation: haSheen 34s linear infinite;
+    }
+    .hero-aurora .ha-grain {
+      position: absolute; inset: 0; opacity: 0.5;
+      background-image: radial-gradient(rgba(255,255,255,0.05) 0.5px, transparent 0.6px);
+      background-size: 3px 3px; mix-blend-mode: overlay;
+    }
+    @keyframes haDrift1 { 0%,100% { transform: translate3d(0,0,0) scale(1); } 50% { transform: translate3d(7%,5%,0) scale(1.12); } }
+    @keyframes haDrift2 { 0%,100% { transform: translate3d(0,0,0) scale(1.05); } 50% { transform: translate3d(-6%,7%,0) scale(0.94); } }
+    @keyframes haDrift3 { 0%,100% { transform: translate3d(0,0,0) scale(0.96); } 50% { transform: translate3d(-5%,-6%,0) scale(1.1); } }
+    @keyframes haSheen { to { transform: rotate(360deg); } }
+    @media (max-width: 767px) {
+      .hero-aurora .ha-pool { filter: blur(34px); opacity: 0.46; }
+      .hero-aurora .ha-3, .hero-aurora .ha-sheen, .hero-aurora .ha-grain { display: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .hero-aurora .ha-pool, .hero-aurora .ha-sheen { animation: none; }
+      .hero-aurora .ha-sheen { opacity: 0.16; }
+      .hero-aurora .ha-1 { transform: translate3d(3%,2%,0) scale(1.06); }
+      .hero-aurora .ha-2 { transform: translate3d(-3%,3%,0) scale(1); }
+      .hero-aurora .ha-3 { transform: translate3d(-2%,-3%,0) scale(1.04); }
+    }
+
+    /* Ambient hero video — layered behind the dashboard mockup (rev 2026-06-16). */
+    .db-section--hero .db-hero-video {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      z-index: 0; pointer-events: none;
+      background: #050505;            /* matches section, masks first-frame flash */
+      opacity: 0.72;                  /* rev 2026-06-17: noticeable (was 0.55) */
+    }
+    .db-section--hero .db-hero-dim {
+      position: absolute; inset: 0; z-index: 1; pointer-events: none;
+      /* Lighter scrim (rev 2026-06-17) — dots read clearly while a soft dark
+         pool under the eyebrow+headline keeps text contrast. */
+      background:
+        radial-gradient(ellipse 86% 64% at 50% 30%, rgba(5,5,5,0.30), rgba(5,5,5,0.66) 74%),
+        linear-gradient(180deg, rgba(5,5,5,0.52) 0%, rgba(5,5,5,0.30) 44%, rgba(5,5,5,0.80) 100%);
+    }
+    .db-section--hero .db-hero-fade {
+      position: absolute; left: 0; right: 0; bottom: 0; height: 220px;
+      z-index: 1; pointer-events: none;
+      background: linear-gradient(to bottom, rgba(5,5,5,0), #050505);
+    }
+    /* Lift the otherwise-static hero content above the video + scrim. */
+    .db-section--hero .db-eyebrow { position: relative; z-index: 3; }
+    .db-section--hero .db-frame   { position: relative; z-index: 3; }
+    @media (prefers-reduced-motion: reduce) {
+      .db-section--hero .db-hero-video { opacity: 0.32; }
+    }
+
+    /* Origin / founder-edge — the demoted ex-hero (rev 2026-06-16). Section sizing, not hero. */
+    .origin-section { position: relative; overflow: hidden; background: #050505; padding: 96px 16px 104px; }
+    @media (min-width: 768px) { .origin-section { padding: 120px 24px 128px; } }
+    /* Brand-red halftone dot grid for the origin/resep section (rev 2026-06-17) — the
+       same dotted-red language as the hero, masked to a soft lower-center pool so the
+       section reads textured, not flat. Sits above the dim scrim (z-2), below content. */
+    .origin-halftone {
+      position: absolute; inset: 0; z-index: 2; pointer-events: none;
+      background-image: radial-gradient(rgba(229,50,45,0.55) 1.1px, transparent 1.6px);
+      background-size: 15px 15px;
+      -webkit-mask-image: radial-gradient(ellipse 92% 78% at 50% 72%, #000 22%, transparent 78%);
+      mask-image: radial-gradient(ellipse 92% 78% at 50% 72%, #000 22%, transparent 78%);
+      opacity: 0.5;
+    }
+    @media (prefers-reduced-motion: reduce) { .origin-halftone { opacity: 0.5; } }
+
+    /* ── Integrations spine — the 4-app centerpiece (Phase 3) ── */
+    .is-section { position: relative; padding: 84px 16px 92px; background: #050505; overflow: hidden; }
+    @media (min-width: 768px) { .is-section { padding: 116px 24px 124px; } }
+    .is-wrap { max-width: 1120px; margin: 0 auto; text-align: center; }
+    .is-eyebrow { display: inline-flex; align-items: center; gap: 8px; background: rgba(20,20,20,0.6); border: 1px solid rgba(229,50,45,0.45); border-radius: 999px; padding: 6px 14px; font-size: 11px; color: rgba(245,245,245,0.9); font-family: 'Inter', sans-serif; }
+    .is-headline { margin: 22px 0 0; font-family: 'Instrument Serif', serif; font-weight: 400; letter-spacing: -0.03em; line-height: 1.0; color: #f5f5f5; font-size: clamp(2.4rem, 6vw, 4.5rem); }
+    .is-sub { margin: 18px auto 0; max-width: 60ch; color: rgba(245,245,245,0.6); font-family: 'Inter', sans-serif; font-weight: 300; font-size: 15px; line-height: 1.6; }
+    .is-hub { display: inline-flex; align-items: center; gap: 8px; margin: 30px 0 4px; padding: 7px 16px; border-radius: 999px; background: rgba(229,50,45,0.10); border: 1px solid rgba(229,50,45,0.45); color: #f5f5f5; font-size: 11px; font-family: 'JetBrains Mono', monospace; text-transform: uppercase; letter-spacing: 0.16em; }
+    .is-grid { margin-top: 36px; display: grid; grid-template-columns: 1fr; gap: 20px; align-items: start; }
+    @media (min-width: 640px) { .is-grid { grid-template-columns: 1fr 1fr; gap: 24px; } }
+    @media (min-width: 1024px) { .is-grid { grid-template-columns: repeat(4, 1fr); gap: 26px; } }
+
+    /* Column item: title + desc OUTSIDE the box (cleaner), then the media box. */
+    .is-item { display: flex; flex-direction: column; text-align: left; }
+    .is-item--segera { opacity: 0.92; }
+    .is-item-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .is-item-name { font-family: 'Instrument Serif', serif; font-size: 23px; color: #f5f5f5; letter-spacing: -0.01em; }
+    .is-item-desc {
+      margin: 8px 0 14px; color: rgba(245,245,245,0.6);
+      font-family: 'Inter', sans-serif; font-weight: 300; font-size: 13px; line-height: 1.5; min-height: 3.8em;
+      display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+    }
+
+    /* The box holds: chat flow · middle divider · app screenshot · micro. */
+    .is-tile { position: relative; display: flex; flex-direction: column; text-align: left; background: rgba(14,14,14,0.6); border: 1px solid rgba(255,255,255,0.09); border-radius: 18px; padding: 16px 16px 18px; overflow: hidden; transition: border-color 220ms ease, transform 220ms ease, box-shadow 220ms ease; }
+    .is-tile::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; }
+    .is-tile--live::before { background: linear-gradient(90deg, transparent, #E5322D, transparent); background-size: 200% 100%; animation: isFlow 2.6s linear infinite; }
+    .is-tile--segera::before { background: repeating-linear-gradient(90deg, rgba(255,255,255,0.16) 0 6px, transparent 6px 12px); }
+    .is-tile--live { box-shadow: 0 8px 44px -26px rgba(229,50,45,0.55); }
+    .is-item:hover .is-tile { transform: translateY(-3px); border-color: rgba(229,50,45,0.4); }
+    .is-chip { display: inline-flex; align-items: center; gap: 6px; font-family: 'JetBrains Mono', monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+    .is-chip--live { color: #ff7a76; background: rgba(229,50,45,0.12); border: 1px solid rgba(229,50,45,0.4); }
+    .is-chip--segera { color: rgba(245,245,245,0.5); background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.14); }
+    .is-chip-dot { width: 6px; height: 6px; border-radius: 50%; background: #E5322D; box-shadow: 0 0 8px rgba(229,50,45,0.6); animation: isPulse 1.6s ease-in-out infinite; }
+    .is-tile-micro { margin-top: 14px; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: rgba(245,245,245,0.62); }
+
+    /* ── Chat flow inside the box — mirrors the hero's .db-msg-user / .db-bubble ── */
+    .is-flow { display: flex; flex-direction: column; gap: 8px; }
+    .is-flow-user {
+      align-self: flex-end; max-width: 84%;
+      padding: 7px 11px; border-radius: 12px 12px 4px 12px;
+      background: rgba(229,50,45,0.12); border: 1px solid rgba(229,50,45,0.32);
+      font-family: 'Inter', sans-serif; font-size: 11.5px; line-height: 1.4; color: #fff;
+    }
+    .is-flow-agent { display: flex; gap: 8px; align-items: flex-start; max-width: 96%; }
+    .is-flow-avatar {
+      width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0; margin-top: 1px;
+      background: linear-gradient(135deg, #E5322D, #8B1410);
+      display: flex; align-items: center; justify-content: center; color: #fff; font-size: 8px; line-height: 1;
+    }
+    .is-flow-bubble {
+      flex: 1; padding: 8px 11px; border-radius: 4px 12px 12px 12px;
+      background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
+      font-family: 'Inter', sans-serif; font-weight: 300; font-size: 11.5px; line-height: 1.45; color: rgba(255,255,255,0.9);
+    }
+    .is-tile--segera .is-flow-avatar { background: linear-gradient(135deg, rgba(255,255,255,0.30), rgba(255,255,255,0.12)); }
+
+    /* The "middle" divider that separates the chat flow from the screenshot. */
+    .is-tile-divider { height: 1px; margin: 14px 0; background: linear-gradient(90deg, transparent, rgba(229,50,45,0.28), transparent); }
+
+    /* ── ROW 2: CSS-drawn iPhone portrait frame (placeholder for a real screen-record) ── */
+    .is-phone {
+      position: relative; width: 100%; max-width: 172px; margin: 16px auto 0;
+      aspect-ratio: 9 / 19.5; border-radius: 30px; padding: 7px;
+      background: linear-gradient(160deg, #1c1c1e, #050505);
+      border: 1px solid rgba(255,255,255,0.14);
+      box-shadow: 0 14px 40px -22px rgba(0,0,0,0.9), inset 0 0 0 1px rgba(255,255,255,0.04);
+    }
+    .is-phone-island {
+      position: absolute; top: 13px; left: 50%; transform: translateX(-50%);
+      width: 34%; height: 12px; border-radius: 999px;
+      background: #000; border: 1px solid rgba(255,255,255,0.10); z-index: 2;
+    }
+    .is-phone-screen {
+      position: relative; width: 100%; height: 100%; border-radius: 24px;
+      overflow: hidden; background: #0a0a0a;
+    }
+    /* SWAP TARGET — a real <img>/<video> drops in here with no geometry change. */
+    .is-shot-media { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+
+    /* Cross-fading slideshow of the 3 real app screenshots per phone. Each .is-shot-slide
+       is absolute-fill (via .is-shot-media); staggered animationDelay (0/4/8s, set inline)
+       gives a continuous crossfade with no black gap across the 12s loop. */
+    .is-shot-slide { opacity: 0; animation: isShotFade 6s ease-in-out infinite; }
+    @keyframes isShotFade {
+      0%   { opacity: 0; }
+      4%   { opacity: 1; }   /* fast fade-in */
+      33%  { opacity: 1; }   /* hold through its 1/3 */
+      42%  { opacity: 0; }   /* fade-out overlaps the next slide's fade-in — no black seam */
+      100% { opacity: 0; }
+    }
+    /* Segera (Gmail/Sekolah): the app preview is real, but the agent's Gmail connection is
+       still coming — so the phone stays dashed + a dimming scrim + a "Segera" badge. */
+    .is-tile--segera .is-phone { border-style: dashed; border-color: rgba(255,255,255,0.18); }
+    .is-tile--segera .is-phone-screen::after {
+      content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+      background: linear-gradient(180deg, rgba(5,5,5,0.34), rgba(5,5,5,0.56));
+    }
+    .is-phone-badge {
+      position: absolute; top: 9px; left: 50%; transform: translateX(-50%); z-index: 3;
+      font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 0.16em;
+      text-transform: uppercase; color: #fff; padding: 3px 9px; border-radius: 999px;
+      background: rgba(229,50,45,0.92); box-shadow: 0 4px 14px -4px rgba(229,50,45,0.7);
+    }
+
+    /* Phone size cap on mobile so a 1-up tile doesn't get a giant phone */
+    @media (max-width: 639px) { .is-phone { max-width: 150px; } }
+
+    .is-foot { margin: 34px auto 0; color: rgba(245,245,245,0.55); font-family: 'Inter', sans-serif; font-weight: 300; font-size: 14px; }
+    .is-foot strong { color: #f5f5f5; font-weight: 500; }
+    @keyframes isFlow { 0% { background-position: 150% 0; } 100% { background-position: -150% 0; } }
+    @keyframes isBar { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+    @keyframes isPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+    @media (prefers-reduced-motion: reduce) {
+      .is-tile--live::before, .is-chip-dot { animation: none; }
+      .is-shot-slide { animation: none; opacity: 0; }
+      .is-shot-slide:first-child { opacity: 1; }
     }
     .db-section::before {
       content: ''; position: absolute; inset: 0; pointer-events: none;
@@ -267,12 +578,19 @@
       border: 1px solid rgba(229, 50, 45, 0.40);
       font-family: 'JetBrains Mono', monospace;
       font-size: 10px; letter-spacing: 0.20em; text-transform: uppercase;
-      color: #E5322D;
+      color: #FF6B66;
+    }
+    /* Generic live-dot (rev 2026-06-17) — IntegrationsSpine .is-eyebrow/.is-hub
+       use bare .live-dot spans; without this they were zero-size + left a gap. */
+    .live-dot {
+      display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: #E5322D;
+      animation: priceLiveDot 1.4s ease-in-out infinite;
     }
     .db-section .db-eyebrow-pill .live-dot {
       width: 5px; height: 5px; border-radius: 50%; background: #E5322D;
       animation: priceLiveDot 1.4s ease-in-out infinite;
     }
+    @media (prefers-reduced-motion: reduce) { .live-dot { animation: none; } }
     .db-section .db-headline {
       font-family: 'Instrument Serif', serif;
       color: #fff;
@@ -575,7 +893,7 @@
       border: 1px solid rgba(255,255,255,0.07);
     }
     .db-stat .num { font-family: 'Instrument Serif', serif; font-size: 22px; line-height: 1; color: #fff; letter-spacing: -0.02em; }
-    .db-stat .lbl { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(255,255,255,0.45); margin-top: 6px; }
+    .db-stat .lbl { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(255,255,255,0.55); margin-top: 6px; }
 
     .db-attach {
       display: inline-flex; align-items: center; gap: 8px;
@@ -635,6 +953,7 @@
       position: relative;
       min-height: 40px;
       display: flex; align-items: center;
+      overflow: hidden;
     }
     .db-input-text {
       position: relative;
@@ -675,6 +994,7 @@
       font-family: 'Inter', sans-serif; font-size: 13px;
       color: rgba(255, 255, 255, 0.92);
       display: inline-flex; align-items: center;
+      white-space: nowrap; min-width: 0; max-width: 100%;
     }
 
     /* Send button click flash */
@@ -1391,6 +1711,7 @@
     .agent-fade-wrap {
       position: relative;
       padding: 0 28px; /* room for nav buttons on each side */
+      touch-action: pan-y;
     }
     @media (min-width: 768px) {
       .agent-fade-wrap { padding: 0 36px; }
@@ -1398,16 +1719,19 @@
     .agent-fade {
       position: relative;
       overflow: hidden;
-      -webkit-mask-image: linear-gradient(to right, transparent 0, #000 28px, #000 calc(100% - 28px), transparent 100%);
-              mask-image: linear-gradient(to right, transparent 0, #000 28px, #000 calc(100% - 28px), transparent 100%);
+      -webkit-mask-image: linear-gradient(to right, transparent 0, #000 40px, #000 calc(100% - 40px), transparent 100%);
+              mask-image: linear-gradient(to right, transparent 0, #000 40px, #000 calc(100% - 40px), transparent 100%);
       padding: 4px 16px;
+      touch-action: pan-y;
     }
     @media (min-width: 768px) { .agent-fade { padding: 6px 24px; } }
     .agent-track {
       display: flex;
       gap: 14px;
       will-change: transform;
-      transition: transform 700ms cubic-bezier(0.22, 0.61, 0.36, 1);
+      /* Continuous drift is transitionless; the snap (click/dot) sets a
+         transition inline then clears it (rev 2026-06-16). */
+      transition: none;
     }
     @media (min-width: 768px) { .agent-track { gap: 18px; } }
 
@@ -1435,7 +1759,7 @@
       border: 1px solid rgba(255, 255, 255, 0.08);
       backdrop-filter: blur(18px) saturate(1.05);
       -webkit-backdrop-filter: blur(18px) saturate(1.05);
-      transition: border-color 240ms ease;
+      transition: border-color 240ms ease, transform 240ms ease, box-shadow 240ms ease;
     }
     /* Tablet (768-1024px): single card centered, no peek of neighbors —
        the carousel JS computes pitch from getBoundingClientRect so this
@@ -1452,6 +1776,11 @@
     }
     .agent-card:hover {
       border-color: rgba(229, 50, 45, 0.40);
+      transform: translateY(-4px);
+      box-shadow: 0 18px 40px -18px rgba(229, 50, 45, 0.35);
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .agent-card, .agent-card:hover { transition: none; transform: none; }
     }
 
     .agent-card .agent-viz {
@@ -1462,6 +1791,27 @@
       aspect-ratio: 16 / 9;
       background-color: #050505;
       overflow: hidden;
+      box-shadow: inset 0 -40px 60px -30px rgba(229, 50, 45, 0.25);
+    }
+
+    /* "Segera hadir" poster — personas without a demo video yet (rev 2026-06-16). */
+    .agent-poster {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+      background: radial-gradient(120% 120% at 50% 35%, rgba(229,50,45,0.12), #050505 70%);
+    }
+    .agent-poster svg { width: 30%; height: auto; opacity: 0.9; }
+    .agent-poster-tag {
+      font-family: 'Inter', sans-serif; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+      color: rgba(229,50,45,0.92); border: 1px solid rgba(229,50,45,0.4); border-radius: 999px; padding: 3px 11px;
+    }
+    /* "Segera hadir" chip over a video card (email/calendar — coming via Gmail). */
+    .agent-viz-chip {
+      position: absolute; top: 10px; left: 10px; z-index: 2;
+      font-family: 'Inter', sans-serif; font-size: 9.5px; font-weight: 500;
+      letter-spacing: 0.12em; text-transform: uppercase; color: #fff;
+      background: rgba(229,50,45,0.92); border-radius: 999px; padding: 3px 10px;
+      box-shadow: 0 4px 14px -4px rgba(229,50,45,0.7);
     }
     /* Halftone background + vignette removed (2026-05-07 pivot): the
        chat bubble + action scenes need clean black so bubbles read as
@@ -2406,6 +2756,12 @@
       font-size: 11.5px;
       line-height: 1.45;
       color: rgba(245, 242, 234, 0.62);
+      /* 2-line clamp so all 10 cards share a uniform body height. */
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      min-height: 2.9em;
     }
     @media (min-width: 768px) { .agent-card .agent-desc { font-size: 13.5px; line-height: 1.5; } }
     .agent-card .agent-cta {
@@ -2445,16 +2801,22 @@
     }
 
     /* Dot indicators */
-    .agent-dots { display: flex; justify-content: center; gap: 6px; margin-top: 18px; }
+    .agent-dots { display: flex; justify-content: center; gap: 0; margin-top: 14px; }
+    /* 24x24 touch target (WCAG 2.5.8) with the visual dot rendered centered via
+       ::before, so the dots look identical but are comfortably tappable. */
     .agent-dot {
+      width: 24px; height: 24px; border-radius: 999px;
+      background: transparent; border: none; padding: 0; cursor: pointer;
+      position: relative;
+    }
+    .agent-dot::before {
+      content: ''; position: absolute; top: 50%; left: 50%;
       width: 6px; height: 6px; border-radius: 999px;
       background: rgba(255, 255, 255, 0.20);
-      border: none;
-      padding: 0;
-      cursor: pointer;
+      transform: translate(-50%, -50%);
       transition: background 240ms ease, width 240ms ease;
     }
-    .agent-dot[aria-current="true"] { background: #E5322D; width: 18px; }
+    .agent-dot[aria-current="true"]::before { background: #E5322D; width: 18px; }
 
     /* Tier tie-in sub-text */
     .agent-tier-line {
@@ -2578,6 +2940,17 @@
       background: #6FA08F;
       animation: priceLiveDot 1.6s ease-in-out infinite;
     }
+    /* Honest price-rise line: setup genuinely rises 799rb -> 999rb after the
+       first 1.000 sell (founder commitment 2026-06-18). Tied to the real
+       seats counter above, not a fake timer. */
+    .seats-rise {
+      margin-top: 16px; max-width: 460px;
+      font-family: 'Inter', sans-serif; font-weight: 300;
+      font-size: 13px; line-height: 1.55;
+      color: rgba(255,255,255,0.74); text-align: center;
+    }
+    @media (min-width: 768px) { .seats-rise { font-size: 14px; } }
+    .seats-rise strong { color: #E5322D; font-weight: 600; white-space: nowrap; }
 
     /* 12 BRIEF — sun glow + news ticker */
     .cap-brief { padding: 7px 10px; height: 100%; display: flex; flex-direction: column; justify-content: center; gap: 6px; position: relative; overflow: hidden; }
@@ -2797,8 +3170,12 @@
       26%, 100% { box-shadow: none; }
     }
     /* progress line filling across the 4 badges */
+    /* Bigger 4-step mock box (rev 2026-06-16) — replaces the inline 168px height. */
+    .how-mockbox { min-height: 240px; padding: 28px; }
+    @media (max-width: 1024px) { .how-mockbox { min-height: 200px; padding: 20px; } }
+
     .how-cycle .how-line {
-      position: absolute; top: 28px; left: 12.5%; right: 12.5%; height: 1px;
+      position: absolute; top: 32px; left: 12.5%; right: 12.5%; height: 1px;
       background: rgba(255,255,255,0.08); z-index: 0; overflow: hidden;
     }
     .how-cycle .how-line::after {
@@ -2827,24 +3204,24 @@
     }
 
     /* MOCK 2 — Form fields lighting up sequentially */
-    .howmock-form { padding: 6px 4px; display: flex; flex-direction: column; gap: 6px; height: 100%; justify-content: center; }
+    .howmock-form { padding: 6px 4px; display: flex; flex-direction: column; gap: 8px; height: 100%; justify-content: center; }
     .howmock-form .field {
-      display: flex; align-items: center; gap: 8px; padding: 5px 9px;
+      display: flex; align-items: center; gap: 8px; padding: 8px 12px;
       border: 1px solid rgba(255,255,255,0.10);
-      border-radius: 5px; background: rgba(0,0,0,0.25);
+      border-radius: 6px; background: rgba(0,0,0,0.25);
       animation: howFormFlash 16s ease-in-out infinite;
     }
     .howmock-form .field:nth-child(1) { animation-delay: 4.0s; }
     .howmock-form .field:nth-child(2) { animation-delay: 4.7s; }
     .howmock-form .field:nth-child(3) { animation-delay: 5.4s; }
     .howmock-form .field .label {
-      color: rgba(255,255,255,0.45); width: 64px; flex-shrink: 0;
+      color: rgba(255,255,255,0.45); width: 74px; flex-shrink: 0;
       text-transform: uppercase; letter-spacing: 0.08em;
-      font-family: 'JetBrains Mono', monospace; font-size: 7.5px;
+      font-family: 'JetBrains Mono', monospace; font-size: 9px;
     }
     .howmock-form .field .value {
       color: rgba(255,255,255,0.78); flex: 1;
-      font-family: 'JetBrains Mono', monospace; font-size: 9px;
+      font-family: 'JetBrains Mono', monospace; font-size: 11px;
     }
     @keyframes howFormFlash {
       0%, 1%   { border-color: #E5322D; background: rgba(229,50,45,0.10); box-shadow: 0 0 10px rgba(229,50,45,0.30); }
@@ -2852,8 +3229,8 @@
     }
 
     /* MOCK 3 — Setup progress + tasks checking */
-    .howmock-setup { padding: 6px 4px; display: flex; flex-direction: column; gap: 7px; height: 100%; justify-content: center; }
-    .howmock-setup .bar { height: 4px; border-radius: 2px; background: rgba(255,255,255,0.08); overflow: hidden; }
+    .howmock-setup { padding: 6px 4px; display: flex; flex-direction: column; gap: 9px; height: 100%; justify-content: center; }
+    .howmock-setup .bar { height: 6px; border-radius: 3px; background: rgba(255,255,255,0.08); overflow: hidden; }
     .howmock-setup .bar .fill {
       height: 100%; width: 0;
       background: linear-gradient(to right, rgba(229,50,45,0.55), #E5322D);
@@ -2866,12 +3243,12 @@
       25%, 100% { width: 100%; }
     }
     .howmock-setup .task {
-      font-family: 'JetBrains Mono', monospace; font-size: 8.5px;
+      font-family: 'JetBrains Mono', monospace; font-size: 10.5px;
       color: rgba(255,255,255,0.55);
-      display: flex; align-items: center; gap: 6px;
+      display: flex; align-items: center; gap: 7px;
     }
     .howmock-setup .task .check {
-      color: #6FA08F; width: 9px; opacity: 0; font-weight: bold;
+      color: #6FA08F; width: 11px; opacity: 0; font-weight: bold;
       animation: howCheckPop 16s ease-in-out infinite;
     }
     .howmock-setup .task:nth-of-type(1) .check { animation-delay: 8.6s; }
@@ -2888,14 +3265,14 @@
 
     .howmock-chat .bubble {
       position: absolute;
-      padding: 5px 9px; border-radius: 10px;
-      font-family: 'Inter', sans-serif; font-size: 9px;
+      padding: 7px 11px; border-radius: 11px;
+      font-family: 'Inter', sans-serif; font-size: 11px;
       line-height: 1.3; opacity: 0;
       white-space: nowrap;
     }
     /* User question — top right */
     .howmock-chat .bubble.user {
-      top: 2px; right: 2px;
+      top: 8px; right: 2px;
       background: #E5322D; color: #fff;
       max-width: 78%;
       animation: howChat-user 16s ease-out infinite;
@@ -2908,7 +3285,7 @@
 
     /* Typing dots — center-left, brief */
     .howmock-chat .bubble.dots {
-      top: 30px; left: 2px;
+      top: 48px; left: 2px;
       background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.85);
       border: 1px solid rgba(255,255,255,0.12);
       display: flex; gap: 3px; align-items: center; padding: 7px 9px;
@@ -2932,7 +3309,7 @@
 
     /* Reply bubble — replaces dots */
     .howmock-chat .bubble.reply {
-      top: 30px; left: 2px;
+      top: 48px; left: 2px;
       background: rgba(255,255,255,0.10); color: rgba(255,255,255,0.92);
       border: 1px solid rgba(255,255,255,0.12);
       max-width: 88%;
@@ -2946,22 +3323,22 @@
 
     /* PDF attachment chip — below reply */
     .howmock-chat .pdf-chip {
-      position: absolute; left: 2px; top: 64px;
-      display: flex; align-items: center; gap: 6px;
-      padding: 4px 7px 4px 4px; border-radius: 7px;
+      position: absolute; left: 2px; top: 96px;
+      display: flex; align-items: center; gap: 7px;
+      padding: 5px 9px 5px 5px; border-radius: 8px;
       background: rgba(229,50,45,0.10);
       border: 1px solid rgba(229,50,45,0.45);
       opacity: 0;
       animation: howChat-pdf 16s ease-out infinite;
     }
     .howmock-chat .pdf-chip .ic {
-      font-family: 'JetBrains Mono', monospace; font-size: 7.5px; font-weight: 600;
+      font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 600;
       color: #fff; background: #E5322D;
-      padding: 2px 5px; border-radius: 3px;
+      padding: 3px 6px; border-radius: 3px;
       letter-spacing: 0.06em;
     }
     .howmock-chat .pdf-chip .nm {
-      font-family: 'JetBrains Mono', monospace; font-size: 8.5px;
+      font-family: 'JetBrains Mono', monospace; font-size: 10px;
       color: rgba(255,255,255,0.92); letter-spacing: 0.01em;
     }
     @keyframes howChat-pdf {
@@ -2972,9 +3349,9 @@
 
     /* Email-sent toast — bottom right, slides in */
     .howmock-chat .email-toast {
-      position: absolute; bottom: 2px; right: 2px;
-      padding: 3px 7px; border-radius: 5px;
-      font-family: 'JetBrains Mono', monospace; font-size: 8px;
+      position: absolute; bottom: 4px; right: 2px;
+      padding: 4px 9px; border-radius: 6px;
+      font-family: 'JetBrains Mono', monospace; font-size: 9.5px;
       color: #6FA08F;
       background: rgba(111,160,143,0.10);
       border: 1px solid rgba(111,160,143,0.4);
@@ -3936,6 +4313,25 @@
       margin-top: 12px;
     }
     .pd-bento-deliv-caption strong { color: #f5f5f5; font-weight: 500; }
+
+    /* ── Global reduced-motion reset (rev 2026-06-17, QA P1) ──────────────────
+       Hardened version of the standard snippet: collapses every animation +
+       transition to instant, runs once, and pins fill-mode:forwards so any
+       entrance/typewriter/mount animation jumps to its VISIBLE end state and
+       stays (never reverts to a hidden base). This neutralizes all 100+ perpetual
+       decorative loops (pulses, grain, marquees, radar sweep, caret/typing,
+       carousel scenes, how/pv/cap/uc systems) for users who ask for less motion,
+       without breaking any layout that an animation reveals. Specific guards
+       elsewhere remain as belt-and-suspenders. */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        animation-fill-mode: forwards !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+    }
   </style>
 </head>
 <body class="bg-black text-white">

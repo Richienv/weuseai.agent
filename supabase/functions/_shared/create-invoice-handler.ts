@@ -16,7 +16,17 @@ export type CreateInvoiceDeps = {
   successRedirectBase: string
   failureRedirectBase: string
   now?: () => Date
+  /** Count of paid subscriptions (status='active') — same definition as the
+   *  public /api/public/subscription-count counter. Drives the library-full
+   *  799→999 batch price-flip; optional so older wirings keep working. */
+  countActiveSubscriptions?: () => Promise<number>
 }
+
+/** Launch batch (honesty lock, founder decision 2026-06-18): library-full setup
+ *  GENUINELY rises from setupIdr (799k) to the advertised anchor setupOldIdr
+ *  (999k) once the first 1000 are paid. Count errors fail OPEN to the launch
+ *  price — never overcharge because a count query hiccuped. */
+export const LIBRARY_FULL_BATCH_LIMIT = 1000
 
 export type CreateInvoiceBody = {
   email: string
@@ -163,7 +173,19 @@ export async function handleCreateInvoice(
 
   // Compute server-authoritative amount — fee is added so customer pays
   // gateway+platform together, matching what checkout.html displays.
-  const charge = totalCharge(plan, alwaysOn, methodId)
+  // Library-full batch flip: after the first LIBRARY_FULL_BATCH_LIMIT paid
+  // customers, setup charges the advertised anchor (setupOldIdr) — keeping
+  // "naik ke Rp 999rb setelah 1.000 pertama" an honest claim. Count failures
+  // fall back to the launch price (never overcharge on an infra hiccup).
+  let setupIdrOverride: number | undefined
+  const anchor = PLANS[plan].setupOldIdr
+  if (plan === 'library-full' && anchor && deps.countActiveSubscriptions) {
+    try {
+      const paid = await deps.countActiveSubscriptions()
+      if (paid >= LIBRARY_FULL_BATCH_LIMIT) setupIdrOverride = anchor
+    } catch { /* fail open to the launch price */ }
+  }
+  const charge = totalCharge(plan, alwaysOn, methodId, setupIdrOverride)
   const fee = paymentFee(charge.base, methodId)
 
   // Insert pending subscription. xendit_invoice_id filled after Xendit call.

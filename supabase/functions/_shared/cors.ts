@@ -25,19 +25,37 @@ const ALLOWED_HEADERS =
 const ALLOWED_METHODS = 'POST, OPTIONS'
 const MAX_AGE = '86400'
 
-// Tight pattern: only our Vercel project hosts are allowed.
-// Examples that match:
+// Exact production origins we always reflect. The new primary domain
+// (weuseai.id + www) plus both canonical Vercel apex aliases.
+const EXACT_ORIGINS = new Set([
+  'https://weuseai.id',
+  'https://www.weuseai.id',
+  'https://weuseai-agent.vercel.app',
+  'https://velorah-nu.vercel.app',
+])
+
+// Any Vercel deploy host (production apex + preview hashes), e.g.
 //   https://weuseai-agent.vercel.app
 //   https://weuseai-agent-ibbxfduv4-richies-projects-6f212435.vercel.app
-const PROJECT_ORIGIN_RE =
-  /^https:\/\/weuseai-agent(?:-[a-z0-9]+(?:-[a-z0-9-]+)?)?\.vercel\.app$/i
+//   https://velorah-nu.vercel.app
+const VERCEL_ORIGIN_RE = /^https:\/\/[a-z0-9-]+\.vercel\.app$/i
+
+// Localhost / loopback on any port (dev), http or https.
+const LOCALHOST_ORIGIN_RE = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i
 
 function pickAllowedOrigin(req: Request): string {
   const origin = req.headers.get('origin') ?? ''
-  if (PROJECT_ORIGIN_RE.test(origin)) return origin
-  // Fallback to the canonical production origin. Browsers will reject
-  // the response if their actual origin doesn't match, which is the
-  // safe behavior — better to fail closed than silently allow.
+  if (
+    EXACT_ORIGINS.has(origin) ||
+    VERCEL_ORIGIN_RE.test(origin) ||
+    LOCALHOST_ORIGIN_RE.test(origin)
+  ) {
+    return origin
+  }
+  // Fallback to the canonical production origin for no-Origin / unknown
+  // callers. Browsers will reject the response if their actual origin
+  // doesn't match, which is the safe behavior — better to fail closed
+  // than silently allow.
   return 'https://weuseai-agent.vercel.app'
 }
 
@@ -77,7 +95,7 @@ export function handleCors(
   // If caller passed explicit headers (e.g. webhook wildcards), use them.
   // Otherwise compute browser-CORS headers based on this request's origin.
   const out = headers ?? browserCorsHeaders(req)
-  return new Response('ok', { status: 200, headers: out })
+  return new Response(null, { status: 204, headers: out })
 }
 
 // Wraps any Response so it carries CORS headers. Lets the pure handler
