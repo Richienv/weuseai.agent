@@ -44,5 +44,7 @@ supabase/.branches/
 .observability-*.txt
 build/
 
-# Claude Code session dir
-.claude/
+# Claude Code session dir (local config stays ignored; shared skills are tracked)
+.claude/*
+!.claude/skills/
+!.claude/skills/**
