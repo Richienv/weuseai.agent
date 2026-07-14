@@ -352,7 +352,13 @@
     // Sliding window — stay inside the relay clamps (40 msgs / 8k chars / 24KB).
     var history = []; // [{role, content}]
     function pushHistory(role, content) {
-      history.push({ role: role, content: String(content).slice(0, 8000) });
+      // NEVER push an empty turn. The relay rejects any message with
+      // content.length === 0 (400 invalid_field), so an empty assistant turn
+      // (aborted reply, upstream hiccup) would poison the window and make every
+      // SUBSEQUENT send fail — surfacing as a bogus "link expired" card.
+      var text = String(content == null ? '' : content).slice(0, 8000);
+      if (!text) return;
+      history.push({ role: role, content: text });
       while (history.length > 24) history.shift();
     }
     function relayHeaders() {
@@ -381,48 +387,34 @@
         return r.json().then(function (j) { return { ok: r.ok, status: r.status, body: j }; });
       });
     }
+    // BUFFERED, not SSE — deliberately. The hop is browser → edge relay → Fly
+    // → the VPS agent, and the Fly route answers with `res.json(...)`: it does
+    // not pipe a stream. Asking for stream:true therefore yields a JSON body
+    // that carries no `data:` frames, so a token-parser would render NOTHING.
+    // We request stream:false and read the completed message. (Real streaming
+    // needs the Fly route to pipe :8642's stream through first — until then
+    // this is the transport that actually exists.)
     function relayStream(text, handlers, signal) {
       pushHistory('user', text);
       fetch(RELAY_URL, {
         method: 'POST', headers: relayHeaders(), signal: signal,
-        body: JSON.stringify({ customer_id: CID, messages: history.slice(), stream: true })
+        body: JSON.stringify({ customer_id: CID, messages: history.slice(), stream: false })
       }).then(function (r) {
-        if (!r.ok || !r.body) {
-          return r.json().then(
-            function (j) { handlers.onError && handlers.onError(stateForCode(j && j.error, r.status)); },
-            function () { handlers.onError && handlers.onError('error-offline'); }
-          );
+        return r.json().then(function (j) { return { ok: r.ok, status: r.status, body: j }; });
+      }).then(function (res) {
+        if (!res.ok) {
+          handlers.onError && handlers.onError(stateForCode(res.body && res.body.error, res.status));
+          return;
         }
-        var reader = r.body.getReader();
-        var dec = new TextDecoder();
-        var buf = '', first = true, reply = '';
-        function pump() {
-          reader.read().then(function (res) {
-            if (res.done) { pushHistory('assistant', reply); handlers.onDone && handlers.onDone(); return; }
-            buf += dec.decode(res.value, { stream: true });
-            var lines = buf.split('\n'); buf = lines.pop() || '';
-            for (var i = 0; i < lines.length; i++) {
-              var ln = lines[i];
-              if (ln.indexOf('data:') !== 0) continue;
-              var payload = ln.slice(5).trim();
-              if (!payload || payload === '[DONE]') continue;
-              try {
-                var j = JSON.parse(payload);
-                var tok = j.choices && j.choices[0] && j.choices[0].delta && j.choices[0].delta.content;
-                if (typeof tok === 'string' && tok) {
-                  if (first) { first = false; handlers.onFirst && handlers.onFirst(); }
-                  reply += tok;
-                  handlers.onToken(tok);
-                }
-              } catch (e) { /* partial SSE frame — wait for the rest */ }
-            }
-            pump();
-          }).catch(function () {
-            if (signal && signal.aborted) { pushHistory('assistant', reply); handlers.onError && handlers.onError('aborted'); }
-            else handlers.onError && handlers.onError('error-offline');
-          });
-        }
-        pump();
+        var c = res.body && res.body.choices && res.body.choices[0];
+        var reply = (c && c.message && c.message.content) || '';
+        if (!reply) { handlers.onError && handlers.onError('error-offline'); return; }
+        // Reveal the completed reply through the same token contract the UI
+        // already speaks, so the typing indicator + markdown flush are unchanged.
+        handlers.onFirst && handlers.onFirst();
+        handlers.onToken(reply);
+        pushHistory('assistant', reply);
+        handlers.onDone && handlers.onDone();
       }).catch(function () {
         if (signal && signal.aborted) handlers.onError && handlers.onError('aborted');
         else handlers.onError && handlers.onError('error-offline');
