@@ -1340,9 +1340,14 @@
               <div style="position:absolute; top:0; bottom:0; width:38%; background:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent); animation:shimmer 2.4s ease-in-out infinite"></div>
             </div>
           </div>
-
-          <div style="margin-top:12px; font-size:13px; color:#9a938d">Setelah 1.000 pelanggan pertama, setup Library Lengkap <span style="color:#ff8a72; font-weight:700">naik ke Rp 999rb</span>.</div>
         </div>
+
+        <!-- The price rise is REAL and enforced server-side (create-invoice flips
+             library-full setup 799rb → 999rb once paid customers reach 1.000), so
+             this claim is true whatever the current count is — it lives OUTSIDE the
+             counter band, which hides itself until the number is worth showing.
+             Count-based, never a clock. -->
+        <div style="margin-top:12px; font-size:13px; color:#9a938d">Setelah 1.000 pelanggan pertama, setup Library Lengkap <span style="color:#ff8a72; font-weight:700">naik ke Rp 999rb</span>.</div>
       </div>
     </div>
 
