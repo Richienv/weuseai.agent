@@ -344,6 +344,83 @@
       setTimeout(step, 360); // simulate first-token latency
     }
 
+    // ── Real relay (Phase 2 — agent-chat-relay edge fn) ─────────────────
+    // Same handlers contract as mockStream. SSE: OpenAI-compatible deltas
+    // relayed from the customer VPS; errors arrive as one JSON body.
+    var RELAY_URL = 'https://gtjgsligllbjcisiyrah.supabase.co/functions/v1/agent-chat-relay';
+    var ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd0amdzbGlnbGxiamNpc2l5cmFoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0Njc2NjUsImV4cCI6MjA5MzA0MzY2NX0.krPAvB3kyxcqsBS5dyDahFMqCB_4MZKaz6FEB0RfjtY';
+    // Sliding window — stay inside the relay clamps (40 msgs / 8k chars / 24KB).
+    var history = []; // [{role, content}]
+    function pushHistory(role, content) {
+      // NEVER push an empty turn. The relay rejects any message with
+      // content.length === 0 (400 invalid_field), so an empty assistant turn
+      // (aborted reply, upstream hiccup) would poison the window and make every
+      // SUBSEQUENT send fail — surfacing as a bogus "link expired" card.
+      var text = String(content == null ? '' : content).slice(0, 8000);
+      if (!text) return;
+      history.push({ role: role, content: text });
+      while (history.length > 24) history.shift();
+    }
+    function relayHeaders() {
+      return {
+        'content-type': 'application/json',
+        'authorization': 'Bearer ' + ANON_KEY,
+        'x-cid': CID
+      };
+    }
+    // Maps a relay error code → status card state.
+    function stateForCode(code, httpStatus) {
+      if (code === 'feature_disabled' || httpStatus === 404) return 'flag-off';
+      if (code === 'tier_does_not_grant_web_chat') return 'tier-upsell';
+      if (code === 'budget_exceeded') return 'error-budget';
+      if (code === 'rate_limited') return 'error-rate';
+      if (code === 'not_ready') return 'provisioning-not-ready';
+      if (code === 'not_active') return 'error-suspended';
+      if (code === 'x_cid_mismatch' || code === 'invalid_field' || code === 'invalid_json') return 'error-auth';
+      return 'error-offline';
+    }
+    function relayMeta() {
+      return fetch(RELAY_URL, {
+        method: 'POST', headers: relayHeaders(),
+        body: JSON.stringify({ customer_id: CID, meta: true })
+      }).then(function (r) {
+        return r.json().then(function (j) { return { ok: r.ok, status: r.status, body: j }; });
+      });
+    }
+    // BUFFERED, not SSE — deliberately. The hop is browser → edge relay → Fly
+    // → the VPS agent, and the Fly route answers with `res.json(...)`: it does
+    // not pipe a stream. Asking for stream:true therefore yields a JSON body
+    // that carries no `data:` frames, so a token-parser would render NOTHING.
+    // We request stream:false and read the completed message. (Real streaming
+    // needs the Fly route to pipe :8642's stream through first — until then
+    // this is the transport that actually exists.)
+    function relayStream(text, handlers, signal) {
+      pushHistory('user', text);
+      fetch(RELAY_URL, {
+        method: 'POST', headers: relayHeaders(), signal: signal,
+        body: JSON.stringify({ customer_id: CID, messages: history.slice(), stream: false })
+      }).then(function (r) {
+        return r.json().then(function (j) { return { ok: r.ok, status: r.status, body: j }; });
+      }).then(function (res) {
+        if (!res.ok) {
+          handlers.onError && handlers.onError(stateForCode(res.body && res.body.error, res.status));
+          return;
+        }
+        var c = res.body && res.body.choices && res.body.choices[0];
+        var reply = (c && c.message && c.message.content) || '';
+        if (!reply) { handlers.onError && handlers.onError('error-offline'); return; }
+        // Reveal the completed reply through the same token contract the UI
+        // already speaks, so the typing indicator + markdown flush are unchanged.
+        handlers.onFirst && handlers.onFirst();
+        handlers.onToken(reply);
+        pushHistory('assistant', reply);
+        handlers.onDone && handlers.onDone();
+      }).catch(function () {
+        if (signal && signal.aborted) handlers.onError && handlers.onError('aborted');
+        else handlers.onError && handlers.onError('error-offline');
+      });
+    }
+
     // ── Send flow ──────────────────────────────────────────────────────
     var active = null; // { abort }
     function setComposerSending(on) {
@@ -376,10 +453,12 @@
       function fail(state) {
         clearTimeout(soft); clearTimeout(hard); active = null; setComposerSending(false);
         if (!acc) { var row = bubble.closest('.row'); if (row) row.remove(); }
-        setState(state);
+        // Card states carry copy — render them fully (showStatus is hoisted).
+        if (STATUS[state]) showStatus(state); else setState(state);
       }
 
-      mockStream(text, {
+      var transport = FLAG_ON_DEV ? mockStream : relayStream;
+      transport(text, {
         onFirst: function () { started = true; clearTimeout(soft); setState('streaming'); },
         onToken: function (tok) { acc += tok; if (!rafQueued) { rafQueued = true; requestAnimationFrame(flush); } },
         onDone: function () {
@@ -388,7 +467,7 @@
         },
         onError: function (why) {
           if (why === 'aborted') { clearTimeout(soft); clearTimeout(hard); flush(); active = null; setComposerSending(false); }
-          else fail('error-offline');
+          else fail(STATUS[why] ? why : 'error-offline');
         }
       }, ac.signal);
     }
@@ -411,7 +490,8 @@
       'error-suspended': { title: 'Agent kamu lagi istirahat', body: 'Hosting agent kamu sedang dijeda. Aktifkan lagi dari dashboard untuk lanjut chat.', cta: 'Aktifkan agent', href: '/welcome' },
       'error-rate': { title: 'Sebentar dulu ya', body: 'Kamu lagi cepat banget. Tunggu sebentar sebelum kirim lagi.', cta: 'Mengerti', href: '#retry' },
       'error-budget': { title: 'Kuota chat kamu sudah penuh', body: 'Pemakaian agent kamu sudah mencapai batas paket. Tambah kuota atau tunggu siklus berikutnya.', cta: 'Lihat paket', href: '/#harga' },
-      'error-auth': { title: 'Tautan ini sudah tidak berlaku', body: 'Buka chat lewat tautan terbaru dari halaman setup kamu.', cta: 'Ke halaman setup', href: '/welcome' }
+      'error-auth': { title: 'Tautan ini sudah tidak berlaku', body: 'Buka chat lewat tautan terbaru dari halaman setup kamu.', cta: 'Ke halaman setup', href: '/welcome' },
+      'tier-upsell': { title: 'Chat web ada di paket Siap Pakai', body: 'Chat lewat dashboard tersedia untuk paket Siap Pakai. Agent kamu tetap aktif penuh di Telegram — atau upgrade untuk buka chat web.', cta: 'Lihat paket', href: '/#harga' }
     };
     function showStatus(state, extra) {
       var s = STATUS[state] || STATUS['error-offline'];
@@ -449,17 +529,20 @@
     }
 
     function boot() {
-      // Phase 1: the relay/feature flag is OFF in prod. The UI is exercised
-      // ONLY against the hard mock on localhost with ?flag=on. Default-closed:
-      // absence/false/any error → flag-off (never probe the network).
+      // Phase 2: live relay. localhost ?flag=on still exercises the hard mock
+      // with ZERO network; prod asks the relay's meta endpoint and routes:
+      // chat_enabled true → chat; false → tier upsell; errors → status cards.
       if (FLAG_ON_DEV) {
         startChat({ persona: 'the-pro', agent_name: 'The Pro', chat_enabled: true });
         return;
       }
       // No CID at all → the link is stale.
-      if (!CID && !IS_LOCAL) { showStatus('error-auth'); return; }
-      // Prod / no dev-flag: feature is dark.
-      showStatus('flag-off');
+      if (!CID) { showStatus('error-auth'); return; }
+      relayMeta().then(function (m) {
+        if (!m.ok) { showStatus(stateForCode(m.body && m.body.error, m.status)); return; }
+        if (!m.body || m.body.chat_enabled !== true) { showStatus('tier-upsell'); return; }
+        startChat({ persona: m.body.persona_slug });
+      }).catch(function () { showStatus('error-offline'); });
     }
 
     boot();

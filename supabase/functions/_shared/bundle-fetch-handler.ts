@@ -20,6 +20,16 @@ import { personasForTier, resolveTier } from './tier-personas.ts'
 export type BundleFetchInput = {
   customer_id: string
   agent_slug: string
+  /**
+   * Per-customer HMAC instance token (Phase 5-3.c) presented as
+   * `Authorization: Bearer <HERMES_INSTANCE_TOKEN>`. The VPS holds this in
+   * /home/weuseai/.hermes/.env; an attacker who only knows the customer_id
+   * cannot forge it (it is HMAC(customer_id, server-secret)). Verified by
+   * `deps.verifyToken` when configured — see the security note on the gate
+   * below. Optional on the wire for back-compat with VPSes provisioned
+   * before bundle-pull-script started sending it.
+   */
+  bearer_token?: string | null
 }
 
 export type BundleFetchOk = {
@@ -35,7 +45,7 @@ export type BundleFetchOk = {
 
 export type BundleFetchErr = {
   ok: false
-  status: 400 | 403 | 404 | 500
+  status: 400 | 401 | 403 | 404 | 500
   error: string
   detail?: string
 }
@@ -58,6 +68,18 @@ export type CustomerInfo = {
 }
 
 export type BundleFetchDeps = {
+  /**
+   * HMAC instance-token verifier (Phase 5-3.c, security finding H2/H3
+   * 2026-06-14). When provided, the handler REQUIRES a valid token bound to
+   * the requesting customer_id — closing the IDOR where anyone who knew a
+   * victim's customer_id could mint a signed URL to that victim's private
+   * persona bundle (custom-<cid>) or a higher-tier persona. Mirrors the gate
+   * on approval-queue / hermes-kanban-proxy. OPTIONAL for back-compat:
+   * undefined (server has no HERMES_INSTANCE_HMAC_KEY) → fail-open, identical
+   * to the prior behaviour, so an unconfigured deploy is never WORSE than
+   * before. Returns true on a valid token.
+   */
+  verifyToken?: (customerId: string, token: string) => Promise<boolean>
   customerLookup: (customerId: string) => Promise<CustomerInfo | null>
   /**
    * List object names under `bundles/<slug>/`. Used for `latest` policy
@@ -128,6 +150,20 @@ export async function bundleFetchHandler(
   }
   if (!input.agent_slug || typeof input.agent_slug !== 'string') {
     return { ok: false, status: 400, error: 'invalid_agent_slug' }
+  }
+  // ─── Auth gate (H2/H3, 2026-06-14) ────────────────────────────────────
+  // Bind the request to the customer's per-customer HMAC instance token so a
+  // bare customer_id (which travels in browser URLs/referrers) is NOT enough
+  // to fetch that customer's bundle. The token is HMAC(customer_id, secret),
+  // held only on that customer's VPS — unforgeable from the UUID alone. When
+  // verifyToken is unset (no HERMES_INSTANCE_HMAC_KEY configured) we fall back
+  // to the prior tier/ownership-only behaviour (fail-open), so this can never
+  // be WORSE than before. Mirrors approval-queue / hermes-kanban-proxy.
+  if (deps.verifyToken) {
+    const ok = await deps.verifyToken(input.customer_id, input.bearer_token ?? '')
+    if (!ok) {
+      return { ok: false, status: 401, error: 'unauthorized' }
+    }
   }
   // Persona Genesis (2026-06-10): `custom-<customer_id>` slugs take a
   // dedicated path with STRICTER isolation than the curated library — the

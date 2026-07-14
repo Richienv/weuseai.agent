@@ -509,8 +509,25 @@ export const EOD_SUMMARY_CRON_PROMPT =
   'Kalau kalian tidak berinteraksi sama sekali hari ini, kirim satu kalimat singkat saja: tanya apakah ada yang bisa disiapkan untuk besok. ' +
   'Kamu TIDAK punya akses kalender atau email — hanya percakapan kalian. Tanpa tanda seru.'
 
+// Weekly recap cron (2026-06-14): the memory moment. Cross-session memory
+// is the agent's realest, most under-shown asset — a Sunday-evening recap
+// turns an invisible backend feature into a weekly proof that the agent
+// remembers the customer. Sunday 19:00 WIB = 12:00 UTC Sunday (0 12 * * 0).
+// Honesty rule (audit U4): no calendar/email claims, no fabricated tasks.
+export const WEEKLY_RECAP_CRON_PROMPT =
+  'Susun Laporan Mingguan untuk customer kamu, dalam Bahasa Indonesia, sapa pakai nama mereka. ' +
+  'Ini momen kamu menunjukkan bahwa kamu INGAT mereka. Baca SOUL.md kamu, lalu telusuri ingatan percakapan kalian selama 7 hari terakhir. Susun: ' +
+  '(1) Sapaan singkat, sebut ini rekap minggu ini. ' +
+  '(2) Yang kamu bantu selesaikan minggu ini — tugas, draft, atau keputusan yang sudah kelar. Sebut spesifik dari percakapan kalian, bukan umum. ' +
+  '(3) Yang masih outstanding — hal yang mereka titip atau sebut penting tapi belum selesai. Kalau ada yang sempat mereka sebut lalu tidak dilanjutkan, ingatkan dengan halus. ' +
+  '(4) Satu saran fokus untuk minggu depan, berdasarkan pola yang kamu lihat dari percakapan kalian. ' +
+  '(5) Tutup dengan satu pertanyaan terbuka soal prioritas minggu depan. ' +
+  'Kalau minggu ini kalian nyaris tidak berinteraksi, jangan mengarang — kirim pesan singkat dan hangat saja: sebut kamu siap bantu, dan tanya apa yang bisa disiapkan minggu ini. ' +
+  'PENTING: kamu TIDAK punya akses kalender atau email customer — hanya percakapan dan ingatan kalian. Jangan pernah mengarang tugas atau angka yang tidak ada di percakapan. ' +
+  'Format Telegram: ringkas, judul tebal seperlunya, tanpa tanda seru.'
+
 const LIVENESS_PING_TEXT =
-  'Halo, gue agen lo. Setup beres. Pagi Briefing aktif jam 7 pagi WIB, ringkasan sore jam 6. ' +
+  'Halo, gue agen lo. Setup beres. Pagi Briefing aktif jam 7 pagi WIB, ringkasan sore jam 6, laporan mingguan tiap Minggu malam. ' +
   'Coba ketik apa aja buat tes.'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
@@ -805,6 +822,9 @@ su - weuseai -c '${HERMES} cron add --schedule "0 0 * * *" --prompt "${shSingleQ
 
 log "Adding end-of-day summary cron (18:00 WIB)..."
 su - weuseai -c '${HERMES} cron add --schedule "0 11 * * *" --prompt "${shSingleQuote(EOD_SUMMARY_CRON_PROMPT)}" --deliver telegram' >> "$LOG" 2>&1 || log "⚠ eod-summary cron add failed (non-fatal)"
+
+log "Adding Laporan Mingguan cron (Minggu 19:00 WIB)..."
+su - weuseai -c '${HERMES} cron add --schedule "0 12 * * 0" --prompt "${shSingleQuote(WEEKLY_RECAP_CRON_PROMPT)}" --deliver telegram' >> "$LOG" 2>&1 || log "⚠ weekly-recap cron add failed (non-fatal)"
 `
     : `
 log "No TELEGRAM_BOT_TOKEN at first spinUp — gateway installed but not started."

@@ -406,3 +406,59 @@ Each Phase F run appends a block below automatically (the harness writes to this
 | 9 | /start → first response | 0.0s | 90s | manual |
 | 10 | /<persona> → persona-correct response | 0.0s | 90s | manual |
 | 11 | Teardown (delete VPS, cancel sub) | 0.0s | 30s | manual |
+
+### Run `deployed-1783410781671` — 2026-07-07T08:00:47.895Z
+
+- target: `deployed`
+- email: `e2e-chain-1783410781671@weuseai.test`
+- customer: `5edd97e1-b965-4835-8ae3-76337a8fab16` · subscription: `5002ec6b-d4f6-4ba5-b292-cb30eff8b1fd` · vps: `62e8d120-d56f-42d4-b0e8-b9e888ff6b1b`
+- all 16 stages clean (no fail/skip): **NO**
+- chain time (Stages 1-9): **7.72 min** (budget 15.00 min → UNDER)
+- unlock-eligible: **NO**
+
+| Stage | Name | Elapsed | Budget | Status |
+|---|---|---|---|---|
+| 1 | Create Xendit test invoice | 3.0s | 5s | pass |
+| 2 | Pay invoice + webhook delivered | 9.6s | 10s | pass |
+| 3 | Customer + subscription rows created + onboarding email matches payment | 3.7s | 5s | pass |
+| 4 | VPS provisioned (ip_address assigned) | 0.3s | 120s | pass |
+| 5 | setup-script COMPLETE (status=running) + agent model = DeepSeek | 446.7s | 480s | fail |
+| 5.5 | Pair — validate bot token | 0.0s | 10s | skipped |
+| 5.6 | Pair — rotate pairing code | 0.0s | 5s | skipped |
+| 5.7 | Pair — /pair message links telegram_chat_id | 0.0s | 5s | skipped |
+| 5.8 | complete-onboarding → hermes-gateway starts | 0.0s | 60s | skipped |
+| 5.9 | auto-greet — proactive greeting delivered | 0.0s | 10s | skipped |
+| 6 | bundle-pull installed all tier personas | 0.0s | 60s | skipped |
+| 7 | hermes-gateway active | 0.0s | 60s | skipped |
+| 8 | Telegram getMe | 0.0s | 10s | skipped |
+| 9 | /start → first response | 0.0s | 90s | skipped |
+| 10 | /<persona> → persona-correct response | 0.0s | 90s | skipped |
+| 11 | Teardown (delete VPS, cancel sub) | 2.9s | 30s | pass |
+
+### Run `deployed-1783411406273` — 2026-07-07T08:10:58.726Z
+
+- target: `deployed`
+- email: `e2e-chain-1783411406273@weuseai.test`
+- customer: `02a85e5b-ab0d-4a7b-821e-2e2f016474f9` · subscription: `a37d4103-8759-4504-ad77-a25e685130a4` · vps: `503b288d-3792-4ee7-9fc7-250a10f8a94c`
+- all 16 stages clean (no fail/skip): **YES**
+- chain time (Stages 1-9): **7.49 min** (budget 15.00 min → UNDER)
+- unlock-eligible: **YES**
+
+| Stage | Name | Elapsed | Budget | Status |
+|---|---|---|---|---|
+| 1 | Create Xendit test invoice | 2.8s | 5s | pass |
+| 2 | Pay invoice + webhook delivered | 5.8s | 10s | pass |
+| 3 | Customer + subscription rows created + onboarding email matches payment | 1.4s | 5s | pass |
+| 4 | VPS provisioned (ip_address assigned) | 9.1s | 120s | pass |
+| 5 | setup-script COMPLETE (status=running) + agent model = DeepSeek | 389.4s | 480s | pass |
+| 5.5 | Pair — validate bot token | 4.8s | 10s | pass |
+| 5.6 | Pair — rotate pairing code | 3.4s | 5s | pass |
+| 5.7 | Pair — /pair message links telegram_chat_id | 3.0s | 5s | pass |
+| 5.8 | complete-onboarding → hermes-gateway starts | 27.3s | 60s | pass |
+| 5.9 | auto-greet — proactive greeting delivered | 0.0s | 10s | pass |
+| 6 | bundle-pull installed all tier personas | 0.8s | 60s | pass |
+| 7 | hermes-gateway active | 0.8s | 60s | pass |
+| 8 | Telegram getMe | 0.7s | 10s | pass |
+| 9 | /start → first response | 0.0s | 90s | manual |
+| 10 | /<persona> → persona-correct response | 0.0s | 90s | manual |
+| 11 | Teardown (delete VPS, cancel sub) | 3.3s | 30s | pass |

@@ -17,6 +17,10 @@ import {
   type BundleFetchDeps,
   type CustomerInfo,
 } from '../_shared/bundle-fetch-handler.ts'
+import {
+  verifyCustomerToken,
+  extractBearerToken,
+} from '../_shared/hermes-instance-auth.ts'
 import type { WorkflowTier } from '../_shared/workflow-types.ts'
 
 // @ts-ignore — Deno global available at runtime
@@ -28,6 +32,11 @@ declare const Deno: {
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const BUCKET = 'workflow-templates'
+// Phase 5-3.c HMAC instance-token verification (H2/H3 hardening, 2026-06-14).
+// Mirror of approval-queue: when HERMES_INSTANCE_HMAC_KEY is configured,
+// bundle-fetch REQUIRES a valid per-customer token (closing the IDOR);
+// when unset, the gate is skipped (fail-open, identical to prior behaviour).
+const HERMES_INSTANCE_HMAC_KEY = Deno.env.get('HERMES_INSTANCE_HMAC_KEY') ?? ''
 
 const supabase = createClient(SUPABASE_URL, SERVICE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
@@ -54,7 +63,13 @@ Deno.serve(async (req) => {
     )
   }
 
+  const bearer = extractBearerToken(req.headers.get('authorization'))
+
   const deps: BundleFetchDeps = {
+    verifyToken: HERMES_INSTANCE_HMAC_KEY
+      ? (customerId, token) =>
+          verifyCustomerToken(customerId, token, HERMES_INSTANCE_HMAC_KEY)
+      : undefined,
     customerLookup: async (customerId) => {
       const { data, error } = await supabase
         .from('customers')
@@ -111,7 +126,7 @@ Deno.serve(async (req) => {
     },
   }
 
-  const result = await bundleFetchHandler(body, deps)
+  const result = await bundleFetchHandler({ ...body, bearer_token: bearer }, deps)
 
   if (!result.ok) {
     return withCors(

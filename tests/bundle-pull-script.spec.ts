@@ -227,3 +227,13 @@ test('script: per-loop summary log line includes success + fail counts', () => {
   const s = buildBundlePullScript(baseParams)
   assert.match(s, /Multi-persona pull complete: \$SUCCESS_COUNT success, \$FAIL_COUNT fail/)
 })
+
+test('script: sends the HERMES_INSTANCE_TOKEN as Authorization: Bearer to bundle-fetch (H2/H3)', () => {
+  const s = buildBundlePullScript(baseParams)
+  // Read the per-customer HMAC token from .env (empty on legacy VPSes).
+  assert.match(s, /INSTANCE_TOKEN="\$\{HERMES_INSTANCE_TOKEN:-\}"/, 'reads the instance token from .env')
+  // Build the bearer header only when the token is present (back-compat).
+  assert.match(s, /auth_args=\(-H "Authorization: Bearer \$INSTANCE_TOKEN"\)/, 'bearer header built when token set')
+  // The bundle-fetch curl forwards the header so the server can verify ownership.
+  assert.match(s, /"\$\{auth_args\[@\]\}"/, 'auth args passed to the bundle-fetch curl')
+})

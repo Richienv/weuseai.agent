@@ -9,8 +9,13 @@ import {
   type PurchasablePlan,
 } from './types.ts'
 
-export function chargeBeforeFee(tier: PurchasablePlan, alwaysOn: boolean): number {
-  return PLANS[tier].setupIdr + HOSTING_MONTHLY_IDR + (alwaysOn ? ALWAYS_ON_MONTHLY_IDR : 0)
+export function chargeBeforeFee(
+  tier: PurchasablePlan,
+  alwaysOn: boolean,
+  setupIdrOverride?: number,
+): number {
+  const setup = setupIdrOverride ?? PLANS[tier].setupIdr
+  return setup + HOSTING_MONTHLY_IDR + (alwaysOn ? ALWAYS_ON_MONTHLY_IDR : 0)
 }
 
 export function paymentFee(amount: number, methodId: PaymentMethodId): number {
@@ -22,8 +27,9 @@ export function totalCharge(
   tier: PurchasablePlan,
   alwaysOn: boolean,
   methodId: PaymentMethodId,
+  setupIdrOverride?: number,
 ): { base: number; fee: number; total: number } {
-  const base = chargeBeforeFee(tier, alwaysOn)
+  const base = chargeBeforeFee(tier, alwaysOn, setupIdrOverride)
   const fee = paymentFee(base, methodId)
   return { base, fee, total: base + fee }
 }
