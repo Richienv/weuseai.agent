@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="/assets/vendor/dc-support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *{ box-sizing:border-box }
+  html,body{ margin:0; background:#070608 }
+  input::placeholder, textarea::placeholder{ color:#5f5853 }
+  input:focus, textarea:focus{ outline:none; border-color:rgba(238,60,48,.6) !important; box-shadow:0 0 0 3px rgba(238,60,48,.16) !important }
+  @keyframes dotPulse { 0%,100%{ opacity:1 } 50%{ opacity:.3 } }
+  @keyframes sheenSweep { 0%{ transform:translateX(-160%) } 30%,100%{ transform:translateX(520%) } }
+  @keyframes amberFlick { 0%,100%{ opacity:.5 } 50%{ opacity:.85 } }
+  @keyframes floatBob { 0%,100%{ transform:translateY(0) } 50%{ transform:translateY(-6px) } }
+  @keyframes scRise { from{ opacity:0; transform:translateY(16px) } to{ opacity:1; transform:translateY(0) } }
+  @keyframes ringSpin { to{ transform:rotate(360deg) } }
+  @keyframes flipIn { 0%{ opacity:0; transform:translateY(8px) rotateX(-40deg) } 100%{ opacity:1; transform:translateY(0) rotateX(0) } }
+  @keyframes msgIn { 0%,6%{ opacity:0; transform:translateY(12px) scale(.97) } 16%,90%{ opacity:1; transform:translateY(0) scale(1) } 100%{ opacity:1 } }
+  @keyframes typBounce { 0%,60%,100%{ transform:translateY(0); opacity:.4 } 30%{ transform:translateY(-4px); opacity:1 } }
+  @keyframes barSweep { 0%{ transform:translateX(-100%) } 100%{ transform:translateX(320%) } }
+  @keyframes revealUp { from{ opacity:0; transform:translateY(12px) scale(.97) } to{ opacity:1; transform:translateY(0) scale(1) } }
+  @keyframes sway { 0%,100%{ transform:rotateY(-9deg) } 50%{ transform:rotateY(9deg) } }
+  @keyframes ackPop { 0%{ opacity:0; transform:scale(.4) } 60%{ transform:scale(1.12) } 100%{ opacity:1; transform:scale(1) } }
+  @keyframes ackCheck { to{ stroke-dashoffset:0 } }
+  @keyframes ackRing { 0%{ transform:scale(.8); opacity:.7 } 100%{ transform:scale(1.7); opacity:0 } }
+  @keyframes stepCycle { 0%,2%{ background:rgba(255,255,255,.02); border-color:rgba(255,255,255,.07); box-shadow:none } 8%,28%{ background:linear-gradient(180deg, rgba(255,138,61,.1), rgba(238,60,48,.03)); border-color:rgba(255,120,90,.45); box-shadow:inset 0 1px 0 rgba(255,185,140,.2), 0 0 26px rgba(238,60,48,.12) } 36%,100%{ background:rgba(255,255,255,.02); border-color:rgba(255,255,255,.07); box-shadow:none } }
+  @keyframes numCycle { 0%,2%{ background:rgba(255,255,255,.04); color:#7c736e; border-color:rgba(255,255,255,.1) } 8%,28%{ background:linear-gradient(180deg,#ff8a52,#ee3c30 55%,#c01f12); color:#fff; border-color:rgba(255,150,120,.6) } 36%,100%{ background:rgba(255,255,255,.04); color:#7c736e; border-color:rgba(255,255,255,.1) } }
+  @keyframes inputBreathe { 0%,100%{ border-color:rgba(255,120,90,.35); box-shadow:inset 0 2px 6px rgba(0,0,0,.4), 0 0 0 0 rgba(238,60,48,0) } 50%{ border-color:rgba(255,120,90,.75); box-shadow:inset 0 2px 6px rgba(0,0,0,.4), 0 0 0 4px rgba(238,60,48,.12) } }
+  @keyframes labelDot { 0%,100%{ opacity:.4; transform:scale(.8) } 50%{ opacity:1; transform:scale(1) } }
+  input:focus.tokenField{ animation:none !important }
+</style>
+</helmet>
+
+<div style="min-height:100vh; background:radial-gradient(120% 80% at 50% -5%, rgba(238,60,48,.09), transparent 60%), #070608; font-family:'Plus Jakarta Sans',sans-serif">
+
+  <!-- ===== NAV ===== -->
+  <nav style="position:sticky; top:0; z-index:50; display:flex; align-items:center; justify-content:space-between; padding:20px 40px; background:rgba(7,6,8,.6); backdrop-filter:saturate(160%) blur(18px); -webkit-backdrop-filter:saturate(160%) blur(18px); border-bottom:1px solid rgba(255,255,255,.07)">
+    <div style="display:flex; align-items:center; gap:10px">
+      <div style="width:30px; height:30px; border-radius:9px; background:linear-gradient(160deg,#ff6a3c,#ee3c30 60%,#c41d10); display:grid; place-items:center; box-shadow:inset 0 1px 1px rgba(255,200,180,.5), 0 6px 14px rgba(238,60,48,.4); color:#fff; font-weight:800; font-size:15px">W</div>
+      <span style="color:#f1ede9; font-size:17px; font-weight:600; letter-spacing:-.01em">weuseai<span style="color:#ff6a4c">.agent</span></span>
+    </div>
+    <span style="font-family:'JetBrains Mono',monospace; font-size:11.5px; letter-spacing:.22em; color:#ff7a5e; text-transform:uppercase">{{ navLabel }}</span>
+  </nav>
+
+  <!-- ===== STEP RAIL (hidden on welcome) ===== -->
+  <div style="display:{{ railDisplay }}; max-width:720px; margin:44px auto 0; padding:0 28px; align-items:center; justify-content:space-between">
+    <div style="display:flex; align-items:center; gap:11px">
+      <sc-for list="{{ dots }}" as="d" hint-placeholder-count="4">
+        <span style="width:{{ d.w }}; height:9px; border-radius:999px; background:{{ d.bg }}; box-shadow:{{ d.glow }}; transition:all .4s cubic-bezier(.16,1,.3,1)"></span>
+      </sc-for>
+    </div>
+    <span style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:.2em; color:#7c736e; text-transform:uppercase">{{ stepLabel }}</span>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- SCREEN 0 — WELCOME -->
+  <!-- ============================================================ -->
+  <div style="display:{{ show0 }}; max-width:760px; margin:0 auto; padding:70px 28px 120px; text-align:center; animation:scRise .6s cubic-bezier(.16,1,.3,1) both">
+    <h1 style="margin:0; font-family:'Plus Jakarta Sans',sans-serif; font-weight:700; font-size:58px; line-height:1.06; letter-spacing:-.02em"><span style="color:#f8f4f0">Selamat datang.</span><br><span style="background:linear-gradient(100deg,#ff8a3d,#ee2f1f); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; color:transparent">Agent kamu sedang dibangun.</span></h1>
+    <p style="margin:20px auto 0; max-width:520px; font-size:17px; line-height:1.6; color:#9a938d">Dalam 5–7 menit, satu pesan akan masuk ke Telegram kamu — tanda agent siap bekerja.</p>
+
+    <!-- payment card -->
+    <div style="position:relative; overflow:hidden; margin:44px auto 0; max-width:600px; text-align:center; border-radius:24px; padding:44px 40px 40px; background:radial-gradient(120% 90% at 50% 0%, rgba(74,222,128,.1), transparent 55%), linear-gradient(180deg, rgba(255,255,255,.03), transparent 22%), #0b090a; border:1px solid rgba(255,255,255,.08); border-top:1.5px solid rgba(120,240,160,.4); box-shadow:inset 0 1px 0 rgba(150,240,180,.24), 0 0 50px rgba(34,197,94,.12), 0 24px 52px rgba(0,0,0,.5)">
+      <div style="position:absolute; top:0; left:-55%; width:55%; height:100%; background:linear-gradient(105deg, transparent, rgba(255,255,255,.07), transparent); pointer-events:none; animation:sheenSweep 7s ease-in-out infinite 1s"></div>
+
+      <!-- success burst -->
+      <div style="position:relative; width:76px; height:76px; margin:0 auto; display:grid; place-items:center">
+        <span style="position:absolute; inset:0; border-radius:50%; border:2px solid rgba(74,222,128,.5); animation:ackRing 2.4s ease-out infinite"></span>
+        <span style="position:absolute; inset:0; border-radius:50%; border:2px solid rgba(74,222,128,.5); animation:ackRing 2.4s ease-out infinite 1.2s"></span>
+        <span style="width:64px; height:64px; border-radius:50%; background:linear-gradient(180deg,#6ff0a4,#22c55e 58%,#15803d); border:1px solid rgba(160,245,190,.6); box-shadow:inset 0 2px 2px rgba(210,255,225,.7), inset 0 -5px 10px rgba(10,90,40,.35), 0 12px 26px rgba(34,197,94,.5); display:grid; place-items:center; animation:ackPop .7s cubic-bezier(.16,1,.3,1) both"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#06210f" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="stroke-dasharray:30; stroke-dashoffset:30; animation:ackCheck .5s ease-out .4s forwards"><path d="M5 12l5 5 9-11"/></svg></span>
+      </div>
+
+      <div style="position:relative; margin-top:22px; font-family:'Plus Jakarta Sans',sans-serif; font-weight:700; font-size:24px; letter-spacing:-.01em; color:#f8f4f0">Pembayaran kamu sudah masuk.</div>
+      <p style="position:relative; margin:10px auto 0; max-width:400px; font-size:16px; line-height:1.55; color:#9a938d">Sekarang lengkapi profil agent kamu.</p>
+
+      <button onClick="{{ goStep1 }}" style="position:relative; overflow:hidden; margin:28px auto 0; display:inline-flex; align-items:center; justify-content:center; gap:11px; padding:17px 34px; border-radius:14px; background:linear-gradient(180deg,#ff8a52,#ee3c30 55%,#c01f12); border:1px solid rgba(255,150,120,.6); box-shadow:inset 0 1.5px 1px rgba(255,225,205,.7), inset 0 -4px 9px rgba(150,20,5,.4), 0 16px 34px rgba(238,60,48,.5); color:#fff; font-family:'Plus Jakarta Sans',sans-serif; font-weight:700; font-size:16.5px; text-shadow:0 1px 2px rgba(120,15,5,.5); cursor:pointer; transition:transform .2s" style-hover="transform:translateY(-2px)"><span style="position:absolute; top:0; left:-40%; width:40%; height:100%; background:linear-gradient(105deg, transparent, rgba(255,255,255,.4), transparent); animation:sheenSweep 4.5s ease-in-out infinite 1.5s"></span><span style="position:relative">Lengkapi profil agent</span><span style="position:relative; font-size:15px">→</span></button>
+    </div>
+
+    <!-- what happens -->
+    <div style="margin:56px auto 0; max-width:640px; text-align:left">
+      <div style="text-align:center; font-family:'Plus Jakarta Sans',sans-serif; font-weight:700; font-size:26px; letter-spacing:-.01em; color:#f8f4f0">Yang akan terjadi</div>
+      <div style="margin-top:24px; display:flex; flex-direction:column; gap:16px">
+
+        <!-- 01 — open @BotFather, /newbot -->
+        <div style="display:flex; gap:20px; align-items:flex-start">
+          <span style="flex:none; width:34px; height:34px; border-radius:10px; background:linear-gradient(180deg, rgba(255,138,61,.14), rgba(238,60,48,.05)); border:1px solid rgba(255,120,90,.32); box-shadow:inset 0 1px 1px rgba(255,255,255,.15); display:grid; place-items:center; font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:600; color:#ff8a72">01</span>
+          <div style="flex:1">
+            <span style="display:block; padding-top:6px; font-size:16px; line-height:1.5; color:#c9c3bd">Klik tombol di atas — kamu langsung diarahkan ke <span style="font-family:'JetBrains Mono',monospace; color:#e9e4e0">@BotFather</span> di Telegram. Kirim <span style="font-family:'JetBrains Mono',monospace; color:#e9e4e0">/newbot</span>.</span>
+            <div style="margin-top:12px; border-radius:14px; overflow:hidden; background:#0c0a0b; border:1px solid rgba(255,255,255,.08); box-shadow:inset 0 1px 0 rgba(255,255,255,.05)">
+              <div style="display:flex; align-items:center; gap:10px; padding:11px 14px; background:linear-gradient(180deg, rgba(34,158,217,.12), transparent); border-bottom:1px solid rgba(255,255,255,.06)"><span style="width:26px; height:26px; border-radius:50%; background:linear-gradient(160deg,#34a8eb,#1c7fc4); display:grid; place-items:center"><svg width="13" height="13" viewBox="0 0 24 24" fill="#fff"><path d="M22 4 L2 11.3 l6.3 2.1 L18 7 l-7.1 8 v4.2 l3-3 L20.5 21z"/></svg></span><span style="font-size:12.5px; font-weight:600; color:#f1ede9">BotFather</span></div>
+              <div style="padding:12px 12px; display:flex; flex-direction:column; gap:8px; min-height:64px">
+                <div style="align-self:flex-end; padding:8px 12px; border-radius:11px 11px 4px 11px; background:linear-gradient(180deg, rgba(34,158,217,.22), rgba(34,158,217,.08)); border:1px solid rgba(52,168,235,.4); font-family:'JetBrains Mono',monospace; font-size:12.5px; color:#bfe6fb; opacity:0; animation:revealUp .6s cubic-bezier(.16,1,.3,1) both; animation-timeline:view(); animation-range:entry 4% cover 24%">/newbot</div>
+                <div style="align-self:flex-start; max-width:90%; padding:8px 12px; border-radius:11px 11px 11px 4px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.08); font-size:12.5px; line-height:1.5; color:#e9e4e0; opacity:0; animation:revealUp .6s cubic-bezier(.16,1,.3,1) both; animation-timeline:view(); animation-range:entry 12% cover 34%">Alright, a new bot. How are we going to call it?</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 02 — name + unique username → token -->
+        <div style="display:flex; gap:20px; align-items:flex-start">
+          <span style="flex:none; width:34px; height:34px; border-radius:10px; background:linear-gradient(180deg, rgba(255,138,61,.14), rgba(238,60,48,.05)); border:1px solid rgba(255,120,90,.32); box-shadow:inset 0 1px 1px rgba(255,255,255,.15); display:grid; place-items:center; font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:600; color:#ff8a72">02</span>
+          <div style="flex:1">
+            <span style="display:block; padding-top:6px; font-size:16px; line-height:1.5; color:#c9c3bd">Kasih nama bot, lalu username unik yang diakhiri <span style="font-family:'JetBrains Mono',monospace; color:#e9e4e0">bot</span> (misal <span style="font-family:'JetBrains Mono',monospace; color:#e9e4e0">himynameisbot</span>). BotFather balas dengan token.</span>
+            <div style="margin-top:12px; border-radius:14px; padding:12px; background:#0c0a0b; border:1px solid rgba(255,255,255,.08); box-shadow:inset 0 1px 0 rgba(255,255,255,.05); display:flex; flex-direction:column; gap:8px; min-height:64px">
+              <div style="align-self:flex-end; padding:8px 12px; border-radius:11px 11px 4px 11px; background:linear-gradient(180deg, rgba(34,158,217,.22), rgba(34,158,217,.08)); border:1px solid rgba(52,168,235,.4); font-family:'JetBrains Mono',monospace; font-size:12.5px; color:#bfe6fb; opacity:0; animation:revealUp .6s cubic-bezier(.16,1,.3,1) both; animation-timeline:view(); animation-range:entry 4% cover 24%">himynameisbot</div>
+              <div style="align-self:flex-start; max-width:94%; padding:9px 12px; border-radius:11px 11px 11px 4px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.08); opacity:0; animation:revealUp .6s cubic-bezier(.16,1,.3,1) both; animation-timeline:view(); animation-range:entry 12% cover 34%"><div style="font-size:12px; color:#cfc9c3; margin-bottom:6px">Done! Use this token to access the HTTP API:</div><div style="font-family:'JetBrains Mono',monospace; font-size:11.5px; color:#ffd9c2; padding:6px 9px; border-radius:7px; background:#0a0809; border:1px solid rgba(255,150,90,.3); word-break:break-all">8123456789:AAF-gh1jKlmnOpqRstuVwxyz</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 03 — paste token → pairing code → live -->
+        <div style="display:flex; gap:20px; align-items:flex-start">
+          <span style="flex:none; width:34px; height:34px; border-radius:10px; background:linear-gradient(180deg, rgba(255,138,61,.14), rgba(238,60,48,.05)); border:1px solid rgba(255,120,90,.32); box-shadow:inset 0 1px 1px rgba(255,255,255,.15); display:grid; place-items:center; font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:600; color:#ff8a72">03</span>
+          <div style="flex:1">
+            <span style="display:block; padding-top:6px; font-size:16px; line-height:1.5; color:#c9c3bd">Paste token itu di sini. Kami cek bot-nya, lalu kasih kode pasangan — tinggal copy, klik link, selesai. Agent kamu langsung <span style="color:#ff8a72; font-weight:600">live</span>.</span>
+            <div style="margin-top:12px; border-radius:14px; padding:14px; background:#0c0a0b; border:1px solid rgba(255,255,255,.08); box-shadow:inset 0 1px 0 rgba(255,255,255,.05); display:flex; align-items:center; gap:12px; min-height:64px">
+              <div style="flex:none; font-family:'JetBrains Mono',monospace; font-size:15px; color:#ffd9c2; padding:8px 13px; border-radius:9px; background:#0a0809; border:1px solid rgba(255,150,90,.3); opacity:0; animation:revealUp .6s cubic-bezier(.16,1,.3,1) both; animation-timeline:view(); animation-range:entry 4% cover 24%">/pair 271899</div>
+              <span style="flex:none; color:#6a6660">→</span>
+              <div style="flex:1; display:flex; align-items:center; gap:8px; padding:9px 13px; border-radius:10px; background:linear-gradient(180deg, rgba(74,222,128,.14), rgba(74,222,128,.04)); border:1px solid rgba(74,222,128,.36); opacity:0; animation:revealUp .6s cubic-bezier(.16,1,.3,1) both; animation-timeline:view(); animation-range:entry 12% cover 34%"><span style="width:8px; height:8px; border-radius:50%; background:#4ade80; box-shadow:0 0 8px #4ade80; animation:dotPulse 2s ease-in-out infinite"></span><span style="font-size:13px; font-weight:600; color:#8af0ad">Agent live — siap kerja</span></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <p style="margin:28px 0 0; font-size:14.5px; font-style:italic; color:#7c736e">Pertama kali pakai? Tim kami akan menghubungi kamu via email kalau butuh bantuan setup.</p>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- SCREEN 1 — STEP 2/4 · CREATE BOT -->
+  <!-- ============================================================ -->
+  <div style="display:{{ show1 }}; max-width:720px; margin:0 auto; padding:36px 28px 120px; animation:scRise .5s cubic-bezier(.16,1,.3,1) both">
+    <div style="position:relative; overflow:hidden; border-radius:24px; padding:44px 44px 40px; background:linear-gradient(180deg, rgba(255,255,255,.03), transparent 14%), radial-gradient(120% 60% at 50% 0%, rgba(238,60,48,.1), #0a080b); border:1px solid rgba(255,255,255,.08); border-top:1.5px solid rgba(255,150,90,.4); box-shadow:inset 0 1px 0 rgba(255,185,140,.2), 0 0 46px rgba(238,60,48,.08), 0 30px 64px rgba(0,0,0,.55)">
+      <div style="position:absolute; inset:0 0 auto 0; height:130px; background-image:radial-gradient(circle, rgba(238,60,48,.35) 1px, transparent 1.6px); background-size:16px 16px; opacity:.4; -webkit-mask-image:linear-gradient(180deg,#000,transparent); mask-image:linear-gradient(180deg,#000,transparent); pointer-events:none"></div>
+
+      <h2 style="position:relative; margin:0; font-weight:700; font-size:40px; letter-spacing:-.02em; color:#f8f4f0">Buat bot Telegram kamu.</h2>
+      <p style="position:relative; margin:16px 0 0; font-size:16.5px; line-height:1.6; color:#9a938d">Agent kamu pakai bot Telegram milik kamu sendiri. Buat lewat <span style="font-family:'JetBrains Mono',monospace; color:#ff8a72">@BotFather</span> dulu — sekitar 60 detik — lalu kembali ke sini.</p>
+
+      <div style="position:relative; margin-top:32px; display:flex; flex-direction:column; gap:14px">
+        <div style="display:flex; gap:16px; align-items:flex-start; padding:18px 20px; border-radius:14px; background:rgba(255,255,255,.02); border:1px solid rgba(255,255,255,.07); animation:stepCycle 9s ease-in-out infinite 0s">
+          <span style="flex:none; width:32px; height:32px; border-radius:9px; border:1px solid rgba(255,255,255,.1); display:grid; place-items:center; font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:600; box-shadow:inset 0 1px 1px rgba(255,255,255,.15); animation:numCycle 9s ease-in-out infinite 0s">01</span>
+          <div style="flex:1">
+            <div style="font-size:16px; color:#e3ded9; line-height:1.55">Buka <span style="font-family:'JetBrains Mono',monospace; color:#f1ede9">@BotFather</span> di Telegram.</div>
+            <button style="margin-top:14px; display:inline-flex; align-items:center; gap:9px; padding:12px 22px; border-radius:11px; background:linear-gradient(180deg,#f7f4ef,#ded9d0); border:1px solid rgba(255,255,255,.5); box-shadow:inset 0 1px 1px rgba(255,255,255,.9), 0 8px 20px rgba(0,0,0,.45); color:#16110f; font-family:'Plus Jakarta Sans',sans-serif; font-weight:700; font-size:14px; cursor:pointer; transition:transform .2s" style-hover="transform:translateY(-2px)">Buka @BotFather <span>→</span></button>
+          </div>
+        </div>
+        <div style="display:flex; gap:16px; align-items:flex-start; padding:18px 20px; border-radius:14px; background:rgba(255,255,255,.02); border:1px solid rgba(255,255,255,.07); animation:stepCycle 9s ease-in-out infinite 3s">
+          <span style="flex:none; width:32px; height:32px; border-radius:9px; border:1px solid rgba(255,255,255,.1); display:grid; place-items:center; font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:600; box-shadow:inset 0 1px 1px rgba(255,255,255,.15); animation:numCycle 9s ease-in-out infinite 3s">02</span>
+          <div style="flex:1; padding-top:5px; font-size:16px; color:#e3ded9; line-height:1.6">Kirim <span style="font-family:'JetBrains Mono',monospace; color:#f1ede9">/newbot</span> dan ikuti instruksinya. Pilih nama dan username unik (akhiran <span style="font-family:'JetBrains Mono',monospace; color:#f1ede9">bot</span>).</div>
+        </div>
+        <div style="display:flex; gap:16px; align-items:flex-start; padding:18px 20px; border-radius:14px; background:rgba(255,255,255,.02); border:1px solid rgba(255,255,255,.07); animation:stepCycle 9s ease-in-out infinite 6s">
+          <span style="flex:none; width:32px; height:32px; border-radius:9px; border:1px solid rgba(255,255,255,.1); display:grid; place-items:center; font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:600; box-shadow:inset 0 1px 1px rgba(255,255,255,.15); animation:numCycle 9s ease-in-out infinite 6s">03</span>
+          <div style="flex:1; padding-top:5px; font-size:16px; color:#e3ded9; line-height:1.6">Salin token yang BotFather kirim, lalu paste di kolom bawah.</div>
+        </div>
+      </div>
+
+      <div style="position:relative; margin-top:32px">
+        <label style="display:inline-flex; align-items:center; gap:8px; font-size:14px; font-weight:600; color:#ff8a72; margin-bottom:10px"><span style="width:7px; height:7px; border-radius:50%; background:#ee3c30; box-shadow:0 0 8px #ee3c30; animation:labelDot 1.6s ease-in-out infinite"></span>Token bot — tempel di sini</label>
+        <input type="text" class="tokenField" placeholder="123456789:ABCDEFghijklmnopqrstuvwxyz" style="width:100%; padding:16px 18px; border-radius:13px; background:#0d0b0c; border:1px solid rgba(255,120,90,.35); color:#f1ede9; font-family:'JetBrains Mono',monospace; font-size:14.5px; box-shadow:inset 0 2px 6px rgba(0,0,0,.4); animation:inputBreathe 2.4s ease-in-out infinite; transition:border-color .2s, box-shadow .2s">
+        <p style="margin:10px 0 0; font-size:13px; color:#7c736e">Format: angka, titik dua, huruf-angka. Tidak ada spasi.</p>
+      </div>
+
+      <button onClick="{{ goStep2 }}" style="position:relative; overflow:hidden; width:100%; margin-top:28px; padding:18px; border-radius:15px; background:linear-gradient(180deg,#ff8a52,#ee3c30 55%,#c01f12); border:1px solid rgba(255,150,120,.6); box-shadow:inset 0 1.5px 1px rgba(255,225,205,.7), inset 0 -5px 11px rgba(150,20,5,.45), 0 16px 36px rgba(238,60,48,.48); color:#fff; font-family:'Plus Jakarta Sans',sans-serif; font-weight:700; font-size:16.5px; text-shadow:0 1px 2px rgba(120,15,5,.5); cursor:pointer; transition:transform .2s" style-hover="transform:translateY(-2px)"><span style="position:absolute; top:0; left:-40%; width:40%; height:100%; background:linear-gradient(105deg, transparent, rgba(255,255,255,.4), transparent); animation:sheenSweep 4.5s ease-in-out infinite 1s"></span><span style="position:relative">Validasi token &nbsp;→</span></button>
+      <p style="margin:16px 0 0; font-size:13.5px; font-style:italic; line-height:1.55; color:#7c736e">Token kami simpan ter-enkripsi dan hanya dipakai untuk agent kamu sendiri. Tidak dibagi ke pihak lain.</p>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- SCREEN 2 — STEP 3/4 · PAIR TELEGRAM -->
+  <!-- ============================================================ -->
+  <div style="display:{{ show2 }}; max-width:720px; margin:0 auto; padding:36px 28px 120px; animation:scRise .5s cubic-bezier(.16,1,.3,1) both">
+    <div style="position:relative; overflow:hidden; border-radius:24px; padding:44px 44px 40px; background:linear-gradient(180deg, rgba(255,255,255,.03), transparent 14%), radial-gradient(120% 60% at 50% 0%, rgba(238,60,48,.1), #0a080b); border:1px solid rgba(255,255,255,.08); border-top:1.5px solid rgba(255,150,90,.4); box-shadow:inset 0 1px 0 rgba(255,185,140,.2), 0 0 46px rgba(238,60,48,.08), 0 30px 64px rgba(0,0,0,.55)">
+      <div style="position:absolute; inset:0 0 auto 0; height:130px; background-image:radial-gradient(circle, rgba(238,60,48,.35) 1px, transparent 1.6px); background-size:16px 16px; opacity:.4; -webkit-mask-image:linear-gradient(180deg,#000,transparent); mask-image:linear-gradient(180deg,#000,transparent); pointer-events:none"></div>
+
+      <h2 style="position:relative; margin:0; font-weight:700; font-size:40px; letter-spacing:-.02em; color:#f8f4f0">Pasangkan Telegram kamu.</h2>
+      <p style="position:relative; margin:16px 0 0; font-size:16.5px; line-height:1.6; color:#9a938d">Kirim kode di bawah ke bot kamu sendiri (<span style="font-family:'JetBrains Mono',monospace; color:#ff8a72">@renitacantikbot</span>) lewat Telegram. Tiga langkah, sekitar 30 detik.</p>
+
+      <!-- pairing code -->
+      <div style="position:relative; margin-top:28px; border-radius:18px; padding:26px; text-align:center; background:linear-gradient(180deg, rgba(238,60,48,.06), transparent 60%), #0a0809; border:1px solid rgba(255,255,255,.08); box-shadow:inset 0 1px 0 rgba(255,255,255,.05)">
+        <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.2em; color:#7c736e; text-transform:uppercase">Kode pasangan kamu</div>
+        <div style="margin-top:16px; display:flex; justify-content:center; gap:10px">
+          <sc-for list="{{ code }}" as="c" hint-placeholder-count="6">
+            <div style="width:60px; height:76px; border-radius:12px; background:linear-gradient(180deg,#1b1513,#100c0b); border:1px solid rgba(255,150,90,.32); box-shadow:inset 0 1.5px 0 rgba(255,185,140,.22), 0 8px 18px rgba(0,0,0,.5); display:grid; place-items:center; font-family:'Plus Jakarta Sans',sans-serif; font-weight:700; font-size:36px; color:#ffd9c2; text-shadow:0 0 14px rgba(238,60,48,.4); animation:flipIn .5s cubic-bezier(.16,1,.3,1) both {{ c.d }}">{{ c.v }}</div>
+          </sc-for>
+        </div>
+        <div style="margin-top:16px; font-family:'JetBrains Mono',monospace; font-size:12.5px; color:#9a938d">Kode kadaluarsa dalam: <span style="color:#ff8a72">{{ expiry }}</span></div>
+      </div>
+
+      <!-- steps -->
+      <div style="position:relative; margin-top:28px; display:flex; flex-direction:column; gap:22px">
+        <div style="display:flex; gap:18px; align-items:flex-start">
+          <span style="flex:none; font-family:'JetBrains Mono',monospace; font-size:12px; color:#ff7a5e; padding-top:1px">01</span>
+          <div style="flex:1">
+            <div style="font-size:15.5px; color:#cfc9c3; line-height:1.5">Salin kode pasangan kamu dulu:</div>
+            <div style="margin-top:13px; display:flex; align-items:center; gap:12px">
+              <span style="font-family:'JetBrains Mono',monospace; font-size:17px; color:#ffd9c2; padding:9px 16px; border-radius:10px; background:#0d0b0c; border:1px solid rgba(255,150,90,.3)">/pair 271899</span>
+              <button style="display:inline-flex; align-items:center; gap:7px; padding:9px 18px; border-radius:10px; background:linear-gradient(180deg,#f7f4ef,#ded9d0); border:1px solid rgba(255,255,255,.5); box-shadow:inset 0 1px 1px rgba(255,255,255,.9), 0 6px 16px rgba(0,0,0,.4); color:#16110f; font-family:'Plus Jakarta Sans',sans-serif; font-weight:700; font-size:14px; cursor:pointer; transition:transform .2s" style-hover="transform:translateY(-2px)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg>Salin kode</button>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex; gap:18px; align-items:flex-start">
+          <span style="flex:none; font-family:'JetBrains Mono',monospace; font-size:12px; color:#ff7a5e; padding-top:3px">02</span>
+          <div style="flex:1">
+            <div style="font-size:15.5px; color:#cfc9c3; line-height:1.5">Buka bot kamu (<span style="font-family:'JetBrains Mono',monospace; color:#e9e4e0">@renitacantikbot</span>), klik <span style="font-family:'JetBrains Mono',monospace; color:#e9e4e0">/start</span>, lalu paste kodenya.</div>
+            <button style="margin-top:13px; display:inline-flex; align-items:center; gap:9px; padding:11px 20px; border-radius:11px; background:linear-gradient(180deg,#34a8eb,#1c7fc4 60%,#155f96); border:1px solid rgba(120,200,245,.6); box-shadow:inset 0 1.5px 1px rgba(190,230,250,.7), inset 0 -3px 7px rgba(10,60,100,.4), 0 10px 22px rgba(34,158,217,.4); color:#fff; font-family:'Plus Jakarta Sans',sans-serif; font-weight:700; font-size:14px; text-shadow:0 1px 2px rgba(10,50,90,.5); cursor:pointer; transition:transform .2s" style-hover="transform:translateY(-2px)"><svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M22 4 L2 11.3 l6.3 2.1 L18 7 l-7.1 8 v4.2 l3-3 L20.5 21z"/></svg>Buka Telegram <span>→</span></button>
+            <div style="margin-top:11px; font-size:13px; color:#7c736e">Bukan bot kamu — <span style="color:#ff8a72; text-decoration:underline; text-underline-offset:2px; cursor:pointer">Ganti bot</span> (paste ulang token dari BotFather)</div>
+          </div>
+        </div>
+        <div style="display:flex; gap:18px; align-items:flex-start">
+          <span style="flex:none; font-family:'JetBrains Mono',monospace; font-size:12px; color:#ff7a5e; padding-top:1px">03</span>
+          <div style="flex:1; font-size:15.5px; color:#cfc9c3; line-height:1.55">Tunggu konfirmasi di sini (max 30 detik).</div>
+        </div>
+      </div>
+
+      <!-- waiting indicator -->
+      <div style="position:relative; margin-top:24px; display:flex; align-items:center; gap:13px; padding:16px 20px; border-radius:13px; background:linear-gradient(180deg, rgba(238,60,48,.06), transparent), #0c0a0b; border:1px solid rgba(255,120,90,.28)">
+        <span style="flex:none; width:18px; height:18px; border-radius:50%; border:2px solid rgba(238,60,48,.3); border-top-color:#ff6a4c; animation:ringSpin 1s linear infinite"></span>
+        <span style="font-size:14.5px; color:#ffb39e">Menunggu pasangan…</span>
+        <button onClick="{{ goStep3 }}" style="margin-left:auto; padding:8px 16px; border-radius:9px; background:transparent; border:1px solid rgba(255,255,255,.14); color:#9a938d; font-family:'Plus Jakarta Sans',sans-serif; font-weight:500; font-size:13px; cursor:pointer; transition:border-color .2s, color .2s" style-hover="border-color:rgba(255,150,120,.5); color:#f1ede9">Lewati (demo) →</button>
+      </div>
+
+      <p style="position:relative; margin:18px 0 0; font-size:13.5px; font-style:italic; color:#7c736e">Belum punya Telegram? <span style="color:#ff8a72; text-decoration:underline; text-underline-offset:2px; cursor:pointer">Download di telegram.org →</span></p>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- SCREEN 3 — STEP 4/4 · CONFIGURE AGENT -->
+  <!-- ============================================================ -->
+  <div style="display:{{ show3 }}; max-width:720px; margin:0 auto; padding:36px 28px 120px; animation:scRise .5s cubic-bezier(.16,1,.3,1) both">
+    <div style="position:relative; overflow:hidden; border-radius:24px; padding:44px 44px 40px; background:linear-gradient(180deg, rgba(255,255,255,.03), transparent 14%), radial-gradient(120% 55% at 50% 0%, rgba(238,60,48,.1), #0a080b); border:1px solid rgba(255,255,255,.08); border-top:1.5px solid rgba(255,150,90,.4); box-shadow:inset 0 1px 0 rgba(255,185,140,.2), 0 0 46px rgba(238,60,48,.08), 0 30px 64px rgba(0,0,0,.55)">
+      <div style="position:absolute; inset:0 0 auto 0; height:130px; background-image:radial-gradient(circle, rgba(238,60,48,.35) 1px, transparent 1.6px); background-size:16px 16px; opacity:.4; -webkit-mask-image:linear-gradient(180deg,#000,transparent); mask-image:linear-gradient(180deg,#000,transparent); pointer-events:none"></div>
+
+      <h2 style="position:relative; margin:0; font-weight:700; font-size:40px; letter-spacing:-.02em; color:#f8f4f0">{{ cfgTitle }}</h2>
+      <p style="position:relative; margin:16px 0 0; font-size:16.5px; line-height:1.6; color:#9a938d">{{ cfgSub }}</p>
+
+      <!-- ===== TEMPLATE MODE (default) ===== -->
+      <div style="display:{{ showTpl }}">
+        <div style="position:relative; margin-top:28px; display:grid; grid-template-columns:repeat(3,1fr); gap:20px; perspective:1400px">
+          <sc-for list="{{ templates }}" as="t" hint-placeholder-count="6">
+            <div style="position:relative; aspect-ratio:2 / 3; perspective:1200px">
+              <div style="position:absolute; inset:0; transform-style:preserve-3d; transform:{{ t.flipT }}; animation:{{ t.sway }}; transition:transform .7s cubic-bezier(.34,1.2,.5,1)">
+                <!-- FRONT -->
+                <div onClick="{{ t.flip }}" style="position:absolute; inset:0; border-radius:14px; overflow:hidden; cursor:pointer; backface-visibility:hidden; -webkit-backface-visibility:hidden; border:1px solid {{ t.cardBd }}; box-shadow:{{ t.cardShadow }}">
+                  <img src="{{ t.img }}" alt="{{ t.name }}" style="display:block; width:100%; height:100%; object-fit:cover"/>
+                  <div style="position:absolute; inset:0; pointer-events:none; background:linear-gradient(160deg, rgba(255,255,255,.2), rgba(255,255,255,0) 34%)"></div>
+                  <div style="position:absolute; top:0; left:-60%; width:60%; height:100%; pointer-events:none; background:linear-gradient(105deg, transparent, rgba(255,255,255,.32), rgba(255,225,190,.18), transparent); mix-blend-mode:screen; animation:sheenSweep 5s ease-in-out infinite {{ t.delay }}"></div>
+                  <div style="position:absolute; top:10px; left:10px; width:26px; height:26px; border-radius:50%; background:linear-gradient(180deg,#6ff0a4,#22c55e 58%,#15803d); border:1px solid rgba(160,245,190,.7); box-shadow:0 4px 12px rgba(34,197,94,.5); place-items:center; color:#06210f; font-size:13px; font-weight:800; display:{{ t.checkDisp }}">✓</div>
+                  <div style="position:absolute; top:10px; right:10px; padding:5px 11px; border-radius:999px; background:rgba(0,0,0,.55); border:1px solid rgba(255,255,255,.2); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.12em; color:#f1ede9; text-transform:uppercase; pointer-events:none">Ketuk info</div>
+                </div>
+                <!-- BACK -->
+                <div style="position:absolute; inset:0; border-radius:14px; overflow:hidden; backface-visibility:hidden; -webkit-backface-visibility:hidden; transform:rotateY(180deg); background:#0c0a0b; border:1px solid rgba(255,255,255,.1); box-shadow:{{ t.cardShadow }}; padding:22px 18px; display:flex; flex-direction:column">
+                  <p style="margin:0; font-family:'Plus Jakarta Sans',sans-serif; font-style:italic; font-size:13px; line-height:1.5; color:#cbc5bf">“{{ t.quote }}”</p>
+                  <p style="margin:11px 0 0; font-size:11.5px; line-height:1.6; color:#b8b1ab">{{ t.story }}</p>
+                  <div style="height:1px; margin:13px 0; background:rgba(255,255,255,.09)"></div>
+                  <div style="font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.1em; color:#6a6660; text-transform:uppercase">Yang dia kerjakan</div>
+                  <div style="margin-top:9px; display:flex; flex-direction:column; gap:7px">
+                    <div style="display:flex; align-items:flex-start; gap:8px; font-size:11.5px; line-height:1.4; color:#c9c3bd"><span style="color:{{ t.accFg }}; flex:none">—</span>{{ t.cap1 }}</div>
+                    <div style="display:flex; align-items:flex-start; gap:8px; font-size:11.5px; line-height:1.4; color:#c9c3bd"><span style="color:{{ t.accFg }}; flex:none">—</span>{{ t.cap2 }}</div>
+                    <div style="display:flex; align-items:flex-start; gap:8px; font-size:11.5px; line-height:1.4; color:#c9c3bd"><span style="color:{{ t.accFg }}; flex:none">—</span>{{ t.cap3 }}</div>
+                  </div>
+                  <div style="margin-top:11px; font-size:11px; line-height:1.5; color:#7c736e"><span style="color:#8a837d">Cocok untuk:</span> {{ t.fit }}</div>
+                  <div style="margin-top:auto; display:flex; gap:8px; padding-top:16px">
+                    <button onClick="{{ t.flip }}" style="flex:none; padding:10px 14px; border-radius:10px; background:transparent; border:1px solid rgba(255,255,255,.16); color:#9a938d; font-family:'Plus Jakarta Sans',sans-serif; font-weight:600; font-size:12.5px; cursor:pointer; transition:border-color .2s, color .2s" style-hover="border-color:rgba(255,255,255,.35); color:#f1ede9">←</button>
+                    <button onClick="{{ t.pickClose }}" style="flex:1; padding:10px 14px; border-radius:10px; background:linear-gradient(180deg,#ff8a52,#ee3c30 55%,#c01f12); border:1px solid rgba(255,150,120,.6); box-shadow:inset 0 1px 1px rgba(255,225,205,.7), 0 8px 18px rgba(238,60,48,.42); color:#fff; font-family:'Plus Jakarta Sans',sans-serif; font-weight:700; font-size:12.5px; text-shadow:0 1px 2px rgba(120,15,5,.5); cursor:pointer; transition:transform .2s" style-hover="transform:translateY(-2px)">Pilih ini</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="margin-top:26px; text-align:center">
+          <button onClick="{{ toDetail }}" style="display:inline-flex; align-items:center; gap:9px; padding:13px 24px; border-radius:999px; background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02)); border:1px solid rgba(255,255,255,.15); box-shadow:inset 0 1px 0 rgba(255,255,255,.09); color:#e7e3df; font-family:'Plus Jakarta Sans',sans-serif; font-weight:600; font-size:14.5px; cursor:pointer; transition:transform .2s, border-color .2s" style-hover="transform:translateY(-2px); border-color:rgba(255,150,120,.5)">Mau lebih personal? Tulis detailnya sendiri <span>→</span></button>
+        </div>
+      </div>
+
+      <!-- ===== DETAIL MODE ===== -->
+      <div style="display:{{ showDetail }}">
+        <button onClick="{{ toTpl }}" style="margin-top:24px; display:inline-flex; align-items:center; gap:8px; padding:9px 16px; border-radius:999px; background:transparent; border:1px solid rgba(255,255,255,.14); color:#9a938d; font-family:'Plus Jakarta Sans',sans-serif; font-weight:500; font-size:13.5px; cursor:pointer; transition:border-color .2s, color .2s" style-hover="border-color:rgba(255,150,120,.5); color:#f1ede9"><span>←</span> Pilih dari template</button>
+
+      <!-- quick paste card -->
+      <div style="position:relative; margin-top:28px; border-radius:16px; padding:22px; background:linear-gradient(180deg, rgba(255,138,61,.07), transparent 40%), #0c0a09; border:1px solid rgba(255,138,61,.26); box-shadow:inset 0 1px 0 rgba(255,200,160,.14)">
+        <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.16em; color:#ff8a72; text-transform:uppercase">Cara cepat</div>
+        <div style="margin-top:12px; font-size:15px; font-weight:600; color:#e9e4e0">Forward contoh kerja kamu, biar aku yang nyusun</div>
+        <p style="margin:7px 0 14px; font-size:13.5px; line-height:1.55; color:#8a837d">Tempel satu proposal, beberapa chat klien, atau caption kamu. Aku baca, lalu isi bagian bawah otomatis — kamu tinggal cek dan sesuaikan.</p>
+        <textarea placeholder="Tempel di sini: proposal, chat bisnis, caption, atau daftar klien kamu." style="width:100%; min-height:120px; resize:vertical; padding:15px 16px; border-radius:12px; background:#0a0809; border:1px solid rgba(255,120,90,.3); color:#f1ede9; font-family:'Plus Jakarta Sans',sans-serif; font-size:14.5px; line-height:1.5; box-shadow:inset 0 2px 6px rgba(0,0,0,.4); transition:border-color .2s, box-shadow .2s"></textarea>
+        <button style="margin-top:14px; display:inline-flex; align-items:center; gap:8px; padding:12px 22px; border-radius:11px; background:linear-gradient(180deg,#ff8a52,#ee3c30 55%,#c01f12); border:1px solid rgba(255,150,120,.6); box-shadow:inset 0 1.5px 1px rgba(255,225,205,.7), 0 10px 22px rgba(238,60,48,.42); color:#fff; font-family:'Plus Jakarta Sans',sans-serif; font-weight:700; font-size:14.5px; text-shadow:0 1px 2px rgba(120,15,5,.5); cursor:pointer; transition:transform .2s" style-hover="transform:translateY(-2px)">Biar aku yang nyusun</button>
+      </div>
+
+      <!-- needs textarea -->
+      <div style="position:relative; margin-top:28px">
+        <label style="display:block; font-size:15px; font-weight:600; color:#e9e4e0">Apa yang paling kamu butuhkan dari agent kamu?</label>
+        <textarea placeholder="Contoh: Bantu briefing pagi, ringkas berita, follow up klien via WhatsApp." style="width:100%; min-height:120px; resize:vertical; margin-top:12px; padding:15px 16px; border-radius:12px; background:#0d0b0c; border:1px solid rgba(255,255,255,.12); color:#f1ede9; font-family:'Plus Jakarta Sans',sans-serif; font-size:14.5px; line-height:1.5; box-shadow:inset 0 2px 6px rgba(0,0,0,.4); transition:border-color .2s, box-shadow .2s"></textarea>
+        <div style="margin-top:8px; text-align:right; font-family:'JetBrains Mono',monospace; font-size:12px; color:#6a6660">0 / 600</div>
+      </div>
+
+      <!-- presets -->
+      <div style="position:relative; margin-top:20px">
+        <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.16em; color:#7c736e; text-transform:uppercase">Atau pilih dari preset</div>
+        <div style="margin-top:15px; display:flex; flex-wrap:wrap; gap:11px">
+          <sc-for list="{{ presets }}" as="p" hint-placeholder-count="6">
+            <button style="padding:10px 18px; border-radius:999px; background:{{ p.bg }}; border:1px solid {{ p.bd }}; box-shadow:inset 0 1px 0 rgba(255,255,255,.08); color:{{ p.fg }}; font-family:'Plus Jakarta Sans',sans-serif; font-weight:500; font-size:14px; cursor:pointer; transition:transform .2s" style-hover="transform:translateY(-2px)">{{ p.t }}</button>
+          </sc-for>
+        </div>
+      </div>
+
+      <!-- persona -->
+      <div style="position:relative; margin-top:32px">
+        <div style="font-size:15px; font-weight:600; color:#e9e4e0">Pilih persona agent kamu</div>
+        <p style="margin:6px 0 16px; font-size:13.5px; color:#8a837d">Persona menentukan keahlian dan gaya agent. Kamu bisa ganti nanti.</p>
+        <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:12px">
+          <sc-for list="{{ personas }}" as="p" hint-placeholder-count="4">
+            <div onClick="{{ p.pick }}" style="position:relative; overflow:hidden; padding:16px 18px; border-radius:14px; cursor:pointer; background:{{ p.cardBg }}; border:1px solid {{ p.cardBd }}; box-shadow:{{ p.cardShadow }}; transition:transform .2s, border-color .3s, box-shadow .3s" style-hover="transform:translateY(-3px)">
+              <div style="display:flex; align-items:center; gap:11px">
+                <span style="flex:none; width:36px; height:36px; border-radius:10px; background:{{ p.iconBg }}; border:1px solid {{ p.iconBd }}; box-shadow:inset 0 1.5px 1.5px rgba(255,255,255,.4); display:grid; place-items:center; font-size:17px">{{ p.icon }}</span>
+                <span style="font-size:15.5px; font-weight:600; color:#f1ede9">{{ p.name }}</span>
+              </div>
+              <p style="margin:11px 0 0; font-size:13px; line-height:1.5; color:#8a837d">{{ p.desc }}</p>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      </div>
+
+      <button onClick="{{ finish }}" style="position:relative; overflow:hidden; width:100%; margin-top:32px; padding:18px; border-radius:15px; background:linear-gradient(180deg,#ff8a52,#ee3c30 55%,#c01f12); border:1px solid rgba(255,150,120,.6); box-shadow:inset 0 1.5px 1px rgba(255,225,205,.7), inset 0 -5px 11px rgba(150,20,5,.45), 0 16px 36px rgba(238,60,48,.48); color:#fff; font-family:'Plus Jakarta Sans',sans-serif; font-weight:700; font-size:16.5px; text-shadow:0 1px 2px rgba(120,15,5,.5); cursor:pointer; transition:transform .2s" style-hover="transform:translateY(-2px)"><span style="position:absolute; top:0; left:-40%; width:40%; height:100%; background:linear-gradient(105deg, transparent, rgba(255,255,255,.4), transparent); animation:sheenSweep 4.5s ease-in-out infinite 1s"></span><span style="position:relative">Aktifkan agent kamu &nbsp;→</span></button>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1200,&quot;height&quot;:900}}">
+class Component extends DCLogic {
+  state = { step: 0, persona: 0, cfgMode: 'template', tpl: -1, flips: {} };
+
+  set = (n) => { this.setState({ step: n }); try { window.scrollTo(0, 0); } catch(e){} };
+  goStep1 = () => this.set(1);
+  goStep2 = () => this.set(2);
+  goStep3 = () => this.set(3);
+  finish = () => this.set(3);
+  pickPersona = (i) => this.setState({ persona: i });
+  toDetail = () => { this.setState({ cfgMode: 'detail' }); try { window.scrollTo(0, 0); } catch(e){} };
+  toTpl = () => { this.setState({ cfgMode: 'template' }); try { window.scrollTo(0, 0); } catch(e){} };
+  pickTpl = (i) => this.setState({ tpl: i });
+  flipCard = (i) => this.setState(s => ({ flips: Object.assign({}, s.flips, { [i]: !s.flips[i] }) }));
+  pickClose = (i) => this.setState(s => ({ tpl: i, flips: Object.assign({}, s.flips, { [i]: false }) }));
+
+  renderVals() {
+    const step = this.state.step;
+    const navLabel = step === 0 ? 'WELCOME' : 'ONBOARDING';
+    const stepLabels = ['', 'STEP 2 DARI 4', 'STEP 3 DARI 4', 'STEP 4 DARI 4'];
+
+    // step rail dots (4 dots) — active = fire gradient + wide
+    const dots = [0,1,2,3].map(i => {
+      const active = i === (step === 0 ? -1 : step);
+      const done = step !== 0 && i < step;
+      return {
+        w: active ? '30px' : '9px',
+        bg: active ? 'linear-gradient(90deg,#ff8a3d,#ee2f1f)' : (done ? 'rgba(255,138,61,.5)' : 'rgba(255,255,255,.16)'),
+        glow: active ? '0 0 12px rgba(238,60,48,.6)' : 'none',
+      };
+    });
+
+    // welcome "what happens" steps
+    const chip = { bg:'linear-gradient(180deg, rgba(255,138,61,.14), rgba(238,60,48,.05))', bd:'rgba(255,120,90,.32)', fg:'#ff8a72' };
+    const stepColors = [chip, chip, chip];
+    const steps = [
+      'Buka Telegram, cari bot kamu sendiri (akan muncul username-nya saat onboarding selesai).',
+      'Tunggu pesan halo dari agent kamu — otomatis masuk dalam beberapa detik.',
+      'Mulai percakapan dengan membalas, atau kasih tahu prioritas kamu hari ini.',
+    ].map((t, i) => ({ n: '0' + (i+1), t, chipBg: stepColors[i].bg, chipBd: stepColors[i].bd, chipFg: stepColors[i].fg }));
+
+    // pairing code
+    const code = '271899'.split('').map((v, i) => ({ v, d: (i * 0.07).toFixed(2) + 's' }));
+
+    // presets — each its own accent tint
+    const presetColors = [
+      { fg:'#ffb39e', tint:'238,60,48' },
+      { fg:'#7fd3f5', tint:'34,158,217' },
+      { fg:'#ff8ab5', tint:'249,80,143' },
+      { fg:'#bda7ff', tint:'139,110,240' },
+      { fg:'#5fe39a', tint:'34,197,94' },
+      { fg:'#ffd95e', tint:'234,179,8' },
+    ];
+    const presets = ['Briefing pagi','Email triage','Content drafting','Riset & dokumen','Trading analysis','Bantuan tugas']
+      .map((t, i) => ({ t, fg: presetColors[i].fg, bg: 'rgba(' + presetColors[i].tint + ',.1)', bd: 'rgba(' + presetColors[i].tint + ',.34)' }));
+
+    // personas — 4 cards, selected one gets fire treatment
+    const personaData = [
+      { name:'Asisten Umum', icon:'✦', desc:'Serba bisa — jadwal, riset, draft, follow-up.', tint:'238,60,48', ig:'linear-gradient(180deg,#ff8a52,#ee3c30 55%,#c01f12)', ib:'rgba(255,150,120,.6)' },
+      { name:'Content Creator', icon:'✎', desc:'Caption, script, ide konten sesuai gaya kamu.', tint:'249,80,143', ig:'linear-gradient(180deg,#ff8fc4,#f9508f 55%,#b3257a)', ib:'rgba(255,170,210,.6)' },
+      { name:'Sales Closer', icon:'◆', desc:'Balas chat, closing, kirim link pembayaran.', tint:'34,197,94', ig:'linear-gradient(180deg,#7ef0a4,#22c55e 55%,#15803d)', ib:'rgba(150,240,180,.6)' },
+      { name:'Analis Finance', icon:'▤', desc:'Rapikan cashflow, ringkasan, laporan.', tint:'34,158,217', ig:'linear-gradient(180deg,#7fd3f5,#229ed9 55%,#1278a8)', ib:'rgba(160,220,250,.6)' },
+    ];
+    const personas = personaData.map((p, i) => {
+      const on = i === this.state.persona;
+      return {
+        name: p.name, icon: p.icon, desc: p.desc,
+        pick: () => this.pickPersona(i),
+        cardBg: on ? ('linear-gradient(180deg, rgba(' + p.tint + ',.14), transparent 60%), #0c0a0b') : '#0b090a',
+        cardBd: on ? ('rgba(' + p.tint + ',.5)') : 'rgba(255,255,255,.09)',
+        cardShadow: on ? ('inset 0 1px 0 rgba(255,255,255,.08), 0 0 26px rgba(' + p.tint + ',.16)') : 'inset 0 1px 0 rgba(255,255,255,.05)',
+        iconBg: p.ig, iconBd: p.ib,
+      };
+    });
+
+    return {
+      navLabel, stepLabel: stepLabels[step],
+      railDisplay: step === 0 ? 'none' : 'flex',
+      show0: step === 0 ? 'block' : 'none',
+      show1: step === 1 ? 'block' : 'none',
+      show2: step === 2 ? 'block' : 'none',
+      show3: step === 3 ? 'block' : 'none',
+      dots, steps, code, presets, personas,
+      expiry: '29:55',
+      goStep1: this.goStep1, goStep2: this.goStep2, goStep3: this.goStep3, finish: this.finish,
+
+      // Step 4 — template vs detail mode
+      cfgTitle: this.state.cfgMode === 'template' ? 'Pilih template agent kamu.' : 'Cara kamu pakai agent.',
+      cfgSub: this.state.cfgMode === 'template'
+        ? 'Mulai dari template yang sudah teruji — tinggal pilih satu kartu. Bisa kamu sesuaikan nanti.'
+        : 'Tulis bebas. Yang kamu tulis di sini jadi "kontrak kepribadian" agent kamu.',
+      showTpl: this.state.cfgMode === 'template' ? 'block' : 'none',
+      showDetail: this.state.cfgMode === 'detail' ? 'block' : 'none',
+      toDetail: this.toDetail, toTpl: this.toTpl,
+      templates: [
+        { img:'/assets/cards/sentinel.png', name:'The Sentinel', roman:'I · Sang Penjaga', tint:'238,60,48', quote:'Yang tak pernah tidur, menjaga tiap pintu masuk.', story:'Chat pelanggan datang kapan saja — jam 2 pagi sekalipun. The Sentinel jaga semua channel, balas cepat, dan tutup penjualan tanpa kamu harus standby.', cap1:'Balas chat & closing otomatis', cap2:'Kirim link pembayaran', cap3:'Ingat riwayat tiap pelanggan', fit:'Toko online, admin CS, bisnis jasa' },
+        { img:'/assets/cards/rainmaker.png', name:'The Rainmaker', roman:'II · Sang Penurun Hujan', tint:'249,80,143', quote:'Ia mengubah percakapan menjadi kesepakatan.', story:'Lead yang menganggur adalah uang yang hilang. The Rainmaker follow-up tiap prospek, jaga percakapan tetap hangat, dan giring mereka sampai deal tertutup.', cap1:'Follow-up lead otomatis', cap2:'Nurturing sampai closing', cap3:'Update pipeline kamu', fit:'Sales, agen properti, tim B2B' },
+        { img:'/assets/cards/muse.png', name:'The Muse', roman:'III · Sang Pemberi Ilham', tint:'139,110,240', quote:'Dari satu ide, lahir ribuan kata.', story:'Kehabisan ide konten itu melelahkan. The Muse tahu gaya nulis kamu, lalu bikin caption, hook, dan ide harian yang terdengar seperti kamu — bukan robot.', cap1:'Caption & hook siap posting', cap2:'Ide konten tiap hari', cap3:'Sesuai brand voice kamu', fit:'Kreator, brand, marketer' },
+        { img:'/assets/cards/alchemist.png', name:'The Alchemist', roman:'IV · Sang Peramu', tint:'234,179,8', quote:'Ia mengubah angka mentah menjadi emas.', story:'Tumpukan struk dan mutasi bikin pusing. The Alchemist rapikan cashflow, ramu jadi laporan yang gampang dibaca, dan tandai hal yang perlu kamu waspadai.', cap1:'Rapikan cashflow', cap2:'Ringkasan keuangan mingguan', cap3:'Deteksi pengeluaran janggal', fit:'UMKM, freelancer, tim finance' },
+        { img:'/assets/cards/scribe.png', name:'The Scribe', roman:'V · Sang Juru Tulis', tint:'34,158,217', quote:'Tiap kata terucap, ia abadikan.', story:'Rapat panjang, catatan berantakan. The Scribe dengar, transkrip, dan rangkum jadi notula plus action items — kamu tinggal hadir dan fokus.', cap1:'Transkrip & notula rapat', cap2:'Action items otomatis', cap3:'Draft slide presentasi', fit:'Manajer, konsultan, tim kerja' },
+        { img:'/assets/cards/magician.png', name:'The Magician', roman:'VI · Sang Pesulap', tint:'34,197,94', quote:'Satu tangan ke langit, satu ke bumi — semua terhubung.', story:'Kenapa pilih satu kalau bisa semua? The Magician gabungkan seluruh keahlian: riset, dokumen, jadwal, sampai tugas harian — satu agent untuk apa pun.', cap1:'Riset & susun dokumen', cap2:'Atur jadwal & reminder', cap3:'Serba bisa, sesuai perintah', fit:'Semua profesi' },
+      ].map((t, i) => {
+        const on = i === this.state.tpl;
+        const flipped = !!this.state.flips[i];
+        return {
+          img: t.img, name: t.name, roman: t.roman, quote: t.quote, story: t.story, cap1: t.cap1, cap2: t.cap2, cap3: t.cap3, fit: t.fit,
+          flip: () => this.flipCard(i),
+          pickClose: () => this.pickClose(i),
+          flipT: flipped ? 'rotateY(180deg)' : 'none',
+          sway: flipped ? 'none' : ('sway ' + (6 + i * 0.4).toFixed(1) + 's ease-in-out infinite ' + (i * 0.5).toFixed(1) + 's'),
+          delay: (i * 0.6).toFixed(1) + 's',
+          checkDisp: on ? 'grid' : 'none',
+          accFg: 'rgba(' + t.tint + ',1)',
+          accSolid: 'rgb(' + t.tint + ')',
+          backBg: 'radial-gradient(120% 80% at 50% 0%, rgba(' + t.tint + ',.16), transparent 60%), #0b090a',
+          backBd: 'rgba(' + t.tint + ',.5)',
+          cardBd: on ? ('rgba(' + t.tint + ',.85)') : 'rgba(255,255,255,.1)',
+          cardShadow: on ? ('0 0 0 2px rgba(' + t.tint + ',.6), 0 0 36px rgba(' + t.tint + ',.4), 0 22px 48px rgba(0,0,0,.6)') : '0 14px 32px rgba(0,0,0,.55)',
+        };
+      }),
+    };
+  }
+}
+</script>
+</body>
+</html>
