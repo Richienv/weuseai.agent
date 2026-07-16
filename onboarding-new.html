@@ -150,7 +150,7 @@
           <span style="flex:none; width:32px; height:32px; border-radius:9px; border:1px solid rgba(255,255,255,.1); display:grid; place-items:center; font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:600; box-shadow:inset 0 1px 1px rgba(255,255,255,.15); animation:numCycle 9s ease-in-out infinite 0s">01</span>
           <div style="flex:1">
             <div style="font-size:16px; color:#e3ded9; line-height:1.55">Buka <span style="font-family:'JetBrains Mono',monospace; color:#f1ede9">@BotFather</span> di Telegram.</div>
-            <button style="margin-top:14px; display:inline-flex; align-items:center; gap:9px; padding:12px 22px; border-radius:11px; background:linear-gradient(180deg,#f7f4ef,#ded9d0); border:1px solid rgba(255,255,255,.5); box-shadow:inset 0 1px 1px rgba(255,255,255,.9), 0 8px 20px rgba(0,0,0,.45); color:#16110f; font-family:'Plus Jakarta Sans',sans-serif; font-weight:700; font-size:14px; cursor:pointer; transition:transform .2s" style-hover="transform:translateY(-2px)">Buka @BotFather <span>→</span></button>
+            <button onClick="{{ openBotFather }}" style="margin-top:14px; display:inline-flex; align-items:center; gap:9px; padding:12px 22px; border-radius:11px; background:linear-gradient(180deg,#f7f4ef,#ded9d0); border:1px solid rgba(255,255,255,.5); box-shadow:inset 0 1px 1px rgba(255,255,255,.9), 0 8px 20px rgba(0,0,0,.45); color:#16110f; font-family:'Plus Jakarta Sans',sans-serif; font-weight:700; font-size:14px; cursor:pointer; transition:transform .2s" style-hover="transform:translateY(-2px)">Buka @BotFather <span>→</span></button>
           </div>
         </div>
         <div style="display:flex; gap:16px; align-items:flex-start; padding:18px 20px; border-radius:14px; background:rgba(255,255,255,.02); border:1px solid rgba(255,255,255,.07); animation:stepCycle 9s ease-in-out infinite 3s">
@@ -165,8 +165,8 @@
 
       <div style="position:relative; margin-top:32px">
         <label style="display:inline-flex; align-items:center; gap:8px; font-size:14px; font-weight:600; color:#ff8a72; margin-bottom:10px"><span style="width:7px; height:7px; border-radius:50%; background:#ee3c30; box-shadow:0 0 8px #ee3c30; animation:labelDot 1.6s ease-in-out infinite"></span>Token bot — tempel di sini</label>
-        <input type="text" class="tokenField" placeholder="123456789:ABCDEFghijklmnopqrstuvwxyz" style="width:100%; padding:16px 18px; border-radius:13px; background:#0d0b0c; border:1px solid rgba(255,120,90,.35); color:#f1ede9; font-family:'JetBrains Mono',monospace; font-size:14.5px; box-shadow:inset 0 2px 6px rgba(0,0,0,.4); animation:inputBreathe 2.4s ease-in-out infinite; transition:border-color .2s, box-shadow .2s">
-        <p style="margin:10px 0 0; font-size:13px; color:#7c736e">Format: angka, titik dua, huruf-angka. Tidak ada spasi.</p>
+        <input type="text" class="tokenField" ref="{{ tokenRef }}" placeholder="123456789:ABCDEFghijklmnopqrstuvwxyz" style="width:100%; padding:16px 18px; border-radius:13px; background:#0d0b0c; border:1px solid rgba(255,120,90,.35); color:#f1ede9; font-family:'JetBrains Mono',monospace; font-size:14.5px; box-shadow:inset 0 2px 6px rgba(0,0,0,.4); animation:inputBreathe 2.4s ease-in-out infinite; transition:border-color .2s, box-shadow .2s">
+        <p style="margin:10px 0 0; font-size:13px; color:{{ tokenHintColor }}">{{ tokenHint }}</p>
       </div>
 
       <button onClick="{{ goStep2 }}" style="position:relative; overflow:hidden; width:100%; margin-top:28px; padding:18px; border-radius:15px; background:linear-gradient(180deg,#ff8a52,#ee3c30 55%,#c01f12); border:1px solid rgba(255,150,120,.6); box-shadow:inset 0 1.5px 1px rgba(255,225,205,.7), inset 0 -5px 11px rgba(150,20,5,.45), 0 16px 36px rgba(238,60,48,.48); color:#fff; font-family:'Plus Jakarta Sans',sans-serif; font-weight:700; font-size:16.5px; text-shadow:0 1px 2px rgba(120,15,5,.5); cursor:pointer; transition:transform .2s" style-hover="transform:translateY(-2px)"><span style="position:absolute; top:0; left:-40%; width:40%; height:100%; background:linear-gradient(105deg, transparent, rgba(255,255,255,.4), transparent); animation:sheenSweep 4.5s ease-in-out infinite 1s"></span><span style="position:relative">Validasi token &nbsp;→</span></button>
@@ -182,7 +182,7 @@
       <div style="position:absolute; inset:0 0 auto 0; height:130px; background-image:radial-gradient(circle, rgba(238,60,48,.35) 1px, transparent 1.6px); background-size:16px 16px; opacity:.4; -webkit-mask-image:linear-gradient(180deg,#000,transparent); mask-image:linear-gradient(180deg,#000,transparent); pointer-events:none"></div>
 
       <h2 style="position:relative; margin:0; font-weight:700; font-size:40px; letter-spacing:-.02em; color:#f8f4f0">Pasangkan Telegram kamu.</h2>
-      <p style="position:relative; margin:16px 0 0; font-size:16.5px; line-height:1.6; color:#9a938d">Kirim kode di bawah ke bot kamu sendiri (<span style="font-family:'JetBrains Mono',monospace; color:#ff8a72">@renitacantikbot</span>) lewat Telegram. Tiga langkah, sekitar 30 detik.</p>
+      <p style="position:relative; margin:16px 0 0; font-size:16.5px; line-height:1.6; color:#9a938d">Kirim kode di bawah ke bot kamu sendiri (<span style="font-family:'JetBrains Mono',monospace; color:#ff8a72">@{{ botHandle }}</span>) lewat Telegram. Tiga langkah, sekitar 30 detik.</p>
 
       <!-- pairing code -->
       <div style="position:relative; margin-top:28px; border-radius:18px; padding:26px; text-align:center; background:linear-gradient(180deg, rgba(238,60,48,.06), transparent 60%), #0a0809; border:1px solid rgba(255,255,255,.08); box-shadow:inset 0 1px 0 rgba(255,255,255,.05)">
@@ -202,17 +202,17 @@
           <div style="flex:1">
             <div style="font-size:15.5px; color:#cfc9c3; line-height:1.5">Salin kode pasangan kamu dulu:</div>
             <div style="margin-top:13px; display:flex; align-items:center; gap:12px">
-              <span style="font-family:'JetBrains Mono',monospace; font-size:17px; color:#ffd9c2; padding:9px 16px; border-radius:10px; background:#0d0b0c; border:1px solid rgba(255,150,90,.3)">/pair 271899</span>
-              <button style="display:inline-flex; align-items:center; gap:7px; padding:9px 18px; border-radius:10px; background:linear-gradient(180deg,#f7f4ef,#ded9d0); border:1px solid rgba(255,255,255,.5); box-shadow:inset 0 1px 1px rgba(255,255,255,.9), 0 6px 16px rgba(0,0,0,.4); color:#16110f; font-family:'Plus Jakarta Sans',sans-serif; font-weight:700; font-size:14px; cursor:pointer; transition:transform .2s" style-hover="transform:translateY(-2px)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg>Salin kode</button>
+              <span style="font-family:'JetBrains Mono',monospace; font-size:17px; color:#ffd9c2; padding:9px 16px; border-radius:10px; background:#0d0b0c; border:1px solid rgba(255,150,90,.3)">/pair {{ pairCmd }}</span>
+              <button onClick="{{ copyPair }}" style="display:inline-flex; align-items:center; gap:7px; padding:9px 18px; border-radius:10px; background:linear-gradient(180deg,#f7f4ef,#ded9d0); border:1px solid rgba(255,255,255,.5); box-shadow:inset 0 1px 1px rgba(255,255,255,.9), 0 6px 16px rgba(0,0,0,.4); color:#16110f; font-family:'Plus Jakarta Sans',sans-serif; font-weight:700; font-size:14px; cursor:pointer; transition:transform .2s" style-hover="transform:translateY(-2px)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg>Salin kode</button>
             </div>
           </div>
         </div>
         <div style="display:flex; gap:18px; align-items:flex-start">
           <span style="flex:none; font-family:'JetBrains Mono',monospace; font-size:12px; color:#ff7a5e; padding-top:3px">02</span>
           <div style="flex:1">
-            <div style="font-size:15.5px; color:#cfc9c3; line-height:1.5">Buka bot kamu (<span style="font-family:'JetBrains Mono',monospace; color:#e9e4e0">@renitacantikbot</span>), klik <span style="font-family:'JetBrains Mono',monospace; color:#e9e4e0">/start</span>, lalu paste kodenya.</div>
-            <button style="margin-top:13px; display:inline-flex; align-items:center; gap:9px; padding:11px 20px; border-radius:11px; background:linear-gradient(180deg,#34a8eb,#1c7fc4 60%,#155f96); border:1px solid rgba(120,200,245,.6); box-shadow:inset 0 1.5px 1px rgba(190,230,250,.7), inset 0 -3px 7px rgba(10,60,100,.4), 0 10px 22px rgba(34,158,217,.4); color:#fff; font-family:'Plus Jakarta Sans',sans-serif; font-weight:700; font-size:14px; text-shadow:0 1px 2px rgba(10,50,90,.5); cursor:pointer; transition:transform .2s" style-hover="transform:translateY(-2px)"><svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M22 4 L2 11.3 l6.3 2.1 L18 7 l-7.1 8 v4.2 l3-3 L20.5 21z"/></svg>Buka Telegram <span>→</span></button>
-            <div style="margin-top:11px; font-size:13px; color:#7c736e">Bukan bot kamu — <span style="color:#ff8a72; text-decoration:underline; text-underline-offset:2px; cursor:pointer">Ganti bot</span> (paste ulang token dari BotFather)</div>
+            <div style="font-size:15.5px; color:#cfc9c3; line-height:1.5">Buka bot kamu (<span style="font-family:'JetBrains Mono',monospace; color:#e9e4e0">@{{ botHandle }}</span>), klik <span style="font-family:'JetBrains Mono',monospace; color:#e9e4e0">/start</span>, lalu paste kodenya.</div>
+            <button onClick="{{ openBot }}" style="margin-top:13px; display:inline-flex; align-items:center; gap:9px; padding:11px 20px; border-radius:11px; background:linear-gradient(180deg,#34a8eb,#1c7fc4 60%,#155f96); border:1px solid rgba(120,200,245,.6); box-shadow:inset 0 1.5px 1px rgba(190,230,250,.7), inset 0 -3px 7px rgba(10,60,100,.4), 0 10px 22px rgba(34,158,217,.4); color:#fff; font-family:'Plus Jakarta Sans',sans-serif; font-weight:700; font-size:14px; text-shadow:0 1px 2px rgba(10,50,90,.5); cursor:pointer; transition:transform .2s" style-hover="transform:translateY(-2px)"><svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M22 4 L2 11.3 l6.3 2.1 L18 7 l-7.1 8 v4.2 l3-3 L20.5 21z"/></svg>Buka Telegram <span>→</span></button>
+            <div style="margin-top:11px; font-size:13px; color:#7c736e">Bukan bot kamu — <span onClick="{{ resetBot }}" style="color:#ff8a72; text-decoration:underline; text-underline-offset:2px; cursor:pointer">Ganti bot</span> (paste ulang token dari BotFather)</div>
           </div>
         </div>
         <div style="display:flex; gap:18px; align-items:flex-start">
@@ -291,15 +291,15 @@
         <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.16em; color:#ff8a72; text-transform:uppercase">Cara cepat</div>
         <div style="margin-top:12px; font-size:15px; font-weight:600; color:#e9e4e0">Forward contoh kerja kamu, biar aku yang nyusun</div>
         <p style="margin:7px 0 14px; font-size:13.5px; line-height:1.55; color:#8a837d">Tempel satu proposal, beberapa chat klien, atau caption kamu. Aku baca, lalu isi bagian bawah otomatis — kamu tinggal cek dan sesuaikan.</p>
-        <textarea placeholder="Tempel di sini: proposal, chat bisnis, caption, atau daftar klien kamu." style="width:100%; min-height:120px; resize:vertical; padding:15px 16px; border-radius:12px; background:#0a0809; border:1px solid rgba(255,120,90,.3); color:#f1ede9; font-family:'Plus Jakarta Sans',sans-serif; font-size:14.5px; line-height:1.5; box-shadow:inset 0 2px 6px rgba(0,0,0,.4); transition:border-color .2s, box-shadow .2s"></textarea>
-        <button style="margin-top:14px; display:inline-flex; align-items:center; gap:8px; padding:12px 22px; border-radius:11px; background:linear-gradient(180deg,#ff8a52,#ee3c30 55%,#c01f12); border:1px solid rgba(255,150,120,.6); box-shadow:inset 0 1.5px 1px rgba(255,225,205,.7), 0 10px 22px rgba(238,60,48,.42); color:#fff; font-family:'Plus Jakarta Sans',sans-serif; font-weight:700; font-size:14.5px; text-shadow:0 1px 2px rgba(120,15,5,.5); cursor:pointer; transition:transform .2s" style-hover="transform:translateY(-2px)">Biar aku yang nyusun</button>
+        <textarea ref="{{ samplesRef }}" placeholder="Tempel di sini: proposal, chat bisnis, caption, atau daftar klien kamu." style="width:100%; min-height:120px; resize:vertical; padding:15px 16px; border-radius:12px; background:#0a0809; border:1px solid rgba(255,120,90,.3); color:#f1ede9; font-family:'Plus Jakarta Sans',sans-serif; font-size:14.5px; line-height:1.5; box-shadow:inset 0 2px 6px rgba(0,0,0,.4); transition:border-color .2s, box-shadow .2s"></textarea>
+        <button onClick="{{ runGenesis }}" style="margin-top:14px; display:inline-flex; align-items:center; gap:8px; padding:12px 22px; border-radius:11px; background:linear-gradient(180deg,#ff8a52,#ee3c30 55%,#c01f12); border:1px solid rgba(255,150,120,.6); box-shadow:inset 0 1.5px 1px rgba(255,225,205,.7), 0 10px 22px rgba(238,60,48,.42); color:#fff; font-family:'Plus Jakarta Sans',sans-serif; font-weight:700; font-size:14.5px; text-shadow:0 1px 2px rgba(120,15,5,.5); cursor:pointer; transition:transform .2s" style-hover="transform:translateY(-2px)">Biar aku yang nyusun</button>
       </div>
 
       <!-- needs textarea -->
       <div style="position:relative; margin-top:28px">
         <label style="display:block; font-size:15px; font-weight:600; color:#e9e4e0">Apa yang paling kamu butuhkan dari agent kamu?</label>
-        <textarea placeholder="Contoh: Bantu briefing pagi, ringkas berita, follow up klien via WhatsApp." style="width:100%; min-height:120px; resize:vertical; margin-top:12px; padding:15px 16px; border-radius:12px; background:#0d0b0c; border:1px solid rgba(255,255,255,.12); color:#f1ede9; font-family:'Plus Jakarta Sans',sans-serif; font-size:14.5px; line-height:1.5; box-shadow:inset 0 2px 6px rgba(0,0,0,.4); transition:border-color .2s, box-shadow .2s"></textarea>
-        <div style="margin-top:8px; text-align:right; font-family:'JetBrains Mono',monospace; font-size:12px; color:#6a6660">0 / 600</div>
+        <textarea ref="{{ expectRef }}" onInput="{{ onExpectInput }}" placeholder="Contoh: Bantu briefing pagi, ringkas berita, follow up klien via WhatsApp." style="width:100%; min-height:120px; resize:vertical; margin-top:12px; padding:15px 16px; border-radius:12px; background:#0d0b0c; border:1px solid rgba(255,255,255,.12); color:#f1ede9; font-family:'Plus Jakarta Sans',sans-serif; font-size:14.5px; line-height:1.5; box-shadow:inset 0 2px 6px rgba(0,0,0,.4); transition:border-color .2s, box-shadow .2s"></textarea>
+        <div style="margin-top:8px; text-align:right; font-family:'JetBrains Mono',monospace; font-size:12px; color:#6a6660">{{ charCount }}</div>
       </div>
 
       <!-- presets -->
@@ -307,7 +307,7 @@
         <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.16em; color:#7c736e; text-transform:uppercase">Atau pilih dari preset</div>
         <div style="margin-top:15px; display:flex; flex-wrap:wrap; gap:11px">
           <sc-for list="{{ presets }}" as="p" hint-placeholder-count="6">
-            <button style="padding:10px 18px; border-radius:999px; background:{{ p.bg }}; border:1px solid {{ p.bd }}; box-shadow:inset 0 1px 0 rgba(255,255,255,.08); color:{{ p.fg }}; font-family:'Plus Jakarta Sans',sans-serif; font-weight:500; font-size:14px; cursor:pointer; transition:transform .2s" style-hover="transform:translateY(-2px)">{{ p.t }}</button>
+            <button onClick="{{ p.apply }}" style="padding:10px 18px; border-radius:999px; background:{{ p.bg }}; border:1px solid {{ p.bd }}; box-shadow:inset 0 1px 0 rgba(255,255,255,.08); color:{{ p.fg }}; font-family:'Plus Jakarta Sans',sans-serif; font-weight:500; font-size:14px; cursor:pointer; transition:transform .2s" style-hover="transform:translateY(-2px)">{{ p.t }}</button>
           </sc-for>
         </div>
       </div>
@@ -338,25 +338,435 @@
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1200,&quot;height&quot;:900}}">
-class Component extends DCLogic {
-  state = { step: 0, persona: 0, cfgMode: 'template', tpl: -1, flips: {} };
+// ─── constants + cid (from onboarding.html) ───────────────────
+const SUPABASE_URL = 'https://gtjgsligllbjcisiyrah.supabase.co';
+const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd0amdzbGlnbGxiamNpc2l5cmFoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0Njc2NjUsImV4cCI6MjA5MzA0MzY2NX0.krPAvB3kyxcqsBS5dyDahFMqCB_4MZKaz6FEB0RfjtY';
+const PAIR_POLL_MS = 3000;
+const CID = new URLSearchParams(location.search).get('cid');
 
-  set = (n) => { this.setState({ step: n }); try { window.scrollTo(0, 0); } catch(e){} };
-  goStep1 = () => this.set(1);
-  goStep2 = () => this.set(2);
-  goStep3 = () => this.set(3);
-  finish = () => this.set(3);
-  pickPersona = (i) => this.setState({ persona: i });
-  toDetail = () => { this.setState({ cfgMode: 'detail' }); try { window.scrollTo(0, 0); } catch(e){} };
-  toTpl = () => { this.setState({ cfgMode: 'template' }); try { window.scrollTo(0, 0); } catch(e){} };
-  pickTpl = (i) => this.setState({ tpl: i });
+const TOKEN_HINT_DEFAULT = 'Format: angka, titik dua, huruf-angka. Tidak ada spasi.';
+const UPSELL = 'Persona ini ada di paket yang lebih tinggi. Pilih yang lain, atau upgrade paket kamu.';
+const WA_MISSING = 'Nomor WhatsApp kamu belum tercatat. Hubungi tim via WhatsApp biar kami bantu aktifkan agent kamu.';
+
+const WA_RE = /^(?:\+?62|0)\d{8,13}$/;
+function validWa(v) { return typeof v === 'string' && WA_RE.test(v.replace(/[\s\-().]/g, '')); }
+function fmtMmss(ms) { if (ms <= 0) return '0:00'; const t = Math.floor(ms / 1000); const m = Math.floor(t / 60); const sec = t % 60; return m + ':' + String(sec).padStart(2, '0'); }
+
+// Persona sets — mirror of _shared/tier-personas.ts (server re-validates).
+const _SET_3 = ['the-pro', 'doc-expert', 'slide-master'];
+const _SET_8 = ['the-pro', 'doc-expert', 'slide-master', 'deep-researcher', 'trade-pro', 'project-conductor', 'video-producer', 'social-conductor'];
+const _SET_10 = _SET_8.concat(['web-app-builder', 'business-agent']);
+const TIER_PERSONAS = {
+  'bare': [], 'solo': _SET_3, 'voice-starter': _SET_3, 'done-for-you': _SET_8, 'library-full': _SET_10,
+  'starter': _SET_3, 'pro': _SET_8, 'studio': _SET_10,
+};
+
+// Tarot card → (agent_slug, expectations preset). Index-aligned with the 6 templates.
+const TAROT_SLUG = ['business-agent', 'business-agent', 'social-conductor', 'the-pro', 'doc-expert', 'the-pro'];
+const TAROT_EXP = [
+  'Balas chat pelanggan otomatis, kirim link pembayaran, ingat riwayat tiap pelanggan.',
+  'Follow-up tiap lead, nurturing sampai closing, update pipeline.',
+  'Caption dan hook sesuai brand voice, ide konten harian.',
+  'Rapikan cashflow, ringkasan keuangan mingguan, tandai pengeluaran janggal.',
+  'Transkrip dan notula rapat, action items, draft slide.',
+  'Serba bisa: riset, dokumen, jadwal, tugas harian.',
+];
+// Detail-mode persona cards → agent_slug (index-aligned with personaData).
+const DETAIL_SLUG = ['the-pro', 'social-conductor', 'business-agent', 'the-pro'];
+
+const PRESET_LABELS = ['Briefing pagi', 'Email triage', 'Content drafting', 'Riset & dokumen', 'Trading analysis', 'Bantuan tugas'];
+const PRESET_TEXT = {
+  'Briefing pagi': 'Kasih briefing tiap pagi: agenda, prioritas, dan hal penting yang perlu aku tahu.',
+  'Email triage': 'Bantu sortir email masuk, tandai yang penting, dan draft balasan singkat.',
+  'Content drafting': 'Bantu draft konten: caption, hook, dan ide sesuai gaya aku.',
+  'Riset & dokumen': 'Bantu riset topik dan susun jadi dokumen yang rapi dan ringkas.',
+  'Trading analysis': 'Rangkum kondisi pasar dan data trading buat aku. Bukan saran finansial.',
+  'Bantuan tugas': 'Bantu tugas harian: jadwal, reminder, dan hal kecil yang gampang kelupaan.',
+};
+
+class Component extends DCLogic {
+  state = {
+    step: 0, persona: 0, cfgMode: 'template', tpl: -1, flips: {},
+    booted: false, cidOk: true,
+    tokenHint: TOKEN_HINT_DEFAULT, tokenHintColor: '#7c736e',
+    botHandle: 'bot kamu', pairCode: null,
+    expiryLabel: '—:—', charCount: '0 / 600',
+    cfgMsg: null, submitting: false,
+  };
+
+  // Uncontrolled inputs are read via refs (survive re-render).
+  tokenRef = React.createRef();
+  expectRef = React.createRef();
+  samplesRef = React.createRef();
+
+  // Non-render instance state.
+  customer = null; paymentEmail = null; customerTier = 'starter';
+  waValue = ''; genesisDraft = null;
+  pollTimer = null; expiryTimer = null; pairExpiryMs = null;
+
+  componentDidMount() { this.boot(); }
+  componentWillUnmount() { this.stopPolling(); if (this.expiryTimer) clearInterval(this.expiryTimer); }
+
+  scrollTop() { try { window.scrollTo(0, 0); } catch (e) {} }
+  anonHeaders() { return { apikey: ANON_KEY, Authorization: 'Bearer ' + ANON_KEY, 'X-CID': CID }; }
+
+  // ─── on-load reads ─────────────────────────────────────────
+  fetchCustomer() {
+    const url = SUPABASE_URL + '/rest/v1/customers?id=eq.' + encodeURIComponent(CID) +
+      '&select=id,display_name,telegram_chat_id,telegram_bot_username,pairing_code,pairing_code_expires_at,genesis_draft';
+    return fetch(url, { headers: this.anonHeaders() })
+      .then(r => { if (!r.ok) throw new Error('fetchCustomer ' + r.status); return r.json(); })
+      .then(rows => rows[0] || null);
+  }
+
+  async fetchInfo() {
+    const r = await fetch(SUPABASE_URL + '/functions/v1/customer-onboarding-info', {
+      method: 'POST',
+      headers: Object.assign({ 'content-type': 'application/json' }, this.anonHeaders()),
+      body: JSON.stringify({ customer_id: CID }),
+    });
+    if (!r.ok) throw new Error('info ' + r.status);
+    return await r.json();
+  }
+
+  fetchTier() {
+    const url = SUPABASE_URL + '/rest/v1/subscriptions?customer_id=eq.' + encodeURIComponent(CID) +
+      '&select=tier,status,started_at&order=started_at.desc&limit=1';
+    return fetch(url, { headers: this.anonHeaders() })
+      .then(r => { if (!r.ok) throw new Error('tier ' + r.status); return r.json(); })
+      .then(rows => { const t = rows[0] && rows[0].tier; return (t && Object.prototype.hasOwnProperty.call(TIER_PERSONAS, t)) ? t : null; });
+  }
+
+  async boot() {
+    if (!CID) { this.setState({ booted: true, cidOk: false }); return; }
+    let cust = null;
+    try { cust = await this.fetchCustomer(); } catch (e) { this.setState({ booted: true, cidOk: false }); return; }
+    if (!cust) { this.setState({ booted: true, cidOk: false }); return; }
+    this.customer = cust;
+
+    try {
+      const info = await this.fetchInfo();
+      if (info) {
+        this.paymentEmail = (typeof info.email === 'string' && info.email) ? info.email : null;
+        if (info.whatsapp_number) this.waValue = info.whatsapp_number;
+        if (info.display_name && !this.customer.display_name) this.customer.display_name = info.display_name;
+      }
+    } catch (e) { /* non-fatal */ }
+
+    try { const c = localStorage.getItem('onboarding_wa_' + CID); if (c && !this.waValue) this.waValue = c; } catch (e) {}
+
+    try { this.customerTier = (await this.fetchTier()) || 'starter'; } catch (e) { this.customerTier = 'starter'; }
+
+    if (this.customer.genesis_draft) this.genesisDraft = this.customer.genesis_draft;
+
+    const granted = TIER_PERSONAS[this.customerTier] || TIER_PERSONAS.starter;
+    const personaFree = granted.length === 0;
+
+    // Resume routing (design step model: 0 welcome, 1 buat bot, 2 pair, 3 config).
+    let step = 0;
+    if (this.customer.telegram_chat_id && this.customer.telegram_bot_username) step = 3;
+    else if (this.customer.telegram_bot_username) step = 2;
+
+    this.setState({
+      booted: true, cidOk: true, step,
+      botHandle: this.customer.telegram_bot_username || 'bot kamu',
+      cfgMode: personaFree ? 'detail' : 'template',
+    }, () => {
+      if (step === 2) this.startPairing();
+      if (step === 3) this.applyGenesisDraft();
+    });
+  }
+
+  // ─── navigation ────────────────────────────────────────────
+  goStep1 = () => { this.setState({ step: 1 }); this.scrollTop(); };
+  goStep3 = () => { this.goConfig(); };   // "Lewati (demo)" escape hatch
+  toDetail = () => { this.setState({ cfgMode: 'detail', cfgMsg: null }); this.scrollTop(); this.applyGenesisDraft(); };
+  toTpl = () => { this.setState({ cfgMode: 'template', cfgMsg: null }); this.scrollTop(); };
   flipCard = (i) => this.setState(s => ({ flips: Object.assign({}, s.flips, { [i]: !s.flips[i] }) }));
-  pickClose = (i) => this.setState(s => ({ tpl: i, flips: Object.assign({}, s.flips, { [i]: false }) }));
+
+  goConfig() {
+    this.stopPolling();
+    if (this.expiryTimer) { clearInterval(this.expiryTimer); this.expiryTimer = null; }
+    this.setState({ step: 3 }, () => this.applyGenesisDraft());
+    this.scrollTop();
+  }
+
+  onExpectInput = () => {
+    const n = ((this.expectRef.current && this.expectRef.current.value) || '').length;
+    this.setState({ charCount: n + ' / 600' });
+  };
+
+  // ─── Screen 1: validate-bot-token ──────────────────────────
+  goStep2 = async () => {
+    const token = ((this.tokenRef.current && this.tokenRef.current.value) || '').trim();
+    if (!token) { this.setState({ tokenHint: 'Paste token dari @BotFather dulu.', tokenHintColor: '#ff8a72' }); return; }
+    this.setState({ tokenHint: 'Memvalidasi token...', tokenHintColor: '#9a938d' });
+    try {
+      const r = await fetch(SUPABASE_URL + '/functions/v1/validate-bot-token', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ customer_id: CID, bot_token: token }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) { const e = new Error('validate ' + r.status); e.body = data; throw e; }
+      this.customer.telegram_bot_username = data.bot_username;
+      this.setState({
+        botHandle: data.bot_username || 'bot kamu', step: 2,
+        tokenHint: TOKEN_HINT_DEFAULT, tokenHintColor: '#7c736e',
+      }, () => this.startPairing());
+      this.scrollTop();
+    } catch (err) {
+      let msg = 'Token tidak valid. Cek lagi di @BotFather.';
+      const b = err && err.body;
+      if (b && typeof b === 'object') {
+        if (b.error === 'invalid_token') msg = b.reason === 'format'
+          ? 'Format token salah. Harus angka, titik dua, lalu huruf-angka.'
+          : 'Token ditolak Telegram. Pastikan token belum kadaluarsa di @BotFather.';
+        else if (b.error === 'webhook_setup_failed') msg = 'Token valid tapi gagal setup webhook. Coba lagi dalam 1 menit.';
+        else if (b.error === 'no_paid_subscription') msg = 'Pembayaran kamu belum tercatat. Refresh halaman atau hubungi support.';
+      }
+      this.setState({ tokenHint: msg, tokenHintColor: '#ff8a72' });
+    }
+  };
+
+  openBotFather = () => { try { window.open('https://t.me/BotFather', '_blank'); } catch (e) {} };
+  openBot = () => {
+    const h = this.customer && this.customer.telegram_bot_username;
+    if (h) { try { window.open('https://t.me/' + encodeURIComponent(h), '_blank'); } catch (e) {} }
+  };
+
+  resetBot = async () => {
+    try {
+      const r = await fetch(SUPABASE_URL + '/functions/v1/reset-bot-pairing', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ customer_id: CID }),
+      });
+      if (!r.ok) throw new Error('reset ' + r.status);
+      if (this.customer) { this.customer.telegram_bot_username = null; this.customer.telegram_chat_id = null; }
+      this.stopPolling();
+      if (this.expiryTimer) { clearInterval(this.expiryTimer); this.expiryTimer = null; }
+      if (this.tokenRef.current) this.tokenRef.current.value = '';
+      this.setState({ step: 1, botHandle: 'bot kamu', pairCode: null });
+      this.scrollTop();
+    } catch (err) {
+      try { window.alert('Gagal me-reset bot — coba lagi atau hubungi support.'); } catch (e) {}
+    }
+  };
+
+  // ─── Screen 2: rotate-pairing-code + poll ──────────────────
+  async rotate() {
+    const r = await fetch(SUPABASE_URL + '/functions/v1/rotate-pairing-code', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ customer_id: CID }),
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error('rotate ' + r.status);
+    return data;
+  }
+
+  async startPairing() {
+    try {
+      const fresh = await this.fetchCustomer();
+      if (fresh) this.customer = Object.assign({}, this.customer, fresh);
+      if (this.customer && this.customer.telegram_chat_id) { this.goConfig(); return; }
+    } catch (e) { /* keep going */ }
+    try {
+      const data = await this.rotate();
+      this.pairExpiryMs = Date.parse(data.expires_at);
+      this.setState({ pairCode: data.code }, () => { this.startExpiry(); this.startPoll(); });
+    } catch (err) {
+      this.setState({ expiryLabel: 'gagal — memuat ulang…' });
+      setTimeout(() => { if (this.state.step === 2) this.startPairing(); }, 3000);
+    }
+  }
+
+  startExpiry() {
+    if (this.expiryTimer) clearInterval(this.expiryTimer);
+    const tick = () => {
+      const rem = this.pairExpiryMs - Date.now();
+      if (rem <= 0) {
+        clearInterval(this.expiryTimer); this.expiryTimer = null;
+        this.stopPolling();
+        this.setState({ expiryLabel: 'memuat kode baru…' });
+        if (this.state.step === 2) this.startPairing();
+        return;
+      }
+      this.setState({ expiryLabel: fmtMmss(rem) });
+    };
+    tick();
+    this.expiryTimer = setInterval(tick, 1000);
+  }
+
+  startPoll() {
+    this.stopPolling();
+    const tick = async () => {
+      try {
+        const c = await this.fetchCustomer();
+        if (c && c.telegram_chat_id) {
+          this.customer.telegram_chat_id = c.telegram_chat_id;
+          setTimeout(() => this.goConfig(), 600);
+          return;
+        }
+      } catch (e) { /* silent — keep polling */ }
+      if (this.state.step === 2) this.pollTimer = setTimeout(tick, PAIR_POLL_MS);
+    };
+    this.pollTimer = setTimeout(tick, PAIR_POLL_MS);
+  }
+
+  stopPolling() { if (this.pollTimer) { clearTimeout(this.pollTimer); this.pollTimer = null; } }
+
+  copyPair = async () => {
+    const code = this.state.pairCode;
+    if (!code || !/^\d{6}$/.test(code)) return;
+    const cmd = '/pair ' + code;
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(cmd); }
+      else {
+        const ta = document.createElement('textarea'); ta.value = cmd;
+        ta.style.position = 'fixed'; ta.style.opacity = '0';
+        document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+      }
+    } catch (e) {}
+  };
+
+  // ─── Screen 3: genesis-distill + complete-onboarding ───────
+  applyGenesisDraft() {
+    const d = this.genesisDraft;
+    if (!d) return;
+    const exp = d.expectations_paragraph || d.expectations_text || '';
+    if (this.expectRef.current && exp) {
+      this.expectRef.current.value = exp;
+      this.setState({ charCount: exp.length + ' / 600', cfgMode: 'detail' });
+    }
+    this.selectPersonaBySlug(d.recommended_persona);
+  }
+
+  selectPersonaBySlug(slug) {
+    if (!slug) return;
+    const i = DETAIL_SLUG.indexOf(slug);
+    const granted = TIER_PERSONAS[this.customerTier] || TIER_PERSONAS.starter;
+    if (i !== -1 && granted.indexOf(slug) !== -1) this.setState({ persona: i });
+  }
+
+  runGenesis = async () => {
+    const samples = ((this.samplesRef.current && this.samplesRef.current.value) || '').trim();
+    if (samples.length < 40) { this.setState({ cfgMsg: 'Tempel contoh yang lebih panjang — minimal beberapa kalimat biar aku bisa baca gaya kamu.' }); return; }
+    this.setState({ cfgMsg: 'Lagi baca contoh kamu…' });
+    try {
+      const r = await fetch(SUPABASE_URL + '/functions/v1/genesis-distill', {
+        method: 'POST',
+        headers: Object.assign({ 'content-type': 'application/json' }, this.anonHeaders()),
+        body: JSON.stringify({ customer_id: CID, tier: this.customerTier || 'starter', samples }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok || !data || !data.ok) throw new Error('genesis');
+      if (this.expectRef.current && data.expectations_paragraph) this.expectRef.current.value = data.expectations_paragraph;
+      this.selectPersonaBySlug(data.recommended_persona);
+      this.setState({
+        charCount: ((data.expectations_paragraph || '').length) + ' / 600',
+        cfgMsg: data.summary_bahasa || 'Sudah aku susun di bawah — cek dan sesuaikan kalau perlu.',
+      });
+    } catch (err) {
+      this.setState({ cfgMsg: 'Belum bisa nyusun otomatis. Tulis kebutuhan kamu manual di bawah.' });
+    }
+  };
+
+  pickPersona = (i, allowed) => {
+    if (!allowed) { this.setState({ cfgMsg: UPSELL }); return; }
+    this.setState({ persona: i, cfgMsg: null });
+  };
+
+  pickClose = (i, allowed) => {
+    if (!allowed) { this.setState(s => ({ flips: Object.assign({}, s.flips, { [i]: false }), cfgMsg: UPSELL })); return; }
+    this.setState(s => ({ tpl: i, flips: Object.assign({}, s.flips, { [i]: false }), cfgMsg: null }));
+  };
+
+  applyPreset = (text) => {
+    if (this.expectRef.current) {
+      this.expectRef.current.value = text;
+      this.setState({ charCount: text.length + ' / 600', cfgMsg: null });
+    }
+  };
+
+  finish = async () => {
+    if (this.state.submitting) return;
+    const granted = TIER_PERSONAS[this.customerTier] || TIER_PERSONAS.starter;
+    const personaFree = granted.length === 0;
+    let exp, slug;
+
+    if (this.state.cfgMode === 'template') {
+      const i = this.state.tpl;
+      if (i < 0) { this.setState({ cfgMsg: 'Pilih satu kartu dulu buat mulai.' }); return; }
+      slug = personaFree ? null : TAROT_SLUG[i];
+      if (!personaFree && granted.indexOf(slug) === -1) { this.setState({ cfgMsg: UPSELL }); return; }
+      exp = TAROT_EXP[i];
+    } else {
+      exp = ((this.expectRef.current && this.expectRef.current.value) || '').trim();
+      if (exp.length < 10) { this.setState({ cfgMsg: 'Tulis minimal 1 kalimat biar agent ngerti karakter kamu.' }); return; }
+      if (personaFree) slug = null;
+      else {
+        slug = DETAIL_SLUG[this.state.persona];
+        if (granted.indexOf(slug) === -1) { this.setState({ cfgMsg: UPSELL }); return; }
+      }
+    }
+
+    if (!validWa(this.waValue)) { this.setState({ cfgMsg: WA_MISSING }); return; }
+
+    await this.submitOnboarding(exp, slug);
+  };
+
+  async submitOnboarding(expectations_text, agent_slug) {
+    this.setState({ submitting: true, cfgMsg: 'Menyiapkan agent kamu...' });
+
+    // Opportunistic profile persist (display_name + whatsapp) — non-fatal.
+    try {
+      const name = ((this.customer && this.customer.display_name) || '').trim();
+      if (validWa(this.waValue) && this.paymentEmail && name) {
+        await fetch(SUPABASE_URL + '/functions/v1/save-onboarding-profile', {
+          method: 'POST', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ customer_id: CID, display_name: name, email: this.paymentEmail, whatsapp_number: this.waValue }),
+        });
+        try { localStorage.setItem('onboarding_wa_' + CID, this.waValue); } catch (e) {}
+      }
+    } catch (e) { /* non-fatal */ }
+
+    let r;
+    try {
+      r = await fetch(SUPABASE_URL + '/functions/v1/complete-onboarding', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ customer_id: CID, whatsapp: this.waValue, expectations_text, agent_slug }),
+      });
+    } catch (err) {
+      this.setState({ submitting: false, cfgMsg: 'Ada kendala teknis. Coba lagi dalam 1 menit, atau hubungi tim via WhatsApp.' });
+      return;
+    }
+
+    let data = null;
+    try { data = await r.json(); } catch (e) { /* null */ }
+
+    if (r.ok && data && data.redirect_url) { window.location.replace(data.redirect_url); return; }
+    if (r.status === 409 && data && data.error === 'already_onboarded' && data.redirect) { window.location.replace(data.redirect); return; }
+    if (r.status === 409 && data && data.error === 'telegram_not_paired') { this.setState({ submitting: false, step: 2, cfgMsg: null }, () => this.startPairing()); this.scrollTop(); return; }
+    if (r.status === 409 && data && data.error === 'no_bot_token') { this.setState({ submitting: false, step: 1, cfgMsg: null }); this.scrollTop(); return; }
+    if (r.status === 422 && data && data.error === 'expectations_too_short') { this.setState({ submitting: false, cfgMsg: 'Tulis minimal 1 kalimat biar agent paham karakter kamu.' }); return; }
+    if (r.status === 422 && data && data.error === 'expectations_too_long') { this.setState({ submitting: false, cfgMsg: 'Maksimum 600 karakter.' }); return; }
+    if (r.status === 400 && data && data.error === 'invalid_input') { this.setState({ submitting: false, cfgMsg: 'Ada karakter yang ditolak. Tulis ulang tanpa tag/kode.' }); return; }
+    if (r.status === 400 && data && data.error === 'invalid_whatsapp') { this.setState({ submitting: false, cfgMsg: WA_MISSING }); return; }
+    if (r.status === 403 && data && data.error === 'tier_does_not_grant_persona') { this.setState({ submitting: false, cfgMsg: UPSELL }); return; }
+    if (r.status === 503 && data && data.error === 'vps_capacity_exhausted') {
+      this.setState({ submitting: false, cfgMsg: 'Sistem infrastruktur sedang ramai. Agent kamu dijadwalkan ulang otomatis — kami coba lagi setiap 3 menit. Kalau dalam 30 menit belum berhasil, tim kami hubungi kamu via email.' });
+      return;
+    }
+    this.setState({ submitting: false, cfgMsg: 'Ada kendala teknis. Coba lagi dalam 1 menit, atau hubungi tim via WhatsApp.' });
+  }
 
   renderVals() {
-    const step = this.state.step;
-    const navLabel = step === 0 ? 'WELCOME' : 'ONBOARDING';
+    const s = this.state;
+    const step = s.step;
+    const err = s.booted && !s.cidOk;
+    const navLabel = err ? 'LINK TIDAK VALID' : (step === 0 ? 'WELCOME' : 'ONBOARDING');
     const stepLabels = ['', 'STEP 2 DARI 4', 'STEP 3 DARI 4', 'STEP 4 DARI 4'];
+    const granted = TIER_PERSONAS[this.customerTier] || TIER_PERSONAS.starter;
+    const personaFree = granted.length === 0;
 
     // step rail dots (4 dots) — active = fire gradient + wide
     const dots = [0,1,2,3].map(i => {
@@ -378,8 +788,9 @@ class Component extends DCLogic {
       'Mulai percakapan dengan membalas, atau kasih tahu prioritas kamu hari ini.',
     ].map((t, i) => ({ n: '0' + (i+1), t, chipBg: stepColors[i].bg, chipBd: stepColors[i].bd, chipFg: stepColors[i].fg }));
 
-    // pairing code
-    const code = '271899'.split('').map((v, i) => ({ v, d: (i * 0.07).toFixed(2) + 's' }));
+    // pairing code — live from state; placeholder dots before rotate resolves
+    const rawCode = (s.pairCode && /^\d{6}$/.test(s.pairCode)) ? s.pairCode : '······';
+    const code = rawCode.split('').map((v, i) => ({ v, d: (i * 0.07).toFixed(2) + 's' }));
 
     // presets — each its own accent tint
     const presetColors = [
@@ -390,8 +801,8 @@ class Component extends DCLogic {
       { fg:'#5fe39a', tint:'34,197,94' },
       { fg:'#ffd95e', tint:'234,179,8' },
     ];
-    const presets = ['Briefing pagi','Email triage','Content drafting','Riset & dokumen','Trading analysis','Bantuan tugas']
-      .map((t, i) => ({ t, fg: presetColors[i].fg, bg: 'rgba(' + presetColors[i].tint + ',.1)', bd: 'rgba(' + presetColors[i].tint + ',.34)' }));
+    const presets = PRESET_LABELS
+      .map((t, i) => ({ t, fg: presetColors[i].fg, bg: 'rgba(' + presetColors[i].tint + ',.1)', bd: 'rgba(' + presetColors[i].tint + ',.34)', apply: () => this.applyPreset(PRESET_TEXT[t]) }));
 
     // personas — 4 cards, selected one gets fire treatment
     const personaData = [
@@ -401,59 +812,73 @@ class Component extends DCLogic {
       { name:'Analis Finance', icon:'▤', desc:'Rapikan cashflow, ringkasan, laporan.', tint:'34,158,217', ig:'linear-gradient(180deg,#7fd3f5,#229ed9 55%,#1278a8)', ib:'rgba(160,220,250,.6)' },
     ];
     const personas = personaData.map((p, i) => {
-      const on = i === this.state.persona;
+      const slug = DETAIL_SLUG[i];
+      const allowed = personaFree || granted.indexOf(slug) !== -1;
+      const on = allowed && i === s.persona;
+      const idx = i;
       return {
-        name: p.name, icon: p.icon, desc: p.desc,
-        pick: () => this.pickPersona(i),
+        name: allowed ? p.name : (p.name + ' · terkunci'), icon: p.icon,
+        desc: allowed ? p.desc : 'Tersedia di paket yang lebih tinggi.',
+        pick: () => this.pickPersona(idx, allowed),
         cardBg: on ? ('linear-gradient(180deg, rgba(' + p.tint + ',.14), transparent 60%), #0c0a0b') : '#0b090a',
         cardBd: on ? ('rgba(' + p.tint + ',.5)') : 'rgba(255,255,255,.09)',
         cardShadow: on ? ('inset 0 1px 0 rgba(255,255,255,.08), 0 0 26px rgba(' + p.tint + ',.16)') : 'inset 0 1px 0 rgba(255,255,255,.05)',
-        iconBg: p.ig, iconBd: p.ib,
+        iconBg: allowed ? p.ig : 'rgba(255,255,255,.06)', iconBd: allowed ? p.ib : 'rgba(255,255,255,.12)',
       };
     });
 
     return {
       navLabel, stepLabel: stepLabels[step],
-      railDisplay: step === 0 ? 'none' : 'flex',
-      show0: step === 0 ? 'block' : 'none',
-      show1: step === 1 ? 'block' : 'none',
-      show2: step === 2 ? 'block' : 'none',
-      show3: step === 3 ? 'block' : 'none',
+      railDisplay: (step === 0 || err) ? 'none' : 'flex',
+      show0: (step === 0 && !err) ? 'block' : 'none',
+      show1: (step === 1 && !err) ? 'block' : 'none',
+      show2: (step === 2 && !err) ? 'block' : 'none',
+      show3: (step === 3 && !err) ? 'block' : 'none',
       dots, steps, code, presets, personas,
-      expiry: '29:55',
+      expiry: s.expiryLabel,
+      tokenRef: this.tokenRef, expectRef: this.expectRef, samplesRef: this.samplesRef,
+      tokenHint: s.tokenHint, tokenHintColor: s.tokenHintColor,
+      botHandle: s.botHandle, charCount: s.charCount,
+      pairCmd: (s.pairCode && /^\d{6}$/.test(s.pairCode)) ? s.pairCode : '——————',
       goStep1: this.goStep1, goStep2: this.goStep2, goStep3: this.goStep3, finish: this.finish,
+      openBotFather: this.openBotFather, openBot: this.openBot, resetBot: this.resetBot,
+      copyPair: this.copyPair, runGenesis: this.runGenesis, onExpectInput: this.onExpectInput,
 
       // Step 4 — template vs detail mode
-      cfgTitle: this.state.cfgMode === 'template' ? 'Pilih template agent kamu.' : 'Cara kamu pakai agent.',
-      cfgSub: this.state.cfgMode === 'template'
+      cfgTitle: s.cfgMode === 'template' ? 'Pilih template agent kamu.' : 'Cara kamu pakai agent.',
+      cfgSub: s.cfgMsg || (s.cfgMode === 'template'
         ? 'Mulai dari template yang sudah teruji — tinggal pilih satu kartu. Bisa kamu sesuaikan nanti.'
-        : 'Tulis bebas. Yang kamu tulis di sini jadi "kontrak kepribadian" agent kamu.',
-      showTpl: this.state.cfgMode === 'template' ? 'block' : 'none',
-      showDetail: this.state.cfgMode === 'detail' ? 'block' : 'none',
+        : 'Tulis bebas. Yang kamu tulis di sini jadi "kontrak kepribadian" agent kamu.'),
+      showTpl: s.cfgMode === 'template' ? 'block' : 'none',
+      showDetail: s.cfgMode === 'detail' ? 'block' : 'none',
       toDetail: this.toDetail, toTpl: this.toTpl,
       templates: [
-        { img:'/assets/cards/sentinel.png', name:'The Sentinel', roman:'I · Sang Penjaga', tint:'238,60,48', quote:'Yang tak pernah tidur, menjaga tiap pintu masuk.', story:'Chat pelanggan datang kapan saja — jam 2 pagi sekalipun. The Sentinel jaga semua channel, balas cepat, dan tutup penjualan tanpa kamu harus standby.', cap1:'Balas chat & closing otomatis', cap2:'Kirim link pembayaran', cap3:'Ingat riwayat tiap pelanggan', fit:'Toko online, admin CS, bisnis jasa' },
-        { img:'/assets/cards/rainmaker.png', name:'The Rainmaker', roman:'II · Sang Penurun Hujan', tint:'249,80,143', quote:'Ia mengubah percakapan menjadi kesepakatan.', story:'Lead yang menganggur adalah uang yang hilang. The Rainmaker follow-up tiap prospek, jaga percakapan tetap hangat, dan giring mereka sampai deal tertutup.', cap1:'Follow-up lead otomatis', cap2:'Nurturing sampai closing', cap3:'Update pipeline kamu', fit:'Sales, agen properti, tim B2B' },
-        { img:'/assets/cards/muse.png', name:'The Muse', roman:'III · Sang Pemberi Ilham', tint:'139,110,240', quote:'Dari satu ide, lahir ribuan kata.', story:'Kehabisan ide konten itu melelahkan. The Muse tahu gaya nulis kamu, lalu bikin caption, hook, dan ide harian yang terdengar seperti kamu — bukan robot.', cap1:'Caption & hook siap posting', cap2:'Ide konten tiap hari', cap3:'Sesuai brand voice kamu', fit:'Kreator, brand, marketer' },
-        { img:'/assets/cards/alchemist.png', name:'The Alchemist', roman:'IV · Sang Peramu', tint:'234,179,8', quote:'Ia mengubah angka mentah menjadi emas.', story:'Tumpukan struk dan mutasi bikin pusing. The Alchemist rapikan cashflow, ramu jadi laporan yang gampang dibaca, dan tandai hal yang perlu kamu waspadai.', cap1:'Rapikan cashflow', cap2:'Ringkasan keuangan mingguan', cap3:'Deteksi pengeluaran janggal', fit:'UMKM, freelancer, tim finance' },
-        { img:'/assets/cards/scribe.png', name:'The Scribe', roman:'V · Sang Juru Tulis', tint:'34,158,217', quote:'Tiap kata terucap, ia abadikan.', story:'Rapat panjang, catatan berantakan. The Scribe dengar, transkrip, dan rangkum jadi notula plus action items — kamu tinggal hadir dan fokus.', cap1:'Transkrip & notula rapat', cap2:'Action items otomatis', cap3:'Draft slide presentasi', fit:'Manajer, konsultan, tim kerja' },
-        { img:'/assets/cards/magician.png', name:'The Magician', roman:'VI · Sang Pesulap', tint:'34,197,94', quote:'Satu tangan ke langit, satu ke bumi — semua terhubung.', story:'Kenapa pilih satu kalau bisa semua? The Magician gabungkan seluruh keahlian: riset, dokumen, jadwal, sampai tugas harian — satu agent untuk apa pun.', cap1:'Riset & susun dokumen', cap2:'Atur jadwal & reminder', cap3:'Serba bisa, sesuai perintah', fit:'Semua profesi' },
+        { img:'/assets/cards/sentinel.jpg', name:'The Sentinel', roman:'I · Sang Penjaga', tint:'238,60,48', quote:'Yang tak pernah tidur, menjaga tiap pintu masuk.', story:'Chat pelanggan datang kapan saja — jam 2 pagi sekalipun. The Sentinel jaga semua channel, balas cepat, dan tutup penjualan tanpa kamu harus standby.', cap1:'Balas chat & closing otomatis', cap2:'Kirim link pembayaran', cap3:'Ingat riwayat tiap pelanggan', fit:'Toko online, admin CS, bisnis jasa' },
+        { img:'/assets/cards/rainmaker.jpg', name:'The Rainmaker', roman:'II · Sang Penurun Hujan', tint:'249,80,143', quote:'Ia mengubah percakapan menjadi kesepakatan.', story:'Lead yang menganggur adalah uang yang hilang. The Rainmaker follow-up tiap prospek, jaga percakapan tetap hangat, dan giring mereka sampai deal tertutup.', cap1:'Follow-up lead otomatis', cap2:'Nurturing sampai closing', cap3:'Update pipeline kamu', fit:'Sales, agen properti, tim B2B' },
+        { img:'/assets/cards/muse.jpg', name:'The Muse', roman:'III · Sang Pemberi Ilham', tint:'139,110,240', quote:'Dari satu ide, lahir ribuan kata.', story:'Kehabisan ide konten itu melelahkan. The Muse tahu gaya nulis kamu, lalu bikin caption, hook, dan ide harian yang terdengar seperti kamu — bukan robot.', cap1:'Caption & hook siap posting', cap2:'Ide konten tiap hari', cap3:'Sesuai brand voice kamu', fit:'Kreator, brand, marketer' },
+        { img:'/assets/cards/alchemist.jpg', name:'The Alchemist', roman:'IV · Sang Peramu', tint:'234,179,8', quote:'Ia mengubah angka mentah menjadi emas.', story:'Tumpukan struk dan mutasi bikin pusing. The Alchemist rapikan cashflow, ramu jadi laporan yang gampang dibaca, dan tandai hal yang perlu kamu waspadai.', cap1:'Rapikan cashflow', cap2:'Ringkasan keuangan mingguan', cap3:'Deteksi pengeluaran janggal', fit:'UMKM, freelancer, tim finance' },
+        { img:'/assets/cards/scribe.jpg', name:'The Scribe', roman:'V · Sang Juru Tulis', tint:'34,158,217', quote:'Tiap kata terucap, ia abadikan.', story:'Rapat panjang, catatan berantakan. The Scribe dengar, transkrip, dan rangkum jadi notula plus action items — kamu tinggal hadir dan fokus.', cap1:'Transkrip & notula rapat', cap2:'Action items otomatis', cap3:'Draft slide presentasi', fit:'Manajer, konsultan, tim kerja' },
+        { img:'/assets/cards/magician.jpg', name:'The Magician', roman:'VI · Sang Pesulap', tint:'34,197,94', quote:'Satu tangan ke langit, satu ke bumi — semua terhubung.', story:'Kenapa pilih satu kalau bisa semua? The Magician gabungkan seluruh keahlian: riset, dokumen, jadwal, sampai tugas harian — satu agent untuk apa pun.', cap1:'Riset & susun dokumen', cap2:'Atur jadwal & reminder', cap3:'Serba bisa, sesuai perintah', fit:'Semua profesi' },
       ].map((t, i) => {
-        const on = i === this.state.tpl;
-        const flipped = !!this.state.flips[i];
+        const slug = TAROT_SLUG[i];
+        const allowed = !personaFree && granted.indexOf(slug) !== -1;
+        const on = allowed && i === s.tpl;
+        const flipped = !!s.flips[i];
+        const idx = i;
         return {
-          img: t.img, name: t.name, roman: t.roman, quote: t.quote, story: t.story, cap1: t.cap1, cap2: t.cap2, cap3: t.cap3, fit: t.fit,
-          flip: () => this.flipCard(i),
-          pickClose: () => this.pickClose(i),
+          img: t.img, name: t.name, roman: t.roman, quote: t.quote, story: t.story, cap1: t.cap1, cap2: t.cap2, cap3: t.cap3,
+          fit: allowed ? t.fit : (t.fit + ' — (terkunci di paket kamu)'),
+          flip: () => this.flipCard(idx),
+          pickClose: () => this.pickClose(idx, allowed),
           flipT: flipped ? 'rotateY(180deg)' : 'none',
           sway: flipped ? 'none' : ('sway ' + (6 + i * 0.4).toFixed(1) + 's ease-in-out infinite ' + (i * 0.5).toFixed(1) + 's'),
           delay: (i * 0.6).toFixed(1) + 's',
           checkDisp: on ? 'grid' : 'none',
-          accFg: 'rgba(' + t.tint + ',1)',
+          accFg: allowed ? ('rgba(' + t.tint + ',1)') : 'rgba(150,145,140,1)',
           accSolid: 'rgb(' + t.tint + ')',
           backBg: 'radial-gradient(120% 80% at 50% 0%, rgba(' + t.tint + ',.16), transparent 60%), #0b090a',
           backBd: 'rgba(' + t.tint + ',.5)',
-          cardBd: on ? ('rgba(' + t.tint + ',.85)') : 'rgba(255,255,255,.1)',
+          cardBd: on ? ('rgba(' + t.tint + ',.85)') : (allowed ? 'rgba(255,255,255,.1)' : 'rgba(255,255,255,.06)'),
           cardShadow: on ? ('0 0 0 2px rgba(' + t.tint + ',.6), 0 0 36px rgba(' + t.tint + ',.4), 0 22px 48px rgba(0,0,0,.6)') : '0 14px 32px rgba(0,0,0,.55)',
         };
       }),
