@@ -1,7 +1,7 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "the-pro",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "description_id": "Bundle skill + template The Pro. Briefing pagi, ingatan lintas sesi, pendamping kerja harian.",
   "skills": [
     {
@@ -46,9 +46,19 @@
     {
       "id": "end-of-day-summary",
       "skill_kind": "playbook",
-      "description_id": "Playbook enam langkah siklus ringkasan akhir hari operasional. Intake tanggal dan jadwal meeting selesai, pull task tuntas hari ini, identifikasi outstanding untuk besok, flag item perlu-konfirmasi (nama pihak, ping terakhir, follow-up recommendation), assemble pakai template end-of-day-summary-bahasa, lalu auto-deliver ke Telegram. Cron 18:00 WIB default, on-demand juga bisa.",
-      "description_en": "Six-step playbook for the operational end-of-day summary cycle. Intake date and completed meetings, pull today's done items, identify outstanding for tomorrow, flag perlu-konfirmasi items (counterparty name, last ping, follow-up recommendation), assemble using end-of-day-summary-bahasa template, then auto-deliver to Telegram. Cron 18:00 WIB default, on-demand also supported.",
-      "templates_used": ["end-of-day-summary-bahasa.md"],
+      "description_id": "Playbook tujuh langkah siklus ringkasan akhir hari operasional. Intake tanggal dan jadwal meeting selesai, pull task tuntas hari ini, identifikasi outstanding untuk besok, flag item perlu-konfirmasi (nama pihak, ping terakhir, follow-up recommendation), assemble pakai template end-of-day-summary-bahasa, auto-deliver ke Telegram, lalu pindahkan tangkapan hari ini dari inbox jadi catatan di vault ingatan. Cron 18:00 WIB default, on-demand juga bisa.",
+      "description_en": "Seven-step playbook for the operational end-of-day summary cycle. Intake date and completed meetings, pull today's done items, identify outstanding for tomorrow, flag perlu-konfirmasi items (counterparty name, last ping, follow-up recommendation), assemble using end-of-day-summary-bahasa template, auto-deliver to Telegram, then fold the day's captures into the memory vault. Cron 18:00 WIB default, on-demand also supported.",
+      "templates_used": [
+        "end-of-day-summary-bahasa.md",
+        "memory/index.md",
+        "memory/inbox.md",
+        "memory/preferensi.md",
+        "memory/orang/_template.md",
+        "memory/proyek/_template.md",
+        "memory/harian/_template.md",
+        "memory/mingguan/_template.md",
+        "memory/arsip/_README.md"
+      ],
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:end-of-day-summary",
       "enabled_for_tiers": ["starter", "pro", "studio"]
@@ -198,6 +208,54 @@
       "kind": "summary",
       "description_id": "Phase B2 Indonesia-deep — ringkasan akhir hari dalam register executive-assistant Bahasa Indonesia. Section khas: 'yang sudah dikerjakan', 'yang masih outstanding', 'perlu konfirmasi' (item menunggu respon stakeholder dengan kapan terakhir di-ping plus kapan follow-up). Section perlu-konfirmasi dirancang khusus untuk pace Jakarta business di mana follow-up lintas hari sering slip.",
       "best_for": "Penutup hari operasional (Jakarta-pace) — beda dari daily-summary yang reflektif-personal, ini lebih dekat ke handover catatan untuk EA atau asisten admin"
+    },
+    {
+      "id": "memory/index.md",
+      "kind": "memory-vault",
+      "description_id": "Seed peta ingatan (MOC) — pintu masuk vault di /var/lib/weuseai/memory/. Berisi aturan penamaan berkas plus batas keras 40 baris penunjuk supaya recall tetap murah. Di-seed-if-absent saat bundle-pull; agent yang menumbuhkannya, customer tidak pernah membukanya.",
+      "best_for": "Entry point for bounded recall — the one file SOUL.md names as the map"
+    },
+    {
+      "id": "memory/inbox.md",
+      "kind": "memory-vault",
+      "description_id": "Seed buffer tangkapan — satu-satunya berkas yang ditulis agent di tengah percakapan, satu baris bertanggal per tangkapan. Dikosongkan cron sore setelah barisnya jadi catatan.",
+      "best_for": "Cheap per-turn capture — keeps the conversation path to one small append"
+    },
+    {
+      "id": "memory/preferensi.md",
+      "kind": "memory-vault",
+      "description_id": "Seed catatan preferensi kerja customer — gaya komunikasi, ritme, cara mengambil keputusan. Kecil dan sering dibuka, jadi isinya yang stabil saja.",
+      "best_for": "The hot, small note — read often, changes rarely"
+    },
+    {
+      "id": "memory/orang/_template.md",
+      "kind": "memory-vault",
+      "description_id": "Bentuk catatan per orang (klien, rekan, atasan, vendor). Siapa, fakta durable bertanggal, komitmen terbuka, terakhir dibahas. Diikuti cron sore saat memindahkan tangkapan inbox jadi catatan orang.",
+      "best_for": "One note per person — shape the agent imitates when a new name appears"
+    },
+    {
+      "id": "memory/proyek/_template.md",
+      "kind": "memory-vault",
+      "description_id": "Bentuk catatan per proyek atau deal. Status, siapa yang terlibat, keputusan beserta alasannya, langkah berjalan, yang sudah ditutup.",
+      "best_for": "One note per project — decisions carry their reasoning so staleness is detectable"
+    },
+    {
+      "id": "memory/harian/_template.md",
+      "kind": "memory-vault",
+      "description_id": "Bentuk catatan penutup hari untuk agent sendiri — bukan salinan ringkasan Telegram. Ditulis cron sore (Langkah 7 playbook end-of-day-summary), penulis tunggal artefak harian.",
+      "best_for": "Daily note written by the existing end-of-day cron — single writer, no conflict"
+    },
+    {
+      "id": "memory/mingguan/_template.md",
+      "kind": "memory-vault",
+      "description_id": "Bentuk sintesis mingguan — pola lintas hari, catatan yang digabung atau diarsipkan, jumlah baris peta. Ditulis cron Minggu setelah laporan mingguan terkirim.",
+      "best_for": "Weekly synthesis + the pruning receipt that keeps index.md bounded"
+    },
+    {
+      "id": "memory/arsip/_README.md",
+      "kind": "memory-vault",
+      "description_id": "Penjelasan folder arsip — catatan dingin yang barisnya sudah dilepas dari peta tapi berkasnya tidak pernah dihapus. Dilihat lagi kalau nama lama muncul dan tidak ada di orang/.",
+      "best_for": "Cold storage — bounded index without losing memory"
     }
   ],
   "self_extend": true,

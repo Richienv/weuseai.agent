@@ -3,7 +3,7 @@ skill_kind: playbook
 name: end-of-day-summary
 bundle: the-pro
 flow_state_playbook_id: end-of-day-summary
-total_steps: 6
+total_steps: 7
 use_cases:
   - "Cron 18:00 WIB harian — auto-deliver ringkasan akhir hari ke Telegram customer"
   - "Customer minta 'rangkum hari ini dong' sebelum cron fires"
@@ -150,23 +150,45 @@ Langkah 4 khusus flag item yang menunggu respon dari pihak eksternal — stakeho
 - **Gerbang eskalasi:** `none`. Ringkasan untuk customer sendiri — tidak butuh review pihak lain sebelum kirim.
 - **Error handling:** Kalau komposisi gagal, ulangi dengan data yang sama dari `state_data` — tidak perlu mengulang fetch. Kalau tetap gagal, kirim ringkasan minimal supaya customer tetap dapat sinyal akhir hari.
 
-### Langkah 6 — Kirim ringkasan ke Telegram dan tutup siklus  ·  estimasi 1 menit
+### Langkah 6 — Kirim ringkasan ke Telegram  ·  estimasi 1 menit
 
-- **Aksi:** Kirim `summary_markdown` ke channel Telegram customer. Setelah terkirim, panggil `complete`. Untuk trigger cron, tidak ada konfirmasi balasan ke customer — ringkasan sendiri yang jadi konfirmasi. Untuk trigger customer, ringkasan yang sampai sebagai jawaban langsung dari request.
-- **Tautan/endpoint:** Channel Telegram terhubung customer lewat pengiriman pesan keluar Hermes. Lalu `POST {WEUSEAI_FLOW_STATE_URL}` operasi `complete`.
+- **Aksi:** Kirim `summary_markdown` ke channel Telegram customer. Setelah terkirim, `advance` ke Langkah 7. Untuk trigger cron, tidak ada konfirmasi balasan ke customer — ringkasan sendiri yang jadi konfirmasi. Untuk trigger customer, ringkasan yang sampai sebagai jawaban langsung dari request.
+- **Tautan/endpoint:** Channel Telegram terhubung customer lewat pengiriman pesan keluar Hermes. Lalu `POST {WEUSEAI_FLOW_STATE_URL}` operasi `advance`.
 - **Input yang diharapkan:** `summary_markdown` dan `delivery_channel` dari `state_data` (hasil Langkah 5).
-- **Output yang diharapkan:** Konfirmasi pengiriman ke `step_output` — `{ "sent_at", "channel": "telegram", "message_id" }`. Run berstatus `completed`.
+- **Output yang diharapkan:** Konfirmasi pengiriman ke `step_output` — `{ "sent_at", "channel": "telegram", "message_id" }`.
 - **Validasi:** Channel Telegram terhubung. Ringkasan terkirim sukses (HTTP 200 dari Telegram Bot API). `message_id` tercatat untuk audit.
 
   | Kondisi | Tindakan |
   |---|---|
-  | Pengiriman sukses | `complete` run |
+  | Pengiriman sukses | `advance` ke Langkah 7 |
   | Pengiriman gagal sekali | Ulangi sekali setelah jeda singkat |
-  | Pengiriman gagal berulang | Jangan `complete`. Tahan ringkasan di `state_data`, log untuk debug |
+  | Pengiriman gagal berulang | Jangan `advance`. Tahan ringkasan di `state_data`, log untuk debug |
   | Channel Telegram putus | Jangan kirim ke channel lain — tandai run sebagai `aborted` dengan alasan `channel_disconnected` |
 
-- **Gerbang eskalasi:** `none`. Langkah penutup — ringkasan akhir hari auto-deliver tanpa approval pihak lain.
+- **Gerbang eskalasi:** `none`. Ringkasan akhir hari auto-deliver tanpa approval pihak lain.
 - **Error handling:** Kalau Telegram unreachable, jangan `abort` agresif — tahan ringkasan dan retry sekali. Kalau channel customer memang putus (token revoked), tandai `aborted` dengan alasan jelas supaya log bisa dipakai customer-support untuk re-connect.
+
+### Langkah 7 — Pindahkan tangkapan hari ini jadi catatan  ·  estimasi 1-2 menit
+
+Langkah ini kerja internal — tidak ada satu pun kata dari sini yang sampai ke customer. Sepanjang hari, aturan capture di SOUL.md cuma menambah satu baris bertanggal ke `inbox.md` tiap kali muncul sesuatu yang durable, supaya balasan tetap cepat dan hemat kredit. Langkah inilah yang membayar utang itu: baris mentah jadi catatan yang tertata. Ini satu-satunya penulis catatan harian dan peta — tidak ada skill lain yang menyentuh berkas yang sama, jadi tidak ada konflik penulis.
+
+Sengaja setelah pengiriman: ringkasan customer sudah sampai di Langkah 6, jadi kegagalan apa pun di sini tidak pernah menghilangkan hal yang mereka dijanjikan.
+
+- **Aksi:** Baca `/var/lib/weuseai/memory/inbox.md`. Tiap baris di bagian "Belum diproses" pindahkan ke catatan yang benar — fakta orang ke `/var/lib/weuseai/memory/orang/<nama>.md`, hal proyek atau deal ke `/var/lib/weuseai/memory/proyek/<nama>.md`, cara kerja customer ke `/var/lib/weuseai/memory/preferensi.md`. Ikuti bentuk `_template.md` di folder tujuan, gabungkan ke berkas yang sudah ada kalau orang atau proyeknya sudah punya catatan (jangan duplikat), nama berkas huruf kecil dengan tanda hubung. Lalu tulis `/var/lib/weuseai/memory/harian/YYYY-MM-DD.md` pakai bentuk `harian/_template.md`. Lalu perbarui peta `/var/lib/weuseai/memory/index.md` — satu baris penunjuk per catatan baru, maksimal delapan kata per baris. Terakhir kosongkan bagian "Belum diproses" di `inbox.md`, lalu `complete`.
+- **Tautan/endpoint:** Baca-tulis berkas lokal di bawah `/var/lib/weuseai/memory/` (di-seed saat provisioning oleh `weuseai-bundle-pull`). Lalu `POST {WEUSEAI_FLOW_STATE_URL}` operasi `complete`.
+- **Input yang diharapkan:** Isi `inbox.md` bagian "Belum diproses", plus `date_short` dan `still_outstanding` dari `state_data` untuk catatan harian.
+- **Output yang diharapkan:** Ringkasan pemindahan ke `step_output` — `{ "notes_written": ["orang/budi-santoso.md"], "daily_note": "harian/YYYY-MM-DD.md", "index_lines": 12, "inbox_cleared": true }`. Run berstatus `completed`.
+- **Validasi:** Tiap baris inbox yang diproses harus benar-benar mendarat di satu catatan sebelum dihapus dari inbox — jangan pernah kosongkan inbox sebelum tulisannya jadi. Bagian Peta di `index.md` selesai di bawah 40 baris; kalau lewat, biarkan dan serahkan ke pemangkasan cron Minggu. Catatan harian tidak menyalin mentah ringkasan Telegram — yang disimpan hal yang masih berguna berbulan-bulan lagi.
+
+  | Kondisi | Tindakan |
+  |---|---|
+  | Inbox kosong (tidak ada tangkapan hari ini) | Lewati pemindahan, tetap tulis catatan harian, lalu `complete` |
+  | Pemindahan sukses, inbox bersih | `complete` run |
+  | Satu catatan gagal ditulis | Biarkan barisnya di inbox, lanjutkan sisanya, tetap `complete` — cron besok yang menyapu |
+  | Vault tidak ada atau tidak bisa ditulis | `complete` run apa adanya dan log alasannya. Ringkasan sudah terkirim; jangan `abort` |
+
+- **Gerbang eskalasi:** `none`. Ini catatan aku untuk diriku sendiri — customer tidak pernah membukanya dan tidak perlu menyetujuinya.
+- **Error handling:** Vault yang gagal ditulis tidak pernah membatalkan run — Langkah 6 sudah memberi customer nilai hari ini. Kalau baris menumpuk di `inbox.md` berhari-hari, itu tandanya langkah ini tidak jalan; biarkan barisnya (jangan dihapus) supaya kerugiannya cuma tertunda, bukan hilang.
 
 ## Voice signature
 

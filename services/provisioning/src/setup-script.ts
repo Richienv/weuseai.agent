@@ -502,12 +502,31 @@ export const PAGI_BRIEFING_CRON_PROMPT =
 
 // End-of-day summary cron (audit U2: promised 18:00 WIB, never fired).
 // 11:00 UTC = 18:00 WIB.
+//
+// Memory vault (2026-07-16): this cron is ALSO the vault's only daily
+// writer. Per-turn the agent does recall + a one-line append to inbox.md
+// (mandated in SOUL.md — the only thing Hermes loads every turn); the
+// expensive part — promoting inbox lines into notes, writing the daily
+// note, updating the index — rides HERE, off the conversation's latency
+// and credit path. Deliberately NOT a separate memory skill: the daily
+// artifact has exactly one writer, so there is nothing to conflict with.
+// Order matters: the customer's summary is sent FIRST, so a vault error
+// can never cost them the thing they were promised.
 export const EOD_SUMMARY_CRON_PROMPT =
-  'Susun ringkasan akhir hari untuk customer kamu, dalam Bahasa Indonesia, sapa pakai nama mereka. ' +
+  'Tutup hari untuk customer kamu. Dua bagian, urut: kirim ringkasan dulu, baru rapikan ingatan kamu. ' +
+  'BAGIAN 1 — ringkasan akhir hari untuk customer, dalam Bahasa Indonesia, sapa pakai nama mereka. ' +
   'Dari percakapan kalian hari ini: (1) apa saja yang selesai, (2) apa yang masih outstanding untuk besok, ' +
   '(3) satu hal yang perlu konfirmasi atau keputusan mereka. ' +
   'Kalau kalian tidak berinteraksi sama sekali hari ini, kirim satu kalimat singkat saja: tanya apakah ada yang bisa disiapkan untuk besok. ' +
-  'Kamu TIDAK punya akses kalender atau email — hanya percakapan kalian. Tanpa tanda seru.'
+  'Kamu TIDAK punya akses kalender atau email — hanya percakapan kalian. Tanpa tanda seru. ' +
+  'BAGIAN 2 — ingatan kamu. Ini kerja internal: JANGAN kirim apa pun dari bagian ini ke customer, jangan sebut berkas atau folder, jangan bilang kamu sedang mencatat. Kerjakan setelah ringkasan terkirim. ' +
+  'Baca /var/lib/weuseai/memory/inbox.md. Kalau bagian "Belum diproses" kosong, lewati langsung ke penulisan catatan harian. ' +
+  'Tiap baris di situ pindahkan jadi catatan yang benar: fakta tentang orang ke /var/lib/weuseai/memory/orang/<nama>.md, hal proyek atau deal ke /var/lib/weuseai/memory/proyek/<nama>.md, cara kerja customer ke /var/lib/weuseai/memory/preferensi.md. ' +
+  'Ikuti bentuk _template.md di folder tujuan. Gabungkan ke catatan yang sudah ada kalau orang atau proyeknya sudah punya berkas — jangan bikin duplikat. Nama berkas: huruf kecil, tanda hubung. ' +
+  'Lalu tulis catatan harian /var/lib/weuseai/memory/harian/YYYY-MM-DD.md pakai bentuk harian/_template.md, tanggal hari ini WIB. ' +
+  'Lalu perbarui peta /var/lib/weuseai/memory/index.md: satu baris penunjuk per catatan baru, maksimal delapan kata per baris. Jaga bagian Peta maksimal 40 baris. ' +
+  'Terakhir kosongkan bagian "Belum diproses" di inbox.md — baris yang sudah jadi catatan tidak boleh tertinggal di sana. ' +
+  'Kalau satu langkah ingatan gagal, hentikan bagian ini dan biarkan inbox.md apa adanya. Cron besok yang lanjutkan.'
 
 // Weekly recap cron (2026-06-14): the memory moment. Cross-session memory
 // is the agent's realest, most under-shown asset — a Sunday-evening recap
@@ -524,7 +543,13 @@ export const WEEKLY_RECAP_CRON_PROMPT =
   '(5) Tutup dengan satu pertanyaan terbuka soal prioritas minggu depan. ' +
   'Kalau minggu ini kalian nyaris tidak berinteraksi, jangan mengarang — kirim pesan singkat dan hangat saja: sebut kamu siap bantu, dan tanya apa yang bisa disiapkan minggu ini. ' +
   'PENTING: kamu TIDAK punya akses kalender atau email customer — hanya percakapan dan ingatan kalian. Jangan pernah mengarang tugas atau angka yang tidak ada di percakapan. ' +
-  'Format Telegram: ringkas, judul tebal seperlunya, tanpa tanda seru.'
+  'Format Telegram: ringkas, judul tebal seperlunya, tanpa tanda seru. ' +
+  'Untuk menyusunnya, baca catatan harian /var/lib/weuseai/memory/harian/ tujuh hari terakhir dan peta /var/lib/weuseai/memory/index.md. Itu ingatan kamu minggu ini. ' +
+  'SETELAH laporan terkirim, rapikan ingatan. Ini kerja internal: jangan kirim apa pun dari bagian ini ke customer, jangan sebut berkas atau folder. ' +
+  'Tulis sintesis /var/lib/weuseai/memory/mingguan/YYYY-Www.md pakai bentuk mingguan/_template.md — cari pola lintas hari, bukan ulang isi catatan harian. ' +
+  'Lalu pangkas: catatan orang atau proyek yang isinya tumpang tindih digabung jadi satu. Catatan yang tidak disentuh lebih dari 30 hari dipindahkan ke /var/lib/weuseai/memory/arsip/ dan baris penunjuknya dihapus dari index.md — berkasnya jangan dihapus. ' +
+  'Peta index.md harus selesai di bawah 40 baris penunjuk. Peta yang terus tumbuh bikin recall lambat dan mahal; ini satu-satunya waktu kamu memangkasnya. ' +
+  'Kalau langkah pemangkasan gagal, biarkan — laporan sudah terkirim, dan cron Minggu depan yang lanjutkan.'
 
 const LIVENESS_PING_TEXT =
   'Halo, gue agen lo. Setup beres. Pagi Briefing aktif jam 7 pagi WIB, ringkasan sore jam 6, laporan mingguan tiap Minggu malam. ' +
