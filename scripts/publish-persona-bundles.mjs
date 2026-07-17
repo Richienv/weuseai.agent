@@ -58,15 +58,7 @@
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { gzipSync } from 'node:zlib'
-import {
-  mkdtempSync,
-  cpSync,
-  readFileSync,
-  readdirSync,
-  rmSync,
-  utimesSync,
-  statSync,
-} from 'node:fs'
+import { cpSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, utimesSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -88,22 +80,20 @@ const DRY_RUN = process.argv.includes('--dry-run')
 // dependency-free. The union of all tier lists == the full library.
 
 function readCanonicalSlugs() {
-  const src = readFileSync(
-    resolve(REPO_ROOT, 'supabase/functions/_shared/tier-personas.ts'),
-    'utf8',
-  )
-  const block = src.match(/TIER_PERSONAS[^=]*=\s*{([\s\S]*?)\n}/)
-  if (!block) {
-    throw new Error('could not locate TIER_PERSONAS literal in tier-personas.ts')
+  // Disk-driven (2026-07-16): the old TIER_PERSONAS literal regex broke when
+  // tier-personas.ts moved to the v1.4 TIERS shape — it started matching TIER
+  // keys (voice-starter/…) instead of persona slugs, so every publish failed
+  // on a nonexistent agent-packs/<tier>/ path. The truth about which packs
+  // exist IS the agent-packs/ directory: publish every dir with a manifest.
+  const packsRoot = resolve(REPO_ROOT, 'agent-packs')
+  const slugs = readdirSync(packsRoot, { withFileTypes: true })
+    .filter((d) => d.isDirectory() && !d.name.startsWith('_'))
+    .filter((d) => existsSync(resolve(packsRoot, d.name, 'manifest.json')))
+    .map((d) => d.name)
+  if (slugs.length === 0) {
+    throw new Error('no agent-packs/*/manifest.json found — aborting')
   }
-  const slugs = new Set()
-  for (const m of block[1].matchAll(/'([a-z0-9-]+)'/g)) {
-    slugs.add(m[1])
-  }
-  if (slugs.size === 0) {
-    throw new Error('parsed zero slugs from TIER_PERSONAS — aborting')
-  }
-  return [...slugs]
+  return slugs
 }
 
 // ─── deterministic per-persona tar build ──────────────────────────────
