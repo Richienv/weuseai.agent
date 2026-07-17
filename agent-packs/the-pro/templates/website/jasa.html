@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{nama_usaha}}</title>
+<style>
+  :root { --tinta: #f5f5f4; --latar: #171614; --kartu: #211f1c; --aksen: #d97706; --garis: #33302b; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--latar); color: var(--tinta); line-height: 1.6; }
+  main { max-width: 640px; margin: 0 auto; padding: 24px 20px 64px; }
+  header { padding: 56px 0 28px; }
+  h1 { font-size: 1.9rem; letter-spacing: -0.02em; }
+  .label { color: var(--aksen); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 12px; }
+  .area { color: #a8a29e; margin-top: 8px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 24px; background: var(--kartu); border-radius: 12px; overflow: hidden; }
+  td { padding: 14px 12px; border-bottom: 1px solid var(--garis); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  td:first-child { font-weight: 600; }
+  td:last-child { text-align: right; white-space: nowrap; color: var(--aksen); }
+  .cta { display: block; text-align: center; margin-top: 28px; background: var(--aksen); color: #171614; padding: 14px 24px; border-radius: 10px; text-decoration: none; font-weight: 700; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <p class="label">Layanan jasa</p>
+    <h1>{{nama_usaha}}</h1>
+    <p class="area">Melayani area {{area}}</p>
+  </header>
+  <table>
+    {{layanan|tabel}}
+  </table>
+  <a class="cta" href="https://wa.me/{{whatsapp|wa}}">Minta penawaran via WhatsApp</a>
+</main>
+</body>
+</html>

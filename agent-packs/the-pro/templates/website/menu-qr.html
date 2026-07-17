@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Menu — {{nama_usaha}}</title>
+<style>
+  :root { --tinta: #1a1a1a; --latar: #fffdf8; --aksen: #166534; --garis: #ece9e2; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--latar); color: var(--tinta); line-height: 1.6; }
+  main { max-width: 560px; margin: 0 auto; padding: 24px 20px 64px; }
+  header { text-align: center; padding: 40px 0 24px; }
+  h1 { font-size: 1.7rem; letter-spacing: -0.02em; }
+  .label { color: var(--aksen); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.14em; margin-bottom: 10px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+  td { padding: 12px 8px; border-bottom: 1px solid var(--garis); vertical-align: top; }
+  td:last-child { text-align: right; white-space: nowrap; font-weight: 600; }
+  .catatan { margin-top: 24px; padding: 16px; background: #f4f1ea; border-radius: 12px; font-size: 0.9rem; white-space: pre-line; color: #57534e; }
+  .cta { display: block; text-align: center; margin-top: 28px; background: var(--aksen); color: #fff; padding: 14px 24px; border-radius: 10px; text-decoration: none; font-weight: 600; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <p class="label">Daftar menu</p>
+    <h1>{{nama_usaha}}</h1>
+  </header>
+  <table>
+    {{menu|tabel}}
+  </table>
+  <p class="catatan">{{catatan}}</p>
+  <a class="cta" href="https://wa.me/{{whatsapp|wa}}">Pesan via WhatsApp</a>
+</main>
+</body>
+</html>

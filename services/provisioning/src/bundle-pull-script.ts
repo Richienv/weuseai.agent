@@ -48,6 +48,15 @@ const DEFAULT_BUNDLE_PULL_RECORD_URL =
 
 const BUNDLE_DIR_BASE = '/var/lib/weuseai/bundle'
 const HERMES_SKILLS_DIR = '/home/weuseai/.hermes/skills'
+// Memory vault (2026-07-16). Deliberately OUTSIDE BUNDLE_DIR_BASE's
+// version-scoped tree (<slug>/<version>/): the vault is the customer's
+// ACCUMULATED memory, and a bundle upgrade re-extracts into a NEW version
+// dir. Anything living under there would be silently orphaned on every
+// version bump. This path is version-independent and seeded ONLY when a
+// file is absent, so notes the agent has grown are never overwritten.
+// The path is also hard-coded in agent-packs/the-pro/SOUL.md (the only
+// file Hermes loads every turn) — drift-gated in tests.
+const MEMORY_VAULT_DIR = '/var/lib/weuseai/memory'
 const PULL_LOG = '/var/log/weuseai-bundle-pull.log'
 const FETCH_TIMEOUT_SEC = 30
 const DOWNLOAD_TIMEOUT_SEC = 60
@@ -251,6 +260,57 @@ PYEOF
     chown -R weuseai:weuseai "$(dirname "$shell_dst")"
     log "  ✓ persona-shell $slug installed (/<slug> slash command exposed)"
   fi
+
+  seed_memory_vault "$slug" "$version"
+}
+
+# ─── Memory vault seed (2026-07-16) ───────────────────────────────────
+# Seeds ${MEMORY_VAULT_DIR} from the bundle's templates/memory/ scaffold so
+# a freshly-provisioned agent is never a blank stranger: it boots with a
+# map (index.md), an inbox, and note shapes to imitate.
+#
+# SEED-IF-ABSENT, file by file — never \`cp -r\` over the tree. The vault
+# outlives the bundle version that seeded it; on a version bump this runs
+# again against an ALREADY-GROWN vault, and every existing file must be
+# left exactly as the agent wrote it. Only genuinely missing files are
+# restored (e.g. index.md deleted by accident).
+#
+# Called from apply_tier_filter, which runs on BOTH the fresh-pull and the
+# already-installed paths — so a vault lost between boots is re-seeded.
+# Never fatal: an agent with no vault still chats, it only stops
+# remembering, and failing the boot over that would be a worse trade.
+seed_memory_vault() {
+  local slug="$1"
+  local version="$2"
+  local src="${BUNDLE_DIR_BASE}/$slug/$version/templates/memory"
+
+  # Only personas that ship a vault scaffold have this dir (today: the-pro).
+  if [ ! -d "$src" ]; then
+    return 0
+  fi
+
+  local seeded=0
+  local kept=0
+  local rel dst
+  while IFS= read -r rel; do
+    [ -n "$rel" ] || continue
+    dst="${MEMORY_VAULT_DIR}/$rel"
+    if [ -e "$dst" ]; then
+      kept=$((kept + 1))
+      continue
+    fi
+    mkdir -p "$(dirname "$dst")" 2>>"$LOG" || continue
+    if cp "$src/$rel" "$dst" 2>>"$LOG"; then
+      seeded=$((seeded + 1))
+    else
+      log "  ⚠ vault seed failed for $rel (non-fatal)"
+    fi
+  done < <(cd "$src" && find . -type f -name '*.md' 2>/dev/null | sed 's|^\\./||')
+
+  chown -R weuseai:weuseai "${MEMORY_VAULT_DIR}" 2>>"$LOG" || true
+  # 0700: the vault holds the customer's private memory. Only the agent reads it.
+  chmod 0700 "${MEMORY_VAULT_DIR}" 2>>"$LOG" || true
+  log "  ✓ memory vault ${MEMORY_VAULT_DIR}: $seeded seeded, $kept kept (from $slug)"
 }
 
 # ─── Safe bundle-fetch request body ───────────────────────────────────
