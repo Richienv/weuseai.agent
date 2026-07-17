@@ -435,6 +435,16 @@ test('every pilot manifest skill handler_ref points to a known edge function, he
     // The Pro (Phase C3 playbooks)
     'morning-briefing-cycle',
     'end-of-day-summary',
+    // The Pro (2026-07-17 skill-engine families — "30 peran" layer)
+    'buku-kas',
+    'tukang-tagih',
+    'admin-toko',
+    'konten-harian',
+    'juru-dokumen',
+    'asisten-pribadi',
+    'hidup-sehat',
+    'rutinitas',
+    'website-instan',
     // Web Creator (v2)
     'site-launch',
     'landing-page-builder',

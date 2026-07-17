@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{nama_toko}}</title>
+<style>
+  :root { --tinta: #1c1917; --latar: #f7f6f3; --aksen: #0f766e; --garis: #e7e5e4; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--latar); color: var(--tinta); line-height: 1.6; }
+  main { max-width: 640px; margin: 0 auto; padding: 24px 20px 64px; }
+  header { padding: 48px 0 20px; }
+  h1 { font-size: 1.8rem; letter-spacing: -0.02em; }
+  .label { color: var(--aksen); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 10px; }
+  .info { margin-top: 10px; padding: 14px 16px; background: #ecfdf5; border: 1px solid #d1fae5; border-radius: 10px; font-size: 0.9rem; white-space: pre-line; color: #134e4a; }
+  table { width: 100%; border-collapse: collapse; margin-top: 20px; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+  td { padding: 14px 12px; border-bottom: 1px solid var(--garis); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  td:first-child { font-weight: 600; }
+  td:last-child { text-align: right; white-space: nowrap; }
+  .cta { display: block; text-align: center; margin-top: 28px; background: var(--aksen); color: #fff; padding: 14px 24px; border-radius: 10px; text-decoration: none; font-weight: 600; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <p class="label">Toko</p>
+    <h1>{{nama_toko}}</h1>
+    <p class="info">{{info}}</p>
+  </header>
+  <table>
+    {{produk|tabel}}
+  </table>
+  <a class="cta" href="https://wa.me/{{whatsapp|wa}}">Pesan via WhatsApp</a>
+</main>
+</body>
+</html>

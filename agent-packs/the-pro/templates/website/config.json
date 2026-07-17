@@ -1,0 +1,76 @@
+{
+  "$comment": "Konfigurasi intake website-instan. Maksimum 4 pertanyaan per template — agent bertanya persis dari daftar ini, mengisi jawaban ke JSON, lalu memanggil tools/fill.py. format: teks (satu baris), teks_panjang (multi-baris), tabel (baris 'Nama | Harga' atau 'Nama | Harga | Keterangan'), links (baris 'Label | https://...'), wa (nomor WhatsApp).",
+  "templates": {
+    "umkm-profil": {
+      "judul": "Profil usaha",
+      "pertanyaan": [
+        { "key": "nama_usaha", "tanya": "Nama usahanya apa", "format": "teks" },
+        { "key": "deskripsi", "tanya": "Ceritakan singkat usaha kamu — apa yang dijual dan sejak kapan", "format": "teks_panjang" },
+        { "key": "alamat", "tanya": "Alamat usahanya di mana", "format": "teks_panjang" },
+        { "key": "whatsapp", "tanya": "Nomor WhatsApp yang bisa dihubungi pembeli", "format": "wa" }
+      ]
+    },
+    "menu-qr": {
+      "judul": "Menu untuk QR di meja",
+      "pertanyaan": [
+        { "key": "nama_usaha", "tanya": "Nama warung atau kafenya apa", "format": "teks" },
+        { "key": "menu", "tanya": "Kirim daftar menu, satu baris satu item: Nama menu | Harga", "format": "tabel" },
+        { "key": "catatan", "tanya": "Ada catatan untuk pembeli (jam buka, cara pesan)", "format": "teks_panjang" },
+        { "key": "whatsapp", "tanya": "Nomor WhatsApp untuk pesan", "format": "wa" }
+      ]
+    },
+    "linkbio": {
+      "judul": "Link bio",
+      "pertanyaan": [
+        { "key": "nama", "tanya": "Nama yang mau ditampilkan", "format": "teks" },
+        { "key": "bio", "tanya": "Satu-dua kalimat tentang kamu", "format": "teks_panjang" },
+        { "key": "tautan", "tanya": "Kirim daftar link, satu baris satu link: Label | https://...", "format": "links" }
+      ]
+    },
+    "katalog": {
+      "judul": "Katalog produk",
+      "pertanyaan": [
+        { "key": "nama_usaha", "tanya": "Nama usahanya apa", "format": "teks" },
+        { "key": "deskripsi", "tanya": "Satu-dua kalimat pembuka katalog", "format": "teks_panjang" },
+        { "key": "produk", "tanya": "Kirim daftar produk, satu baris satu produk: Nama | Harga | Keterangan singkat", "format": "tabel" },
+        { "key": "whatsapp", "tanya": "Nomor WhatsApp untuk order", "format": "wa" }
+      ]
+    },
+    "undangan": {
+      "judul": "Undangan acara",
+      "pertanyaan": [
+        { "key": "nama_acara", "tanya": "Acaranya apa (misal pernikahan Rani dan Bima, syukuran khitanan)", "format": "teks" },
+        { "key": "waktu", "tanya": "Hari, tanggal, dan jamnya", "format": "teks" },
+        { "key": "lokasi", "tanya": "Lokasinya di mana", "format": "teks" },
+        { "key": "pesan", "tanya": "Pesan penutup untuk tamu", "format": "teks_panjang" }
+      ]
+    },
+    "cv-online": {
+      "judul": "CV online",
+      "pertanyaan": [
+        { "key": "nama", "tanya": "Nama lengkap kamu", "format": "teks" },
+        { "key": "profesi", "tanya": "Profesi atau posisi yang dituju", "format": "teks" },
+        { "key": "riwayat", "tanya": "Riwayat kerja dan pendidikan — satu baris satu poin, mulai dari yang terbaru", "format": "teks_panjang" },
+        { "key": "kontak", "tanya": "Kontak yang bisa dihubungi (nomor atau email)", "format": "teks" }
+      ]
+    },
+    "toko-sederhana": {
+      "judul": "Toko sederhana",
+      "pertanyaan": [
+        { "key": "nama_toko", "tanya": "Nama tokonya apa", "format": "teks" },
+        { "key": "info", "tanya": "Info penting untuk pembeli (ongkir, jam kirim, pembayaran)", "format": "teks_panjang" },
+        { "key": "produk", "tanya": "Kirim daftar barang, satu baris satu barang: Nama | Harga", "format": "tabel" },
+        { "key": "whatsapp", "tanya": "Nomor WhatsApp untuk order", "format": "wa" }
+      ]
+    },
+    "jasa": {
+      "judul": "Jasa dan layanan",
+      "pertanyaan": [
+        { "key": "nama_usaha", "tanya": "Nama usaha jasanya apa", "format": "teks" },
+        { "key": "area", "tanya": "Melayani area mana saja", "format": "teks" },
+        { "key": "layanan", "tanya": "Kirim daftar layanan, satu baris satu layanan: Nama layanan | Tarif", "format": "tabel" },
+        { "key": "whatsapp", "tanya": "Nomor WhatsApp untuk penawaran", "format": "wa" }
+      ]
+    }
+  }
+}

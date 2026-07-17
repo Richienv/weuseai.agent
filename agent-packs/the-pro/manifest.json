@@ -1,18 +1,25 @@
 {
   "$schema": "../_manifest.schema.json",
   "agent_slug": "the-pro",
-  "version": "1.6.0",
-  "description_id": "Bundle skill + template The Pro. Briefing pagi, ingatan lintas sesi, pendamping kerja harian.",
+  "version": "1.7.0",
+  "description_id": "Bundle skill + template The Pro. Briefing pagi, ingatan lintas sesi, pendamping kerja harian, plus 9 skill family peran harian: buku kas, tukang tagih, admin toko, konten harian, juru dokumen, asisten pribadi, hidup sehat, rutinitas, website instan.",
   "skills": [
     {
       "id": "daily-briefing",
       "description_id": "Rangkum kalender, email penting, dan headline berita pagi jadi satu briefing markdown. Default ke timezone Asia/Jakarta.",
       "description_en": "Aggregates calendar + email + news into a single morning briefing. Defaults to Asia/Jakarta timezone.",
-      "templates_used": ["mocks/calendar/typical-day.json", "mocks/gmail/typical-day.json"],
+      "templates_used": [
+        "mocks/calendar/typical-day.json",
+        "mocks/gmail/typical-day.json"
+      ],
       "template_fetch_required": true,
       "execution": "edge-function",
       "handler_ref": "edge-fn:daily-briefing-handler",
-      "enabled_for_tiers": ["starter", "pro", "studio"]
+      "enabled_for_tiers": [
+        "starter",
+        "pro",
+        "studio"
+      ]
     },
     {
       "id": "extend-capabilities",
@@ -21,7 +28,11 @@
       "templates_used": [],
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:extend-capabilities",
-      "enabled_for_tiers": ["starter", "pro", "studio"]
+      "enabled_for_tiers": [
+        "starter",
+        "pro",
+        "studio"
+      ]
     },
     {
       "id": "customer-reply",
@@ -31,17 +42,29 @@
       "templates_used": [],
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:customer-reply",
-      "enabled_for_tiers": ["starter", "pro", "studio"]
+      "enabled_for_tiers": [
+        "starter",
+        "pro",
+        "studio"
+      ]
     },
     {
       "id": "morning-briefing-cycle",
       "skill_kind": "playbook",
       "description_id": "Playbook lima langkah siklus briefing pagi harian. Intake tanggal dan klasifikasi konteks hari (libur nasional, cuti bersama, Ramadhan, hari kerja), pull outstanding dari kemarin, pull konteks pagi (berita, cuaca, meeting), assemble pakai template morning-briefing varian yang tepat, lalu auto-deliver ke Telegram customer. Cron 07:00 WIB default, customer juga bisa minta on-demand.",
       "description_en": "Five-step playbook for the daily morning briefing cycle. Intake date and classify day context (national holiday, joint leave, Ramadan, working day), pull yesterday's outstanding, fetch morning context (news, weather, meetings), assemble using the right morning-briefing template variant, then auto-deliver to the customer's Telegram. Cron 07:00 WIB default, on-demand also supported.",
-      "templates_used": ["briefings/morning-briefing.md", "briefings/morning-briefing-hari-libur.md", "briefings/morning-briefing-puasa.md"],
+      "templates_used": [
+        "briefings/morning-briefing.md",
+        "briefings/morning-briefing-hari-libur.md",
+        "briefings/morning-briefing-puasa.md"
+      ],
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:morning-briefing-cycle",
-      "enabled_for_tiers": ["starter", "pro", "studio"]
+      "enabled_for_tiers": [
+        "starter",
+        "pro",
+        "studio"
+      ]
     },
     {
       "id": "end-of-day-summary",
@@ -61,7 +84,180 @@
       ],
       "execution": "hermes-skill",
       "handler_ref": "hermes-skill:end-of-day-summary",
-      "enabled_for_tiers": ["starter", "pro", "studio"]
+      "enabled_for_tiers": [
+        "starter",
+        "pro",
+        "studio"
+      ]
+    },
+    {
+      "id": "buku-kas",
+      "description_id": "Kasir + pembukuan + pajak UMKM + HPP + bendahara rumah dalam satu peran. Semua angka dihitung tools/kas.py via shell (append CSV kas-YYYY-MM.csv, agregat harian/bulanan, PPh final 0,5% PP 55/2022, HPP dari resep/*.md) — LLM hanya kulit bahasa. Perhitungan pajak indikatif, bukan nasihat konsultan berizin.",
+      "description_en": "Cashier + bookkeeping + UMKM tax + HPP + household treasurer in one role. Every number computed by tools/kas.py via shell (append-only monthly CSV, daily/monthly aggregates, 0.5% final tax, HPP recomputed from recipe files) — the LLM is language skin only. Tax math is indicative, not licensed advice.",
+      "template_fetch_required": true,
+      "templates_used": [
+        "kas/laporan-kas-harian.md",
+        "kas/resep-contoh.md"
+      ],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:buku-kas",
+      "enabled_for_tiers": [
+        "starter",
+        "pro",
+        "studio"
+      ]
+    },
+    {
+      "id": "tukang-tagih",
+      "description_id": "Penjaga piutang: ledger piutang.md, lima template nada penagihan bertahap (H-1 halus sampai H+7 tegas), dan lebur ke briefing pagi. Aku menyusun draf — customer yang approve dan kirim sendiri, tidak pernah kontak langsung ke penunggak.",
+      "description_en": "Receivables keeper: piutang.md ledger, five escalating dunning tones (gentle D-1 through firm D+7), folded into the morning briefing. Drafts only — the customer approves and sends; the agent never contacts debtors directly.",
+      "template_fetch_required": true,
+      "templates_used": [
+        "tagih/piutang.md",
+        "tagih/tagih-h-1-halus.md",
+        "tagih/tagih-h0-jatuh-tempo.md",
+        "tagih/tagih-h2-pengingat.md",
+        "tagih/tagih-h5-serius.md",
+        "tagih/tagih-h7-tegas.md"
+      ],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:tukang-tagih",
+      "enabled_for_tiers": [
+        "starter",
+        "pro",
+        "studio"
+      ]
+    },
+    {
+      "id": "admin-toko",
+      "description_id": "Admin toko online: balas chat pembeli dan deskripsi produk per platform (Shopee/Tokopedia vs Instagram) dari data produk.md + faq-toko.md yang customer isi. Data tidak ada = tanya customer, bukan mengarang harga atau stok. Draf disusun, customer yang paste.",
+      "description_en": "Online-shop admin: buyer-chat replies and per-platform product descriptions (Shopee/Tokopedia vs Instagram) sourced from customer-maintained produk.md + faq-toko.md. Missing data means asking the customer, never inventing price or stock. Drafts only; the customer pastes.",
+      "template_fetch_required": true,
+      "templates_used": [
+        "toko/produk.md",
+        "toko/faq-toko.md",
+        "toko/balas-pembeli.md",
+        "toko/deskripsi-produk-platform.md"
+      ],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:admin-toko",
+      "enabled_for_tiers": [
+        "starter",
+        "pro",
+        "studio"
+      ]
+    },
+    {
+      "id": "konten-harian",
+      "description_id": "Konten harian dari library, bukan karangan: kalender momen Indonesia (tanggal kembar, gajian 25-1, harbolnas, Ramadan, 17an) dipadukan bank 30 formula caption. Rotasi kategori, fakta hanya dari data customer, approve sebelum posting.",
+      "description_en": "Daily content from a seeded library, not improvisation: an Indonesian moments calendar (twin dates, payday 25-1, harbolnas, Ramadan, Aug 17) paired with a 30-formula caption bank. Category rotation, facts only from customer data, customer approval before posting.",
+      "template_fetch_required": true,
+      "templates_used": [
+        "konten/kalender-momen-indonesia.md",
+        "konten/bank-formula-caption.md"
+      ],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:konten-harian",
+      "enabled_for_tiers": [
+        "starter",
+        "pro",
+        "studio"
+      ]
+    },
+    {
+      "id": "juru-dokumen",
+      "description_id": "Juru tulis dokumen harian: nota penjualan, notula rapat (termasuk dari voice note), CV kronologis, dan perapih bahasa. Numpang template reply + surat cuti yang sudah ada. Kirim/terima file dokumen masih spike-gated — alur resmi teks markdown di chat.",
+      "description_en": "Everyday document clerk: sales notes, meeting minutes (voice note supported), chronological CVs, and language polishing. Reuses existing reply + formal-leave templates. Sending/receiving document files is spike-gated — the official flow is markdown text in chat.",
+      "template_fetch_required": true,
+      "templates_used": [
+        "dokumen/nota-penjualan.md",
+        "dokumen/notula-rapat.md",
+        "dokumen/cv-kronologis.md",
+        "email-permohonan-cuti-formal.md",
+        "replies/reply-professional.md"
+      ],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:juru-dokumen",
+      "enabled_for_tiers": [
+        "starter",
+        "pro",
+        "studio"
+      ]
+    },
+    {
+      "id": "asisten-pribadi",
+      "description_id": "Asisten urusan harian: buku pesanan/PO dengan pengingat H-1, jadwal, dan pengingat bayaran rutin mulai H-2. Semua pengingat menumpang briefing pagi. Aku mengingatkan dan mencatat — tidak pernah mengeksekusi pembayaran.",
+      "description_en": "Daily-affairs assistant: an order/PO book with D-1 reminders, schedules, and recurring-bill reminders from D-2. All reminders ride the existing morning briefing. The agent reminds and records — it never executes a payment.",
+      "template_fetch_required": true,
+      "templates_used": [
+        "pribadi/buku-pesanan.md",
+        "pribadi/pengingat-bayaran.md",
+        "commitment-tracker.md"
+      ],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:asisten-pribadi",
+      "enabled_for_tiers": [
+        "starter",
+        "pro",
+        "studio"
+      ]
+    },
+    {
+      "id": "hidup-sehat",
+      "description_id": "Teman hidup sehat dengan disclaimer non-medis permanen: library latihan rumahan tanpa alat, tabel kalori masakan Indonesia (kisaran, bukan presisi), dan check-in harian via voice note dengan streak. Rekomendasi hanya dari tabel library — bukan dokter, ahli gizi, atau pelatih.",
+      "description_en": "Healthy-living companion with a permanent non-medical disclaimer: a no-equipment home-workout library, an Indonesian-dish calorie table (ranges, not precision), and daily voice-note check-ins with streaks. Recommendations come only from the seeded tables — not a doctor, dietitian, or certified trainer.",
+      "template_fetch_required": true,
+      "templates_used": [
+        "sehat/latihan-rumahan.md",
+        "sehat/kalori-masakan-indonesia.md"
+      ],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:hidup-sehat",
+      "enabled_for_tiers": [
+        "starter",
+        "pro",
+        "studio"
+      ]
+    },
+    {
+      "id": "rutinitas",
+      "description_id": "Mesin tiap-X-lakukan-Y: tulis rutinitas.md + daftarkan cron bertanda # weuseai-rutinitas via shell, konfirmasi jadwal sekali sebelum pasang, maksimal 10 rutinitas aktif. Crontab self-registration masih spike-gated — fallback manual lewat briefing pagi ditulis di playbook.",
+      "description_en": "The every-X-do-Y engine: writes rutinitas.md + registers tagged cron entries via shell, confirms the schedule once before installing, caps at 10 active routines. Crontab self-registration is spike-gated — the manual morning-briefing fallback is written into the playbook.",
+      "template_fetch_required": true,
+      "templates_used": [
+        "rutinitas/rutinitas.md"
+      ],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:rutinitas",
+      "enabled_for_tiers": [
+        "starter",
+        "pro",
+        "studio"
+      ]
+    },
+    {
+      "id": "website-instan",
+      "description_id": "Website satu halaman dalam satu percakapan: 8 template HTML self-contained (<30KB, mobile-first, nol aset eksternal), intake maksimal 4 pertanyaan dari config.json, diisi deterministik oleh tools/fill.py. Serving via Caddy masih spike-gated — file jadi tersimpan sekarang.",
+      "description_en": "A one-page website in one conversation: 8 self-contained HTML templates (<30KB, mobile-first, zero external assets), an intake of at most 4 questions from config.json, filled deterministically by tools/fill.py. Caddy serving is spike-gated — finished files are stored now.",
+      "template_fetch_required": true,
+      "templates_used": [
+        "website/config.json",
+        "website/umkm-profil.html",
+        "website/menu-qr.html",
+        "website/linkbio.html",
+        "website/katalog.html",
+        "website/undangan.html",
+        "website/cv-online.html",
+        "website/toko-sederhana.html",
+        "website/jasa.html"
+      ],
+      "execution": "hermes-skill",
+      "handler_ref": "hermes-skill:website-instan",
+      "enabled_for_tiers": [
+        "starter",
+        "pro",
+        "studio"
+      ]
     }
   ],
   "templates": [
@@ -256,6 +452,192 @@
       "kind": "memory-vault",
       "description_id": "Penjelasan folder arsip — catatan dingin yang barisnya sudah dilepas dari peta tapi berkasnya tidak pernah dihapus. Dilihat lagi kalau nama lama muncul dan tidak ada di orang/.",
       "best_for": "Cold storage — bounded index without losing memory"
+    },
+    {
+      "id": "kas/resep-contoh.md",
+      "kind": "engine-data",
+      "description_id": "Format resep untuk hitung HPP oleh tools/kas.py — baris porsi: N dan bahan `- nama | takaran | harga`. Disalin ke /var/lib/weuseai/data/kas/resep/ lalu diedit customer.",
+      "best_for": "HPP recompute source format — parsed deterministically by kas.py"
+    },
+    {
+      "id": "kas/laporan-kas-harian.md",
+      "kind": "report",
+      "description_id": "Bentuk laporan kas harian — masuk, keluar, selisih, per kategori. Semua angka disalin dari output tools/kas.py, bukan hitungan model.",
+      "best_for": "Daily cash report shape fed by kas.py JSON output"
+    },
+    {
+      "id": "tagih/piutang.md",
+      "kind": "ledger",
+      "description_id": "Format buku piutang append-only: tanggal, nama, jumlah, jatuh tempo, status, terakhir ditagih. Sumber pemilihan nada template penagihan.",
+      "best_for": "Receivables ledger — drives which dunning tone applies"
+    },
+    {
+      "id": "tagih/tagih-h-1-halus.md",
+      "kind": "reply",
+      "description_id": "Nada 1 penagihan — H-1 sebelum jatuh tempo, mengingatkan halus. Draf untuk dikirim customer sendiri.",
+      "best_for": "Gentle D-1 payment reminder draft"
+    },
+    {
+      "id": "tagih/tagih-h0-jatuh-tempo.md",
+      "kind": "reply",
+      "description_id": "Nada 2 penagihan — hari jatuh tempo, ramah tapi jelas menagih, sertakan cara bayar.",
+      "best_for": "Due-day dunning draft, neutral register"
+    },
+    {
+      "id": "tagih/tagih-h2-pengingat.md",
+      "kind": "reply",
+      "description_id": "Nada 3 penagihan — H+2 lewat tempo, sopan tapi menyebut keterlambatan dan minta kepastian tanggal.",
+      "best_for": "D+2 overdue reminder asking for a concrete date"
+    },
+    {
+      "id": "tagih/tagih-h5-serius.md",
+      "kind": "reply",
+      "description_id": "Nada 4 penagihan — H+5 lewat tempo, serius dengan dua opsi jelas: bayar penuh atau kesepakatan cicilan bertanggal.",
+      "best_for": "D+5 serious dunning with a payment-plan escape hatch"
+    },
+    {
+      "id": "tagih/tagih-h7-tegas.md",
+      "kind": "reply",
+      "description_id": "Nada 5 penagihan — H+7 lewat tempo, tegas dan formal, menyebut langkah berikut tanpa ancaman berlebihan.",
+      "best_for": "D+7 firm final dunning naming next steps"
+    },
+    {
+      "id": "toko/produk.md",
+      "kind": "engine-data",
+      "description_id": "Format data produk toko — harga, varian, stok, berat, info kirim. Sumber kebenaran satu-satunya jawaban ke pembeli.",
+      "best_for": "Single source of truth for buyer-facing answers"
+    },
+    {
+      "id": "toko/faq-toko.md",
+      "kind": "engine-data",
+      "description_id": "Jawaban baku pertanyaan pembeli yang berulang — COD, ongkir, nego, SLA kirim. Diisi kalimat customer sendiri.",
+      "best_for": "Canned answers for repeat buyer questions"
+    },
+    {
+      "id": "toko/balas-pembeli.md",
+      "kind": "reply",
+      "description_id": "Pola balasan chat marketplace per situasi: tanya stok, ongkir, sudah bayar, barang kosong, plus gerbang wajib komplain.",
+      "best_for": "Marketplace chat reply patterns, complaint gate included"
+    },
+    {
+      "id": "toko/deskripsi-produk-platform.md",
+      "kind": "copy",
+      "description_id": "Kerangka deskripsi produk per platform: Shopee/Tokopedia padat + kata kunci, Instagram naratif satu hook satu CTA. Fakta dari produk.md.",
+      "best_for": "Per-platform product description scaffolds"
+    },
+    {
+      "id": "konten/kalender-momen-indonesia.md",
+      "kind": "library",
+      "description_id": "Kalender momen konten Indonesia — bulanan (tanggal kembar, gajian 25-1, tanggal tua, Jumat) dan tahunan (harbolnas, Ramadan, Lebaran, 17an, Harpelnas).",
+      "best_for": "Moment picker for daily content — check today + 7 days ahead"
+    },
+    {
+      "id": "konten/bank-formula-caption.md",
+      "kind": "library",
+      "description_id": "Bank 30 formula caption dalam 6 kategori (pertanyaan, angka, cerita, edukasi, momen, interaksi) dengan aturan rotasi dan larangan data karangan.",
+      "best_for": "Caption formula bank — pick and fill, never invent"
+    },
+    {
+      "id": "dokumen/nota-penjualan.md",
+      "kind": "invoice",
+      "description_id": "Nota penjualan sederhana usaha kecil — bukti transaksi dan arsip, bukan dokumen pajak. Total dihitung tools/kas.py.",
+      "best_for": "Simple sales note for small businesses"
+    },
+    {
+      "id": "dokumen/notula-rapat.md",
+      "kind": "notes",
+      "description_id": "Notula rapat satu halaman: pembahasan, keputusan, tindak lanjut ber-PIC dan tenggat. Bisa disusun dari voice note rekaman.",
+      "best_for": "One-page meeting minutes — decisions + follow-ups"
+    },
+    {
+      "id": "dokumen/cv-kronologis.md",
+      "kind": "letter",
+      "description_id": "CV kronologis pelamar kerja formal Indonesia — jujur, rapi, pengalaman non-formal tetap dihitung.",
+      "best_for": "Chronological CV for Indonesian job applications"
+    },
+    {
+      "id": "pribadi/buku-pesanan.md",
+      "kind": "tracker",
+      "description_id": "Tracker pesanan/PO dengan status dan tanggal ambil — pengingat H-1 menumpang briefing pagi, DP nyambung ke buku kas.",
+      "best_for": "Order/PO book with D-1 reminders riding the briefing"
+    },
+    {
+      "id": "pribadi/pengingat-bayaran.md",
+      "kind": "tracker",
+      "description_id": "Daftar bayaran rutin (listrik, sewa, cicilan, iuran) dengan jatuh tempo — muncul di briefing mulai H-2. Aku mengingatkan, customer yang membayar.",
+      "best_for": "Recurring-bill reminder list from D-2"
+    },
+    {
+      "id": "sehat/latihan-rumahan.md",
+      "kind": "library",
+      "description_id": "Library latihan rumahan tanpa alat — gerakan dasar dua level, paket sesi 15 menit, aturan progresi, disclaimer non-medis permanen.",
+      "best_for": "No-equipment workout library with permanent non-medical disclaimer"
+    },
+    {
+      "id": "sehat/kalori-masakan-indonesia.md",
+      "kind": "library",
+      "description_id": "Tabel kisaran kalori masakan dan jajanan Indonesia per porsi wajar — untuk sadar kisaran, bukan hitungan presisi atau diet medis.",
+      "best_for": "Indonesian dish calorie ranges for daily check-ins"
+    },
+    {
+      "id": "rutinitas/rutinitas.md",
+      "kind": "engine-data",
+      "description_id": "Daftar rutinitas tiap-X-lakukan-Y — jadwal bahasa manusia + ekspresi cron + status, berpasangan dengan entri crontab bertanda weuseai-rutinitas.",
+      "best_for": "Human-readable routine registry paired with tagged crontab entries"
+    },
+    {
+      "id": "website/config.json",
+      "kind": "config",
+      "description_id": "Konfigurasi intake website-instan — daftar pertanyaan per template, maksimum 4, dengan format jawaban (teks, tabel, links, wa). Agent bertanya persis dari sini.",
+      "best_for": "Intake question registry for the 8 website templates"
+    },
+    {
+      "id": "website/umkm-profil.html",
+      "kind": "website",
+      "description_id": "Template website profil usaha satu halaman — tentang kami, alamat, tombol WhatsApp. Self-contained, mobile-first, nol aset eksternal, diisi tools/fill.py.",
+      "best_for": "One-page business profile with WhatsApp CTA"
+    },
+    {
+      "id": "website/menu-qr.html",
+      "kind": "website",
+      "description_id": "Template menu digital untuk QR di meja — tabel menu dua kolom, catatan, tombol pesan WhatsApp. Self-contained, mobile-first.",
+      "best_for": "Digital menu behind a table QR code"
+    },
+    {
+      "id": "website/linkbio.html",
+      "kind": "website",
+      "description_id": "Template link bio gelap — nama, bio singkat, tombol tautan dari baris Label | URL. Self-contained, mobile-first.",
+      "best_for": "Link-in-bio page with button list"
+    },
+    {
+      "id": "website/katalog.html",
+      "kind": "website",
+      "description_id": "Template katalog produk — pembuka, tabel produk 2-3 kolom, tombol tanya stok WhatsApp. Self-contained, mobile-first.",
+      "best_for": "Product catalog with WhatsApp CTA"
+    },
+    {
+      "id": "website/undangan.html",
+      "kind": "website",
+      "description_id": "Template undangan acara digital — nama acara, waktu, lokasi, pesan penutup, register serif formal. Self-contained, mobile-first.",
+      "best_for": "Digital event invitation"
+    },
+    {
+      "id": "website/cv-online.html",
+      "kind": "website",
+      "description_id": "Template CV online yang bisa dibagikan sebagai link — nama, profesi, riwayat, kontak. Self-contained, mobile-first.",
+      "best_for": "Shareable online CV page"
+    },
+    {
+      "id": "website/toko-sederhana.html",
+      "kind": "website",
+      "description_id": "Template toko sederhana — info pembeli, tabel barang + harga, tombol order WhatsApp. Self-contained, mobile-first.",
+      "best_for": "Simple shop page with WhatsApp ordering"
+    },
+    {
+      "id": "website/jasa.html",
+      "kind": "website",
+      "description_id": "Template jasa dan layanan — area layanan, tabel layanan + tarif, tombol minta penawaran WhatsApp. Self-contained, mobile-first.",
+      "best_for": "Services page with quote-request CTA"
     }
   ],
   "self_extend": true,

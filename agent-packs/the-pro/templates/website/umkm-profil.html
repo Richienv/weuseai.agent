@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{nama_usaha}}</title>
+<style>
+  :root { --tinta: #1c1917; --latar: #faf9f7; --aksen: #b45309; --garis: #e7e5e4; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--latar); color: var(--tinta); line-height: 1.6; }
+  main { max-width: 640px; margin: 0 auto; padding: 24px 20px 64px; }
+  header { padding: 56px 0 32px; border-bottom: 1px solid var(--garis); }
+  h1 { font-size: 2rem; letter-spacing: -0.02em; }
+  .label { color: var(--aksen); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 12px; }
+  section { padding: 28px 0; border-bottom: 1px solid var(--garis); }
+  h2 { font-size: 1.05rem; margin-bottom: 10px; }
+  .isi { white-space: pre-line; color: #44403c; }
+  .cta { display: inline-block; margin-top: 28px; background: var(--tinta); color: var(--latar); padding: 14px 24px; border-radius: 10px; text-decoration: none; font-weight: 600; }
+  footer { padding-top: 24px; font-size: 0.8rem; color: #a8a29e; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <p class="label">Profil usaha</p>
+    <h1>{{nama_usaha}}</h1>
+  </header>
+  <section>
+    <h2>Tentang kami</h2>
+    <p class="isi">{{deskripsi}}</p>
+  </section>
+  <section>
+    <h2>Alamat</h2>
+    <p class="isi">{{alamat}}</p>
+  </section>
+  <a class="cta" href="https://wa.me/{{whatsapp|wa}}">Hubungi via WhatsApp</a>
+  <footer>
+    <p>WhatsApp: {{whatsapp}}</p>
+  </footer>
+</main>
+</body>
+</html>

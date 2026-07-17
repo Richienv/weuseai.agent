@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{nama}} — {{profesi}}</title>
+<style>
+  :root { --tinta: #18181b; --latar: #fafafa; --aksen: #1e40af; --garis: #e4e4e7; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--latar); color: var(--tinta); line-height: 1.65; }
+  main { max-width: 640px; margin: 0 auto; padding: 24px 20px 64px; }
+  header { padding: 56px 0 28px; border-bottom: 2px solid var(--tinta); }
+  h1 { font-size: 2rem; letter-spacing: -0.02em; }
+  .profesi { color: var(--aksen); font-weight: 600; margin-top: 4px; }
+  section { padding: 26px 0; border-bottom: 1px solid var(--garis); }
+  h2 { font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.12em; color: #71717a; margin-bottom: 12px; }
+  .isi { white-space: pre-line; }
+  .kontak { font-weight: 600; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>{{nama}}</h1>
+    <p class="profesi">{{profesi}}</p>
+  </header>
+  <section>
+    <h2>Riwayat</h2>
+    <p class="isi">{{riwayat}}</p>
+  </section>
+  <section>
+    <h2>Kontak</h2>
+    <p class="isi kontak">{{kontak}}</p>
+  </section>
+</main>
+</body>
+</html>
