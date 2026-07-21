@@ -80,15 +80,16 @@ points and reduces the two mid tiers. Still a feature MATRIX, not a ladder:
 | `bare` | Bare Agent | none (vanilla Hermes) | ✗ | 99.000 | 99.000 | {✗, ✗, ✗} | no |
 | `solo` | Solo Starter | 3 (the-pro, doc-expert, slide-master) | ✗ | 399.000 | 99.000 | {✗, ✗, ✗} | no |
 | `voice-starter` | Voice Starter | 3 (same 3) | ✓ | 599.000 | 99.000 | {✓, ✗, ✗} | no |
-| `library-full` | Library Lengkap | all 10 | ✓ | 799.000 (anchor ~~999.000~~) | 99.000 | {✓, ✗, ✗} | no |
+| `library-full` | Library Lengkap | all 10 | ✓ | 799.000 (anchor ~~2.200.000~~, real post-batch) | 99.000 | {✓, ✗, ✗} | no |
 | `done-for-you` | Siap Pakai | 8 (Pro set) | ✓ | 1.299.000 | 99.000 | {✓, ✓, ✗} | no |
 | `enterprise` | Enterprise | custom | ✓ | quote | quote | {✓, ✓, ✓} | yes |
 
 Price history: `voice-starter` 699→599, `library-full` 899→799 (v1.4).
-The `library-full` **999k is a display-only strikethrough anchor — NEVER
-charged** (`setup_fee_anchor_idr`); the charged amount is always
-`setup_fee_idr` (799k). Post-promo prices STAY at these reduced levels
-(no real expiry — see Launch FOMO honesty note below).
+The `library-full` **2,2jt is the REAL post-batch price** (`setup_fee_anchor_idr`,
+2_200_000 — founder decision 2026-07-16, raised from the old 999k display anchor):
+shown as a strikethrough today and GENUINELY charged once 1.000 paid customers
+are reached. Below the batch limit the charged amount is `setup_fee_idr` (799k);
+at/after it, `create-invoice` charges the 2,2jt anchor (see Launch FOMO below).
 
 Always-On (+Rp 49rb/bulan) opsional unchanged across tiers (VPS 24/7,
 skip auto-suspend). `the-pro` is the default-persona-at-index-0 invariant
@@ -108,17 +109,17 @@ bare/solo).
 **Launch FOMO (honesty lock — UPDATED 2026-06-18):** the scarcity counter
 MUST read a REAL subscription count (`/api/public/subscription-count`,
 `paid_customers`); the landing banner renders NOTHING if the fetch fails —
-NEVER fabricate a number. **Price-rise is now REAL (founder decision
-2026-06-18):** `library-full` setup genuinely rises from Rp 799rb → Rp 999rb
-after the first 1.000 paid (the 999 `setup_fee_anchor_idr`, previously
-"display-only, never charged," BECOMES the real post-batch price). So
-"naik ke Rp 999rb setelah 1.000 pertama" is an HONEST forward-looking claim
-(supersedes the old "prices do not rise" lock for this tier). **REQUIRED
-follow-up (unwired):** `create-invoice` must flip the library-full charge
-799→999 once `paid_customers ≥ 1000` — until that lands, do NOT let the
-1000th sale through at 799 while the page advertises 999, or the claim
-breaks. Still NEVER invent a fake time-deadline ("harga naik dalam MM:SS")
-— the rise is tied to the batch count, not a clock.
+NEVER fabricate a number. **Price-rise is REAL (founder decision 2026-06-18,
+raised to 2,2jt 2026-07-16):** `library-full` setup genuinely rises from
+Rp 799rb → Rp 2,2jt after the first 1.000 paid (the 2_200_000
+`setup_fee_anchor_idr` is the real post-batch price). So "setup Premium naik ke
+Rp 2,2jt setelah 1.000 pertama" is an HONEST forward-looking claim (supersedes
+the old "prices do not rise" lock for this tier). **WIRED:** `create-invoice`
+flips the library-full charge 799→anchor once `paid_customers ≥ 1000`
+(`LIBRARY_FULL_BATCH_LIMIT`, fail-open to launch price on count error — never
+overcharge); `tests/create-invoice-price-flip.spec.ts` pins base 799k below the
+limit and the 2,2jt anchor at/after it. Still NEVER invent a fake time-deadline
+("harga naik dalam MM:SS") — the rise is tied to the batch count, not a clock.
 
 `enterprise` is contact-only (no fixed persona set, no fixed fee) — it is
 NOT provisionable via the manual-provision form or any self-serve

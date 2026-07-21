@@ -38,8 +38,8 @@ test('v1.4 locked numbers: bare 99k / solo 399k / voice-starter 599k / library-f
   assert.equal(PLANS['done-for-you'].setupIdr, 1_299_000)
 })
 
-test('library-full anchor (999k) is display-only strikethrough, never the charge', () => {
-  assert.equal(PLANS['library-full'].setupOldIdr, 999_000)
+test('library-full anchor (2.2jt) is the REAL post-batch price (founder 2026-07-16)', () => {
+  assert.equal(PLANS['library-full'].setupOldIdr, 2_200_000)
   // The charge path must use setupIdr (799k), not the anchor.
   assert.equal(chargeBeforeFee('library-full', false), 799_000 + 99_000)
 })
