@@ -108,9 +108,13 @@ export type TierConfig = {
   /** null = contact-for-quote (enterprise). */
   readonly setup_fee_idr: number | null
   /**
-   * Display-only psychological anchor (a strikethrough "harga normal").
-   * NEVER charged — the charged amount is always `setup_fee_idr`. Only set
-   * on library-full (999k → 799k launch framing). Absent elsewhere.
+   * Strikethrough "harga normal" anchor. For library-full this is the REAL
+   * post-batch price (2.2jt): shown struck-through today, and GENUINELY charged
+   * once paid_customers >= LIBRARY_FULL_BATCH_LIMIT — create-invoice flips the
+   * charge from setup_fee_idr (799k) to this value (see create-invoice-handler,
+   * types.ts setupOldIdr). NOT a display-only figure: editing it changes what
+   * post-batch customers pay. Absent on other tiers. (Founder 2026-07-16,
+   * raised from the old 999k display anchor.)
    */
   readonly setup_fee_anchor_idr?: number
   readonly monthly_fee_idr: number | null
