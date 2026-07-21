@@ -1,15 +1,15 @@
 /**
- * Library-full 799→999 batch price-flip (founder decision 2026-06-18,
- * honesty lock follow-up — CLAUDE.md "Launch FOMO").
+ * Library-full 799→2,2jt batch price-flip (founder decision 2026-06-18,
+ * anchor raised to 2,2jt 2026-07-16 — honesty lock follow-up, CLAUDE.md "Launch FOMO").
  *
- * The landing advertises "naik ke Rp 999rb setelah 1.000 pertama". For that
+ * The landing advertises "setup Premium naik ke Rp 2,2jt setelah 1.000 pertama". For that
  * claim to stay honest, create-invoice must charge the anchor (setupOldIdr,
- * 999k) once paid customers (subscriptions status='active' — the SAME
+ * 2,2jt) once paid customers (subscriptions status='active' — the SAME
  * definition as /api/public/subscription-count) reach 1000.
  *
  * Contract:
  *   1. library-full + paid < 1000  → launch price   (base 898k, qris total 904.286)
- *   2. library-full + paid ≥ 1000  → anchor price   (base 1.098k, qris total 1.105.686)
+ *   2. library-full + paid ≥ 1000  → anchor price   (base 2.299k, qris total 2.315.093)
  *   3. count query THROWS          → launch price   (fail-open — never overcharge)
  *   4. dep absent (older wiring)   → launch price
  *   5. other tiers                 → unaffected AND the count is never queried
@@ -111,8 +111,8 @@ function makeDeps(over: Record<string, unknown> = {}) {
 
 // launch price:  (799.000 + 99.000) × 1.007  = 904.286
 const LAUNCH_TOTAL = 904_286
-// anchor price:  (999.000 + 99.000) + round(1.098.000 × 0.7%) = 1.105.686
-const ANCHOR_TOTAL = 1_105_686
+// anchor price:  (2.200.000 + 99.000) + round(2.299.000 × 0.7%) = 2.315.093
+const ANCHOR_TOTAL = 2_315_093
 
 test(`library-full below the batch limit charges the launch price`, async () => {
   const xendit = makeXendit()
@@ -122,7 +122,7 @@ test(`library-full below the batch limit charges the launch price`, async () => 
   assert.deepEqual(xendit.charged, [LAUNCH_TOTAL])
 })
 
-test(`library-full at/after the batch limit charges the 999k anchor`, async () => {
+test(`library-full at/after the batch limit charges the 2.2jt anchor`, async () => {
   const xendit = makeXendit()
   const deps = makeDeps({ xendit, countActiveSubscriptions: async () => LIBRARY_FULL_BATCH_LIMIT })
   const res = await handleCreateInvoice(buildReq(body('library-full')), deps as never)

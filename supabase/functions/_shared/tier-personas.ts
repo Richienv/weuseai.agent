@@ -159,7 +159,7 @@ export const TIERS: { readonly [T in Tier]: TierConfig } = {
     label_id: 'Library Lengkap',
     personas: FULL_LIBRARY_PERSONAS,
     setup_fee_idr: 799_000, // v1.4: reduced from 899_000
-    setup_fee_anchor_idr: 999_000, // strikethrough display only — NEVER charged
+    setup_fee_anchor_idr: 2_200_000, // REAL post-batch price (founder 2026-07-16): create-invoice charges this once paid_customers >= 1000
     monthly_fee_idr: 99_000,
     features: { voice: true, web_app: false, custom_build: false },
     contact_required: false,

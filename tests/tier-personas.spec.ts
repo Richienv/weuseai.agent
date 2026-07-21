@@ -87,9 +87,9 @@ test('tier fees match the v1.4 structure', () => {
   assert.equal(TIERS.enterprise.monthly_fee_idr, null)
 })
 
-test('library-full carries the never-charged 999k strikethrough anchor', () => {
+test('library-full carries the 2.2jt post-batch anchor (charged after 1000 paid)', () => {
   // Display-only psychological anchor; the CHARGED amount is setup_fee_idr.
-  assert.equal(TIERS['library-full'].setup_fee_anchor_idr, 999_000)
+  assert.equal(TIERS['library-full'].setup_fee_anchor_idr, 2_200_000)
   assert.ok(TIERS['library-full'].setup_fee_anchor_idr! > TIERS['library-full'].setup_fee_idr!)
   // No other tier carries an anchor.
   for (const t of ['bare', 'solo', 'voice-starter', 'done-for-you'] as const) {

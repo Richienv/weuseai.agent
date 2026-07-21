@@ -548,14 +548,6 @@
         </label>
 
         <div class="totals">
-          <div class="totals-row" id="subtotalRow" style="display:none;">
-            <span class="lbl">Setup (full price)</span>
-            <span class="val" id="subtotal">Rp 3.500.000</span>
-          </div>
-          <div class="totals-row" id="discountRow" style="display:none;">
-            <span class="lbl" id="discountLbl">Launch discount (66%)</span>
-            <span class="val discount" id="discount">−Rp 2.300.000</span>
-          </div>
           <div class="totals-grand">
             <span>Total hari ini</span>
             <span id="grandTotal">Rp 1.308.100</span>
@@ -765,7 +757,7 @@
         thumb: 'L',
         title: 'Library Lengkap · setup',
         sub: 'Semua 10 persona + voice. Library paling lengkap.',
-        old: 999000,
+        old: 2200000,
         price: 799000,
       },
       'done-for-you': {
@@ -1004,27 +996,17 @@
       document.getElementById('recurringTotal').textContent = fmt(recurring) + '/bulan';
 
       // Strikethrough / anchor: ONLY when this plan carries a real anchor
-      // (library-full's display-only `old`, never charged). For every other
-      // plan, hide the old-price + the "Setup (full price)" / discount rows
-      // entirely (v1.4 honesty lock — no fake anchors).
+      // (library-full's `old` — the 2,2jt post-batch price create-invoice
+      // charges once 1.000 paid customers are reached). The single line-item
+      // strikethrough IS the anchor now; the redundant "Setup (full price)" /
+      // "Launch discount" totals rows were removed to declutter the summary.
       const hasAnchor = typeof plan.old === 'number' && plan.old > plan.price;
       const planOldEl = document.getElementById('planOld');
-      const subtotalRow = document.getElementById('subtotalRow');
-      const discountRow = document.getElementById('discountRow');
       if (hasAnchor) {
-        const discountAmt = plan.old - plan.price;
-        const discountPct = Math.round((discountAmt / plan.old) * 100);
         planOldEl.textContent = fmt(plan.old);
         planOldEl.style.display = '';
-        document.getElementById('subtotal').textContent = fmt(plan.old);
-        document.getElementById('discount').textContent = '−' + fmt(discountAmt);
-        document.getElementById('discountLbl').textContent = `Launch discount (${discountPct}%)`;
-        subtotalRow.style.display = 'flex';
-        discountRow.style.display = 'flex';
       } else {
         planOldEl.style.display = 'none';
-        subtotalRow.style.display = 'none';
-        discountRow.style.display = 'none';
       }
 
       // Always-On line item: show or hide (totals row was folded into the

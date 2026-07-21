@@ -71,7 +71,7 @@ export const TIER_CATALOG: Readonly<Record<Tier, TierEntry>> = {
   },
   'library-full': {
     label: 'Library Lengkap',
-    setup_fee_idr: 799_000, // v1.4: reduced from 899_000 (999k strikethrough anchor lives in tier-personas.ts)
+    setup_fee_idr: 799_000, // v1.4: reduced from 899_000 (2,2jt real post-batch anchor lives in tier-personas.ts)
     monthly_fee_idr: 99_000,
     personas: [
       'the-pro', 'doc-expert', 'slide-master',

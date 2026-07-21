@@ -96,6 +96,6 @@ test('the canonical id-ID grouped fee strings round-trip from the catalog', () =
   assert.equal(idGrouped(TIERS.solo.setup_fee_idr as number), '399.000')
   assert.equal(idGrouped(TIERS['voice-starter'].setup_fee_idr as number), '599.000')
   assert.equal(idGrouped(TIERS['library-full'].setup_fee_idr as number), '799.000')
-  assert.equal(idGrouped(TIERS['library-full'].setup_fee_anchor_idr as number), '999.000')
+  assert.equal(idGrouped(TIERS['library-full'].setup_fee_anchor_idr as number), '2.200.000')
   assert.equal(idGrouped(TIERS['done-for-you'].setup_fee_idr as number), '1.299.000')
 })
