@@ -233,13 +233,19 @@ export async function bundleFetchHandler(
   let targetVersion: string
   const pinnedVersion = customer.bundle_versions[input.agent_slug]
 
-  if (customer.bundle_update_policy === 'pin' || customer.bundle_update_policy === 'staged') {
-    // Pin or staged: always use the explicit pin. If none set, fall back
-    // to the Phase 2E-2 default. (Staged behaves like pin until dashboard
-    // ships in Phase 3+.)
-    targetVersion = pinnedVersion ?? PHASE_2E2_FALLBACK_VERSION
+  if (pinnedVersion && (customer.bundle_update_policy === 'pin' || customer.bundle_update_policy === 'staged')) {
+    // Explicit pin (or staged with a chosen version): honor it exactly.
+    targetVersion = pinnedVersion
   } else {
-    // 'latest': probe Storage for highest-semver version.
+    // 'latest' — OR pin/staged with NO explicit pin. The latter is the DEFAULT
+    // for a freshly-provisioned customer: migration 20260508140000 defaults
+    // bundle_update_policy='pin' + bundle_versions='{}', and nothing in the
+    // activation/provisioning path writes an explicit pin (the Phase-3
+    // subscription-activation policy step was never built). The old behaviour
+    // fell straight to a hardcoded '1.0.0', so every newly-published pack (e.g.
+    // the-pro@1.7.0) was INERT until a manual psql re-pin — the ship never
+    // reached customers. Probe Storage for the highest-semver bundle instead so
+    // a default customer tracks the current pack.
     let versions: string[]
     try {
       versions = await deps.listBundleVersions(input.agent_slug)
@@ -251,14 +257,9 @@ export async function bundleFetchHandler(
         detail: e instanceof Error ? e.message : String(e),
       }
     }
-    const latest = pickLatestSemver(versions)
-    if (!latest) {
-      // No published bundle for this agent yet. Fall back to the pinned
-      // version (or the Phase 2E-2 default) — degrades gracefully.
-      targetVersion = pinnedVersion ?? PHASE_2E2_FALLBACK_VERSION
-    } else {
-      targetVersion = latest
-    }
+    // No published bundle at all → degrade to the pin (if any) or the Phase 2E-2
+    // default, so this can never be worse than the prior behaviour.
+    targetVersion = pickLatestSemver(versions) ?? pinnedVersion ?? PHASE_2E2_FALLBACK_VERSION
   }
 
   const path = `bundles/${input.agent_slug}/${targetVersion}.tar.gz`

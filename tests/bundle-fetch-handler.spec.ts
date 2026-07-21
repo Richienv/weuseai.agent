@@ -125,11 +125,27 @@ test('fetch: pin policy returns explicit pin', async () => {
   }
 })
 
-test('fetch: pin policy with no pin → fallback default 1.0.0', async () => {
+test('fetch: pin policy with NO explicit pin → resolves highest published semver (not the stale 1.0.0 hardcode)', async () => {
+  // The default freshly-provisioned customer (policy='pin', bundle_versions={}).
+  // Must track the CURRENT pack, else every new ship (e.g. the-pro@1.7.0) is
+  // inert until a manual re-pin. Regression pin for the delivery-gap fix.
   const r = await bundleFetchHandler(
     baseInput,
     buildDeps({
       customer: customer({ bundle_update_policy: 'pin', bundle_versions: {} }),
+      versions: ['1.0.0.tar.gz', '1.7.0.tar.gz', '1.2.0.tar.gz'],
+    }),
+  )
+  assert.equal(r.ok, true)
+  if (r.ok) assert.equal(r.body.version, '1.7.0')
+})
+
+test('fetch: pin policy, no pin AND no published bundle → degrades to default (never worse than before)', async () => {
+  const r = await bundleFetchHandler(
+    baseInput,
+    buildDeps({
+      customer: customer({ bundle_update_policy: 'pin', bundle_versions: {} }),
+      versions: [],
     }),
   )
   assert.equal(r.ok, true)
