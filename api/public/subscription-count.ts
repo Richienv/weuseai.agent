@@ -34,8 +34,14 @@ type VercelResponse = {
 }
 
 /**
- * Count active subscriptions via PostgREST's count header — no row data
+ * Count active PAID subscriptions via PostgREST's count header — no row data
  * crosses the wire. Exported for tests (fetchImpl injectable).
+ *
+ * `source=neq.access_code` excludes COMPED subscriptions — B2B clients who paid
+ * the founder by bank transfer and redeemed an access code. The landing shows
+ * this number as real paying customers (honesty lock), so comped rows must not
+ * inflate it. Rows predating the `source` migration default to 'xendit' and
+ * still count as paid.
  */
 export async function fetchActiveSubscriptionCount(opts: {
   supabaseUrl: string
@@ -43,17 +49,25 @@ export async function fetchActiveSubscriptionCount(opts: {
   fetchImpl?: typeof fetch
 }): Promise<number> {
   const doFetch = opts.fetchImpl ?? fetch
-  const r = await doFetch(
-    `${opts.supabaseUrl}/rest/v1/subscriptions?status=eq.active&select=id`,
-    {
-      method: 'HEAD',
-      headers: {
-        apikey: opts.serviceKey,
-        authorization: `Bearer ${opts.serviceKey}`,
-        prefer: 'count=exact',
-      },
-    },
-  )
+  const headers = {
+    apikey: opts.serviceKey,
+    authorization: `Bearer ${opts.serviceKey}`,
+    prefer: 'count=exact',
+  }
+  const base = `${opts.supabaseUrl}/rest/v1/subscriptions?status=eq.active`
+
+  let r = await doFetch(`${base}&source=neq.access_code&select=id`, { method: 'HEAD', headers })
+
+  // DEPLOY-RACE FALLBACK. Vercel republishes this function on push, but the
+  // `source` column arrives via the Supabase migration job on a SEPARATE rail
+  // — so for a few minutes this can run against a schema that has no `source`
+  // yet, and PostgREST answers 4xx. Retry unfiltered rather than let the
+  // landing's batch band go dark. Safe: before that migration lands there are
+  // no comped rows to exclude, so both queries return the same number.
+  if (!r.ok && r.status >= 400 && r.status < 500) {
+    r = await doFetch(`${base}&select=id`, { method: 'HEAD', headers })
+  }
+
   if (!r.ok) throw new Error(`subscriptions count HTTP ${r.status}`)
   // content-range: 0-24/3129  → count after the slash.
   const range = r.headers.get('content-range') ?? ''

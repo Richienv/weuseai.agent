@@ -140,6 +140,22 @@
     .promo:hover { background: var(--bg-elevated); border-color: var(--border-strong); color: var(--text); }
     .promo .plus { width: 18px; height: 18px; border-radius: 4px; background: rgba(255,255,255,0.08); display: grid; place-items: center; color: var(--text-muted); font-size: 14px; line-height: 1; }
 
+    /* Access-code redemption slot. Same footprint as the collapsed .promo
+       row it expands from, so the summary column keeps its resting layout. */
+    .ac-wrap { margin-top: 10px; }
+    .ac-row { display: flex; gap: 8px; align-items: stretch; }
+    .ac-input { text-transform: uppercase; letter-spacing: 0.14em; font-variant-numeric: tabular-nums; }
+    .ac-btn {
+      flex-shrink: 0; padding: 10px 14px; border-radius: 6px;
+      background: var(--bg-elevated); color: var(--text);
+      border: 1px solid var(--border-strong);
+      font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap;
+      transition: background 0.15s ease, border-color 0.15s ease;
+    }
+    .ac-btn:hover { background: rgba(255,255,255,0.08); border-color: var(--text-subtle); }
+    .ac-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .ac-note { font-size: 12px; color: var(--text-subtle); margin: 8px 0 0; line-height: 1.5; }
+
     /* Form */
     .form-title { font-size: 13px; font-weight: 600; color: var(--text); letter-spacing: 0.02em; margin-bottom: 10px; text-transform: uppercase; }
     .field-label { display: block; font-size: 13px; color: var(--text); font-weight: 500; margin-bottom: 6px; }
@@ -565,9 +581,37 @@
           </div>
         </div>
 
-        <div class="promo" id="promoToggle">
+        <!-- Access-code slot (replaces the old inert "kode promo" affordance,
+             which revealed an input nobody ever read or sent). B2B clients who
+             pay the founder by bank transfer redeem an 8-character code here
+             instead of going through Xendit. Tier + Always-On come from the
+             code row server-side — never from ?plan= / ?alwaysOn= on this
+             page, so a code holder cannot upgrade themselves. -->
+        <div class="promo" id="promoToggle" role="button" tabindex="0" aria-expanded="false" aria-controls="accessCodeWrap">
           <span class="plus">+</span>
-          <span>Punya kode promo?</span>
+          <span>Punya kode akses?</span>
+        </div>
+
+        <div class="ac-wrap" id="accessCodeWrap" hidden>
+          <label class="field-label" for="accessCode" style="display:block; font-size:12px; color: var(--text-muted); margin-bottom:6px;">Kode akses</label>
+          <div class="ac-row">
+            <input
+              class="field-input ac-input"
+              type="text"
+              id="accessCode"
+              name="accessCode"
+              placeholder="K7Q4-XR9M"
+              autocomplete="off"
+              autocapitalize="characters"
+              autocorrect="off"
+              spellcheck="false"
+              maxlength="9"
+              aria-describedby="accessCodeNote"
+            >
+            <button type="button" class="ac-btn" id="accessCodeBtn">Pakai kode</button>
+          </div>
+          <p id="accessCodeError" class="field-error" aria-live="polite" style="display:none; margin: 8px 0 0; font-size: 12px; color: #e5322d;"></p>
+          <p class="ac-note" id="accessCodeNote">Kode akses kami kirim langsung ke kamu. Email dan persetujuan tetap wajib diisi sebelum kode dipakai.</p>
         </div>
       </div>
     </aside>
@@ -1053,22 +1097,9 @@
         renderAll();
       });
 
-      document.getElementById('promoToggle').addEventListener('click', () => {
-        const wrap = document.getElementById('promoToggle');
-        if (wrap.dataset.open === '1') return;
-        wrap.dataset.open = '1';
-        wrap.innerHTML = '';
-        const input = document.createElement('input');
-        input.className = 'field-input';
-        input.placeholder = 'Promotion code';
-        input.style.border = 'none';
-        input.style.boxShadow = 'none';
-        input.style.padding = '0';
-        input.style.background = 'transparent';
-        wrap.style.cursor = 'text';
-        wrap.appendChild(input);
-        input.focus();
-      });
+      // The access-code affordance (reveal + redeem) is wired at the bottom
+      // of this DOMContentLoaded block — it reuses validateBeforePay() and
+      // the checkout error catalog, both declared further down.
 
       // Edge Function endpoint. Anon key is public-by-design — the function
       // recomputes amounts server-side and verifies subscription state.
@@ -1497,6 +1528,178 @@
           renderTotals();
         }
       });
+
+      // ─── Access-code redemption ────────────────────────────────────────
+      //
+      // Some B2B clients pay the founder outside the system (bank transfer)
+      // and get an 8-character code instead of a Xendit invoice. Redeeming a
+      // valid code activates the customer and lands on the SAME /welcome page
+      // a paid invoice does.
+      //
+      // Deliberately separate from the pay path above:
+      //  - it NEVER calls create-invoice
+      //  - it sends NO plan and NO alwaysOn. Both `?plan=` and `?alwaysOn=1`
+      //    are client-settable on this page, so the tier + Always-On flag are
+      //    read server-side from the code row only. A code holder cannot
+      //    upgrade themselves.
+      //  - email + ToS run through the SAME validateBeforePay() gate the pay
+      //    button uses, so there is one consent surface, not two.
+      const ACCESS_CODE_RE = /^[ABCDEFGHJKMNPQRSTVWXYZ23456789]{8}$/;
+      const ACCESS_CODE_ERROR_MAP = {
+        // The server returns the same `invalid_code` for unknown, malformed,
+        // expired, revoked and exhausted codes (no oracle) — one copy covers
+        // every one of those cases.
+        invalid_code:      'Kode tidak berlaku. Cek lagi, atau hubungi tim.',
+        too_many_attempts: 'Terlalu banyak percobaan. Coba lagi dalam 15 menit.',
+        already_active:    'Email ini sudah punya agent aktif.',
+        // Consent codes reuse the pay-path copy so both surfaces read the same.
+        tos_required:      CHECKOUT_ERROR_MAP.tos_required,
+        tos_stale:         CHECKOUT_ERROR_MAP.tos_stale,
+      };
+      const ACCESS_CODE_FALLBACK = 'Kode belum bisa diproses saat ini. Coba lagi dalam 1 menit, atau hubungi tim.';
+      function mapAccessCodeError(serverCode) {
+        if (typeof serverCode === 'string' && ACCESS_CODE_ERROR_MAP[serverCode]) {
+          return ACCESS_CODE_ERROR_MAP[serverCode];
+        }
+        return ACCESS_CODE_FALLBACK;
+      }
+
+      // Storage form is the normalized 8 characters; the dash is display only.
+      function normalizeAccessCode(raw) {
+        return String(raw == null ? '' : raw).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
+      }
+      function formatAccessCode(normalized) {
+        return normalized.length > 4
+          ? normalized.slice(0, 4) + '-' + normalized.slice(4)
+          : normalized;
+      }
+
+      const accessToggle = document.getElementById('promoToggle');
+      const accessWrap = document.getElementById('accessCodeWrap');
+      const accessCodeInp = document.getElementById('accessCode');
+      const accessCodeBtn = document.getElementById('accessCodeBtn');
+      const accessCodeErr = document.getElementById('accessCodeError');
+
+      // The message lands next to the input (where kamu acts) and, for the
+      // consent codes, also under the ToS checkbox via validateBeforePay's
+      // existing surface. #payError mirrors it so the page has one banner
+      // position for "something went wrong", same as the pay path.
+      function showAccessCodeError(msg) {
+        const payErrEl = document.getElementById('payError');
+        if (!msg) {
+          accessCodeErr.textContent = '';
+          accessCodeErr.style.display = 'none';
+          if (payErrEl) { payErrEl.textContent = ''; payErrEl.style.display = 'none'; }
+          return;
+        }
+        accessCodeErr.textContent = msg;
+        accessCodeErr.style.display = 'block';
+        if (payErrEl) { payErrEl.textContent = msg; payErrEl.style.display = 'block'; }
+      }
+
+      function revealAccessCode() {
+        if (accessWrap.hidden === false) return;
+        accessWrap.hidden = false;
+        accessToggle.setAttribute('aria-expanded', 'true');
+        accessCodeInp.focus();
+      }
+      accessToggle.addEventListener('click', revealAccessCode);
+      accessToggle.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          revealAccessCode();
+        }
+      });
+
+      // Uppercase + regroup as kamu type, so the value always matches the
+      // XXXX-XXXX display form the code is printed in.
+      accessCodeInp.addEventListener('input', () => {
+        accessCodeInp.value = formatAccessCode(normalizeAccessCode(accessCodeInp.value));
+      });
+      accessCodeInp.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter') return;
+        // This input lives OUTSIDE #payForm, so Enter here can never reach the
+        // pay-form submit handler. Redeem instead.
+        e.preventDefault();
+        submitAccessCode();
+      });
+      accessCodeBtn.addEventListener('click', submitAccessCode);
+
+      let accessCodeBusy = false;
+      async function submitAccessCode() {
+        if (accessCodeBusy) return;
+        const code = normalizeAccessCode(accessCodeInp.value);
+        accessCodeInp.value = formatAccessCode(code);
+        showAccessCodeError('');
+
+        if (!code) {
+          showAccessCodeError('Masukkan kode akses kamu dulu.');
+          accessCodeInp.focus();
+          return;
+        }
+        // Same email + ToS gate the pay button runs. It focuses and scrolls to
+        // the offending field and writes the under-checkbox ToS message.
+        if (!validateBeforePay()) return;
+        if (!ACCESS_CODE_RE.test(code)) {
+          showAccessCodeError(ACCESS_CODE_ERROR_MAP.invalid_code);
+          accessCodeInp.focus();
+          return;
+        }
+
+        const email = document.getElementById('email').value.trim();
+        const marketingInp = document.getElementById('acceptMarketing');
+        const acceptMarketing = !!(marketingInp && marketingInp.checked);
+        // Stamped once and reused for both the POST and the localStorage
+        // cache, so the two records never drift (same rule as the pay path).
+        const tosAcceptedAt = new Date().toISOString();
+        const marketingOptInAt = acceptMarketing ? new Date().toISOString() : null;
+
+        try {
+          localStorage.setItem('onboarding_checkout_email', email);
+          localStorage.setItem('onboarding_accept_tos_at', tosAcceptedAt);
+          localStorage.setItem('onboarding_accept_marketing', acceptMarketing ? '1' : '0');
+        } catch { /* localStorage may be disabled */ }
+
+        accessCodeBusy = true;
+        const btnOrigLabel = accessCodeBtn.textContent;
+        accessCodeBtn.disabled = true;
+        accessCodeBtn.textContent = 'Memeriksa kode...';
+        accessCodeInp.disabled = true;
+
+        try {
+          const res = await fetch(`${SUPABASE_FUNCTIONS_URL}/redeem-access-code`, {
+            method: 'POST',
+            headers: {
+              'content-type': 'application/json',
+              'authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            },
+            body: JSON.stringify({
+              code: code,
+              email: email,
+              // Tier + Always-On come from the code row server-side. No plan
+              // and no alwaysOn are sent on purpose — see the note above.
+              tos_accepted_at: tosAcceptedAt,
+              marketing_opt_in_at: marketingOptInAt,
+              policy_version: 'v1.0',
+            }),
+          });
+          const data = await res.json().catch(() => null);
+          if (!res.ok || !data || !data.redirect_url) {
+            const serverCode = (data && typeof data.error === 'string') ? data.error : null;
+            if (serverCode) console.warn('[checkout] access-code redeem failed:', serverCode);
+            throw new Error(serverCode ?? '__http_' + res.status + '__');
+          }
+          window.location.href = data.redirect_url;
+        } catch (err) {
+          const serverCode = String((err && err.message) ? err.message : '');
+          showAccessCodeError(mapAccessCodeError(serverCode));
+          accessCodeBusy = false;
+          accessCodeBtn.disabled = false;
+          accessCodeBtn.textContent = btnOrigLabel;
+          accessCodeInp.disabled = false;
+          accessCodeInp.focus();
+        }
+      }
     });
   </script>
 </body>
