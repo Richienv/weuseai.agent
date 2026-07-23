@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>weuseai.agent — IG 1080x1350</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#16120F; --ink-soft:#4A423C; --ink-mute:#6B615A;
+    --coral:#FF5A45; --card:#F6F3EF; --rule:#E7E1DA;
+  }
+  *{ box-sizing:border-box; margin:0; padding:0 }
+  html,body{ background:#EDE9E4 }
+
+  .frame{
+    width:1080px; height:1350px;
+    background:#FFFFFF;
+    padding:74px 72px 64px;
+    display:flex; flex-direction:column;
+    font-family:'Inter',sans-serif; color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+    overflow:hidden;
+  }
+
+  .label{
+    display:flex; align-items:center; gap:11px;
+    font-size:19px; font-weight:600; letter-spacing:.2em; text-transform:uppercase;
+  }
+  .dot{ width:12px; height:12px; border-radius:50%; background:var(--coral); flex:none }
+
+  .display{
+    font-family:'Playfair Display',Georgia,serif; font-weight:800;
+    font-size:104px; line-height:.94; letter-spacing:-.022em;
+    margin-top:44px;
+  }
+  .sub{ margin-top:30px; font-size:31px; line-height:1.35; color:var(--ink-soft); max-width:830px }
+
+  .rule{ height:1px; background:var(--rule); margin:42px 0 0 }
+
+  .key{ margin-top:38px; font-size:30px; line-height:1.4; max-width:900px; color:var(--ink) }
+  .key b{ font-weight:600 }
+  .key .muted{ color:var(--ink-mute) }
+
+  .grid{
+    margin-top:26px;
+    display:grid; grid-template-columns:repeat(3,1fr); gap:16px;
+  }
+  .cardlet{
+    background:var(--card); border-radius:26px; padding:24px 24px 26px;
+  }
+  .cardlet .name{ font-size:25px; font-weight:600; letter-spacing:-.01em }
+  .cardlet .fn{ margin-top:9px; font-size:18px; line-height:1.42; color:var(--ink-mute) }
+
+  .foot{
+    margin-top:auto; padding-top:30px;
+    display:flex; align-items:center; justify-content:space-between;
+    font-size:20px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-mute);
+  }
+</style>
+</head>
+<body>
+
+<div class="frame">
+  <div class="label"><span class="dot"></span>weuseai.agent</div>
+
+  <h1 class="display">Agents that<br>do the work.</h1>
+  <p class="sub">Bukan chatbot yang menjawab. Agent yang mengerjakan.</p>
+
+  <div class="rule"></div>
+
+  <p class="key">
+    Chatbot menjawab pertanyaan. <b>Agent mengerjakan pekerjaan.</b><br>
+    <span class="muted">Seperti anak magang digital: kerja sendiri sampai jadi, kamu tinggal setujui.</span>
+  </p>
+
+  <div style="margin-top:40px" class="label"><span class="dot"></span>Sembilan agent spesialis</div>
+
+  <div class="grid">
+    <div class="cardlet"><div class="name">Deep Researcher</div><div class="fn">Riset banyak sumber, laporan dengan citation.</div></div>
+    <div class="cardlet"><div class="name">Doc Expert</div><div class="fn">Laporan, proposal, invoice — sesuai gaya kamu.</div></div>
+    <div class="cardlet"><div class="name">Slide Master</div><div class="fn">Outline jadi deck 12 slide plus speaker notes.</div></div>
+    <div class="cardlet"><div class="name">Social Conductor</div><div class="fn">Calendar dan draft konten, satu voice.</div></div>
+    <div class="cardlet"><div class="name">Video Producer</div><div class="fn">Script TikTok dan Reels, riset hashtag.</div></div>
+    <div class="cardlet"><div class="name">Web Creator</div><div class="fn">Website dari struktur sampai deploy.</div></div>
+    <div class="cardlet"><div class="name">Project Conductor</div><div class="fn">Kanban, dispatch agent, monitor progres.</div></div>
+    <div class="cardlet"><div class="name">Business Director</div><div class="fn">Roadmap 5-tahap founder Indonesia.</div></div>
+    <div class="cardlet"><div class="name">Trade Pro</div><div class="fn">Briefing pasar, alert saham dan crypto.</div></div>
+  </div>
+
+  <div class="foot">
+    <span>Dibangun &amp; dipakai sendiri</span>
+    <span>weuseai-agent.vercel.app</span>
+  </div>
+</div>
+
+</body>
+</html>

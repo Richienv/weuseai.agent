@@ -33,7 +33,8 @@ const BROWSER_CALLABLE = [
   'reset-bot-pairing',        // onboarding.html step 3 recovery (PR #56)
   'save-onboarding-profile',  // onboarding.html step 1 (PR #57)
   'customer-readiness',       // welcome.html readiness probe wrapper (post-pair Track 1)
-  'genesis-distill',          // onboarding.html step 4 "forward aja" fast path (2026-06-13)
+  'genesis-distill',
+  'redeem-access-code', // checkout.html access-code path (browser-called)          // onboarding.html step 4 "forward aja" fast path (2026-06-13)
 ] as const
 
 // External-webhook callable (Telegram / Xendit servers, no Supabase JWT).

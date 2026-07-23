@@ -169,13 +169,19 @@ Deno.serve(async (req) => {
       xendit,
       successRedirectBase: `${PUBLIC_BASE}/welcome`,
       failureRedirectBase: `${PUBLIC_BASE}/checkout.html`,
-      // Paid count for the library-full 799→999 batch flip — same
-      // status='active' definition as /api/public/subscription-count.
+      // Paid count for the library-full 799→2,2jt batch flip — same
+      // definition as /api/public/subscription-count.
+      // source != 'access_code' excludes COMPED subscriptions (B2B clients
+      // redeeming an access code after paying the founder outside the system).
+      // They are real customers but not part of the 1.000 PAID batch, so they
+      // must never push the price flip forward. Rows predating the `source`
+      // migration default to 'xendit' and still count as paid.
       countActiveSubscriptions: async () => {
         const { count, error } = await supabase
           .from('subscriptions')
           .select('id', { count: 'exact', head: true })
           .eq('status', 'active')
+          .neq('source', 'access_code')
         if (error || typeof count !== 'number') throw (error ?? new Error('count unavailable'))
         return count
       },

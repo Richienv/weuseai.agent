@@ -192,3 +192,14 @@ verify_jwt = false
 # every request 404s until the live throwaway-VPS spike validates the transport.
 [functions.agent-chat-relay]
 verify_jwt = false
+
+# Access-code redemption (2026-07-23): called pre-auth from checkout.html in
+# the browser, exactly like create-invoice — B2B clients who paid the founder
+# by bank transfer enter an 8-char code instead of paying via Xendit. The
+# customer has no Supabase JWT at this point in the flow. Auth is the code
+# itself, verified server-side against access_codes (service-role only; the
+# table is RLS default-deny), plus a per-IP-hash attempt throttle in the
+# handler so the keyspace can't be walked. Tier and always_on come from the
+# code row ONLY — never from the request body.
+[functions.redeem-access-code]
+verify_jwt = false
