@@ -154,7 +154,13 @@ export function fleetSentinelHandler(
   const dryTag = config.dryRun ? '[DRY-RUN] ' : ''
 
   for (const vps of snapshot.vpses) {
-    const idleMs = ageMs(vps.last_activity_at, nowMs) ?? ageMs(vps.created_at, nowMs)
+    // Idle is measured ONLY from real recorded activity (last_activity_at).
+    // NEVER fall back to created_at — provisioning age is not activity: a box
+    // created 60d ago but messaged every day is NOT idle. When no activity has
+    // been recorded yet (null), idle is UNKNOWN, so the destructive suspend
+    // path below must not fire. created_at still drives orphan detection via
+    // provisioningAgeMs (a separate, non-destructive, alert-only signal).
+    const idleMs = ageMs(vps.last_activity_at, nowMs)
     const provisioningAgeMs = ageMs(vps.created_at, nowMs)
 
     // ── 1. Orphaned provision (alert-only; never auto-reaped) ────────────
