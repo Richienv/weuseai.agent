@@ -48,3 +48,7 @@ build/
 .claude/*
 !.claude/skills/
 !.claude/skills/**
+
+# Python bytecode cache — generated when the suite imports agent-pack tools
+__pycache__/
+*.pyc
