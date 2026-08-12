@@ -1,46 +1,46 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://weuseai.id/</loc>
+    <loc>https://www.weuseai.id/</loc>
     <lastmod>2026-06-21</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://weuseai.id/use-cases</loc>
+    <loc>https://www.weuseai.id/use-cases</loc>
     <lastmod>2026-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://weuseai.id/faq</loc>
+    <loc>https://www.weuseai.id/faq</loc>
     <lastmod>2026-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://weuseai.id/checkout</loc>
+    <loc>https://www.weuseai.id/checkout</loc>
     <lastmod>2026-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://weuseai.id/privacy</loc>
+    <loc>https://www.weuseai.id/privacy</loc>
     <changefreq>yearly</changefreq>
     <priority>0.4</priority>
   </url>
   <url>
-    <loc>https://weuseai.id/terms</loc>
+    <loc>https://www.weuseai.id/terms</loc>
     <changefreq>yearly</changefreq>
     <priority>0.4</priority>
   </url>
   <url>
-    <loc>https://weuseai.id/refund-policy</loc>
+    <loc>https://www.weuseai.id/refund-policy</loc>
     <changefreq>yearly</changefreq>
     <priority>0.4</priority>
   </url>
   <url>
-    <loc>https://weuseai.id/contact</loc>
+    <loc>https://www.weuseai.id/contact</loc>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>

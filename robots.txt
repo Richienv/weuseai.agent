@@ -10,4 +10,4 @@ Disallow: /welcome
 Disallow: /welcome.html
 Disallow: /admin/
 
-Sitemap: https://weuseai.id/sitemap.xml
+Sitemap: https://www.weuseai.id/sitemap.xml
