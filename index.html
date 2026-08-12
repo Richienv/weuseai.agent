@@ -666,6 +666,15 @@
       [data-m="foot-cols"] > div:first-child { grid-column:1 / -1 !important; }
       footer { padding:56px 18px 32px !important; }
       [data-m="foot-bottom"] { flex-direction:column !important; align-items:flex-start !important; gap:16px !important; }
+
+      /* Target sentuh. Tautan footer merender setinggi barisnya saja — 19px —
+         yang meleset terus di jempol. Padding vertikal menaikkannya ke 44px
+         tanpa menggeser tata letak: gap kolom sudah menyediakan ruangnya, dan
+         margin negatif menahan blok tidak ikut memanjang. */
+      [data-m="foot-cols"] a { display:inline-flex !important; align-items:center !important;
+        min-height:44px !important; margin:-11px 0 !important; }
+      [data-m="foot-bottom"] a { display:inline-flex !important; align-items:center !important;
+        min-height:44px !important; margin:-11px 0 !important; }
     }
 
   </style>

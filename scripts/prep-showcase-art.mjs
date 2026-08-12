@@ -27,6 +27,11 @@ const SRC_DIR = process.argv[2] || join(homedir(), 'Downloads');
 const NAMES = ['sc-duit', 'sc-jualan', 'sc-dokumen', 'sc-pribadi'];
 const EXTS = ['.jpg', '.jpeg', '.png', '.webp', '.JPG', '.JPEG', '.PNG'];
 const W = 760, H = 428;
+// q55, bukan q80. Halftone padat adalah derau frekuensi-tinggi yang dibenci JPEG:
+// q80 menghasilkan ~215 KB per berkas (840 KB berempat), q55 ~127 KB — dan pada
+// q55 teksturnya masih utuh. Gambar ini duduk di bawah tint mix-blend-mode dan
+// scrim, jadi detail halusnya teredam sebelum sampai ke mata.
+const Q = '55';
 
 const find = (base) => {
   for (const e of EXTS) {
@@ -54,7 +59,7 @@ for (const name of NAMES) {
   // resampleHeightWidth stretches to exactly WxH. The sources are 16:9, same as
   // the target, so nothing is distorted; a non-16:9 source would letterbox-stretch
   // and that is worth seeing rather than silently cropping.
-  execFileSync('sips', ['-s', 'format', 'jpeg', '-s', 'formatOptions', '80',
+  execFileSync('sips', ['-s', 'format', 'jpeg', '-s', 'formatOptions', Q,
     '--resampleHeightWidth', String(H), String(W), work, '--out', work],
     { stdio: 'ignore' });
   const out = join(REPO, 'assets', `${name}.jpg`);
@@ -66,6 +71,6 @@ for (const name of NAMES) {
   console.log(`  assets/${name}.jpg  ${dim[1]}x${dim[2]}  ${kb.toFixed(0)} KB`);
 }
 console.log(`\n  total ${total.toFixed(0)} KB untuk empat gambar\n`);
-if (total > 700) {
-  console.error('  PERINGATAN: lebih berat dari ~480 KB yang diharapkan. Periksa sumbernya.\n');
+if (total > 620) {
+  console.error('  PERINGATAN: lebih berat dari ~520 KB yang diharapkan. Periksa sumbernya.\n');
 }
