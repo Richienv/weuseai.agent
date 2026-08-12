@@ -83,6 +83,14 @@
     /* ── summary pane (the "what you get" side) ─────────────────── */
     .summary-pane {
       position: relative;
+      /* Isi dipusatkan vertikal. Panel ini adalah sel grid setinggi baris,
+         dan isinya lebih pendek — di desktop 1253px vs 1009px, jadi dulu
+         ada 244px menggantung di bawah sementara isinya menempel di atas.
+         Tinggi baris selalu >= tinggi isi (grid menyesuaikan isi), jadi
+         pemusatan ini tidak pernah mendorong apa pun ke luar overflow:hidden. */
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
       background:
         linear-gradient(180deg, rgba(255,255,255,.03), transparent 14%),
         radial-gradient(120% 55% at 50% 0%, rgba(238,60,48,.10), var(--bg-summary));
@@ -102,11 +110,18 @@
     }
     .summary-inner {
       position: relative; z-index: 1;
-      max-width: 520px; margin-left: auto;
+      /* Satu kolom: dipusatkan. margin-left:auto sendirian mendorong blok
+         520px ini ke tepi kanan — di layar 828px itu meninggalkan 308px
+         kosong di kiri dan terbaca miring. */
+      max-width: 520px; margin: 0 auto; width: 100%;
       padding: 34px 28px 44px;
       animation: scRise .55s var(--ease) both;
     }
-    @media (min-width: 900px) { .summary-inner { padding: 56px 44px 64px; } }
+    @media (min-width: 900px) {
+      /* Dua kolom: kembali memeluk pembatas, supaya isi kedua kolom
+         berdekatan dan tidak terpisah selokan lebar di tengah layar. */
+      .summary-inner { margin-left: auto; margin-right: 0; padding: 56px 44px 64px; }
+    }
 
     .brand-row { display: flex; align-items: center; gap: 11px; }
     .pay-back {
