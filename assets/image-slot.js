@@ -43,7 +43,13 @@
   if (!window.customElements || customElements.get('image-slot')) return;
 
   var SHEET = [
-    ':host{display:block;position:relative;overflow:hidden;background:#0e0c10}',
+    ':host{display:block;position:relative;overflow:hidden;background:#0e0c10;'
+    // Isi pembungkusnya. Tanpa width/height eksplisit, host memakai tinggi
+    // otomatis: img height:100% jatuh ke auto, jadi slot mengikuti rasio
+    // gambar (428/760) alih-alih wadahnya. Di kartu skill itu kebetulan pas
+    // karena wadahnya 16:9 — di panel Memory yang tinggi, gambar cuma
+    // menutupi 35% dan sisanya kosong.
+    + 'width:100%;height:100%}',
     ':host([shape="round"]){border-radius:50%}',
     'img{width:100%;height:100%;display:block;object-fit:cover}',
     ':host([fit="contain"]) img{object-fit:contain}',
