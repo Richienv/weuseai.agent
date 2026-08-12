@@ -5,15 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>40 cara pakai weuseai.agent — use cases</title>
   <meta name="description" content="40 cara AI bikin hidup kamu lebih enak. Buat agen asuransi, agen properti, anak kuliahan, content creator, pemilik UMKM, karyawan kantoran, pewaris muda, dan sosmed head.">
-  <link rel="canonical" href="https://weuseai.id/use-cases" />
+  <link rel="canonical" href="https://www.weuseai.id/use-cases" />
 
   <!-- Open Graph -->
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="weuseai.agent">
   <meta property="og:title" content="40 cara pakai weuseai.agent">
   <meta property="og:description" content="40 cara AI bikin hidup kamu lebih enak — buat 8 profesi yang males kerja capek-capek tapi mau hasil maksimal.">
-  <meta property="og:url" content="https://weuseai.id/use-cases">
-  <meta property="og:image" content="https://weuseai.id/assets/og-image.png">
+  <meta property="og:locale" content="id_ID">
+  <meta property="og:url" content="https://www.weuseai.id/use-cases">
+  <meta property="og:image" content="https://www.weuseai.id/assets/og-use-cases.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta property="og:image:alt" content="weuseai.agent — 40 cara AI bikin hidup kamu lebih enak">
@@ -22,7 +23,8 @@
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="40 cara pakai weuseai.agent">
   <meta name="twitter:description" content="40 cara AI bikin hidup kamu lebih enak — buat 8 profesi yang males kerja capek-capek tapi mau hasil maksimal.">
-  <meta name="twitter:image" content="https://weuseai.id/assets/og-image.png">
+  <meta name="twitter:image" content="https://www.weuseai.id/assets/og-use-cases.png">
+  <meta name="twitter:image:alt" content="weuseai.agent — 40 cara AI bikin hidup kamu lebih enak">
 
   <!-- Theme + favicon -->
   <meta name="theme-color" content="#0a0a0a">
@@ -216,6 +218,99 @@
       font-family: 'Inter', sans-serif; font-size: 11.5px; font-weight: 300; color: rgba(255,255,255,0.55);
     }
 
+    /* Kalkulator jam */
+    .calc-wrap { border-radius: 18px; padding: 24px 20px; }
+    @media (min-width: 768px) { .calc-wrap { padding: 34px 32px; } }
+    .calc-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .calc-chip {
+      font-family: 'JetBrains Mono', monospace; font-size: 10.5px;
+      letter-spacing: 0.16em; text-transform: uppercase;
+      color: rgba(255,255,255,0.60);
+      background: transparent; cursor: pointer;
+      border: 1px solid rgba(255,255,255,0.14); border-radius: 999px;
+      padding: 10px 14px; min-height: 40px;
+      transition: color .25s ease, border-color .25s ease, background .25s ease;
+    }
+    .calc-chip:hover { color: rgba(255,255,255,0.9); border-color: rgba(255,255,255,0.3); }
+    .calc-chip[aria-pressed="true"] {
+      color: #fff; border-color: rgba(229,50,45,0.85);
+      background: rgba(229,50,45,0.14);
+    }
+    .calc-row { padding: 18px 0; border-top: 1px solid rgba(255,255,255,0.09); }
+    .calc-row:first-of-type { border-top: none; }
+    .calc-task {
+      font-family: 'Inter', sans-serif; font-size: 15px; font-weight: 400;
+      color: #f3eee5; line-height: 1.35;
+    }
+    .calc-fields { display: grid; grid-template-columns: 1fr; gap: 14px; margin-top: 14px; }
+    @media (min-width: 640px) { .calc-fields { grid-template-columns: 1fr 1fr; gap: 18px; } }
+    .calc-field-head {
+      display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+      font-family: 'JetBrains Mono', monospace; font-size: 9.5px;
+      letter-spacing: 0.16em; text-transform: uppercase; color: rgba(255,255,255,0.42);
+    }
+    .calc-field-head b {
+      font-family: 'Instrument Serif', serif; font-size: 20px; font-weight: 400;
+      letter-spacing: -0.02em; color: #fff; text-transform: none;
+    }
+    .calc-range {
+      -webkit-appearance: none; appearance: none;
+      width: 100%; max-width: 100%; height: 4px; margin: 14px 0 0;
+      border-radius: 999px; background: rgba(255,255,255,0.16);
+      outline: none; cursor: pointer;
+    }
+    .calc-range::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none;
+      width: 26px; height: 26px; border-radius: 50%;
+      background: #E5322D; border: 3px solid #0a0a0a;
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.25); cursor: pointer;
+    }
+    .calc-range::-moz-range-thumb {
+      width: 22px; height: 22px; border-radius: 50%;
+      background: #E5322D; border: 3px solid #0a0a0a; cursor: pointer;
+    }
+    .calc-range:focus-visible { box-shadow: 0 0 0 2px rgba(229,50,45,0.6); }
+    .calc-rowsum {
+      margin-top: 12px; font-family: 'JetBrains Mono', monospace;
+      font-size: 11px; color: rgba(255,255,255,0.45); line-height: 1.5;
+      overflow-wrap: anywhere;
+    }
+    .calc-out { margin-top: 24px; padding-top: 22px; border-top: 1px solid rgba(255,255,255,0.10); }
+    .calc-out[hidden] { display: none; }
+    .calc-big {
+      font-family: 'Instrument Serif', serif; color: #fff;
+      font-size: clamp(2.6rem, 9vw, 4.2rem); line-height: 0.95; letter-spacing: -0.04em;
+    }
+    .calc-math {
+      margin-top: 16px; padding: 16px; border-radius: 12px;
+      background: rgba(255,255,255,0.03);
+      font-family: 'JetBrains Mono', monospace; font-size: 11.5px; line-height: 1.85;
+      color: rgba(255,255,255,0.62); overflow-wrap: anywhere;
+    }
+    .calc-math span { color: #fff; }
+    .calc-note {
+      margin-top: 16px; font-family: 'Inter', sans-serif; font-weight: 300;
+      font-size: 13px; line-height: 1.65; color: rgba(255,255,255,0.55);
+    }
+    .calc-actions { margin-top: 22px; display: flex; flex-wrap: wrap; gap: 10px; }
+    .calc-cta {
+      border-radius: 999px; padding: 13px 22px; min-height: 46px;
+      font-size: 14px; font-weight: 500; color: #fff; text-decoration: none;
+      display: inline-flex; align-items: center; gap: 8px;
+      background: #E5322D; border: 1px solid #E5322D;
+    }
+    .calc-copy {
+      border-radius: 999px; padding: 13px 22px; min-height: 46px;
+      font-size: 14px; font-weight: 500; color: #fff; cursor: pointer;
+      background: transparent; border: 1px solid rgba(255,255,255,0.22);
+    }
+    .calc-empty {
+      margin-top: 24px; padding-top: 22px; border-top: 1px solid rgba(255,255,255,0.10);
+      font-family: 'Inter', sans-serif; font-weight: 300; font-size: 14px;
+      color: rgba(255,255,255,0.5); line-height: 1.6;
+    }
+    .calc-empty[hidden] { display: none; }
+
     /* Chapter heading */
     .chapter-num {
       font-family: 'Instrument Serif', serif; font-size: 14px;
@@ -266,6 +361,7 @@
         <a href="#kantoran" class="liquid-glass rounded-full px-3.5 md:px-4 py-2 text-[11px] md:text-sm font-mono uppercase tracking-[0.16em] text-white/85 hover:text-white transition-colors">Kantoran</a>
         <a href="#pewaris" class="liquid-glass rounded-full px-3.5 md:px-4 py-2 text-[11px] md:text-sm font-mono uppercase tracking-[0.16em] text-white/85 hover:text-white transition-colors">Pewaris</a>
         <a href="#sosmed" class="liquid-glass rounded-full px-3.5 md:px-4 py-2 text-[11px] md:text-sm font-mono uppercase tracking-[0.16em] text-white/85 hover:text-white transition-colors">SosMed</a>
+        <a href="#hitung" class="rounded-full px-3.5 md:px-4 py-2 text-[11px] md:text-sm font-mono uppercase tracking-[0.16em] text-white transition-colors" style="border: 1px solid rgba(229,50,45,0.85); background: rgba(229,50,45,0.14);">Hitung jam kamu</a>
       </div>
     </div>
   </section>
@@ -1355,6 +1451,254 @@
       </div>
     </div>
   </section>
+
+  <!-- KALKULATOR JAM -->
+  <section id="hitung" class="relative pt-12 md:pt-20 pb-8 md:pb-12 px-5 md:px-6 lg:px-16 z-[2]">
+    <div class="max-w-3xl mx-auto">
+      <div class="text-center mb-10 md:mb-14 reveal">
+        <div class="chapter-num">Hitung sendiri</div>
+        <h2 class="mt-3 font-heading text-white" style="font-size: clamp(2rem, 5vw, 3.4rem); letter-spacing: -0.04em; line-height: 0.95;">
+          Berapa jam kerja berulang kamu tiap minggu?
+        </h2>
+        <p class="mt-4 max-w-xl mx-auto text-white/55 font-body font-light text-sm md:text-base leading-[1.6]">
+          Semua angka di bawah ini kamu sendiri yang isi. Kami cuma menjumlahkan, dan rumusnya kelihatan.
+        </p>
+        <div class="mt-8 divider-glow"></div>
+      </div>
+
+      <div class="liquid-glass calc-wrap reveal">
+        <div class="case-label">Pilih yang paling mirip kamu</div>
+        <div class="calc-chips mt-3" id="calcChips"></div>
+
+        <div class="mt-6" id="calcRows"></div>
+
+        <p class="calc-empty" id="calcEmpty">
+          Geser slider di atas untuk mulai. Selama semua masih nol, tidak ada hasil yang ditampilkan.
+        </p>
+
+        <div class="calc-out" id="calcOut" hidden>
+          <div class="case-label">Total dari angka kamu</div>
+          <div class="calc-big" id="calcBig"></div>
+          <div class="calc-math" id="calcMath"></div>
+          <p class="calc-note">
+            Ini catatan waktu kamu sendiri, bukan klaim kami. Sebagian pekerjaan berulang seperti ini bisa kamu delegasikan ke agent; seberapa banyak yang benar-benar berkurang tergantung alur kerja dan datanya, dan itu belum bisa kami janjikan lewat angka.
+          </p>
+          <div class="calc-actions">
+            <a href="/checkout" class="calc-cta">
+              Lihat paket
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7"/><path d="M7 7h10v10"/></svg>
+            </a>
+            <button type="button" class="calc-copy" id="calcCopy">Salin hitungan kamu</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    (function () {
+      var PRESETS = [
+        { id: 'asuransi', label: 'Asuransi', tasks: ['Follow-up prospek satu per satu', 'Cek polis jatuh tempo & renewal', 'Riset prospek sebelum ketemu'] },
+        { id: 'properti', label: 'Properti', tasks: ['Cari & bandingkan listing baru', 'Balas pertanyaan calon pembeli', 'Susun materi & foto untuk iklan'] },
+        { id: 'kuliahan', label: 'Kuliahan', tasks: ['Baca & rangkum bahan kuliah', 'Rapikan catatan dan tugas', 'Cari referensi buat paper'] },
+        { id: 'kreator', label: 'Kreator', tasks: ['Cari ide dan riset konten', 'Tulis skrip atau caption', 'Potong, edit, dan unggah'] },
+        { id: 'umkm', label: 'UMKM', tasks: ['Balas chat pesanan pelanggan', 'Rekap penjualan dan stok', 'Bikin materi promosi'] },
+        { id: 'kantoran', label: 'Kantoran', tasks: ['Rapikan email dan pesan masuk', 'Bikin laporan rutin', 'Catat dan sebar hasil rapat'] },
+        { id: 'pewaris', label: 'Pewaris', tasks: ['Rekap laporan dari tiap unit usaha', 'Cek angka dan dokumen', 'Koordinasi ke banyak orang'] },
+        { id: 'sosmed', label: 'SosMed', tasks: ['Susun kalender konten', 'Balas komentar dan DM', 'Rekap performa tiap kanal'] }
+      ];
+
+      var chipsEl = document.getElementById('calcChips');
+      var rowsEl  = document.getElementById('calcRows');
+      var outEl   = document.getElementById('calcOut');
+      var emptyEl = document.getElementById('calcEmpty');
+      var bigEl   = document.getElementById('calcBig');
+      var mathEl  = document.getElementById('calcMath');
+      var copyBtn = document.getElementById('calcCopy');
+      if (!chipsEl || !rowsEl || !outEl) return;
+
+      var STORE = 'weuseai_calc_jam_v1';
+      var state = { preset: 'asuransi', rows: [{ f: 0, m: 0 }, { f: 0, m: 0 }, { f: 0, m: 0 }] };
+
+      try {
+        var saved = JSON.parse(localStorage.getItem(STORE) || 'null');
+        if (saved && Array.isArray(saved.rows) && saved.rows.length === 3) {
+          state.preset = typeof saved.preset === 'string' ? saved.preset : state.preset;
+          for (var s = 0; s < 3; s++) {
+            state.rows[s] = {
+              f: clamp(Number(saved.rows[s] && saved.rows[s].f) || 0, 0, 40),
+              m: clamp(Number(saved.rows[s] && saved.rows[s].m) || 0, 0, 120)
+            };
+          }
+        }
+      } catch (err) { /* penyimpanan lokal tidak tersedia, lanjut dengan nol */ }
+
+      function clamp(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); }
+      function current() {
+        for (var i = 0; i < PRESETS.length; i++) if (PRESETS[i].id === state.preset) return PRESETS[i];
+        return PRESETS[0];
+      }
+      function num(v, d) {
+        try { return v.toLocaleString('id-ID', { minimumFractionDigits: d || 0, maximumFractionDigits: d || 0 }); }
+        catch (e) { return String(d ? v.toFixed(d) : Math.round(v)); }
+      }
+
+      PRESETS.forEach(function (p) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'calc-chip';
+        b.textContent = p.label;
+        b.setAttribute('aria-pressed', String(p.id === state.preset));
+        b.addEventListener('click', function () {
+          state.preset = p.id;
+          Array.prototype.forEach.call(chipsEl.children, function (c) {
+            c.setAttribute('aria-pressed', String(c === b));
+          });
+          renderRowLabels();
+          render();
+        });
+        chipsEl.appendChild(b);
+      });
+
+      var rowNodes = [];
+      for (var r = 0; r < 3; r++) rowNodes.push(buildRow(r));
+
+      function buildRow(idx) {
+        var row = document.createElement('div');
+        row.className = 'calc-row';
+        var task = document.createElement('div');
+        task.className = 'calc-task';
+        var fields = document.createElement('div');
+        fields.className = 'calc-fields';
+
+        var freq = field('Berapa kali per minggu', 0, 40, 1, state.rows[idx].f, 'kali');
+        var mins = field('Menit tiap kali', 0, 120, 5, state.rows[idx].m, 'menit');
+        fields.appendChild(freq.wrap);
+        fields.appendChild(mins.wrap);
+
+        var sum = document.createElement('div');
+        sum.className = 'calc-rowsum';
+
+        row.appendChild(task);
+        row.appendChild(fields);
+        row.appendChild(sum);
+        rowsEl.appendChild(row);
+
+        freq.input.addEventListener('input', function () { state.rows[idx].f = Number(freq.input.value); render(); });
+        mins.input.addEventListener('input', function () { state.rows[idx].m = Number(mins.input.value); render(); });
+
+        return { task: task, sum: sum, freq: freq, mins: mins };
+      }
+
+      function field(labelText, min, max, step, value, unit) {
+        var wrap = document.createElement('label');
+        var head = document.createElement('div');
+        head.className = 'calc-field-head';
+        var lbl = document.createElement('span');
+        lbl.textContent = labelText;
+        var val = document.createElement('b');
+        head.appendChild(lbl);
+        head.appendChild(val);
+        var input = document.createElement('input');
+        input.type = 'range';
+        input.className = 'calc-range';
+        input.min = String(min); input.max = String(max); input.step = String(step);
+        input.value = String(value);
+        input.setAttribute('aria-label', labelText);
+        wrap.appendChild(head);
+        wrap.appendChild(input);
+        function sync() { val.textContent = input.value + ' ' + unit; }
+        input.addEventListener('input', sync);
+        sync();
+        return { wrap: wrap, input: input, val: val, sync: sync };
+      }
+
+      function renderRowLabels() {
+        var p = current();
+        for (var i = 0; i < 3; i++) rowNodes[i].task.textContent = p.tasks[i];
+      }
+
+      function render() {
+        var totalMin = 0;
+        var lines = [];
+        for (var i = 0; i < 3; i++) {
+          var f = state.rows[i].f, m = state.rows[i].m;
+          var sub = f * m;
+          totalMin += sub;
+          rowNodes[i].freq.input.value = String(f);
+          rowNodes[i].mins.input.value = String(m);
+          rowNodes[i].freq.sync();
+          rowNodes[i].mins.sync();
+          rowNodes[i].sum.textContent = sub > 0
+            ? f + ' × ' + m + ' menit = ' + num(sub) + ' menit / minggu'
+            : 'Belum diisi';
+          if (sub > 0) lines.push({ task: current().tasks[i], f: f, m: m, sub: sub });
+        }
+
+        try { localStorage.setItem(STORE, JSON.stringify(state)); } catch (e2) { /* abaikan */ }
+
+        if (totalMin <= 0) {
+          outEl.hidden = true;
+          emptyEl.hidden = false;
+          return;
+        }
+        emptyEl.hidden = true;
+        outEl.hidden = false;
+
+        var perWeek = totalMin / 60;
+        var perMonth = perWeek * 4.33;
+        var daysYear = (perWeek * 52) / 8;
+
+        bigEl.textContent = num(perWeek, 1) + ' jam / minggu';
+
+        var html = '';
+        lines.forEach(function (l) {
+          html += l.task + '<br><span>' + l.f + ' × ' + l.m + ' menit = ' + num(l.sub) + ' menit</span><br><br>';
+        });
+        html += 'Total <span>' + num(totalMin) + ' menit</span> ÷ 60 = <span>' + num(perWeek, 1) + ' jam / minggu</span><br>';
+        html += '× 4,33 minggu = <span>' + num(perMonth, 1) + ' jam / bulan</span><br>';
+        html += '× 52 minggu ÷ 8 jam = <span>' + num(daysYear, 1) + ' hari kerja / tahun</span>';
+        mathEl.innerHTML = html;
+      }
+
+      if (copyBtn) {
+        copyBtn.addEventListener('click', function () {
+          var totalMin = 0, txt = 'Aku hitung jam kerja berulangku di weuseai.id/use-cases:\n\n';
+          for (var i = 0; i < 3; i++) {
+            var f = state.rows[i].f, m = state.rows[i].m, sub = f * m;
+            totalMin += sub;
+            if (sub > 0) txt += '- ' + current().tasks[i] + ': ' + f + ' × ' + m + ' menit = ' + num(sub) + ' menit/minggu\n';
+          }
+          txt += '\nTotal ' + num(totalMin) + ' menit ÷ 60 = ' + num(totalMin / 60, 1) + ' jam per minggu.\n';
+          txt += 'Hitung punya kamu di https://www.weuseai.id/use-cases#hitung';
+
+          function done(ok) {
+            copyBtn.textContent = ok ? 'Tersalin' : 'Gagal menyalin';
+            setTimeout(function () { copyBtn.textContent = 'Salin hitungan kamu'; }, 2200);
+          }
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(txt).then(function () { done(true); }, function () { done(false); });
+          } else {
+            try {
+              var ta = document.createElement('textarea');
+              ta.value = txt; ta.setAttribute('readonly', '');
+              ta.style.position = 'fixed'; ta.style.opacity = '0';
+              document.body.appendChild(ta); ta.select();
+              document.execCommand('copy');
+              document.body.removeChild(ta);
+              done(true);
+            } catch (e3) { done(false); }
+          }
+        });
+      }
+
+      Array.prototype.forEach.call(chipsEl.children, function (c, i) {
+        c.setAttribute('aria-pressed', String(PRESETS[i].id === state.preset));
+      });
+      renderRowLabels();
+      render();
+    })();
+  </script>
 
   <!-- ESSENTIALS -->
   <section class="relative pt-12 md:pt-20 pb-16 md:pb-24 px-5 md:px-6 lg:px-16 z-[2]">

@@ -70,16 +70,21 @@
   // that whatever renders must be the real number from the endpoint.
   var MIN_DISPLAY = 25;
   var batchCount = null; // null until a real number arrives
+  var lastBand = null;   // node terakhir yang sudah kita cat
+  var reduceMotion = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+
+  function wantHidden() { return batchCount === null || batchCount < MIN_DISPLAY; }
 
   function paintBatch() {
     var band = document.querySelector('[data-batch]');
-    if (!band) return; // the runtime may not have rendered this section yet
+    if (!band) { lastBand = null; return; } // the runtime may not have rendered this section yet
+    lastBand = band;
     // No real number yet (still loading, or the fetch failed) → the band must be
     // INVISIBLE. Enforce it in JS: the runtime re-renders the template and drops
     // the `hidden` attribute, which would otherwise leave an empty "— / 1.000"
     // scarcity band on screen. Hide via style too, since `hidden` alone loses to
     // the element's own display rule.
-    if (batchCount === null || batchCount < MIN_DISPLAY) {
+    if (wantHidden()) {
       band.hidden = true;
       band.style.display = 'none';
       return;
@@ -89,9 +94,17 @@
     var barEl = band.querySelector('[data-batch-bar]');
     var left = Math.max(0, BATCH_LIMIT - batchCount);
     var pct = Math.max(0, Math.min(100, (batchCount / BATCH_LIMIT) * 100));
-    if (countEl) countEl.textContent = batchCount.toLocaleString('id-ID');
-    if (leftEl) leftEl.textContent = left.toLocaleString('id-ID') + ' slot';
-    if (barEl) barEl.style.width = pct + '%';
+    // Tulis hanya kalau nilainya memang berubah — DOM write yang tidak perlu
+    // memicu layout ulang, dan di ponsel kelas menengah itu terasa.
+    var countTxt = batchCount.toLocaleString('id-ID');
+    var leftTxt = left.toLocaleString('id-ID') + ' slot';
+    if (countEl && countEl.textContent !== countTxt) countEl.textContent = countTxt;
+    if (leftEl && leftEl.textContent !== leftTxt) leftEl.textContent = leftTxt;
+    if (barEl) {
+      // Hormati preferensi tanpa gerak: bar langsung di posisinya, tanpa animasi.
+      if (reduceMotion && reduceMotion.matches) barEl.style.transition = 'none';
+      if (barEl.style.width !== pct + '%') barEl.style.width = pct + '%';
+    }
     band.hidden = false;
     band.style.display = '';
   }
@@ -107,6 +120,48 @@
     .catch(function () { /* stay hidden — never fabricate */ });
 
   // The DC runtime replaces template DOM on re-render, so re-apply onto whichever
-  // node is current. Cheap, and a no-op until a real count exists.
-  setInterval(paintBatch, 500);
+  // node is current. Dulu ini setInterval(paintBatch, 500) selamanya — jalan terus
+  // walau tab tidak terlihat dan walau tidak ada yang berubah. Sekarang kita hanya
+  // mengecat ulang ketika runtime benar-benar mengganti node-nya.
+  var queued = false;
+  function schedule() {
+    if (queued) return;
+    queued = true;
+    var run = function () { queued = false; paintBatch(); };
+    if (window.requestAnimationFrame) window.requestAnimationFrame(run);
+    else setTimeout(run, 32);
+  }
+  // Cek murah, dan tidak bisa memicu dirinya sendiri: sesudah dicat,
+  // band === lastBand dan band.hidden sudah sesuai, jadi kondisi ini false.
+  function needsPaint() {
+    var band = document.querySelector('[data-batch]');
+    if (!band) return false;
+    if (band !== lastBand || band.hidden !== wantHidden()) return true;
+    if (wantHidden()) return false;
+    // Runtime bisa menulis ulang isi node yang SAMA (rekonsiliasi in-place), yang
+    // mengembalikan angka jadi "—" padahal band tetap terlihat. Bandingkan juga
+    // teksnya. Sesudah dicat nilainya sudah sama, jadi kondisi ini tidak bisa
+    // memicu dirinya sendiri.
+    var countEl = band.querySelector('[data-batch-count]');
+    return !!(countEl && countEl.textContent !== batchCount.toLocaleString('id-ID'));
+  }
+  function watchBatch() {
+    paintBatch();
+    if (!window.MutationObserver) {
+      setInterval(function () { if (!document.hidden) paintBatch(); }, 1000);
+      return;
+    }
+    new MutationObserver(function () {
+      if (document.hidden) return; // tab tersembunyi: tidak ada yang perlu dilihat
+      if (needsPaint()) schedule();
+    }).observe(document.body, { childList: true, subtree: true });
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden && needsPaint()) schedule();
+    });
+  }
+  if (document.body) watchBatch();
+  else document.addEventListener('DOMContentLoaded', watchBatch, { once: true });
+
+  // Dipanggil sesudah fetch selesai supaya band muncul tanpa menunggu re-render.
+  window.addEventListener('pageshow', function () { if (needsPaint()) schedule(); });
 })();

@@ -722,7 +722,18 @@
         min-height:44px !important; margin:-11px 0 !important; }
       [data-m="foot-bottom"] a { display:inline-flex !important; align-items:center !important;
         min-height:44px !important; margin:-11px 0 !important; }
+
+      /* Share kit — di layar kecil tombolnya menumpuk penuh lebar supaya
+         jempol tidak meleset, dan teks pengantar naik ke atas tombol. */
+      [data-m="share-band"] { flex-direction:column !important; align-items:stretch !important;
+        gap:18px !important; padding:22px 18px !important; }
+      [data-m="share-actions"] { width:100% !important; }
+      [data-m="share-actions"] > * { flex:1 1 100% !important; justify-content:center !important; }
     }
+
+    [data-share-btn] { transition:transform .2s, border-color .2s, background .2s; }
+    [data-share-btn]:hover { transform:translateY(-2px); }
+    [data-share-btn]:focus-visible { outline:2px solid #ff8a52; outline-offset:3px; }
 
   </style>
 <script src="/assets/image-slot.js" onerror="console.warn('[landing] /assets/image-slot.js gagal dimuat — image-slot tidak akan merender gambar')"></script>
@@ -2019,8 +2030,30 @@
       </div>
     </div>
 
+    <!-- ── Share kit ──────────────────────────────────────────────────────
+         Sebelum ini satu-satunya cara membagikan halaman adalah menyalin URL
+         dari address bar. Pasar utamanya WhatsApp-first, jadi WhatsApp yang
+         jadi jalur utama, dengan salin-tautan sebagai cadangan.
+         Perilaku diatur inline di akhir <body> lewat event-delegation —
+         runtime DC merender ulang dan menghapus listener per-node. -->
+    <div data-share-kit data-m="share-band" style="margin-top:52px; display:flex; align-items:center; justify-content:space-between; gap:24px; padding:22px 26px; border-radius:20px; background:linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.012)); border:1px solid rgba(255,255,255,.1); box-shadow:inset 0 1px 0 rgba(255,255,255,.07)">
+      <div>
+        <div style="font-family:'Plus Jakarta Sans',sans-serif; font-weight:600; font-size:17px; color:#f1ede9">Ada teman yang butuh ini?</div>
+        <div style="margin-top:6px; font-size:14px; line-height:1.55; color:#8a837d">Kirim satu tautan, dia bisa baca sendiri.</div>
+      </div>
+
+      <div data-m="share-actions" style="display:flex; flex-wrap:wrap; gap:10px">
+        <!-- Native share sheet — hanya muncul kalau navigator.share ada (mobile). -->
+        <button type="button" data-share-btn data-share="native" hidden style="display:none; align-items:center; gap:9px; padding:12px 20px; min-height:44px; border-radius:999px; background:linear-gradient(180deg,#ff8a52,#ee3c30 55%,#c01f12); border:1px solid rgba(255,150,120,.6); box-shadow:inset 0 1.5px 1px rgba(255,225,205,.7), 0 10px 22px rgba(238,60,48,.4); color:#fff; font-family:'Plus Jakarta Sans',sans-serif; font-weight:700; font-size:15px; text-shadow:0 1px 2px rgba(120,15,5,.5); cursor:pointer"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="M8.3 10.8l7.4-4.3M8.3 13.2l7.4 4.3"/></svg>Bagikan</button>
+
+        <a data-share-btn data-share="wa" href="https://wa.me/" target="_blank" rel="noopener" style="display:inline-flex; align-items:center; gap:9px; padding:12px 20px; min-height:44px; border-radius:999px; background:linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.02)); border:1px solid rgba(255,255,255,.14); box-shadow:inset 0 1px 0 rgba(255,255,255,.09); color:#f1ede9; font-family:'Plus Jakarta Sans',sans-serif; font-weight:600; font-size:15px; text-decoration:none"><svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a9.8 9.8 0 00-8.4 14.9L2 22l5.3-1.4A9.8 9.8 0 1012 2zm5.6 13.9c-.2.7-1.4 1.3-2 1.4-.5.1-1.2.1-1.9-.1-.4-.1-1-.3-1.7-.6-3-1.3-4.9-4.3-5.1-4.5-.1-.2-1.2-1.6-1.2-3s.7-2.1 1-2.4c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 1.9c.1.2.1.3 0 .5l-.4.6c-.2.2-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.4 2.4 1.5.2.1.4.1.5-.1l.7-.9c.2-.2.4-.2.6-.1l1.8.9c.3.1.4.2.5.3.1.2.1.8-.2 1.4z"/></svg>Bagikan lewat WhatsApp</a>
+
+        <button type="button" data-share-btn data-share="copy" style="display:inline-flex; align-items:center; gap:9px; padding:12px 20px; min-height:44px; border-radius:999px; background:linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.02)); border:1px solid rgba(255,255,255,.14); box-shadow:inset 0 1px 0 rgba(255,255,255,.09); color:#f1ede9; font-family:'Plus Jakarta Sans',sans-serif; font-weight:600; font-size:15px; cursor:pointer"><span data-share-icon style="display:inline-flex"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M10.6 13.4a4 4 0 005.7 0l2.8-2.8a4 4 0 10-5.7-5.7l-1.3 1.3"/><path d="M13.4 10.6a4 4 0 00-5.7 0l-2.8 2.8a4 4 0 105.7 5.7l1.3-1.3"/></svg></span><span data-share-label>Salin tautan</span></button>
+      </div>
+    </div>
+
     <!-- bottom bar -->
-    <div data-m="foot-bottom" style="margin-top:56px; padding-top:26px; border-top:1px solid rgba(255,255,255,.07); display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:18px">
+    <div data-m="foot-bottom" style="margin-top:36px; padding-top:26px; border-top:1px solid rgba(255,255,255,.07); display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:18px">
       <div style="font-size:13px; color:#6a6660">© 2026 PT WEUSEAI TEKNOLOGI INDONESIA. Terdaftar di Kementerian Komunikasi dan Digital Republik Indonesia.</div>
       <a href="#" style="display:inline-flex; align-items:center; gap:10px; padding:12px 22px; border-radius:999px; background:linear-gradient(180deg,#ff8a52,#ee3c30 55%,#c01f12); border:1px solid rgba(255,150,120,.6); box-shadow:inset 0 1.5px 1px rgba(255,225,205,.7), 0 10px 22px rgba(238,60,48,.4); color:#fff; font-weight:700; font-size:15px; text-decoration:none; text-shadow:0 1px 2px rgba(120,15,5,.5); transition:transform .2s" style-hover="transform:translateY(-2px)">Gabung Discord <svg width="20" height="20" viewBox="0 0 24 24" fill="#fff"><path d="M20 4.5A18 18 0 0015.5 3l-.3.6a14 14 0 014 2 13 13 0 00-14.4 0 14 14 0 014-2L8.5 3A18 18 0 004 4.5C1.5 8 1 11.5 1.2 15a18 18 0 005.5 2.8l.7-1.1a11 11 0 01-1.8-.9l.4-.3a13 13 0 0011.8 0l.4.3a11 11 0 01-1.8.9l.7 1.1A18 18 0 0022.8 15c.3-4-.6-7.5-2.8-10.5zM8.7 13.2c-.9 0-1.6-.8-1.6-1.8s.7-1.8 1.6-1.8 1.6.8 1.6 1.8-.7 1.8-1.6 1.8zm6.6 0c-.9 0-1.6-.8-1.6-1.8s.7-1.8 1.6-1.8 1.6.8 1.6 1.8-.7 1.8-1.6 1.8z"/></svg></a>
     </div>
@@ -2443,7 +2476,148 @@ class Component extends DCLogic {
   }
 }
 </script>
+<!-- Share kit — perilaku. Sama seperti konten-wiring.js: runtime DC merender
+     ulang template dan menghapus listener per-node, jadi klik didelegasikan dari
+     document dan tampilan tombol dicat ulang berkala. Tidak ada anak yang
+     disuntik ke elemen yang dikelola runtime — hanya atribut/teks yang diperbarui. -->
+<script>
+(function () {
+  'use strict';
+  var CANON = (function () {
+    var l = document.querySelector('link[rel="canonical"]');
+    var href = l && l.getAttribute('href');
+    if (href && /^https?:\/\//.test(href)) return href;
+    return location.origin + '/';
+  })();
+  // Satu kalimat, tenang, tanpa tanda seru.
+  var PESAN = 'Satu agent yang ngerjain kerja laptop kamu — chat, dokumen, catatan, jualan.';
+  var WA_HREF = 'https://wa.me/?text=' + encodeURIComponent(PESAN + ' ' + CANON);
+  var LABEL = 'Salin tautan';
+  var copiedUntil = 0;
+
+  function canShare() {
+    return typeof navigator !== 'undefined' && typeof navigator.share === 'function';
+  }
+
+  function paint() {
+    var kit = document.querySelector('[data-share-kit]');
+    if (!kit) return;
+    var wa = kit.querySelector('[data-share="wa"]');
+    if (wa && wa.getAttribute('href') !== WA_HREF) wa.setAttribute('href', WA_HREF);
+
+    var nat = kit.querySelector('[data-share="native"]');
+    if (nat) {
+      // Runtime bisa mengembalikan atribut `hidden` saat render ulang, jadi
+      // dukungan dicek ulang tiap kali, bukan sekali di awal.
+      if (canShare()) { nat.hidden = false; nat.style.display = 'inline-flex'; }
+      else { nat.hidden = true; nat.style.display = 'none'; }
+    }
+
+    var copy = kit.querySelector('[data-share="copy"]');
+    if (copy) {
+      var label = copy.querySelector('[data-share-label]');
+      var on = Date.now() < copiedUntil;
+      if (label && label.textContent !== (on ? 'Tersalin' : LABEL)) label.textContent = on ? 'Tersalin' : LABEL;
+      copy.style.borderColor = on ? 'rgba(120,230,160,.55)' : 'rgba(255,255,255,.14)';
+      copy.style.color = on ? '#a8f0c4' : '#f1ede9';
+    }
+  }
+
+  function salin(teks) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(teks);
+    }
+    return new Promise(function (resolve, reject) {
+      try {
+        var ta = document.createElement('textarea');
+        ta.value = teks;
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed';
+        ta.style.top = '-1000px';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        var ok = document.execCommand && document.execCommand('copy');
+        document.body.removeChild(ta);
+        ok ? resolve() : reject(new Error('copy-failed'));
+      } catch (err) { reject(err); }
+    });
+  }
+
+  document.addEventListener('click', function (e) {
+    var el = e.target && e.target.closest ? e.target.closest('[data-share]') : null;
+    if (!el) return;
+    var kind = el.getAttribute('data-share');
+
+    if (kind === 'native') {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!canShare()) return;
+      try {
+        var p = navigator.share({ title: document.title, text: PESAN, url: CANON });
+        if (p && p.catch) p.catch(function () { /* pengguna membatalkan — diam saja */ });
+      } catch (err) { /* diam saja */ }
+      return;
+    }
+
+    if (kind === 'copy') {
+      e.preventDefault();
+      e.stopPropagation();
+      salin(CANON).then(function () {
+        copiedUntil = Date.now() + 2000;
+        paint();
+      }).catch(function () {
+        // Clipboard ditolak browser — buka WhatsApp sebagai jalur yang pasti jalan.
+        window.open(WA_HREF, '_blank', 'noopener');
+      });
+    }
+    // data-share="wa" dibiarkan menavigasi sendiri (target=_blank rel=noopener).
+  }, true);
+
+  paint();
+  setInterval(paint, 500);
+})();
+</script>
 <script src="/assets/konten-wiring.js" defer onerror="console.warn('[landing] /assets/konten-wiring.js gagal dimuat — batch counter dan interaksi mati')"></script>
   <script src="/assets/konten-hero-demo.js" defer onerror="console.warn('[landing] /assets/konten-hero-demo.js gagal dimuat — terminal hero akan kosong')"></script>
+<script>
+/* Pemulih hash. Runtime DC merender halaman SESUDAH browser mencoba melompat ke
+   #hash, jadi target-nya belum ada saat lompatan itu terjadi. Akibatnya /#harga
+   dari checkout ("Ganti paket") dan setiap tautan anchor lintas halaman mendarat
+   di puncak homepage.
+
+   Yang tidak cukup: menggulir begitu elemennya muncul. Diukur — elemen #harga
+   sudah ada pada 164ms, tapi saat itu sisa halaman belum merender, jadi dia
+   masih di dekat atas. Kita menggulir ke posisi yang benar SAAT ITU, lalu
+   halaman tumbuh dan targetnya pindah ke 9403px tanpa kita ikut.
+
+   Jadi: tunggu tinggi dokumen berhenti berubah, baru gulir sekali. Berhenti
+   sendiri sesudah berhasil atau 10 detik — tidak ada timer yang hidup selamanya. */
+(function () {
+  var hash = location.hash;
+  if (!hash || hash.length < 2) return;
+  var id;
+  try { id = decodeURIComponent(hash.slice(1)); } catch (e) { return; }
+
+  var batas = Date.now() + 10000;
+  var tinggiTerakhir = -1;
+  var diamBerturut = 0;
+  var timer = setInterval(function () {
+    if (Date.now() > batas) { clearInterval(timer); return; }
+    var el = document.getElementById(id);
+    var tinggi = document.documentElement.scrollHeight;
+
+    // Tinggi harus sama tiga kali berturut-turut sebelum kita percaya
+    // posisinya sudah final.
+    if (tinggi === tinggiTerakhir) diamBerturut++; else diamBerturut = 0;
+    tinggiTerakhir = tinggi;
+
+    if (el && diamBerturut >= 3) {
+      clearInterval(timer);
+      el.scrollIntoView({ behavior: 'auto', block: 'start' });
+    }
+  }, 120);
+})();
+</script>
 </body>
 </html>

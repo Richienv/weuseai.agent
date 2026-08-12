@@ -421,6 +421,39 @@
       });
     }
 
+    // ── Tab title ──────────────────────────────────────────────────────
+    // Dua hal yang dilakukan blok ini, keduanya dari data nyata:
+    //  1. Judul tab memakai nama agent yang benar-benar dikembalikan relay,
+    //     supaya tab ini bisa dibedakan dari tab lain.
+    //  2. Kalau balasan agent selesai sementara tab sedang tidak dilihat,
+    //     judul diberi penanda "(1)". Penanda ini hilang begitu kamu balik
+    //     ke tab — tidak ada notifikasi yang dipaksakan, tidak ada angka
+    //     yang dikarang.
+    var titleName = 'Chat dengan agent kamu';
+    var unread = 0;
+    function paintTitle() {
+      var next = (unread > 0 ? '(' + unread + ') ' : '') + titleName + ' — weuseai.agent';
+      if (document.title !== next) document.title = next;
+    }
+    function setTitleName(name) {
+      titleName = (name && String(name).trim()) || 'Chat dengan agent kamu';
+      paintTitle();
+    }
+    function markUnread() {
+      if (!document.hidden) return;
+      unread += 1;
+      paintTitle();
+    }
+    function clearUnread() {
+      if (unread === 0) return;
+      unread = 0;
+      paintTitle();
+    }
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden) clearUnread();
+    });
+    window.addEventListener('focus', clearUnread);
+
     // ── Send flow ──────────────────────────────────────────────────────
     var active = null; // { abort }
     function setComposerSending(on) {
@@ -464,6 +497,7 @@
         onDone: function () {
           clearTimeout(soft); clearTimeout(hard); flush(); active = null; setComposerSending(false);
           setState('streaming'); // stays on the chat surface (idle = streaming-class view)
+          markUnread(); // no-op kalau tab lagi dilihat
         },
         onError: function (why) {
           if (why === 'aborted') { clearTimeout(soft); clearTimeout(hard); flush(); active = null; setComposerSending(false); }
@@ -498,6 +532,9 @@
       $('statusTitle').textContent = s.title;
       $('statusBody').textContent = (extra && extra.body) || s.body;
       var cta = $('statusCta'); cta.textContent = s.cta; cta.setAttribute('href', s.href);
+      // Judul tab ikut kartu status yang sedang tampil — persis teks yang
+      // dibaca pelanggan di layar, bukan judul generik.
+      setTitleName(s.title);
       setState(STATUS[state] ? state : 'error-offline');
     }
     $('statusCta').addEventListener('click', function (e) {
@@ -511,6 +548,7 @@
       var name = (meta && meta.agent_name) || PERSONA_META[slug] || 'Agent kamu';
       $('agentName').textContent = name;
       $('ava').textContent = (name.trim()[0] || 'A').toUpperCase();
+      setTitleName(name);
       // empty-state greeting + suggestion chips
       msgs.innerHTML = '';
       var g = document.createElement('div'); g.className = 'greeting';

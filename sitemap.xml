@@ -1,29 +1,101 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Persona pages are listed as /persona?slug=<slug> because that is the form
+  that actually answers 200 in production. The pretty path /persona/<slug>
+  is declared in vercel.json but currently returns 404 on the live
+  deployment (every dynamic-segment rewrite does, e.g. /admin/customers/:id),
+  so it is deliberately kept out of this file — a sitemap with dead URLs
+  costs crawler trust. Swap these to /persona/<slug> once that rewrite
+  answers 200.
+-->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://www.weuseai.id/</loc>
-    <lastmod>2026-06-21</lastmod>
+    <lastmod>2026-08-12</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://www.weuseai.id/use-cases</loc>
-    <lastmod>2026-06-21</lastmod>
+    <lastmod>2026-08-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://www.weuseai.id/faq</loc>
-    <lastmod>2026-06-21</lastmod>
+    <lastmod>2026-08-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://www.weuseai.id/checkout</loc>
-    <lastmod>2026-06-21</lastmod>
+    <lastmod>2026-08-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
+
+  <!-- Persona detail pages — one search keyword each. -->
+  <url>
+    <loc>https://www.weuseai.id/persona?slug=the-pro</loc>
+    <lastmod>2026-08-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.weuseai.id/persona?slug=deep-researcher</loc>
+    <lastmod>2026-08-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.weuseai.id/persona?slug=slide-master</loc>
+    <lastmod>2026-08-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.weuseai.id/persona?slug=doc-expert</loc>
+    <lastmod>2026-08-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.weuseai.id/persona?slug=business-agent</loc>
+    <lastmod>2026-08-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.weuseai.id/persona?slug=project-conductor</loc>
+    <lastmod>2026-08-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.weuseai.id/persona?slug=web-app-builder</loc>
+    <lastmod>2026-08-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.weuseai.id/persona?slug=social-conductor</loc>
+    <lastmod>2026-08-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.weuseai.id/persona?slug=trade-pro</loc>
+    <lastmod>2026-08-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.weuseai.id/persona?slug=video-producer</loc>
+    <lastmod>2026-08-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
   <url>
     <loc>https://www.weuseai.id/privacy</loc>
     <changefreq>yearly</changefreq>

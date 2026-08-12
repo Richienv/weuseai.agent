@@ -1,13 +1,20 @@
 # weuseai.agent — public crawl directives.
-# Onboarding + welcome are session-bound and not useful to crawlers;
-# admin tooling under /admin/ is never indexable.
+# Onboarding, welcome, and the customer chat are session-bound and not
+# useful to crawlers; admin tooling under /admin is never indexable.
+# Everything else — landing, use-cases, faq, checkout, persona pages,
+# and the legal pages — is open on purpose.
 
 User-agent: *
 Allow: /
+Allow: /persona
 Disallow: /onboarding
 Disallow: /onboarding.html
 Disallow: /welcome
 Disallow: /welcome.html
-Disallow: /admin/
+Disallow: /chat
+Disallow: /chat.html
+Disallow: /checkout-new
+Disallow: /checkout-new.html
+Disallow: /admin
 
 Sitemap: https://www.weuseai.id/sitemap.xml

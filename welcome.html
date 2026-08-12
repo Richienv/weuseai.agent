@@ -6,7 +6,10 @@
   <title>Pembayaran berhasil — weuseai.agent</title>
   <meta name="description" content="Konfirmasi pembayaran weuseai.agent — agent kamu sedang dibangun.">
   <meta name="robots" content="noindex,nofollow" />
-  <link rel="canonical" href="https://weuseai-agent.vercel.app/welcome" />
+  <!-- Halaman pasca-bayar, terikat sesi: noindex di atas adalah yang mengikat.
+       Canonical dibetulkan ke host kanonik (www.weuseai.id) supaya tautan yang
+       tidak sengaja dibagikan tidak memunculkan domain vercel.app. -->
+  <link rel="canonical" href="https://www.weuseai.id/welcome" />
   <meta name="theme-color" content="#0a0a0a" />
   <link rel="icon" type="image/svg+xml" href="assets/logo.svg" />
   <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png" />
@@ -899,8 +902,44 @@
 
     const StatusBox = document.getElementById('status-box');
 
+    /* ── Tab title reflects the REAL state ─────────────────────────────
+     * The post-payment wait can run for minutes, and customers park this
+     * page in a background tab. A tab that just says "Pembayaran berhasil"
+     * forces them to click back in to learn anything. Each label below is
+     * derived from the same state machine that renders the page — no
+     * invented progress, no countdown. State B additionally carries the
+     * real percentage already shown in the progress bar (see
+     * renderTimeline), so the tab strip answers "sudah sampai mana?"
+     * without a click. */
+    const TITLE_SUFFIX = ' — weuseai.agent';
+    const STATE_TITLES = {
+      A:  'Memeriksa pembayaran',
+      B:  'Agent kamu sedang dibangun',
+      C:  'Lengkapi profil agent',
+      C2: 'Agent kamu siap',
+      D:  'Penyiapan agent gagal',
+      E:  'Tautan belum lengkap',
+      E2: 'Konfirmasi pembayaran tertunda',
+      F:  'Penyiapan lebih lama dari biasanya',
+      G:  'Koneksi terputus',
+    };
+    /** Single writer for document.title. pct is only ever the number the
+     *  progress bar is already displaying. */
+    function syncTitle(pct) {
+      const base = STATE_TITLES[currentState] ?? 'Pembayaran berhasil';
+      const withPct = (currentState === 'B' && typeof pct === 'number' && pct > 0)
+        ? base + ' ' + Math.min(100, Math.max(5, Math.round(pct))) + '%'
+        : base;
+      const next = withPct + TITLE_SUFFIX;
+      if (document.title !== next) document.title = next;
+    }
+
     function renderState(state, opts = {}) {
       currentState = state;
+      // No pct here on purpose: displayPct is declared further down, and
+      // renderTimeline() re-syncs the title with the real number the
+      // moment the bar paints.
+      syncTitle();
       // welcome-guard fix (2026-05-10): drives the .verified-only /
       // .unverified-only CSS gate so the success HERO + STEPS only show
       // for verified states (B/C/C2/D/F), and the neutral HERO shows
@@ -1449,6 +1488,9 @@
       }
       renderTermBlocks(p);
       renderTermMilestones(p);
+      // Mirror the same number into the tab title so a background tab
+      // reports real progress instead of a frozen headline.
+      syncTitle(p);
     }
 
     /** Item 2: nudge displayPct on real activity — each genuinely-new

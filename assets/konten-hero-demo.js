@@ -1,10 +1,19 @@
 "use strict";
+let __waits = 0;
 (function start() {
   if (!window.React || !window.ReactDOM) {
+    // Berhenti menunggu sesudah ~10 detik: kalau runtime tidak pernah datang,
+    // timer abadi hanya membakar baterai tanpa hasil.
+    if (++__waits > 100) return;
     return setTimeout(start, 100);
   }
   const React = window.React;
-  const { useState, useEffect } = React;
+  const { useState, useEffect, useRef } = React;
+  // Gerak dihentikan total kalau pembaca minta reduced motion.
+  const reduceMotionQuery = typeof window.matchMedia === "function" ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
+  function prefersReducedMotion() {
+    return !!(reduceMotionQuery && reduceMotionQuery.matches);
+  }
   function Arrow() {
     return /* @__PURE__ */ React.createElement("svg", { width: "18", height: "18", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2.4", strokeLinecap: "round", strokeLinejoin: "round" }, /* @__PURE__ */ React.createElement("path", { d: "M7 17 L17 7 M8 7 h9 v9" }));
   }
@@ -40,7 +49,42 @@
     const [step, setStep] = useState(0);
     const [phase, setPhase] = useState("idle");
     const [typed, setTyped] = useState(0);
+    const [reduced, setReduced] = useState(prefersReducedMotion);
+    const [awake, setAwake] = useState(true);
+    const frameRef = useRef(null);
     useEffect(() => {
+      if (!reduceMotionQuery) return;
+      const onChange = () => setReduced(reduceMotionQuery.matches);
+      if (reduceMotionQuery.addEventListener) {
+        reduceMotionQuery.addEventListener("change", onChange);
+        return () => reduceMotionQuery.removeEventListener("change", onChange);
+      }
+      reduceMotionQuery.addListener(onChange);
+      return () => reduceMotionQuery.removeListener(onChange);
+    }, []);
+    useEffect(() => {
+      if (reduced) return;
+      let onScreen = true;
+      const sync = () => setAwake(onScreen && !document.hidden);
+      const onVis = () => sync();
+      document.addEventListener("visibilitychange", onVis);
+      let io = null;
+      const node = frameRef.current;
+      if (node && typeof window.IntersectionObserver === "function") {
+        io = new window.IntersectionObserver((entries) => {
+          for (const entry of entries) onScreen = entry.isIntersecting;
+          sync();
+        }, { threshold: 0 });
+        io.observe(node);
+      }
+      sync();
+      return () => {
+        document.removeEventListener("visibilitychange", onVis);
+        if (io) io.disconnect();
+      };
+    }, [reduced]);
+    useEffect(() => {
+      if (reduced || !awake) return;
       let cleanup = () => {
       };
       if (step >= conversation.length) {
@@ -95,9 +139,9 @@
         cleanup = () => clearInterval(ti);
       }
       return () => cleanup();
-    }, [step]);
-    const ev = conversation[step];
-    const visible = conversation.slice(0, step);
+    }, [step, awake, reduced]);
+    const ev = reduced ? null : conversation[step];
+    const visible = reduced ? conversation.slice(0) : conversation.slice(0, step);
     if (ev) {
       if (ev.type === "system") visible.push(ev);
       else if (ev.type === "agent" && phase === "idle") visible.push(ev);
@@ -110,7 +154,7 @@
       if (m.type === "user") return /* @__PURE__ */ React.createElement("div", { key: i, className: "db-bubble-row user" }, /* @__PURE__ */ React.createElement("div", { className: "db-msg-user" }, m.text));
       return /* @__PURE__ */ React.createElement("div", { key: i, className: "db-bubble-row agent" }, /* @__PURE__ */ React.createElement("div", { className: "db-avatar" }, "\u25CF"), /* @__PURE__ */ React.createElement("div", { className: "db-bubble" }, m.content));
     };
-    return /* @__PURE__ */ React.createElement("div", { className: "db-frame" }, /* @__PURE__ */ React.createElement("div", { className: "db-topbar" }, /* @__PURE__ */ React.createElement("div", { className: "db-traffic" }, /* @__PURE__ */ React.createElement("span", null), /* @__PURE__ */ React.createElement("span", null), /* @__PURE__ */ React.createElement("span", null)), /* @__PURE__ */ React.createElement("div", { className: "db-title" }, "weuseai.agent \xB7 dashboard"), /* @__PURE__ */ React.createElement("div", { className: "db-status" }, "Online")), /* @__PURE__ */ React.createElement("div", { className: "db-body" }, /* @__PURE__ */ React.createElement("aside", { className: "db-sidebar" }, /* @__PURE__ */ React.createElement("button", { className: "db-nav active", tabIndex: -1, "aria-hidden": "true" }, /* @__PURE__ */ React.createElement("div", { className: "db-agent-avatar a" }, "A"), /* @__PURE__ */ React.createElement("span", { className: "db-agent-name" }, "Agent A"), /* @__PURE__ */ React.createElement("span", { className: "db-agent-badge" }, "3")), /* @__PURE__ */ React.createElement("button", { className: "db-nav", tabIndex: -1, "aria-hidden": "true" }, /* @__PURE__ */ React.createElement("div", { className: "db-agent-avatar b" }, "B"), /* @__PURE__ */ React.createElement("span", { className: "db-agent-name" }, "Agent B"), /* @__PURE__ */ React.createElement("span", { className: "db-agent-badge" }, "1")), /* @__PURE__ */ React.createElement("button", { className: "db-nav", tabIndex: -1, "aria-hidden": "true" }, /* @__PURE__ */ React.createElement("div", { className: "db-agent-avatar c" }, "C"), /* @__PURE__ */ React.createElement("span", { className: "db-agent-name" }, "Agent C")), /* @__PURE__ */ React.createElement("div", { className: "db-user" }, /* @__PURE__ */ React.createElement("div", { className: "db-user-avatar" }, "J"), /* @__PURE__ */ React.createElement("span", null, "Jason"))), /* @__PURE__ */ React.createElement("div", { className: "db-main", role: "presentation" }, /* @__PURE__ */ React.createElement("div", { className: "db-thread" }, /* @__PURE__ */ React.createElement("div", { className: "db-thread-content" }, visible.map(renderBubble), showAgentTyping && /* @__PURE__ */ React.createElement("div", { className: "db-typing-row agent" }, /* @__PURE__ */ React.createElement("div", { className: "typing-bubble" }, /* @__PURE__ */ React.createElement("span", { className: "dot" }), /* @__PURE__ */ React.createElement("span", { className: "dot" }), /* @__PURE__ */ React.createElement("span", { className: "dot" }))))))), /* @__PURE__ */ React.createElement("div", { className: "db-input" }, /* @__PURE__ */ React.createElement("div", { className: "db-input-box" }, typedText ? /* @__PURE__ */ React.createElement("span", { className: "db-input-typed" }, typedText, /* @__PURE__ */ React.createElement("span", { className: "db-input-caret" })) : /* @__PURE__ */ React.createElement("span", { className: "db-input-placeholder" }, "Tanya apa aja...", /* @__PURE__ */ React.createElement("span", { className: "db-input-caret" }))), /* @__PURE__ */ React.createElement("button", { type: "button", tabIndex: -1, "aria-hidden": "true", className: `db-send ${phase === "user-click" ? "db-send-clicked" : ""}` }, /* @__PURE__ */ React.createElement(Arrow, null))), /* @__PURE__ */ React.createElement("div", { className: `db-cursor cur-${phase}`, "aria-hidden": "true" }, /* @__PURE__ */ React.createElement("svg", { viewBox: "0 0 18 22" }, /* @__PURE__ */ React.createElement("path", { d: "M2 2 L2 17 L6.5 13 L9 18 L11.5 17 L8.8 12 L14 12 Z", fill: "#fff", stroke: "#000", strokeWidth: "0.7", strokeLinejoin: "round" }))));
+    return /* @__PURE__ */ React.createElement("div", { className: "db-frame", ref: frameRef }, /* @__PURE__ */ React.createElement("div", { className: "db-topbar" }, /* @__PURE__ */ React.createElement("div", { className: "db-traffic" }, /* @__PURE__ */ React.createElement("span", null), /* @__PURE__ */ React.createElement("span", null), /* @__PURE__ */ React.createElement("span", null)), /* @__PURE__ */ React.createElement("div", { className: "db-title" }, "weuseai.agent \xB7 dashboard"), /* @__PURE__ */ React.createElement("div", { className: "db-status" }, "Online")), /* @__PURE__ */ React.createElement("div", { className: "db-body" }, /* @__PURE__ */ React.createElement("aside", { className: "db-sidebar" }, /* @__PURE__ */ React.createElement("button", { className: "db-nav active", tabIndex: -1, "aria-hidden": "true" }, /* @__PURE__ */ React.createElement("div", { className: "db-agent-avatar a" }, "A"), /* @__PURE__ */ React.createElement("span", { className: "db-agent-name" }, "Agent A"), /* @__PURE__ */ React.createElement("span", { className: "db-agent-badge" }, "3")), /* @__PURE__ */ React.createElement("button", { className: "db-nav", tabIndex: -1, "aria-hidden": "true" }, /* @__PURE__ */ React.createElement("div", { className: "db-agent-avatar b" }, "B"), /* @__PURE__ */ React.createElement("span", { className: "db-agent-name" }, "Agent B"), /* @__PURE__ */ React.createElement("span", { className: "db-agent-badge" }, "1")), /* @__PURE__ */ React.createElement("button", { className: "db-nav", tabIndex: -1, "aria-hidden": "true" }, /* @__PURE__ */ React.createElement("div", { className: "db-agent-avatar c" }, "C"), /* @__PURE__ */ React.createElement("span", { className: "db-agent-name" }, "Agent C")), /* @__PURE__ */ React.createElement("div", { className: "db-user" }, /* @__PURE__ */ React.createElement("div", { className: "db-user-avatar" }, "J"), /* @__PURE__ */ React.createElement("span", null, "Jason"))), /* @__PURE__ */ React.createElement("div", { className: "db-main", role: "presentation" }, /* @__PURE__ */ React.createElement("div", { className: "db-thread" }, /* @__PURE__ */ React.createElement("div", { className: "db-thread-content" }, visible.map(renderBubble), showAgentTyping && /* @__PURE__ */ React.createElement("div", { className: "db-typing-row agent" }, /* @__PURE__ */ React.createElement("div", { className: "typing-bubble" }, /* @__PURE__ */ React.createElement("span", { className: "dot" }), /* @__PURE__ */ React.createElement("span", { className: "dot" }), /* @__PURE__ */ React.createElement("span", { className: "dot" }))))))), /* @__PURE__ */ React.createElement("div", { className: "db-input" }, /* @__PURE__ */ React.createElement("div", { className: "db-input-box" }, typedText ? /* @__PURE__ */ React.createElement("span", { className: "db-input-typed" }, typedText, /* @__PURE__ */ React.createElement("span", { className: "db-input-caret" })) : /* @__PURE__ */ React.createElement("span", { className: "db-input-placeholder" }, "Tanya apa aja...", /* @__PURE__ */ React.createElement("span", { className: "db-input-caret" }))), /* @__PURE__ */ React.createElement("button", { type: "button", tabIndex: -1, "aria-hidden": "true", className: `db-send ${phase === "user-click" ? "db-send-clicked" : ""}` }, /* @__PURE__ */ React.createElement(Arrow, null))), /* @__PURE__ */ React.createElement("div", { className: `db-cursor cur-${phase}`, "aria-hidden": "true" }, /* @__PURE__ */ React.createElement("svg", { viewBox: "0 0 18 22" }, /* @__PURE__ */ React.createElement("path", { d: "M2 2 L2 17 L6.5 13 L9 18 L11.5 17 L8.8 12 L14 12 Z", fill: "#fff", stroke: "#000", strokeWidth: "0.7", strokeLinejoin: "round" }))));
   }
   function ensure() {
     const slot = document.getElementById("kt-hero-demo");
@@ -121,6 +165,41 @@
     slot.appendChild(host);
     window.ReactDOM.createRoot(host).render(React.createElement(HeroChatTerminal));
   }
-  ensure();
-  setInterval(ensure, 300);
+  // Dulu ini polling setInterval(ensure, 300) selamanya — CPU dan baterai kepakai
+  // walau tidak ada yang berubah. Sekarang kita hanya bereaksi saat runtime DC
+  // benar-benar mengganti node #kt-hero-demo. Callback-nya digabung lewat rAF,
+  // dan rAF sendiri berhenti saat tab tidak terlihat.
+  let queued = false;
+  function schedule() {
+    if (queued) return;
+    queued = true;
+    const run = () => {
+      queued = false;
+      ensure();
+    };
+    if (typeof window.requestAnimationFrame === "function") window.requestAnimationFrame(run);
+    else setTimeout(run, 32);
+  }
+  function watch() {
+    ensure();
+    if (typeof window.MutationObserver !== "function") {
+      // Fallback lawas: poll lambat, dan lewati saat tab tersembunyi.
+      setInterval(() => {
+        if (!document.hidden) ensure();
+      }, 1e3);
+      return;
+    }
+    const mo = new window.MutationObserver(() => {
+      const slot = document.getElementById("kt-hero-demo");
+      if (!slot || slot.querySelector("[data-hero-host]")) return; // masih terpasang
+      schedule();
+    });
+    mo.observe(document.body, { childList: true, subtree: true });
+    // Node bisa berganti persis saat tab kembali terlihat; sekali cek murah.
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) schedule();
+    });
+  }
+  if (document.body) watch();
+  else document.addEventListener("DOMContentLoaded", watch, { once: true });
 })();

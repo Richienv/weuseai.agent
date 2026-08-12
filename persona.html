@@ -6,11 +6,27 @@
   <title>weuseai.agent — Detail persona</title>
   <meta name="description" content="Detail persona weuseai.agent — apa yang dia bisa, bagaimana dia kerja, contoh output, dan template yang sudah ada di inventory." />
   <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://www.weuseai.id/persona" />
+
+  <!-- Open Graph — nilai statis di bawah ini dipakai kalau slug tidak dikenali.
+       Script di bawah <head> menimpanya per persona begitu slug terbaca. -->
   <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="weuseai.agent" />
+  <meta property="og:locale" content="id_ID" />
   <meta property="og:title" content="weuseai.agent — Detail persona" />
   <meta property="og:description" content="Detail persona weuseai.agent — apa yang dia bisa, bagaimana dia kerja, contoh output." />
-  <meta property="og:image" content="/assets/og-image.png" />
+  <meta property="og:url" content="https://www.weuseai.id/persona" />
+  <meta property="og:image" content="https://www.weuseai.id/assets/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="weuseai.agent — detail persona" />
+
+  <!-- Twitter / X -->
   <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="weuseai.agent — Detail persona" />
+  <meta name="twitter:description" content="Detail persona weuseai.agent — apa yang dia bisa, bagaimana dia kerja, contoh output." />
+  <meta name="twitter:image" content="https://www.weuseai.id/assets/og-image.png" />
+  <meta name="twitter:image:alt" content="weuseai.agent — detail persona" />
   <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
   <link rel="icon" type="image/x-icon" href="/assets/favicon.ico" />
 
@@ -24,6 +40,105 @@
 
   <!-- Persona detail content (shared with /index.html) -->
   <script src="/assets/persona-details.js"></script>
+
+  <!--
+    Identitas per persona.
+
+    Halaman ini melayani banyak persona lewat /persona/<slug> (rewrite di
+    vercel.json) atau /persona.html?slug=<slug>. Tanpa langkah ini, sepuluh
+    persona berbagi satu judul dan satu deskripsi — jadi hasil pencarian dan
+    preview saat dibagikan terlihat identik semua.
+
+    Dijalankan vanilla di <head>, sesudah persona-details.js selesai dimuat
+    (script biasa, sinkron), jadi window.PERSONA_DETAILS sudah tersedia dan
+    meta-nya sudah benar sebelum React bahkan mulai render.
+  -->
+  <script>
+    (function () {
+      var ORIGIN = 'https://www.weuseai.id';
+      var OG_IMAGE = ORIGIN + '/assets/og-image.png';
+
+      function readSlug() {
+        try {
+          var u = new URL(window.location.href);
+          var q = u.searchParams.get('slug');
+          if (q) return q;
+          var m = u.pathname.match(/^\/persona\/([\w-]+)/);
+          if (m) return m[1];
+        } catch (e) { /* URL tidak bisa dibaca — pakai meta statis */ }
+        return null;
+      }
+
+      function setMeta(attr, key, value) {
+        var el = document.head.querySelector('meta[' + attr + '="' + key + '"]');
+        if (!el) {
+          el = document.createElement('meta');
+          el.setAttribute(attr, key);
+          document.head.appendChild(el);
+        }
+        el.setAttribute('content', value);
+      }
+
+      function setCanonical(href) {
+        var el = document.head.querySelector('link[rel="canonical"]');
+        if (!el) {
+          el = document.createElement('link');
+          el.setAttribute('rel', 'canonical');
+          document.head.appendChild(el);
+        }
+        el.setAttribute('href', href);
+      }
+
+      function apply(slug) {
+        var list = Array.isArray(window.PERSONA_DETAILS) ? window.PERSONA_DETAILS : [];
+        var persona = null;
+        for (var i = 0; i < list.length; i++) {
+          if (list[i] && list[i].slug === slug) { persona = list[i]; break; }
+        }
+
+        var title, description, url, imageAlt;
+
+        if (persona) {
+          title = persona.name + ' — persona weuseai.agent';
+          description = (persona.tagline || '') +
+            ' Lihat cara kerjanya, contoh output, dan template yang sudah ada.';
+          // Bentuk ?slug= — BUKAN /persona/<slug>. Rewrite bersegmen-dinamis
+          // di vercel.json tidak aktif di deployment ini: /persona/the-pro
+          // menjawab 404 sementara /persona?slug=the-pro menjawab 200.
+          // Meng-canonical-kan ke URL 404 membuat Google membuang halamannya.
+          url = ORIGIN + '/persona?slug=' + encodeURIComponent(persona.slug);
+          imageAlt = persona.name + ' — persona weuseai.agent';
+        } else if (slug) {
+          title = 'Persona tidak ditemukan — weuseai.agent';
+          description = 'Persona ini tidak ada di daftar. Lihat sepuluh persona yang tersedia di halaman utama.';
+          url = ORIGIN + '/persona';
+          imageAlt = 'weuseai.agent — detail persona';
+          setMeta('name', 'robots', 'noindex, follow');
+        } else {
+          return; // tanpa slug: biarkan meta statis apa adanya
+        }
+
+        description = description.replace(/\s+/g, ' ').trim();
+
+        document.title = title;
+        setMeta('name', 'description', description);
+        setCanonical(url);
+        setMeta('property', 'og:title', title);
+        setMeta('property', 'og:description', description);
+        setMeta('property', 'og:url', url);
+        setMeta('property', 'og:image', OG_IMAGE);
+        setMeta('property', 'og:image:alt', imageAlt);
+        setMeta('name', 'twitter:title', title);
+        setMeta('name', 'twitter:description', description);
+        setMeta('name', 'twitter:image', OG_IMAGE);
+        setMeta('name', 'twitter:image:alt', imageAlt);
+      }
+
+      // Dipakai ulang oleh React supaya judulnya cuma punya satu sumber.
+      window.__applyPersonaMeta = apply;
+      apply(readSlug());
+    })();
+  </script>
 
   <style>
     :root {
@@ -2588,14 +2703,13 @@
         return window.PERSONA_DETAILS.find((p) => p.slug === slug) || null;
       }, [slug]);
 
-      // Update document title once persona loads
+      // Judul + meta share dipegang oleh helper di <head> (satu sumber, sudah
+      // jalan sebelum render). Di sini cuma dipanggil ulang kalau slug berubah.
       useEffect(() => {
-        if (persona) {
-          document.title = `${persona.name} — weuseai.agent`;
-        } else {
-          document.title = 'Persona tidak ditemukan — weuseai.agent';
+        if (typeof window.__applyPersonaMeta === 'function') {
+          window.__applyPersonaMeta(slug);
         }
-      }, [persona]);
+      }, [slug]);
 
       if (!persona) {
         return (
