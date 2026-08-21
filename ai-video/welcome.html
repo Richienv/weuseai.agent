@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#111111">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="supabase-functions-origin" content="https://gtjgsligllbjcisiyrah.supabase.co/functions/v1">
+  <link rel="icon" href="/assets/ads/logo-cat.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/ai-video-welcome.css?v=printer6">
+  <title>Receipt pembayaran — weuseai</title>
+</head>
+<body>
+  <p class="local-badge" id="local-badge" hidden></p>
+  <main class="scene">
+    <section class="receipt-printer" id="printer" data-stage="processing" data-feed="stepped" aria-label="Receipt printer">
+      <div class="receipt-machine">
+        <div class="receipt-header">
+          <span class="receipt-lockup">
+            <img class="receipt-cat" src="/assets/ads/logo-cat.png" width="24" height="24" alt="">
+            <span class="receipt-wordmark">weuseai</span>
+          </span>
+          <span class="receipt-led" aria-hidden="true"></span>
+        </div>
+        <div class="receipt-screen">
+          <div class="receipt-status">
+            <span class="receipt-icon" aria-hidden="true">
+              <span class="receipt-icon-face receipt-icon-working">
+                <svg class="receipt-spinner" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+                  <circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="36 18"/>
+                </svg>
+              </span>
+              <span class="receipt-icon-face receipt-icon-complete">
+                <svg width="18" height="18" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+                  <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm45.66,85.66-56,56a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L112,148.69l50.34-50.35a8,8,0,0,1,11.32,11.32Z"/>
+                </svg>
+              </span>
+            </span>
+            <div class="receipt-status-copy" role="status" aria-live="polite">
+              <span class="receipt-status-label" data-for="processing">Kami cek pembayaran</span>
+              <span class="receipt-status-label" data-for="printing">Receipt sedang dicetak</span>
+              <span class="receipt-status-label" data-for="complete">Order selesai</span>
+            </div>
+          </div>
+          <p class="receipt-note" id="receipt-note" hidden></p>
+        </div>
+        <div class="receipt-slot" aria-hidden="true"></div>
+      </div>
+
+      <div class="receipt-output">
+        <div class="receipt-slot-blur" aria-hidden="true"></div>
+        <div class="receipt-feed" id="receipt-feed" aria-hidden="true">
+          <article class="receipt-paper" id="receipt">
+            <header class="receipt-head">
+              <p class="receipt-brand">
+                <img class="receipt-cat receipt-cat-paper" src="/assets/ads/logo-cat.png" width="20" height="20" alt="">
+                <span>weuseai</span>
+              </p>
+              <p class="receipt-kind">Receipt pembayaran</p>
+            </header>
+            <div class="receipt-row"><span>Paket</span><strong id="ticket-sku">—</strong></div>
+            <div class="receipt-row"><span>Total</span><strong id="ticket-amount">—</strong></div>
+            <div class="receipt-row"><span>Email</span><strong id="ticket-email">—</strong></div>
+            <div class="receipt-row" id="date-row" hidden>
+              <span>Tanggal beli</span>
+              <strong id="ticket-date"></strong>
+            </div>
+            <div class="receipt-row receipt-claim" id="claim-row" hidden>
+              <span>Kode klaim</span>
+              <code id="ticket-claim"></code>
+            </div>
+            <section class="receipt-promo" id="promo-block" hidden>
+              <p class="receipt-promo-kicker">Promo pembelian berikutnya</p>
+              <p class="receipt-promo-offer">Diskon 25%</p>
+              <code id="ticket-promo"></code>
+              <div class="receipt-barcode" id="ticket-barcode" aria-hidden="true"></div>
+              <p class="receipt-promo-deadline">Berlaku sampai <strong id="ticket-promo-deadline"></strong></p>
+              <p class="receipt-promo-note">Pakai sendiri, atau bagi ke satu orang. Sekali pakai. Pakai dengan bijak.</p>
+            </section>
+            <section class="receipt-thanks" id="thanks-block" hidden>
+              <p>Terima kasih sudah percaya dan membeli di weuseai. Kami akan kerjakan dengan sebaik mungkin.</p>
+              <div class="receipt-sign">
+                <img class="receipt-cat receipt-cat-paper" src="/assets/ads/logo-cat.png" width="20" height="20" alt="">
+                <p class="receipt-sign-name">Richie Kid Novell</p>
+                <p class="receipt-sign-title">founder of weuseai.id</p>
+              </div>
+            </section>
+            <p class="receipt-foot" id="ticket-foot">Kode ini muncul hanya setelah Midtrans menandai lunas.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <footer class="dock">
+      <a class="ghost" id="chat-link" href="https://wa.me/6282154902561">Chat Richie</a>
+      <button type="button" class="ghost" id="retry-btn">Cek lagi</button>
+      <a class="cta-wa" id="wa-link" hidden href="https://wa.me/6282154902561">Kirim receipt ke Richie</a>
+    </footer>
+  </main>
+  <script src="/assets/ai-video-welcome.js?v=printer6" defer></script>
+</body>
+</html>

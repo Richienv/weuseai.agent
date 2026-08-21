@@ -20,6 +20,7 @@
 import { createHash } from 'node:crypto'
 
 import { requireAdminCookie } from '../_shared/admin-cookie-auth.js'
+import { aiVideoOpsConfigured, createAiVideoOpsStore, setAiVideoOpsFulfillment } from '../_shared/admin-ai-video-ops.js'
 import {
   isTier,
   personasForTier,
@@ -62,6 +63,8 @@ type ActionKind =
   | 'restart_gateway'
   | 'mark_refunded'
   | 'escalate'
+  | 'ai_video_fulfillment'
+  | 'ai_video_refund_needed'
 const ACTIONS: ActionKind[] = [
   'manual_provision',
   'manual_provision_v2',
@@ -69,6 +72,8 @@ const ACTIONS: ActionKind[] = [
   'restart_gateway',
   'mark_refunded',
   'escalate',
+  'ai_video_fulfillment',
+  'ai_video_refund_needed',
 ]
 
 type Tier = 'starter' | 'pro' | 'studio'
@@ -936,6 +941,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   }
   if (action === 'manual_provision_v2') {
     await handleManualProvisionV2(body, res)
+    return
+  }
+  if (action === 'ai_video_fulfillment' || action === 'ai_video_refund_needed') {
+    if (!aiVideoOpsConfigured()) {
+      res.status(500).json({ ok: false, error: 'misconfigured' })
+      return
+    }
+    try {
+      const result = await setAiVideoOpsFulfillment({
+        ...body,
+        fulfillment: action === 'ai_video_refund_needed' ? 'refund_needed' : body.fulfillment,
+      }, createAiVideoOpsStore())
+      if ('error' in result) {
+        res.status(result.status).json({ ok: false, error: result.error })
+        return
+      }
+      res.status(200).json(result)
+    } catch {
+      res.status(502).json({ ok: false, error: 'fulfillment_failed' })
+    }
     return
   }
 

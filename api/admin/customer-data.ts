@@ -19,6 +19,7 @@
  */
 
 import { requireAdminCookie } from '../_shared/admin-cookie-auth.js'
+import { aiVideoOpsConfigured, createAiVideoOpsStore, listAiVideoOps } from '../_shared/admin-ai-video-ops.js'
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? ''
 const SUPABASE_SERVICE_KEY =
@@ -132,6 +133,27 @@ export default async function handler(
   }
 
   const u = new URL(req.url ?? '/', 'http://x')
+  if ((u.searchParams.get('resource') ?? '').trim() === 'ai-video') {
+    if (!aiVideoOpsConfigured()) {
+      res.status(500).json({ error: 'misconfigured', detail: 'SUPABASE_URL / SUPABASE_SECRET_KEY unset' })
+      return
+    }
+    try {
+      const result = await listAiVideoOps({
+        filter: u.searchParams.get('filter') ?? 'all',
+        q: u.searchParams.get('q') ?? '',
+      }, createAiVideoOpsStore())
+      if ('error' in result) {
+        res.status(result.status).json({ error: result.error })
+        return
+      }
+      res.setHeader('Cache-Control', 'no-store')
+      res.status(200).json(result)
+    } catch (error) {
+      res.status(502).json({ error: 'fetch_failed', detail: error instanceof Error ? error.message : 'ai_video' })
+    }
+    return
+  }
   const id = (u.searchParams.get('id') ?? '').trim()
   if (id) {
     if (!UUID_RE.test(id)) {

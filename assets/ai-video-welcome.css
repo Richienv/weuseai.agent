@@ -1,0 +1,555 @@
+:root {
+  --gs-1: #111111;
+  --gs-2: #191919;
+  --gs-3: #222222;
+  --gs-4: #2a2a2a;
+  --gs-8: #6e6e6e;
+  --gs-11: #b4b4b4;
+  --gs-12: #eeeeee;
+  --green-9: #30a46c;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --printer-radius: 1.5rem;
+  --printer-inset: 0.75rem;
+  --printer-inner-radius: calc(var(--printer-radius) - var(--printer-inset));
+}
+*, *::before, *::after { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--gs-1);
+  color: var(--gs-12);
+  font-family: "IBM Plex Sans", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+body {
+  min-height: 100svh;
+  overflow-x: hidden;
+}
+
+.local-badge {
+  position: fixed;
+  top: calc(10px + env(safe-area-inset-top));
+  left: 12px;
+  z-index: 8;
+  margin: 0;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: color-mix(in oklab, var(--gs-12) 12%, transparent);
+  color: color-mix(in oklab, var(--gs-12) 72%, transparent);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+}
+.local-badge[hidden] { display: none; }
+
+.scene {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: safe center;
+  gap: 1.25rem;
+  min-height: 100svh;
+  padding: calc(28px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom));
+}
+
+.receipt-printer {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 24rem;
+}
+
+.receipt-machine {
+  position: relative;
+  isolation: isolate;
+  z-index: 10;
+  width: 100%;
+  overflow: hidden;
+  padding: var(--printer-inset);
+  padding-bottom: 2rem;
+  border: 1px solid var(--gs-3);
+  border-radius: var(--printer-radius);
+  background: var(--gs-4);
+  box-shadow:
+    0 20px 36px -20px color-mix(in oklab, var(--gs-3) 55%, transparent),
+    0 6px 14px -8px color-mix(in oklab, var(--gs-3) 24%, transparent),
+    inset 0 1px 0 color-mix(in oklab, var(--gs-12) 14%, transparent),
+    inset 0 -1px 0 color-mix(in oklab, var(--gs-3) 55%, transparent);
+}
+.receipt-machine::before {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  background: url("/assets/receipt-plastic-noise.svg") repeat;
+  background-size: 180px 180px;
+  opacity: 0.3;
+  mix-blend-mode: multiply;
+}
+
+.receipt-header {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  height: 2.75rem;
+}
+.receipt-lockup {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.receipt-cat {
+  display: block;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 0.35rem;
+  object-fit: cover;
+}
+.receipt-cat-paper {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+.receipt-wordmark {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: lowercase;
+  color: color-mix(in oklab, var(--gs-12) 72%, transparent);
+}
+.receipt-led {
+  width: 0.45rem;
+  height: 0.45rem;
+  margin-top: 0.2rem;
+  border-radius: 999px;
+  background: #c9a36a;
+  box-shadow: 0 0 8px color-mix(in oklab, #c9a36a 70%, transparent);
+}
+.receipt-printer[data-stage="processing"] .receipt-led,
+.receipt-printer[data-stage="printing"] .receipt-led {
+  animation: receipt-led-pulse 900ms ease-in-out infinite;
+}
+.receipt-printer[data-stage="complete"] .receipt-led {
+  background: var(--green-9);
+  box-shadow: 0 0 8px color-mix(in oklab, var(--green-9) 70%, transparent);
+}
+
+.receipt-screen {
+  position: relative;
+  isolation: isolate;
+  z-index: 10;
+  overflow: hidden;
+  padding: 1rem;
+  border: 1px solid var(--gs-1);
+  border-radius: var(--printer-inner-radius);
+  background: var(--gs-2);
+  color: var(--gs-12);
+  box-shadow: inset 0 1px 2px color-mix(in oklab, var(--gs-1) 80%, transparent);
+}
+.receipt-screen::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  border-radius: inherit;
+  box-shadow: inset 0 0 24px 4px color-mix(in oklab, var(--gs-1) 52%, transparent);
+}
+.receipt-screen > .receipt-status {
+  position: relative;
+  z-index: 10;
+}
+
+.receipt-status {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.5rem;
+}
+.receipt-icon {
+  position: relative;
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+}
+.receipt-icon-face {
+  grid-column: 1;
+  grid-row: 1;
+  display: grid;
+  place-items: center;
+  transition:
+    opacity 0.16s var(--ease-out),
+    transform 0.16s var(--ease-out);
+}
+.receipt-icon-working {
+  color: var(--gs-11);
+  opacity: 1;
+  transform: scale(1);
+}
+.receipt-icon-complete {
+  color: var(--green-9);
+  opacity: 0;
+  transform: scale(0.94);
+}
+.receipt-printer[data-stage="complete"] .receipt-icon-working {
+  opacity: 0;
+  transform: scale(0.96);
+}
+.receipt-printer[data-stage="complete"] .receipt-icon-complete {
+  opacity: 1;
+  transform: scale(1);
+}
+.receipt-spinner {
+  display: block;
+  width: 18px;
+  height: 18px;
+  transform-origin: center;
+  animation: receipt-spin 0.75s linear infinite;
+}
+
+.receipt-status-copy {
+  display: grid;
+  min-width: 0;
+  flex: 1;
+  align-items: center;
+}
+.receipt-status-label {
+  grid-column: 1;
+  grid-row: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--gs-11);
+  opacity: 0;
+  transform: translateY(-4px);
+  transition:
+    opacity 0.18s var(--ease-out),
+    transform 0.18s var(--ease-out);
+}
+.receipt-printer[data-stage="processing"] [data-for="processing"],
+.receipt-printer[data-stage="printing"] [data-for="printing"],
+.receipt-printer[data-stage="complete"] [data-for="complete"] {
+  opacity: 1;
+  transform: translateY(0);
+  animation: receipt-status-in 0.18s var(--ease-out) both;
+}
+.receipt-note {
+  margin: 0.55rem 0 0;
+  font-size: 0.68rem;
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--gs-8);
+  text-wrap: pretty;
+}
+.receipt-note[hidden] { display: none; }
+
+.receipt-slot {
+  position: absolute;
+  right: 1.5rem;
+  bottom: var(--printer-inset);
+  left: 1.5rem;
+  z-index: 40;
+  height: 0.5rem;
+  border: 1px solid var(--gs-1);
+  border-radius: 0.25rem;
+  background: var(--gs-1);
+  box-shadow: inset 0 1px 2px var(--gs-1);
+}
+
+.receipt-output {
+  position: relative;
+  z-index: 50;
+  width: calc(80% + 3rem);
+  max-width: 100%;
+  height: 54rem;
+  margin-top: -1rem;
+  overflow: hidden;
+  padding-right: 1.5rem;
+  padding-left: 1.5rem;
+}
+.receipt-slot-blur {
+  pointer-events: none;
+  position: absolute;
+  top: -0.25rem;
+  right: 1.5rem;
+  left: 1.5rem;
+  z-index: 20;
+  height: 0.5rem;
+  background: color-mix(in oklab, var(--gs-1) 75%, transparent);
+  filter: blur(6px);
+  opacity: 0;
+}
+.receipt-printer[data-stage="printing"] .receipt-slot-blur,
+.receipt-printer[data-stage="complete"] .receipt-slot-blur {
+  opacity: 1;
+}
+
+.receipt-feed {
+  position: relative;
+  isolation: isolate;
+  opacity: 0;
+  transform: translate3d(0, calc(-100% + 2px), 0);
+  will-change: transform;
+  backface-visibility: hidden;
+  transition: opacity 0.16s var(--ease-out);
+}
+.receipt-feed::before {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  bottom: 1rem;
+  left: 0.75rem;
+  z-index: 0;
+  border-radius: 0.125rem;
+  box-shadow: 0 8px 24px color-mix(in oklab, var(--gs-1) 20%, transparent);
+}
+.receipt-feed::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  right: 8%;
+  bottom: 0;
+  left: 8%;
+  z-index: 0;
+  height: 0.75rem;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--gs-1) 10%, transparent);
+  filter: blur(16px);
+  transform: translateY(0.375rem);
+}
+.receipt-printer[data-stage="printing"] .receipt-feed {
+  opacity: 1;
+  animation: receipt-print 1.75s linear forwards;
+}
+.receipt-printer[data-stage="complete"] .receipt-feed {
+  opacity: 1;
+  transform: none;
+}
+
+.receipt-paper {
+  position: relative;
+  z-index: 10;
+  min-height: 36rem;
+  padding: 1.75rem 1.5rem 2rem;
+  background-color: var(--gs-12);
+  background-image: url("/assets/receipt-paper.svg");
+  background-size: cover;
+  background-blend-mode: soft-light;
+  color: var(--gs-1);
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 4px), 98.75% 100%, 97.5% calc(100% - 4px), 96.25% 100%, 95% calc(100% - 4px), 93.75% 100%, 92.5% calc(100% - 4px), 91.25% 100%, 90% calc(100% - 4px), 88.75% 100%, 87.5% calc(100% - 4px), 86.25% 100%, 85% calc(100% - 4px), 83.75% 100%, 82.5% calc(100% - 4px), 81.25% 100%, 80% calc(100% - 4px), 78.75% 100%, 77.5% calc(100% - 4px), 76.25% 100%, 75% calc(100% - 4px), 73.75% 100%, 72.5% calc(100% - 4px), 71.25% 100%, 70% calc(100% - 4px), 68.75% 100%, 67.5% calc(100% - 4px), 66.25% 100%, 65% calc(100% - 4px), 63.75% 100%, 62.5% calc(100% - 4px), 61.25% 100%, 60% calc(100% - 4px), 58.75% 100%, 57.5% calc(100% - 4px), 56.25% 100%, 55% calc(100% - 4px), 53.75% 100%, 52.5% calc(100% - 4px), 51.25% 100%, 50% calc(100% - 4px), 48.75% 100%, 47.5% calc(100% - 4px), 46.25% 100%, 45% calc(100% - 4px), 43.75% 100%, 42.5% calc(100% - 4px), 41.25% 100%, 40% calc(100% - 4px), 38.75% 100%, 37.5% calc(100% - 4px), 36.25% 100%, 35% calc(100% - 4px), 33.75% 100%, 32.5% calc(100% - 4px), 31.25% 100%, 30% calc(100% - 4px), 28.75% 100%, 27.5% calc(100% - 4px), 26.25% 100%, 25% calc(100% - 4px), 23.75% 100%, 22.5% calc(100% - 4px), 21.25% 100%, 20% calc(100% - 4px), 18.75% 100%, 17.5% calc(100% - 4px), 16.25% 100%, 15% calc(100% - 4px), 13.75% 100%, 12.5% calc(100% - 4px), 11.25% 100%, 10% calc(100% - 4px), 8.75% 100%, 7.5% calc(100% - 4px), 6.25% 100%, 5% calc(100% - 4px), 3.75% 100%, 2.5% calc(100% - 4px), 1.25% 100%, 0% calc(100% - 4px));
+}
+.receipt-head { margin-bottom: 1rem; }
+.receipt-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+.receipt-kind {
+  margin: 0.2rem 0 0;
+  font-size: 0.7rem;
+  color: color-mix(in oklab, var(--gs-1) 55%, transparent);
+}
+.receipt-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0.55rem 0;
+  border-top: 1px dashed color-mix(in oklab, var(--gs-1) 18%, transparent);
+  font-size: 0.78rem;
+}
+.receipt-row span { color: color-mix(in oklab, var(--gs-1) 55%, transparent); }
+.receipt-row strong, .receipt-row code {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  word-break: break-all;
+}
+.receipt-claim code {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+.receipt-promo,
+.receipt-thanks {
+  margin-top: 0.85rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed color-mix(in oklab, var(--gs-1) 18%, transparent);
+}
+.receipt-promo-kicker,
+.receipt-promo-offer {
+  margin: 0;
+}
+.receipt-promo-kicker {
+  font-size: 0.68rem;
+  color: color-mix(in oklab, var(--gs-1) 55%, transparent);
+}
+.receipt-promo-offer {
+  margin-top: 0.2rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+.receipt-promo code {
+  display: block;
+  margin: 0.45rem 0 0.35rem;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+}
+.receipt-barcode {
+  display: block;
+  width: 100%;
+  min-height: 36px;
+  margin: 0.2rem 0 0.45rem;
+}
+.receipt-barcode svg { display: block; width: 100%; height: 36px; }
+.receipt-promo-deadline,
+.receipt-promo-note,
+.receipt-thanks p {
+  margin: 0.35rem 0 0;
+  font-size: 0.68rem;
+  color: color-mix(in oklab, var(--gs-1) 58%, transparent);
+  text-wrap: pretty;
+}
+.receipt-sign {
+  display: grid;
+  justify-items: start;
+  gap: 0.15rem;
+  margin-top: 0.85rem;
+}
+.receipt-sign-name {
+  margin: 0.25rem 0 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+.receipt-sign-title {
+  margin: 0;
+  font-size: 0.68rem;
+  color: color-mix(in oklab, var(--gs-1) 55%, transparent);
+}
+.receipt-foot {
+  margin: 1rem 0 0;
+  font-size: 0.68rem;
+  color: color-mix(in oklab, var(--gs-1) 50%, transparent);
+  text-wrap: pretty;
+}
+
+.dock {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+  max-width: 24rem;
+}
+.ghost, .cta-wa {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 54px;
+  padding: 0 22px;
+  border-radius: 14px;
+  text-decoration: none;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+.ghost[hidden], .cta-wa[hidden], .receipt-claim[hidden],
+.receipt-promo[hidden], .receipt-thanks[hidden], #date-row[hidden] { display: none; }
+.ghost {
+  border: 1px solid color-mix(in oklab, var(--gs-12) 16%, transparent);
+  background: color-mix(in oklab, var(--gs-12) 8%, transparent);
+  color: var(--gs-12);
+}
+.cta-wa {
+  border: 1px solid rgba(140, 255, 180, 0.45);
+  background: linear-gradient(180deg, #4ae07a, #25d366 55%, #128c3e);
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(8, 60, 28, 0.5);
+  box-shadow:
+    0 14px 30px rgba(18, 140, 62, 0.4),
+    inset 0 2px 2px rgba(200, 255, 210, 0.7),
+    inset 0 -10px 20px rgba(8, 80, 32, 0.5);
+}
+.ghost:hover, .cta-wa:hover { transform: translateY(-2px); }
+.ghost:active, .cta-wa:active { transform: scale(0.96); }
+
+@keyframes receipt-print {
+  0% { transform: translate3d(0, calc(-100% + 2px), 0); }
+  7.5% { transform: translate3d(0, -91%, 0); }
+  10.5% { transform: translate3d(0, -91%, 0); }
+  18% { transform: translate3d(0, -81%, 0); }
+  21% { transform: translate3d(0, -81%, 0); }
+  28.5% { transform: translate3d(0, -70%, 0); }
+  31.5% { transform: translate3d(0, -70%, 0); }
+  39% { transform: translate3d(0, -58%, 0); }
+  42% { transform: translate3d(0, -58%, 0); }
+  49.5% { transform: translate3d(0, -45%, 0); }
+  52.5% { transform: translate3d(0, -45%, 0); }
+  60% { transform: translate3d(0, -32%, 0); }
+  63% { transform: translate3d(0, -32%, 0); }
+  70.5% { transform: translate3d(0, -20%, 0); }
+  73.5% { transform: translate3d(0, -20%, 0); }
+  81% { transform: translate3d(0, -10%, 0); }
+  84% { transform: translate3d(0, -10%, 0); }
+  91.5% { transform: translate3d(0, -3%, 0); }
+  94.5% { transform: translate3d(0, -3%, 0); }
+  100% { transform: translate3d(0, 0%, 0); }
+}
+@keyframes receipt-status-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes receipt-spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes receipt-led-pulse {
+  50% { opacity: 0.35; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .receipt-feed {
+    transform: none;
+    transition: opacity 0.16s var(--ease-out);
+  }
+  .receipt-printer[data-stage="printing"] .receipt-feed,
+  .receipt-printer[data-stage="complete"] .receipt-feed {
+    animation: none;
+    transform: none;
+  }
+  .receipt-status-label,
+  .receipt-icon-face {
+    transform: none;
+    animation: none;
+    transition: opacity 0.16s var(--ease-out);
+  }
+  .receipt-spinner,
+  .receipt-led {
+    animation: none;
+  }
+}

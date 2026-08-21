@@ -203,3 +203,9 @@ verify_jwt = false
 # code row ONLY — never from the request body.
 [functions.redeem-access-code]
 verify_jwt = false
+
+[functions.create-ai-video-order]
+verify_jwt = false
+
+[functions.ai-video-session]
+verify_jwt = false

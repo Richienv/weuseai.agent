@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow, noarchive" />
+  <title>AI Video — weuseai.agent admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Instrument+Serif&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/admin/assets/admin.css" />
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js"></script>
+  <script src="/admin/assets/admin-shared.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel" data-presets="env,react">
+    const { useEffect, useState } = React;
+    const { Sidebar, statusDot, formatDate, formatIdr } = window.WeUseAdmin;
+
+    const FILTERS = [
+      { value: 'all', label: 'Semua' },
+      { value: 'today', label: 'Hari ini' },
+      { value: 'unpaid', label: 'Belum lunas' },
+      { value: 'paid', label: 'Lunas' },
+      { value: 'needs_action', label: 'Perlu tindakan' },
+    ];
+    const FULFILLMENT = [
+      { value: 'processing', label: 'Diproses' },
+      { value: 'in_progress', label: 'Dikerjakan' },
+      { value: 'delivered', label: 'Terkirim' },
+      { value: 'refund_needed', label: 'Perlu refund' },
+      { value: 'extension', label: 'Perlu perpanjangan' },
+      { value: 'refunded', label: 'Sudah refund' },
+    ];
+
+    function payLabel(status) {
+      if (status === 'pending') return 'Menunggu';
+      if (status === 'paid') return 'Lunas';
+      if (status === 'expired') return 'Kadaluarsa';
+      if (status === 'failed') return 'Gagal';
+      if (status === 'refunded') return 'Refund';
+      if (status === 'held_for_review') return 'Ditahan';
+      return status || '—';
+    }
+
+    function Stat({ label, value, sub }) {
+      return (
+        <div className="stat-card">
+          <div className="stat-label">{label}</div>
+          <div className="stat-value">{value}</div>
+          {sub ? <div className="stat-sub">{sub}</div> : null}
+        </div>
+      );
+    }
+
+    function AiVideoPage() {
+      const params = new URLSearchParams(window.location.search);
+      const [filter, setFilter] = useState(params.get('filter') || 'all');
+      const [query, setQuery] = useState(params.get('q') || '');
+      const [data, setData] = useState(null);
+      const [err, setErr] = useState(null);
+      const [loading, setLoading] = useState(true);
+      const [busyId, setBusyId] = useState('');
+
+      const load = (silent) => {
+        if (!silent) setLoading(true);
+        const url = '/api/admin/customer-data?resource=ai-video&filter=' +
+          encodeURIComponent(filter) + '&q=' + encodeURIComponent(query);
+        fetch(url, { credentials: 'same-origin' })
+          .then((r) => {
+            if (r.status === 401) {
+              window.location.href = '/admin/login';
+              return null;
+            }
+            return r.json().then((body) => ({ status: r.status, body }));
+          })
+          .then((res) => {
+            if (!res) return;
+            if (res.status >= 200 && res.status < 300) {
+              setData(res.body);
+              setErr(null);
+            } else {
+              setErr((res.body && (res.body.error || res.body.detail)) || ('http_' + res.status));
+            }
+          })
+          .catch((e) => setErr(e && e.message ? e.message : String(e)))
+          .finally(() => setLoading(false));
+      };
+
+      useEffect(() => {
+        load(false);
+        const timer = window.setInterval(() => load(true), 15000);
+        return () => window.clearInterval(timer);
+      }, [filter, query]);
+
+      async function setFulfillment(orderId, fulfillment) {
+        setBusyId(orderId + fulfillment);
+        try {
+          const r = await fetch('/api/admin/customer-action', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: fulfillment === 'refund_needed' ? 'ai_video_refund_needed' : 'ai_video_fulfillment',
+              order_id: orderId,
+              fulfillment,
+            }),
+          });
+          if (r.status === 401) {
+            window.location.href = '/admin/login';
+            return;
+          }
+          if (!r.ok) {
+            const body = await r.json().catch(() => ({}));
+            setErr(body.error || 'gagal_ubah_status');
+            return;
+          }
+          load(true);
+        } finally {
+          setBusyId('');
+        }
+      }
+
+      const orders = (data && data.orders) || [];
+      const promos = (data && data.promos) || [];
+      const summary = (data && data.summary) || {};
+
+      return (
+        <div className="app-shell">
+          <Sidebar activeHref="/admin/ai-video" />
+          <main className="app-main" style={{ maxWidth: 1280 }}>
+            <header className="page-head">
+              <div>
+                <h1>AI Video</h1>
+                <p>Order, email, SKU, klaim, promo, dan fulfillment. Refresh otomatis 15 detik.</p>
+              </div>
+            </header>
+
+            <div className="stat-grid">
+              <Stat label="Lunas hari ini" value={summary.paid_today ?? 0} sub={formatIdr(summary.paid_today_idr || 0)} />
+              <Stat label="Belum lunas" value={summary.unpaid ?? 0} sub="Pending, gagal, kadaluarsa" />
+              <Stat label="Perlu tindakan" value={summary.needs_action ?? 0} sub="Proses, refund, perpanjangan" />
+              <Stat label="Promo belum dipakai" value={summary.unused_promos ?? 0} sub="Masih dalam 7 hari" />
+            </div>
+
+            <div className="toolbar">
+              <label>
+                Filter
+                <select value={filter} onChange={(e) => setFilter(e.target.value)}>
+                  {FILTERS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+                </select>
+              </label>
+              <label>
+                Cari
+                <input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="email, av-…, WU-…, serial"
+                />
+              </label>
+            </div>
+
+            {loading ? <div className="alert info">Memuat...</div> : null}
+            {err ? <div className="alert error">Gagal load: {err}</div> : null}
+
+            <section className="section">
+              <h2>Penjualan</h2>
+              {orders.length === 0 && !loading ? <div className="alert info">Belum ada order untuk filter ini.</div> : null}
+              {orders.length > 0 ? (
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Waktu</th><th>Email</th><th>Paket</th><th>Nominal</th>
+                      <th>Bayar</th><th>Klaim</th><th>Order</th><th>Fulfillment</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {orders.map((row) => (
+                      <tr key={row.id} className={row.needs_action ? 'row-warn' : ''}>
+                        <td style={{ color: 'var(--ink-3)' }}>{formatDate(row.paid_at || row.created_at)}</td>
+                        <td>{row.email || <span className="muted">—</span>}</td>
+                        <td>{row.label}</td>
+                        <td className="num">{formatIdr(row.amount_idr)}</td>
+                        <td>{statusDot(row.payment_status === 'paid' ? 'active' : row.payment_status)}{payLabel(row.payment_status)}</td>
+                        <td>{row.claim_code ? <code>{row.claim_code}</code> : <span className="muted">—</span>}</td>
+                        <td><code>{row.order_id}</code></td>
+                        <td>
+                          {row.fulfillment ? (
+                            <select
+                              value={row.fulfillment}
+                              disabled={busyId.indexOf(row.id) === 0}
+                              onChange={(e) => setFulfillment(row.id, e.target.value)}
+                            >
+                              {FULFILLMENT.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+                            </select>
+                          ) : <span className="muted">—</span>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : null}
+            </section>
+
+            <section className="section" style={{ marginTop: 28 }}>
+              <h2>Promo 25%</h2>
+              {promos.length === 0 && !loading ? <div className="alert info">Belum ada serial promo.</div> : null}
+              {promos.length > 0 ? (
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Serial</th><th>Status</th><th>Dari</th><th>Order sumber</th>
+                      <th>Dibuat</th><th>Habis</th><th>Dipakai oleh</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {promos.map((row) => (
+                      <tr key={row.id}>
+                        <td><code>{row.serial || '—'}</code></td>
+                        <td>{row.status === 'unused' ? 'Belum dipakai' : row.status === 'redeemed' ? 'Dipakai' : 'Kadaluarsa'}</td>
+                        <td>{row.source_email || '—'}</td>
+                        <td><code>{row.source_order_id || '—'}</code></td>
+                        <td style={{ color: 'var(--ink-3)' }}>{formatDate(row.created_at)}</td>
+                        <td style={{ color: 'var(--ink-3)' }}>{formatDate(row.expires_at)}</td>
+                        <td>{row.redeemed_email ? <>{row.redeemed_email}<br /><code>{row.redeemed_order_id}</code></> : <span className="muted">—</span>}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : null}
+            </section>
+          </main>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<AiVideoPage />);
+  </script>
+</body>
+</html>

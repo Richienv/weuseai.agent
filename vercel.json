@@ -23,6 +23,10 @@
       "destination": "/api/admin/library-proposals"
     },
     {
+      "source": "/ai-video",
+      "destination": "/ai-video.html"
+    },
+    {
       "source": "/persona/:slug",
       "destination": "/persona.html?slug=:slug"
     },
@@ -61,6 +65,10 @@
     {
       "source": "/admin/proposals",
       "destination": "/admin/proposals.html"
+    },
+    {
+      "source": "/admin/ai-video",
+      "destination": "/admin/ai-video.html"
     }
   ],
   "redirects": [
@@ -133,6 +141,34 @@
         }
       ]
     },
+    {
+      "source": "/ai-video",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/ai-video/checkout",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/ai-video/welcome",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    },
+
     {
       "source": "/checkout-new",
       "headers": [
