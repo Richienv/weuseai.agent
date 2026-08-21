@@ -4,7 +4,7 @@ import {
   type AiVideoOpsOrderRow,
   type AiVideoOpsPromoRow,
   type AiVideoOpsStore,
-} from '../../supabase/functions/_shared/admin-ai-video-ops-handler.ts'
+} from './admin-ai-video-ops-handler.js'
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? ''
 const SUPABASE_SERVICE_KEY =
