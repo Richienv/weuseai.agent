@@ -21,6 +21,18 @@ import { createHash } from 'node:crypto'
 
 import { requireAdminCookie } from '../_shared/admin-cookie-auth.js'
 import { aiVideoOpsConfigured, createAiVideoOpsStore, setAiVideoOpsFulfillment } from '../_shared/admin-ai-video-ops.js'
+import { aiVideoOperatorConfigured, createAiVideoOperatorGenerateStore } from '../_shared/admin-ai-video-generate.js'
+import {
+  cancelAiVideoOperatorGenerate,
+  compileAiVideoOperatorPrompt,
+  listAiVideoOperatorUploads,
+  saveAiVideoOperatorCharacter,
+  saveAiVideoOperatorLibrary,
+  saveAiVideoOperatorPrompt,
+  signAiVideoOperatorUpload,
+  startAiVideoOperatorGenerate,
+  submitAiVideoOperatorGenerate,
+} from '../_shared/admin-ai-video-generate-handler.js'
 import {
   isTier,
   personasForTier,
@@ -65,6 +77,15 @@ type ActionKind =
   | 'escalate'
   | 'ai_video_fulfillment'
   | 'ai_video_refund_needed'
+  | 'ai_video_generate_upload'
+  | 'ai_video_generate_list_uploads'
+  | 'ai_video_generate_start'
+  | 'ai_video_generate_submit'
+  | 'ai_video_generate_cancel'
+  | 'ai_video_generate_save_library'
+  | 'ai_video_prompt_save'
+  | 'ai_video_character_save'
+  | 'ai_video_prompt_compile'
 const ACTIONS: ActionKind[] = [
   'manual_provision',
   'manual_provision_v2',
@@ -74,6 +95,15 @@ const ACTIONS: ActionKind[] = [
   'escalate',
   'ai_video_fulfillment',
   'ai_video_refund_needed',
+  'ai_video_generate_upload',
+  'ai_video_generate_list_uploads',
+  'ai_video_generate_start',
+  'ai_video_generate_submit',
+  'ai_video_generate_cancel',
+  'ai_video_generate_save_library',
+  'ai_video_prompt_save',
+  'ai_video_character_save',
+  'ai_video_prompt_compile',
 ]
 
 type Tier = 'starter' | 'pro' | 'studio'
@@ -371,7 +401,7 @@ async function triggerVpsSpinUp(args: {
         // Manual provision: founder has not collected a bot token from the
         // customer (unless concierge mode runs separately) — pass empty so
         // setup-script defers bot start to refresh-env, matching the new-
-        // customer back-compat path in xendit-webhook-handler.
+        // customer back-compat path used by payment webhook provisioning.
         customerTelegramBotToken: '',
         alwaysOnEnabled: false,
         // Onboarding LLM credits go to the entry voice tier (the Phase A
@@ -699,7 +729,9 @@ export async function handleManualProvisionV2(
   }
   completed_steps.push('subscription')
 
-  const onboarding_url = `${ONBOARDING_BASE_URL.replace(/\/$/, '')}/welcome?cid=${customer_id}`
+  // Customer-facing handoff is deliberately non-authorizing. The welcome
+  // page restores access through a one-time email grant.
+  const onboarding_url = `${ONBOARDING_BASE_URL.replace(/\/$/, '')}/welcome`
 
   // Step 4: VPS spin-up (fire-and-forget). We await the POST response so
   // we can record vps_id, but the actual VPS readiness is async — the
@@ -954,12 +986,62 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         fulfillment: action === 'ai_video_refund_needed' ? 'refund_needed' : body.fulfillment,
       }, createAiVideoOpsStore())
       if ('error' in result) {
-        res.status(result.status).json({ ok: false, error: result.error })
+        res.status(result.status ?? 400).json({ ok: false, error: result.error })
         return
       }
       res.status(200).json(result)
     } catch {
       res.status(502).json({ ok: false, error: 'fulfillment_failed' })
+    }
+    return
+  }
+  if (action === 'ai_video_prompt_compile') {
+    const result = compileAiVideoOperatorPrompt(body)
+    if ('error' in result) {
+      res.status(typeof result.status === 'number' ? result.status : 400).json({ ok: false, error: result.error })
+      return
+    }
+    res.status(200).json(result)
+    return
+  }
+  if (
+    action === 'ai_video_generate_upload'
+    || action === 'ai_video_generate_list_uploads'
+    || action === 'ai_video_generate_start'
+    || action === 'ai_video_generate_submit'
+    || action === 'ai_video_generate_cancel'
+    || action === 'ai_video_generate_save_library'
+    || action === 'ai_video_prompt_save'
+    || action === 'ai_video_character_save'
+  ) {
+    if (!aiVideoOperatorConfigured()) {
+      res.status(500).json({ ok: false, error: 'misconfigured' })
+      return
+    }
+    try {
+      const store = createAiVideoOperatorGenerateStore()
+      const result = action === 'ai_video_generate_upload'
+        ? await signAiVideoOperatorUpload(body, store)
+        : action === 'ai_video_generate_list_uploads'
+          ? await listAiVideoOperatorUploads(store)
+        : action === 'ai_video_generate_start'
+          ? await startAiVideoOperatorGenerate(body, store)
+          : action === 'ai_video_generate_submit'
+            ? await submitAiVideoOperatorGenerate(body, store)
+          : action === 'ai_video_generate_save_library'
+            ? await saveAiVideoOperatorLibrary(body, store)
+            : action === 'ai_video_prompt_save'
+              ? await saveAiVideoOperatorPrompt(body, store)
+            : action === 'ai_video_character_save'
+              ? await saveAiVideoOperatorCharacter(body, store)
+              : await cancelAiVideoOperatorGenerate(body, store)
+      if ('error' in result) {
+        res.status(typeof result.status === 'number' ? result.status : 400).json({ ok: false, error: result.error })
+        return
+      }
+      res.status(200).json(result)
+    } catch {
+      res.status(502).json({ ok: false, error: 'generate_failed' })
     }
     return
   }

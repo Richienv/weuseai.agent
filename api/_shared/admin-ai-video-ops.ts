@@ -134,7 +134,7 @@ export function createAiVideoOpsStore(): AiVideoOpsStore {
       })
       if (response.status === 404) return null
       if (!response.ok) throw new Error(`fulfillment ${response.status}`)
-      const row = await response.json() as OrderJoin
+      const row = await response.json() as OrderJoin & { customer_id?: string }
       const customerRes = await fetch(
         `${SUPABASE_URL}/rest/v1/customers?select=email&id=eq.${row.customer_id ?? ''}&limit=1`,
         { headers: supabaseHeaders() },

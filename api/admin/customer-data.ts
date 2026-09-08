@@ -20,6 +20,8 @@
 
 import { requireAdminCookie } from '../_shared/admin-cookie-auth.js'
 import { aiVideoOpsConfigured, createAiVideoOpsStore, listAiVideoOps } from '../_shared/admin-ai-video-ops.js'
+import { aiVideoOperatorConfigured, createAiVideoOperatorGenerateStore } from '../_shared/admin-ai-video-generate.js'
+import { listAiVideoOperatorGenerate } from '../_shared/admin-ai-video-generate-handler.js'
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? ''
 const SUPABASE_SERVICE_KEY =
@@ -144,13 +146,32 @@ export default async function handler(
         q: u.searchParams.get('q') ?? '',
       }, createAiVideoOpsStore())
       if ('error' in result) {
-        res.status(result.status).json({ error: result.error })
+        res.status(result.status ?? 400).json({ error: result.error })
         return
       }
       res.setHeader('Cache-Control', 'no-store')
       res.status(200).json(result)
     } catch (error) {
       res.status(502).json({ error: 'fetch_failed', detail: error instanceof Error ? error.message : 'ai_video' })
+    }
+    return
+  }
+  if ((u.searchParams.get('resource') ?? '').trim() === 'ai-video-generate') {
+    if (!aiVideoOperatorConfigured()) {
+      res.status(500).json({ error: 'misconfigured', detail: 'SUPABASE_URL / SUPABASE_SECRET_KEY unset' })
+      return
+    }
+    try {
+      const result = await listAiVideoOperatorGenerate({
+        tid: u.searchParams.get('tid') ?? '',
+        jobId: u.searchParams.get('job_id') ?? '',
+        simple: u.searchParams.get('simple') === '1',
+        includeReferences: u.searchParams.get('include_refs') === '1',
+      }, createAiVideoOperatorGenerateStore())
+      res.setHeader('Cache-Control', 'no-store')
+      res.status(200).json(result)
+    } catch (error) {
+      res.status(502).json({ error: 'fetch_failed', detail: error instanceof Error ? error.message : 'ai_video_generate' })
     }
     return
   }

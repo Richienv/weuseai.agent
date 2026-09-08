@@ -1,0 +1,44 @@
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+const { PGlite } = await import(process.env.STUDIO_PGLITE_MODULE || '@electric-sql/pglite');
+const db = new PGlite();
+try {
+  await db.exec(`create table ai_video_operator_jobs (id uuid primary key, status text not null, provider_task_id text, result_path text, error_code text, attempt int default 0, poll_attempts int default 0, created_at timestamptz default now(), updated_at timestamptz default now(), completed_at timestamptz, lease_until timestamptz);`);
+  const migration = await readFile(new URL('../supabase/migrations/20260906010000_ai_video_operator_reliability.sql', import.meta.url), 'utf8');
+  await db.exec(migration.split('revoke all on function public.claim_due_ai_video_operator_jobs')[0]);
+  const id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+  await db.query(`insert into ai_video_operator_jobs(id,status,provider_task_id,poll_attempts,updated_at) values ($1,'running','run-1',40,now() - interval '30 seconds')`, [id]);
+  assert.equal((await db.query('select * from claim_due_ai_video_operator_jobs(3,300)')).rows.length, 1, 'historical 40-poll job is recoverable');
+  await db.query(`update ai_video_operator_jobs set lease_until=null where id=$1`, [id]);
+  assert.equal((await db.query('select * from claim_due_ai_video_operator_jobs(3,300)')).rows.length, 0, 'rapid browser polls do not burn the retry budget');
+  await db.query(`update ai_video_operator_jobs set lease_until=null, poll_attempts=240,updated_at=now()-interval '30 seconds' where id=$1`, [id]);
+  assert.equal((await db.query('select * from claim_due_ai_video_operator_jobs(3,300)')).rows.length, 0);
+  const paused = (await db.query(`select status,error_code,provider_task_id from ai_video_operator_jobs where id=$1`, [id])).rows[0];
+  assert.equal(paused.status, 'failed'); assert.equal(paused.error_code, 'operator_sync_timeout'); assert.equal(paused.provider_task_id, 'run-1');
+  await db.query(`update ai_video_operator_jobs set status='queued',provider_task_id=null,error_code=null,attempt=1,poll_attempts=1 where id=$1`, [id]);
+  assert.equal((await db.query('select * from claim_due_ai_video_operator_jobs(3,300)')).rows.length, 0);
+  assert.equal((await db.query(`select error_code from ai_video_operator_jobs where id=$1`, [id])).rows[0].error_code, 'monid_submission_unknown');
+  const request = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+  await db.query(`update ai_video_operator_jobs set client_request_id=$1 where id=$2`, [request,id]);
+  await assert.rejects(db.query(`insert into ai_video_operator_jobs(id,status,client_request_id) values ('cccccccc-cccc-4ccc-8ccc-cccccccccccc','queued',$1)`, [request]), /unique/);
+  // An active lease is respected even when the poll cap is exhausted.
+  await db.query(`update ai_video_operator_jobs set status='running', error_code=null,provider_task_id='run-1',poll_attempts=240,lease_until=now()+interval '2 minutes' where id=$1`, [id]);
+  await db.query('select * from claim_due_ai_video_operator_jobs(3,300)');
+  assert.equal((await db.query(`select status from ai_video_operator_jobs where id=$1`, [id])).rows[0].status, 'running');
+  await db.exec(`create role anon; create role authenticated; create role service_role;
+    create schema vault; create table vault.decrypted_secrets(name text, decrypted_secret text);
+    create schema net; create table net.calls(id bigserial primary key, payload jsonb);
+    create function net.http_post(url text, headers jsonb, body jsonb, timeout_milliseconds int) returns bigint language sql as $$ insert into net.calls(payload) values (body) returning id $$;`);
+  const dispatch = migration.slice(migration.indexOf('create or replace function public.dispatch_ai_video_operator_worker()'), migration.indexOf('select cron.unschedule'));
+  await db.exec(dispatch);
+  await assert.rejects(db.query('select dispatch_ai_video_operator_worker()'), /operator_worker_schedule_unconfigured/);
+  await db.exec(`insert into vault.decrypted_secrets values ('ai_video_operator_worker_url','https://example.com/worker'),('ai_video_operator_worker_token','test-worker-token')`);
+  await assert.rejects(db.query('select dispatch_ai_video_operator_worker()'), /operator_worker_schedule_invalid_url/);
+  await db.exec(`update vault.decrypted_secrets set decrypted_secret='https://testproject.supabase.co/functions/v1/ai-video-render-worker' where name='ai_video_operator_worker_url'`);
+  await db.query('select dispatch_ai_video_operator_worker()');
+  assert.deepEqual((await db.query('select payload from net.calls')).rows[0].payload, { operator_only: true });
+  await db.exec('set role anon');
+  await assert.rejects(db.query('select public.dispatch_ai_video_operator_worker()'), /permission denied/);
+  await db.exec('reset role');
+  console.log('Passed: old 40-poll recovery, 15-second cadence, exhausted sync state, no ambiguous resubmission, atomic request deduplication, active lease preservation, scheduler config errors, target URL validation, operator-only dispatch, anonymous caller denied.');
+} finally { await db.close(); }
