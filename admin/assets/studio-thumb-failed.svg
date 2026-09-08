@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <radialGradient id="failV" cx="50%" cy="62%" r="72%">
+      <stop offset="0%" stop-color="#1a222c"/>
+      <stop offset="55%" stop-color="#0b0d10"/>
+      <stop offset="100%" stop-color="#050505"/>
+    </radialGradient>
+    <linearGradient id="failH" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0%" stop-color="#2a3340" stop-opacity=".0"/>
+      <stop offset="50%" stop-color="#6f8aa8" stop-opacity=".22"/>
+      <stop offset="100%" stop-color="#2a3340" stop-opacity=".0"/>
+    </linearGradient>
+  </defs>
+  <rect width="320" height="200" fill="#050505"/>
+  <rect width="320" height="200" fill="url(#failV)"/>
+  <rect x="24" y="132" width="272" height="2" fill="url(#failH)"/>
+</svg>
