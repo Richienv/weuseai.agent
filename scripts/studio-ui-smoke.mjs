@@ -54,11 +54,11 @@ const server = createServer(async (req, res) => {
   if (url.pathname.startsWith('/uploaded/')) {
     const name = url.pathname.split('/').pop(), bytes = uploaded.get(name);
     if (!bytes) { res.writeHead(404); res.end(); return; }
-    res.setHeader('content-type', name.endsWith('.wav') ? 'audio/wav' : 'image/jpeg'); res.end(bytes); return;
+    res.setHeader('content-type', name.endsWith('.wav') ? 'audio/wav' : name.endsWith('.mp4') || name.endsWith('.mov') ? 'video/mp4' : 'image/jpeg'); res.end(bytes); return;
   }
   if (url.pathname === '/fixture-video.mp4') {
     if (brokenMedia) { res.writeHead(404); res.end(); return; }
-    res.setHeader('content-type', 'video/mp4'); res.end(await readFile(resolve(root, 'assets/ads/logo-cat-run.mp4'))); return;
+    res.setHeader('content-type', 'video/mp4'); res.end(await readFile(resolve(root, 'assets/welcome-success.mp4'))); return;
   }
   const path = resolve(root, '.' + (url.pathname === '/admin/ai-video-generate' ? '/admin/ai-video-generate.html' : url.pathname));
   if (!path.startsWith(root + sep)) { res.writeHead(403); res.end(); return; }
@@ -341,6 +341,84 @@ try {
   assert.equal(await promptField.inputValue(), finalPrompt);
   assert.equal(await generate.isEnabled(), true);
   passed.push('submitted tags map to provider ordinals and original handles survive history, reuse and model changes');
+
+  await fresh();
+  await page.getByRole('button', { name: '9:16 6 dtk' }).click();
+  const settings = page.getByRole('dialog', { name: 'Pengaturan video' });
+  await settings.waitFor();
+  assert.equal(await settings.getByRole('button', { name: '21:9', exact: true }).count(), 1);
+  assert.equal(await settings.getByRole('button', { name: '4 dtk', exact: true }).count(), 1);
+  assert.equal(await settings.getByRole('button', { name: '8 dtk', exact: true }).count(), 1);
+  assert.equal(await settings.getByRole('button', { name: '5 dtk', exact: true }).count(), 0);
+  assert.equal(await settings.getByRole('button', { name: '20 dtk', exact: true }).count(), 0);
+  await settings.getByRole('button', { name: '21:9', exact: true }).click();
+  await settings.getByRole('button', { name: '8 dtk', exact: true }).click();
+  await settings.getByRole('button', { name: 'Suara hidup', exact: true }).click();
+  assert.equal(await settings.getByRole('button', { name: 'Tanpa suara', exact: true }).count(), 1);
+  await settings.getByRole('button', { name: 'Selesai', exact: true }).click();
+  await page.getByRole('button', { name: '21:9 senyap 8 dtk' }).waitFor();
+  await modelSelect.selectOption('wan3.0');
+  await page.getByRole('button', { name: '16:9 senyap 8 dtk' }).click();
+  await page.getByRole('dialog', { name: 'Pengaturan video' }).waitFor();
+  assert.equal(await page.getByRole('button', { name: '21:9', exact: true }).count(), 0);
+  await page.getByRole('button', { name: 'Selesai', exact: true }).click();
+  await modelSelect.selectOption('seedance-2.5');
+  await page.getByRole('button', { name: '16:9 senyap 8 dtk' }).click();
+  await page.getByRole('button', { name: 'Tanpa suara', exact: true }).click();
+  await page.getByRole('button', { name: 'Selesai', exact: true }).click();
+  passed.push('21:9 and 4/8s chips, hidden 21:9 on Wan, and Suara toggle persist');
+
+  const motion = await readFile(resolve(root, 'assets/welcome-success.mp4'));
+  await page.getByLabel('Upload video', { exact: true }).setInputFiles({ name: 'motion.mp4', mimeType: 'video/mp4', buffer: motion });
+  await page.waitForFunction(() => document.querySelector('.sv-reference.video')?.dataset.status === 'ready');
+  await promptField.fill(''); await promptField.pressSequentially('@mot');
+  await page.getByRole('option', { name: /@Video1/ }).waitFor();
+  await promptField.press('Enter');
+  assert.match(await promptField.inputValue(), /@Video1/);
+  const sheetBytes = await page.evaluate(() => {
+    const canvas = document.createElement('canvas'); canvas.width = 2400; canvas.height = 800;
+    const ctx = canvas.getContext('2d'); ctx.fillStyle = '#7d7d7d'; ctx.fillRect(0, 0, 2400, 800);
+    return canvas.toDataURL('image/png').split(',')[1];
+  });
+  await page.getByLabel('Upload foto', { exact: true }).setInputFiles({ name: 'character-sheet.png', mimeType: 'image/png', buffer: Buffer.from(sheetBytes, 'base64') });
+  await page.waitForFunction(() => document.querySelector('.sv-reference.image')?.dataset.status === 'ready');
+  await page.getByText('Foto wajah nyata bisa ditolak Seedance.', { exact: false }).waitFor();
+  await page.getByRole('button', { name: 'Frame awal', exact: true }).click();
+  assert.equal(await page.locator('[data-role=first_frame]').count(), 1);
+  await page.getByText('Frame awal memakai gambar yang mirip character sheet.', { exact: false }).waitFor();
+  await page.getByRole('button', { name: 'Frame akhir', exact: true }).click();
+  assert.match(await promptField.inputValue(), /@Image1 is the last frame/);
+  assert.equal(await page.locator('[data-role=first_frame]').count(), 0);
+  await page.getByRole('button', { name: 'Frame awal', exact: true }).click();
+  await generate.click();
+  await page.getByRole('dialog', { name: 'Periksa referensi' }).waitFor();
+  await page.getByRole('button', { name: 'Lanjut generate', exact: true }).click();
+  await page.getByRole('heading', { name: 'Membuat video', exact: true }).waitFor();
+  assert.equal(latest.model, 'seedance-2.5');
+  assert.equal(latest.ratio, '16:9');
+  assert.equal(latest.duration_seconds, 8);
+  assert.equal(latest.generate_audio, true);
+  assert.ok(latest.ref_roles.includes('first_frame'));
+  assert.ok(latest.ref_roles.includes('reference_video'));
+  assert.equal(latest.ref_roles.includes('last_frame'), false);
+  passed.push('video attach, @VideoN autocomplete, first-frame warning, last-frame prompt text');
+
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await fresh();
+  await generate.click();
+  await page.getByRole('heading', { name: 'Membuat video', exact: true }).waitFor();
+  scenario = 'succeeded';
+  await page.getByRole('button', { name: 'Cek status', exact: true }).click();
+  await page.getByRole('heading', { name: 'Video siap', exact: true }).waitFor();
+  assert.equal(await page.locator('.sv-player-frame.ratio-9-16').count(), 1);
+  await page.locator('.job-player').evaluate(async (video) => { video.muted = true; await video.play(); });
+  await page.waitForFunction(() => document.querySelector('.job-player').readyState >= 2 && document.querySelector('.job-player').videoWidth > 0);
+  await page.getByRole('button', { name: 'Pasang sebagai @Video1', exact: true }).click();
+  await page.waitForFunction(() => document.querySelector('.sv-reference.video')?.dataset.status === 'ready');
+  assert.equal(await page.locator('[data-tag="@Video1"]').count(), 1);
+  await page.getByRole('button', { name: 'Ambil frame terakhir → frame awal', exact: true }).click();
+  await page.waitForFunction(() => document.querySelector('.sv-reference.image[data-role="first_frame"]')?.dataset.status === 'ready');
+  passed.push('result player follows ratio and can attach as @Video1 or last-frame still');
   assert.deepEqual(errors, []);
   console.log(JSON.stringify({ passed, screenshots: out }, null, 2));
 } catch (error) {

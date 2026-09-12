@@ -62,6 +62,23 @@ test('simple studio keeps runtime local and isolates its stylesheet from the oth
   assert.doesNotMatch(generateJsx, /Satu take|SKILL_MODES|studio-checklist|studio-modes/)
 })
 
+test('simple studio unlocks Seedance 2.5 without restoring the operator desk', () => {
+  const media = readFileSync(new URL('../admin/assets/studio-media.js', import.meta.url), 'utf8')
+  assert.match(generateHtml, /seedance-1/)
+  assert.match(generateJsx, /\[4, 6, 8, 10, 15, 30\]/)
+  assert.match(generateJsx, /21:9/)
+  assert.match(generateJsx, /generate_audio: generateAudio/)
+  assert.match(generateJsx, /Frame awal/)
+  assert.match(generateJsx, /Frame akhir/)
+  assert.match(generateJsx, /Pasang sebagai/)
+  assert.match(generateJsx, /Ambil frame terakhir/)
+  assert.match(generateJsx, /Upload video/)
+  assert.match(media, /VIDEO_ACCEPT/)
+  assert.match(media, /kind === 'video'/)
+  assert.doesNotMatch(generateJsx, /last_frame|end_image|video_extension|SKILL_MODES|Satu take|Vault/)
+  assert.doesNotMatch(media, /last_frame|end_image/)
+})
+
 test('studio page never embeds merchant secrets or hype copy', () => {
   assert.doesNotMatch(generate, /MODELARK_MERCHANT_API_KEY/)
   assert.doesNotMatch(generate, /MONID_API_KEY/)

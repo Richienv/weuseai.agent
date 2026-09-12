@@ -129,6 +129,40 @@ test('switching models revalidates existing references without changing them', (
   assert.equal(simpleReferenceError('seedance-2.5', Array(6).fill({ role: 'reference_audio', seconds: 2 }), 6), '')
 })
 
+test('Seedance simple start accepts 21:9, 8 seconds, audio off, video refs and last-frame prompt text', () => {
+  const body = {
+    prompt_mode: 'simple',
+    prompt: '@Image1 is the last frame. @Video1 continues the motion.',
+    model: 'seedance-2.5',
+    ratio: '21:9',
+    duration_seconds: 8,
+    generate_audio: false,
+    ref_paths: ['operator/inbox/still.jpg', 'operator/inbox/motion.mp4'],
+    ref_roles: ['reference_image', 'reference_video'],
+    ref_tags: ['@Image1', '@Video1'],
+    ref_durations: [0, 4],
+  }
+  const input = parseOperatorStartInput(body)
+  assert.deepEqual(input, parseEdge(body))
+  assert.equal(input.ratio, '21:9')
+  assert.equal(input.durationSeconds, 8)
+  assert.equal(input.generateAudio, false)
+  assert.deepEqual(input.refRoles, ['reference_image', 'reference_video'])
+  assert.match(simplePromptText(input.prompt), /@Image1 is the last frame/)
+})
+
+test('Seedance first_frame stays a scene-still role and last_frame is rejected', () => {
+  const body = {
+    prompt_mode: 'simple', prompt: 'Walk through the door.', model: 'seedance-2.5',
+    ratio: '9:16', duration_seconds: 4, generate_audio: true,
+    ref_paths: ['operator/inbox/start.jpg'], ref_roles: ['first_frame'],
+  }
+  const input = parseOperatorStartInput(body)
+  assert.deepEqual(input.refRoles, ['first_frame'])
+  assert.throws(() => parseOperatorStartInput({ ...body, ref_roles: ['last_frame'] }), /invalid_operator_ref_role/)
+  assert.throws(() => parseOperatorStartInput({ ...body, ref_roles: ['end_image'] }), /invalid_operator_ref_role/)
+})
+
 test('new Seedance requests validate clip lengths and independent audio/video totals before billing', () => {
   const seedance = { ...base, model: 'seedance-2.5', ref_paths: [audio], ref_durations: [20] }
   const input = parseOperatorStartInput(seedance)

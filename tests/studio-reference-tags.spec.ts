@@ -36,6 +36,20 @@ test('removed references cannot become another character and invalid bindings st
   }
 })
 
+test('owned video handles bind like photos and do not cascade after a deletion', () => {
+  const video = {
+    prompt_mode: 'simple', model: 'seedance-2.5', prompt: '@Video2 follows @Video1.',
+    ratio: '9:16', duration_seconds: 6, resolution: '720p',
+    ref_paths: ['operator/inbox/one.mp4', 'operator/inbox/two.mp4'],
+    ref_roles: ['reference_video', 'reference_video'],
+    ref_tags: ['@Video1', '@Video2'], ref_durations: [3, 4],
+  }
+  const parsed = parseOperatorStartInput(video)
+  assert.deepEqual(parsed, parseEdge(video))
+  assert.equal(simplePromptText(parsed.prompt), '@Video2 follows @Video1.')
+  assert.deepEqual(missingReferenceTags('@Video3 follows @Video1', ['@Video1', '@Video2']), ['@Video3'])
+})
+
 test('pasted Higgsfield-style tags normalize while stable handles above provider capacity bind safely', () => {
   assert.equal(bindReferenceTags('@[Image 1] memakai @audio 1', ['reference_image', 'reference_audio']).prompt, '@Image1 memakai @Audio1')
   assert.deepEqual(referenceMentions('hello@example.com @Image1').map((row) => row.tag), ['@Image1'])
