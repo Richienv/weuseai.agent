@@ -174,6 +174,26 @@ export class TelegramBotClient implements ITelegramClient {
     }
   }
 
+  async sendVideoAs(
+    botToken: string,
+    chatId: number | string,
+    videoUrl: string,
+    caption: string,
+  ): Promise<void> {
+    const parsed = new URL(videoUrl)
+    const allowed = parsed.protocol === 'https:' && (
+      parsed.hostname.endsWith('.bytepluses.com') ||
+      parsed.hostname.endsWith('.volces.com')
+    )
+    if (!allowed) throw new Error('Telegram sendVideo: result host is not allowed')
+    const r = await fetch(`${TELEGRAM_API}/bot${botToken}/sendVideo`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, video: parsed.toString(), caption: caption.slice(0, 1024) }),
+    })
+    if (!r.ok) throw new Error(`Telegram sendVideo -> ${r.status}`)
+  }
+
   // ─── Phase 5-5b: inline-keyboard support for approval surfacing ──
 
   async sendMessageWithButtonsAs(

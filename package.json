@@ -32,6 +32,7 @@
     "orphan-vps:check": "node scripts/orphan-vps-cleanup.mjs"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
     "@types/node": "^20.11.0",
     "tsx": "^4.7.0",
     "typescript": "^5.4.0"
