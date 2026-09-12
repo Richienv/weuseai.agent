@@ -112,11 +112,12 @@ function StudioApp() {
   const modelRef = useRef(model);
   modelRef.current = model;
   const modelSettings = simpleModelSettings(model);
-  const formatOptions = model === 'wan3.0' ? RATIOS.filter((item) => item !== '21:9') : RATIOS;
   const [ratio, setRatio] = useState(RATIOS.includes(initial.ratio) ? initial.ratio : '9:16');
   const [duration, setDuration] = useState(Number(initial.duration) >= 4 && Number(initial.duration) <= 30 ? Number(initial.duration) : 6);
   const [generateAudio, setGenerateAudio] = useState(initial.generateAudio !== false);
   const [refs, setRefs] = useState(() => taggedReferences(readLocal(REFS_KEY, []).filter((row) => row && (row.path || row.name)).map(restoreRef)));
+  const firstFrameOn = refs.some((row) => row.role === 'first_frame');
+  const formatOptions = model === 'wan3.0' || firstFrameOn ? RATIOS.filter((item) => item !== '21:9') : RATIOS;
   const tagSequence = useRef({ ...initial.tagSequence });
   for (const tag of refs.map((row) => row.tag)) {
     const match = /^@(Image|Audio|Video)([1-9]\d{0,5})$/.exec(tag || '');
@@ -147,8 +148,11 @@ function StudioApp() {
   function chooseJob(row) { selectedRef.current = row.id; setSelectedId(row.id); setJob(row); setView('result'); setSheet(''); setError(''); setDownloadState(''); }
   function changeModel(next) {
     setModel(next);
-    if (next === 'wan3.0' && ratio === '21:9') setRatio('16:9');
+    if ((next === 'wan3.0' || firstFrameOn) && ratio === '21:9') setRatio('16:9');
   }
+  useEffect(() => {
+    if ((model === 'wan3.0' || firstFrameOn) && ratio === '21:9') setRatio('16:9');
+  }, [model, firstFrameOn, ratio]);
   useEffect(() => {
     writeLocal(DRAFT_KEY, { ...readLocal(DRAFT_KEY, {}), prompt, selectedModel: model, ratio, duration, generateAudio, jobId: selectedId, tid, pendingRequestId: pendingRef.current, tagSequence: tagSequence.current, version: 5 });
     const url = new URL(location.href);
@@ -241,6 +245,7 @@ function StudioApp() {
       return item;
     }));
     if (row.lastFrame) setPrompt((value) => withLastFrameSentence(value, row.tag, false));
+    if (next === 'first_frame' && ratio === '21:9') setRatio('16:9');
   }
   function setLastFrame(row) {
     const on = !row.lastFrame;
@@ -310,6 +315,7 @@ function StudioApp() {
     if (extras.role === 'first_frame') {
       added.forEach(({ row }) => { row.role = 'first_frame'; });
       refsRef.current = refsRef.current.map((item) => item.role === 'first_frame' ? { ...item, role: 'reference_image' } : item);
+      if (ratio === '21:9') setRatio('16:9');
     }
     writeLocal(DRAFT_KEY, { ...readLocal(DRAFT_KEY, {}), tagSequence: tagSequence.current });
     refsRef.current = refsRef.current.concat(added.map(({ row }) => row));
@@ -353,10 +359,11 @@ function StudioApp() {
     const requestId = crypto.randomUUID(); rememberRequest(requestId);
     const remote = refs.filter((row) => /^https:/.test(row.path)), local = refs.filter((row) => !/^https:/.test(row.path));
     const ordered = remote.concat(local);
-    const optimistic = { id: '', status: 'queued', created_at: new Date().toISOString(), model, ratio, duration_seconds: duration, estimate_usd: estimate };
+    const sentRatio = firstFrameOn && ratio === '21:9' ? '16:9' : ratio;
+    const optimistic = { id: '', status: 'queued', created_at: new Date().toISOString(), model, ratio: sentRatio, duration_seconds: duration, estimate_usd: estimate };
     setJob(optimistic); setView('result'); window.scrollTo({ top: 0, behavior: 'instant' });
     try {
-      const body = await post('ai_video_generate_start', { prompt_mode: 'simple', prompt, model, ratio, duration_seconds: duration, resolution: '720p', generate_audio: generateAudio, tid: tid || null, client_request_id: requestId, ref_urls: remote.map((row) => row.path), ref_paths: local.map((row) => row.path), ref_roles: ordered.map((row) => row.role), ref_tags: ordered.map((row) => row.tag), ref_durations: ordered.map((row) => row.seconds || 0) });
+      const body = await post('ai_video_generate_start', { prompt_mode: 'simple', prompt, model, ratio: sentRatio, duration_seconds: duration, resolution: '720p', generate_audio: generateAudio, tid: tid || null, client_request_id: requestId, ref_urls: remote.map((row) => row.path), ref_paths: local.map((row) => row.path), ref_roles: ordered.map((row) => row.role), ref_tags: ordered.map((row) => row.tag), ref_durations: ordered.map((row) => row.seconds || 0) });
       if (!body.job?.id) throw Object.assign(new Error('submission_unknown'), { uncertain: true });
       rememberRequest(''); chooseJob(body.job);
       if (body.worker_warning) setConnection('delayed');
@@ -378,9 +385,9 @@ function StudioApp() {
       const attached = refsFromJob(current);
       refsRef.current.forEach((item) => { if (item.preview?.startsWith('blob:')) URL.revokeObjectURL(item.preview); });
       const nextModel = simpleModelSettings(current.model).id;
-      const allowed = nextModel === 'wan3.0' ? RATIOS.filter((item) => item !== '21:9') : RATIOS;
+      const allowed = nextModel === 'wan3.0' || attached.some((item) => item.role === 'first_frame') ? RATIOS.filter((item) => item !== '21:9') : RATIOS;
       setRefs(attached); setPrompt(jobPrompt(current)); setModel(nextModel);
-      setRatio(allowed.includes(current.ratio) ? current.ratio : '9:16');
+      setRatio(allowed.includes(current.ratio) ? current.ratio : '16:9');
       setDuration(current.duration_seconds || 6);
       setGenerateAudio(current.generate_audio !== false);
       setView('create'); setSheet(''); window.scrollTo({ top: 0, behavior: 'instant' });
@@ -439,7 +446,7 @@ function StudioApp() {
   const heading = resultReady ? 'Video siap' : state.phase === 'failed' ? 'Video gagal' : state.phase === 'unconfirmed' ? 'Periksa pengiriman' : state.canSync ? 'Cek status video' : state.phase === 'cancelled' ? 'Dibatalkan' : state.phase === 'saving' ? 'Menyimpan video' : job ? 'Membuat video' : 'Hasil video';
   const resultDetail = state.phase === 'unconfirmed' ? 'Permintaan mungkin sudah diterima dan memakai saldo.' : state.phase === 'failed' ? errorText(job?.error_code, job?.model) : state.canSync ? 'Status belum terkonfirmasi.' : state.phase === 'stale' ? 'Masih menunggu kabar terbaru.' : state.phase === 'saving' ? 'Hasil render sedang disimpan.' : state.active ? 'Biasanya beberapa menit.' : '';
   const unknown = pendingId && !submitting;
-  const settingsLabel = ratio + (generateAudio ? '' : ' senyap') + ' ' + duration + ' dtk';
+  const settingsLabel = (firstFrameOn ? 'ikut frame' : ratio) + (generateAudio ? '' : ' senyap') + ' ' + duration + ' dtk';
   return <div className="sv-app" data-view={view}>
     <header className="sv-header"><a className="sv-brand" href="/admin" aria-label="Kembali ke admin"><img src="/assets/ads/logo-cat-mark.png" alt=""/><span>Video</span></a><div className="sv-header-actions">{job && view === 'create' ? <button className="sv-text-button sv-mobile-only" onClick={() => setView('result')}>{isActiveJob(job) ? <Icon name="spin" size={16}/> : null}Hasil</button> : null}<button className="sv-text-button" onClick={() => setSheet('history')}><Icon name="history" size={18}/>Riwayat</button></div></header>
     {connection === 'offline' || connection === 'delayed' ? <div className="sv-connection" role="status"><Icon name="warning" size={17}/><span>{connection === 'offline' ? 'Koneksi terputus.' : 'Pembaruan status terlambat.'}</span><button onClick={() => pollRef.current?.()}>Cek lagi</button></div> : null}
@@ -489,7 +496,7 @@ function StudioApp() {
         </> : <div className="sv-empty-preview"><Icon name="film" size={44}/><span>Videomu tampil di sini</span></div>}
       </section>
     </main>
-    {sheet === 'settings' ? <Sheet title="Pengaturan video" close={() => setSheet('')}><fieldset><legend>Format</legend><div className="sv-choice-row">{formatOptions.map((item) => <button type="button" key={item} aria-pressed={ratio === item} onClick={() => setRatio(item)}><span className={'sv-format-shape ratio-' + item.replace(':', '-')}/><span>{item}</span></button>)}</div></fieldset><fieldset><legend>Durasi</legend><div className="sv-duration-row">{DURATIONS.map((item) => <button key={item} type="button" aria-pressed={duration === item} onClick={() => setDuration(item)}>{item} dtk</button>)}</div></fieldset><fieldset><legend>Suara</legend><button type="button" className="sv-toggle" aria-pressed={generateAudio} onClick={() => setGenerateAudio(!generateAudio)}>{generateAudio ? 'Suara hidup' : 'Tanpa suara'}</button>{refs.some((row) => row.kind === 'audio') ? <p className="sv-hint">Audio terpasang memaksa suara tetap hidup saat generate.</p> : null}</fieldset><div className="sv-settings-note"><span>{modelSettings.label} · 720p</span>{studio?.wallet?.value != null ? <span>Saldo {money(studio.wallet.value)}</span> : null}</div><button className="sv-download sv-full" onClick={() => setSheet('')}>Selesai</button></Sheet> : null}
+    {sheet === 'settings' ? <Sheet title="Pengaturan video" close={() => setSheet('')}><fieldset><legend>Format</legend><div className="sv-choice-row">{firstFrameOn ? <button type="button" aria-pressed={true} disabled><span className="sv-format-shape ratio-adaptive"/><span>ikut frame</span></button> : formatOptions.map((item) => <button type="button" key={item} aria-pressed={ratio === item} onClick={() => setRatio(item)}><span className={'sv-format-shape ratio-' + item.replace(':', '-')}/><span>{item}</span></button>)}</div></fieldset><fieldset><legend>Durasi</legend><div className="sv-duration-row">{DURATIONS.map((item) => <button key={item} type="button" aria-pressed={duration === item} onClick={() => setDuration(item)}>{item} dtk</button>)}</div></fieldset><fieldset><legend>Suara</legend><button type="button" className="sv-toggle" aria-pressed={generateAudio} onClick={() => setGenerateAudio(!generateAudio)}>{generateAudio ? 'Suara hidup' : 'Tanpa suara'}</button>{refs.some((row) => row.kind === 'audio') ? <p className="sv-hint">Audio terpasang memaksa suara tetap hidup saat generate.</p> : null}</fieldset><div className="sv-settings-note"><span>{modelSettings.label} · 720p</span>{studio?.wallet?.value != null ? <span>Saldo {money(studio.wallet.value)}</span> : null}</div><button className="sv-download sv-full" onClick={() => setSheet('')}>Selesai</button></Sheet> : null}
     {sheet === 'preflight' ? <Sheet title="Periksa referensi" close={() => setSheet('')}><p className="sv-hint is-warn">Frame awal memakai gambar yang mirip character sheet. Seedance bisa merender plat panel, bukan shot.</p><button className="sv-download sv-full" onClick={() => { preflightRef.current = true; setSheet(''); start(); }}>Lanjut generate</button></Sheet> : null}
     {sheet === 'history' ? <Sheet title="Riwayat video" close={() => setSheet('')}><div className="sv-history">{studio?.jobs?.length ? studio.jobs.map((row) => { const status = jobState(row); return <button key={row.id} className="sv-history-row" onClick={() => chooseJob(row)}><span className={'sv-history-symbol ' + status.tone}><Icon name={status.active ? 'spin' : status.phase === 'ready' ? 'play' : status.phase === 'failed' ? 'warning' : 'film'}/></span><span className="sv-history-copy"><span>{jobPrompt(row).slice(0, 100) || 'Video'}</span><small>{status.phase === 'ready' ? 'Selesai' : status.phase === 'failed' ? 'Gagal' : status.active ? 'Diproses' : status.label}</small></span><span className="sv-history-duration">{row.duration_seconds} dtk</span></button>; }) : <p className="sv-no-history">Belum ada video.</p>}</div></Sheet> : null}
   </div>;

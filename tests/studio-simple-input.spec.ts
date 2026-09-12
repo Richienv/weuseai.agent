@@ -159,6 +159,8 @@ test('Seedance first_frame stays a scene-still role and last_frame is rejected',
   }
   const input = parseOperatorStartInput(body)
   assert.deepEqual(input.refRoles, ['first_frame'])
+  assert.throws(() => parseOperatorStartInput({ ...body, ratio: '21:9' }), /invalid_operator_ratio/)
+  assert.throws(() => parseEdge({ ...body, ratio: '21:9' }), /invalid_operator_ratio/)
   assert.throws(() => parseOperatorStartInput({ ...body, ref_roles: ['last_frame'] }), /invalid_operator_ref_role/)
   assert.throws(() => parseOperatorStartInput({ ...body, ref_roles: ['end_image'] }), /invalid_operator_ref_role/)
 })

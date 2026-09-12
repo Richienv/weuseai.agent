@@ -386,6 +386,12 @@ try {
   await page.getByRole('button', { name: 'Frame awal', exact: true }).click();
   assert.equal(await page.locator('[data-role=first_frame]').count(), 1);
   await page.getByText('Frame awal memakai gambar yang mirip character sheet.', { exact: false }).waitFor();
+  await page.getByRole('button', { name: 'ikut frame 8 dtk' }).waitFor();
+  await page.getByRole('button', { name: 'ikut frame 8 dtk' }).click();
+  await page.getByRole('dialog', { name: 'Pengaturan video' }).waitFor();
+  assert.equal(await page.getByRole('button', { name: '21:9', exact: true }).count(), 0);
+  assert.equal(await page.getByRole('button', { name: 'ikut frame', exact: true }).count(), 1);
+  await page.getByRole('button', { name: 'Selesai', exact: true }).click();
   await page.getByRole('button', { name: 'Frame akhir', exact: true }).click();
   assert.match(await promptField.inputValue(), /@Image1 is the last frame/);
   assert.equal(await page.locator('[data-role=first_frame]').count(), 0);
