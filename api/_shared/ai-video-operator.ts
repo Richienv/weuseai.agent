@@ -476,6 +476,7 @@ export function parseOperatorStartInput(body: Record<string, unknown>): AiVideoO
   if (refRoles.filter((role) => role === 'first_frame').length > 1) {
     throw new Error('invalid_operator_ref_role')
   }
+  if (refRoles.includes('first_frame') && body.ratio === '21:9') throw new Error('invalid_operator_ratio')
   const imageCount = refRoles.filter((role) => role === 'first_frame' || role === 'reference_image').length
   const videoCount = refRoles.filter((role) => role === 'reference_video').length
   const audioCount = refRoles.filter((role) => role === 'reference_audio').length

@@ -152,6 +152,7 @@ svg { flex-shrink:0; }
 .sv-format-shape.ratio-16-9 { width:28px; height:18px; margin:5px 0; }
 .sv-format-shape.ratio-21-9 { width:32px; height:12px; margin:8px 0; }
 .sv-format-shape.ratio-1-1 { width:24px; height:24px; margin:2px 0; }
+.sv-format-shape.ratio-adaptive { width:22px; height:22px; margin:3px 0; border-style:dashed; }
 .sv-toggle { width:100%; min-height:46px; border:1px solid #383d47; border-radius:10px; background:transparent; font-size:13px; }
 .sv-duration-row { display:grid; grid-template-columns:repeat(3,1fr); gap:9px; }
 .sv-duration-row button { border:1px solid #383d47; border-radius:10px; background:transparent; min-height:46px; font-size:13px; }

@@ -67,6 +67,7 @@ test('simple studio unlocks Seedance 2.5 without restoring the operator desk', (
   assert.match(generateHtml, /seedance-1/)
   assert.match(generateJsx, /\[4, 6, 8, 10, 15, 30\]/)
   assert.match(generateJsx, /21:9/)
+  assert.match(generateJsx, /ikut frame/)
   assert.match(generateJsx, /generate_audio: generateAudio/)
   assert.match(generateJsx, /Frame awal/)
   assert.match(generateJsx, /Frame akhir/)

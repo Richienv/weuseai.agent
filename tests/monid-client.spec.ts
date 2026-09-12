@@ -236,11 +236,13 @@ test('rejects prompts above the current 6000 character provider contract before 
 
 test('first-frame generation inherits the source ratio and asks for a browser playable MP4', async () => {
   let body: any
-  await createMonidSeedanceRun({ plan: PLAN, signedInputUrls: ['https://files.example/frame.png'], refRoles: ['first_frame'] },
+  await createMonidSeedanceRun({ plan: { ...PLAN, ratio: '21:9' }, signedInputUrls: ['https://files.example/frame.png'], refRoles: ['first_frame'] },
     'monid-key-16chars+', resolveMonidConfig(), async (_url, init) => {
       body = JSON.parse(String(init?.body)).input.body
       return new Response(JSON.stringify({ runId: 'run-first-frame' }))
     })
   assert.equal(body.ratio, 'adaptive')
   assert.equal(body.output_format, 'mp4')
+  assert.equal(body.generate_audio, false)
+  assert.equal('last_frame' in body, false)
 })
