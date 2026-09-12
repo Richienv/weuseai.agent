@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { mediaKind, looksLikeSheet, withLastFrameSentence } from '../admin/assets/studio-media.js'
+
+const { mediaKind, looksLikeSheet, withLastFrameSentence } = await import(new URL('../admin/assets/studio-media.js', import.meta.url).href)
 
 test('simple mediaKind unlocks video without stealing audio/mp4', () => {
   assert.equal(mediaKind({ type: 'video/mp4', name: 'motion.mp4' }), 'video')
