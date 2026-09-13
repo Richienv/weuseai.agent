@@ -108,6 +108,9 @@ export async function createMonidSeedanceRun(input: {
   if (audios > operatorMaxAudioRefs(input.plan.model)) throw new Error('operator_audio_cap')
   const wan = input.plan.model === 'wan3.0'
   if (wan && input.plan.ratio === '21:9') throw new Error('invalid_operator_ratio')
+  if (input.plan.ratio === '21:9' && media.some((item) => item.role === 'first_frame')) {
+    throw new Error('invalid_operator_ratio')
+  }
   if (wan && media.some((item) => item.role === 'first_frame') && media.length > 1) throw new Error('invalid_operator_ref_combination')
   const response = await fetch(`${config.baseUrl}/v1/run`, {
     method: 'POST',

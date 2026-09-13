@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
-import { MONID_ENDPOINTS as apiMonidEndpoints } from '../api/_shared/monid-run.ts'
+import {
+  createMonidSeedanceRun as createApiMonidSeedanceRun,
+  MONID_ENDPOINTS as apiMonidEndpoints,
+} from '../api/_shared/monid-run.ts'
 import {
   createMonidSeedanceRun,
   getMonidWalletBalance,
@@ -234,15 +237,42 @@ test('rejects prompts above the current 6000 character provider contract before 
   assert.equal(requests, 0)
 })
 
-test('first-frame generation inherits the source ratio and asks for a browser playable MP4', async () => {
-  let body: any
-  await createMonidSeedanceRun({ plan: { ...PLAN, ratio: '21:9' }, signedInputUrls: ['https://files.example/frame.png'], refRoles: ['first_frame'] },
-    'monid-key-16chars+', resolveMonidConfig(), async (_url, init) => {
-      body = JSON.parse(String(init?.body)).input.body
-      return new Response(JSON.stringify({ runId: 'run-first-frame' }))
-    })
+test('21:9 first-frame generation is rejected before a provider request', async () => {
+  let requests = 0
+  const input = {
+    plan: { ...PLAN, ratio: '21:9' },
+    signedInputUrls: ['https://files.example/frame.png'],
+    refRoles: ['first_frame'],
+  } as const
+  await assert.rejects(() => createMonidSeedanceRun(input, 'monid-key-16chars+', resolveMonidConfig(), async () => {
+    requests++
+    return new Response(JSON.stringify({ runId: 'run-first-frame' }))
+  }), /invalid_operator_ratio/)
+  await assert.rejects(() => createApiMonidSeedanceRun(input, 'monid-key-16chars+'), /invalid_operator_ratio/)
+  assert.equal(requests, 0)
+})
+
+test('9:16 first-frame generation becomes adaptive without invented controls', async (t) => {
+  const bodies: Array<Record<string, unknown>> = []
+  const fetcher = async (_url: string, init?: RequestInit) => {
+    bodies.push((JSON.parse(String(init?.body)) as { input: { body: Record<string, unknown> } }).input.body)
+    return new Response(JSON.stringify({ runId: 'run-first-frame' }))
+  }
+  await createMonidSeedanceRun({ plan: PLAN, signedInputUrls: ['https://files.example/frame.png'], refRoles: ['first_frame'] },
+    'monid-key-16chars+', resolveMonidConfig(), fetcher)
+  t.mock.method(globalThis, 'fetch', fetcher)
+  await createApiMonidSeedanceRun({
+    plan: PLAN,
+    signedInputUrls: ['https://files.example/frame.png'],
+    refRoles: ['first_frame'],
+  }, 'monid-key-16chars+')
+  assert.deepEqual(bodies[0], bodies[1])
+  const body = bodies[0]
   assert.equal(body.ratio, 'adaptive')
   assert.equal(body.output_format, 'mp4')
   assert.equal(body.generate_audio, false)
   assert.equal('last_frame' in body, false)
+  assert.equal('camera_fixed' in body, false)
+  assert.equal('seed' in body, false)
+  assert.equal('mode' in body, false)
 })

@@ -25,10 +25,101 @@ export function withLastFrameSentence(prompt, tag, on) {
   return new RegExp(tag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ' is the last frame', 'i').test(prompt || '') ? String(prompt) : (cleaned ? cleaned + ' ' : '') + mark;
 }
 function stem(file) { return (file.name || 'reference').replace(/\.[^.]+$/, '').replace(/[^A-Za-z0-9_-]/g, '_').slice(0, 50) || 'reference'; }
-async function readImage(file) {
-  if (typeof createImageBitmap === 'function') {
-    try { return await createImageBitmap(file); } catch {}
+function four(bytes, i) { return String.fromCharCode(bytes[i], bytes[i + 1], bytes[i + 2], bytes[i + 3]); }
+function be16(bytes, i) { return (bytes[i] << 8) | bytes[i + 1]; }
+function be32(bytes, i) { return ((bytes[i] << 24) | (bytes[i + 1] << 16) | (bytes[i + 2] << 8) | bytes[i + 3]) >>> 0; }
+function le16(bytes, i) { return bytes[i] | (bytes[i + 1] << 8); }
+function le32(bytes, i) { return bytes[i] | (bytes[i + 1] << 8) | (bytes[i + 2] << 16) | (bytes[i + 3] << 24); }
+function photoCap() {
+  const memory = typeof navigator !== 'undefined' ? Number(navigator.deviceMemory) : 0;
+  const phone = typeof matchMedia === 'function' && matchMedia('(max-width: 680px)').matches;
+  return (memory > 0 && memory <= 4) || phone ? 2048 : 4096;
+}
+function isHeic(bytes) {
+  if (bytes.length < 12 || four(bytes, 4) !== 'ftyp') return false;
+  const end = Math.min(bytes.length, be32(bytes, 0) || 32);
+  for (let i = 8; i + 4 <= end; i += 4) {
+    if (i !== 12 && /^(heic|heix|mif1|msf1)$/.test(four(bytes, i))) return true;
   }
+  return false;
+}
+function jpegOrientation(bytes) {
+  let i = 2;
+  while (i + 8 < bytes.length) {
+    if (bytes[i] !== 0xFF) { i++; continue; }
+    const marker = bytes[i + 1];
+    if (marker === 0xD8 || marker === 0x01 || (marker >= 0xD0 && marker <= 0xD9)) { i += 2; continue; }
+    const size = be16(bytes, i + 2);
+    if (marker === 0xE1 && size > 8 && i + 10 < bytes.length && four(bytes, i + 4) === 'Exif') {
+      const tiff = i + 10, little = bytes[tiff] === 0x49;
+      const u16 = (o) => little ? le16(bytes, o) : be16(bytes, o);
+      const u32 = (o) => little ? le32(bytes, o) : be32(bytes, o);
+      if (tiff + 8 < bytes.length) {
+        const ifd = tiff + u32(tiff + 4), count = ifd + 2 < bytes.length ? u16(ifd) : 0;
+        for (let t = 0; t < count; t++) {
+          const entry = ifd + 2 + t * 12;
+          if (entry + 12 <= bytes.length && u16(entry) === 0x0112) return u16(entry + 8);
+        }
+      }
+    }
+    if (marker >= 0xC0 && marker <= 0xCF && marker !== 0xC4 && marker !== 0xC8 && marker !== 0xCC) break;
+    i += 2 + size;
+  }
+  return 1;
+}
+function imageSize(bytes) {
+  if (bytes[0] === 0xFF && bytes[1] === 0xD8) {
+    let i = 2;
+    while (i + 8 < bytes.length) {
+      if (bytes[i] !== 0xFF) { i++; continue; }
+      const marker = bytes[i + 1];
+      if (marker === 0xD8 || marker === 0x01 || (marker >= 0xD0 && marker <= 0xD9)) { i += 2; continue; }
+      const size = be16(bytes, i + 2);
+      if (marker >= 0xC0 && marker <= 0xCF && marker !== 0xC4 && marker !== 0xC8 && marker !== 0xCC && size >= 7) {
+        let width = be16(bytes, i + 7), height = be16(bytes, i + 5);
+        if (jpegOrientation(bytes) >= 5) { const swap = width; width = height; height = swap; }
+        return width && height ? { width, height } : null;
+      }
+      i += 2 + size;
+    }
+    return null;
+  }
+  if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47 && four(bytes, 12) === 'IHDR') {
+    const width = be32(bytes, 16), height = be32(bytes, 20);
+    return width && height ? { width, height } : null;
+  }
+  if (four(bytes, 0) === 'RIFF' && four(bytes, 8) === 'WEBP') {
+    const kind = four(bytes, 12);
+    if (kind === 'VP8X' && bytes.length >= 30) return { width: 1 + bytes[24] + (bytes[25] << 8) + (bytes[26] << 16), height: 1 + bytes[27] + (bytes[28] << 8) + (bytes[29] << 16) };
+    if (kind === 'VP8 ' && bytes.length >= 30) return { width: bytes[26] | ((bytes[27] & 0x3f) << 8), height: bytes[28] | ((bytes[29] & 0x3f) << 8) };
+    if (kind === 'VP8L' && bytes.length >= 25) {
+      const bits = bytes[21] | (bytes[22] << 8) | (bytes[23] << 16) | (bytes[24] << 24);
+      return { width: (bits & 0x3fff) + 1, height: ((bits >> 14) & 0x3fff) + 1 };
+    }
+  }
+  if (isHeic(bytes)) {
+    let width = 0, height = 0, rotated = false;
+    for (let i = 8; i + 16 < bytes.length; i++) {
+      if (four(bytes, i) === 'ispe' && !width) {
+        const nextWidth = be32(bytes, i + 8), nextHeight = be32(bytes, i + 12);
+        if (nextWidth > 0 && nextHeight > 0 && nextWidth < 65536 && nextHeight < 65536) { width = nextWidth; height = nextHeight; }
+      }
+      if (four(bytes, i) === 'irot' && ((bytes[i + 8] & 3) === 1 || (bytes[i + 8] & 3) === 3)) rotated = true;
+    }
+    if (width && height) return rotated ? { width: height, height: width } : { width, height };
+  }
+  return null;
+}
+function photoFits(width, height, cap) {
+  return width >= 240 && height >= 240 && Math.max(width / height, height / width) <= 8 && Math.max(width, height) <= cap;
+}
+function keepNamed(file, name, type) {
+  return file.name === name ? file : new File([file], name, { type: type || file.type });
+}
+function signName(file, ext) {
+  return new RegExp('^[A-Za-z0-9._-]{1,80}\\' + ext + '$', 'i').test(file.name) ? file.name : stem(file) + ext;
+}
+async function readImageElement(file) {
   const url = URL.createObjectURL(file);
   try {
     return await new Promise((resolve, reject) => {
@@ -39,14 +130,59 @@ async function readImage(file) {
     });
   } finally { URL.revokeObjectURL(url); }
 }
+async function readImage(file, width, height) {
+  const cap = photoCap();
+  if (typeof createImageBitmap === 'function' && width && height) {
+    const scale = Math.min(1, cap / Math.max(width, height));
+    try {
+      return await createImageBitmap(file, {
+        resizeWidth: Math.max(1, Math.round(width * scale)),
+        resizeHeight: Math.max(1, Math.round(height * scale)),
+        imageOrientation: 'from-image',
+      });
+    } catch {}
+  }
+  return readImageElement(file);
+}
+async function jpegThumb(source, width, height) {
+  const scale = 128 / Math.max(width, height || 1);
+  const thumb = document.createElement('canvas');
+  thumb.width = Math.max(1, Math.round(width * scale)); thumb.height = Math.max(1, Math.round(height * scale));
+  const context = thumb.getContext('2d');
+  if (typeof Blob !== 'undefined' && source instanceof Blob && typeof createImageBitmap === 'function') {
+    try {
+      const bitmap = await createImageBitmap(source, { resizeWidth: thumb.width, resizeHeight: thumb.height, imageOrientation: 'from-image' });
+      try { context.drawImage(bitmap, 0, 0, thumb.width, thumb.height); }
+      finally { if (bitmap.close) bitmap.close(); }
+      return thumb.toDataURL('image/jpeg', .72);
+    } catch {}
+    const image = await readImageElement(source);
+    try { context.drawImage(image, 0, 0, thumb.width, thumb.height); }
+    finally { if (image.close) image.close(); }
+    return thumb.toDataURL('image/jpeg', .72);
+  }
+  context.drawImage(source, 0, 0, thumb.width, thumb.height);
+  return thumb.toDataURL('image/jpeg', .72);
+}
 async function preparePhoto(file) {
   if (!file.size || file.size > 20 * 1024 * 1024) throw new Error('photo_size');
-  const image = await readImage(file);
+  const cap = photoCap();
+  const head = new Uint8Array(await file.slice(0, Math.min(file.size, 131072)).arrayBuffer());
+  const heic = isHeic(head);
+  const parsed = imageSize(head);
+  const jpeg = !heic && file.type === 'image/jpeg' && head[0] === 0xFF && head[1] === 0xD8;
+  if (parsed && (Math.min(parsed.width, parsed.height) < 240 || Math.max(parsed.width / parsed.height, parsed.height / parsed.width) > 8)) {
+    throw new Error('photo_dimensions');
+  }
+  if (jpeg && parsed && photoFits(parsed.width, parsed.height, cap)) {
+    return { file: keepNamed(file, stem(file) + '.jpg', 'image/jpeg'), thumb: await jpegThumb(file, parsed.width, parsed.height), seconds: 0, width: parsed.width, height: parsed.height };
+  }
+  const image = await readImage(file, parsed?.width || 0, parsed?.height || 0);
   const width = image.naturalWidth || image.width;
   const height = image.naturalHeight || image.height;
   try {
     if (Math.min(width, height) < 240 || Math.max(width / height, height / width) > 8) throw new Error('photo_dimensions');
-    const scale = Math.min(1, 4096 / Math.max(width, height));
+    const scale = Math.min(1, cap / Math.max(width, height));
     const canvas = document.createElement('canvas');
     canvas.width = Math.round(width * scale); canvas.height = Math.round(height * scale);
     const context = canvas.getContext('2d');
@@ -54,24 +190,64 @@ async function preparePhoto(file) {
     context.drawImage(image, 0, 0, canvas.width, canvas.height);
     const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', .93));
     if (!blob) throw new Error('photo_decode');
-    const thumb = document.createElement('canvas');
-    const thumbScale = 128 / Math.max(width, height);
-    thumb.width = Math.round(width * thumbScale); thumb.height = Math.round(height * thumbScale);
-    thumb.getContext('2d').drawImage(canvas, 0, 0, thumb.width, thumb.height);
-    return { file: new File([blob], stem(file) + '.jpg', { type: 'image/jpeg' }), thumb: thumb.toDataURL('image/jpeg', .72), seconds: 0, width, height };
+    return { file: new File([blob], stem(file) + '.jpg', { type: 'image/jpeg' }), thumb: await jpegThumb(canvas, width, height), seconds: 0, width: parsed?.width || width, height: parsed?.height || height };
   } finally { if (image.close) image.close(); }
+}
+function wavSeconds(bytes) {
+  if (bytes.length < 44 || four(bytes, 0) !== 'RIFF' || four(bytes, 8) !== 'WAVE') return 0;
+  let byteRate = 0, data = 0, i = 12;
+  while (i + 8 <= bytes.length) {
+    const id = four(bytes, i), size = le32(bytes, i + 4);
+    if (id === 'fmt ' && size >= 16 && i + 28 <= bytes.length) byteRate = le32(bytes, i + 16);
+    else if (id === 'data') data = size;
+    const step = 8 + size + (size & 1);
+    if (step <= 0) break;
+    i += step;
+  }
+  return byteRate > 0 && data > 0 ? data / byteRate : 0;
+}
+async function metadataSeconds(file, error) {
+  const url = URL.createObjectURL(file);
+  const node = document.createElement('audio');
+  node.preload = 'metadata';
+  try {
+    await new Promise((resolve, reject) => {
+      const fail = () => reject(new Error(error));
+      node.addEventListener('loadedmetadata', () => resolve(), { once: true });
+      node.addEventListener('error', fail, { once: true });
+      node.src = url;
+    });
+    let seconds = node.duration;
+    if (!Number.isFinite(seconds)) {
+      await new Promise((resolve) => {
+        node.addEventListener('seeked', () => resolve(), { once: true });
+        window.setTimeout(resolve, 800);
+        node.currentTime = 1e101;
+      });
+      seconds = node.duration;
+    }
+    return seconds;
+  } finally { node.removeAttribute('src'); node.load(); URL.revokeObjectURL(url); }
 }
 async function prepareAudio(file) {
   if (!file.size || file.size > 15 * 1024 * 1024) throw new Error('audio_size');
+  if (file.type === 'audio/wav') {
+    const seconds = wavSeconds(new Uint8Array(await file.slice(0, Math.min(file.size, 262144)).arrayBuffer()));
+    if (seconds >= 1 && seconds <= 30) return { file: keepNamed(file, stem(file) + '.wav', 'audio/wav'), seconds, thumb: '' };
+  }
+  const hinted = await metadataSeconds(file, 'audio_decode').catch(() => 0);
+  // Decode the supported range; the composer applies the currently selected model's limits.
+  if (Number.isFinite(hinted) && hinted > 0 && (hinted < 1 || hinted > 30)) throw new Error('audio_duration');
   const Context = window.AudioContext || window.webkitAudioContext;
   if (!Context) throw new Error('audio_decode');
   const context = new Context();
   let audio;
-  try { audio = await context.decodeAudioData(await file.arrayBuffer()); }
-  catch { throw new Error('audio_decode'); }
+  try {
+    await context.resume();
+    audio = await context.decodeAudioData(await file.arrayBuffer());
+  } catch { throw new Error('audio_decode'); }
   finally { await context.close(); }
   const seconds = audio.duration;
-  // Decode the supported range; the composer applies the currently selected model's limits.
   if (!Number.isFinite(seconds) || seconds < 1 || seconds > 30) throw new Error('audio_duration');
   // Upload a real WAV rather than relabeling an iPhone M4A or relying on upstream decoding.
   const channels = Math.min(audio.numberOfChannels, 2);
@@ -129,12 +305,13 @@ async function prepareVideo(file) {
   const name = file.name || 'reference.mp4';
   if (/\.mp4$/i.test(name) || file.type === 'video/mp4') {
     const header = new Uint8Array(await file.slice(0, 12).arrayBuffer());
-    if (header.length < 12 || String.fromCharCode(...header.slice(4, 8)) !== 'ftyp') throw new Error('video_decode');
+    if (header.length < 12 || four(header, 4) !== 'ftyp') throw new Error('video_decode');
   }
   const ext = /\.mov$/i.test(name) ? '.mov' : /\.webm$/i.test(name) ? '.webm' : '.mp4';
   const type = ext === '.mov' ? 'video/quicktime' : ext === '.webm' ? 'video/webm' : 'video/mp4';
   const meta = await readVideoMeta(file);
-  return { file: new File([file], stem(file) + ext, { type }), ...meta };
+  const nextName = signName(file, ext);
+  return { file: file.name === nextName ? file : new File([file], nextName, { type }), ...meta };
 }
 export async function captureVideoFrame(video, atEnd = true) {
   if (!video || !video.videoWidth) throw new Error('photo_decode');
@@ -166,7 +343,11 @@ export function uploadMedia(slot, file, onProgress, signal) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     const abort = () => xhr.abort();
+    const tick = typeof requestAnimationFrame === 'function' ? requestAnimationFrame : (fn) => setTimeout(fn, 0);
+    const stop = typeof cancelAnimationFrame === 'function' ? cancelAnimationFrame : clearTimeout;
+    let frame = 0, percent = -1;
     const finish = (error) => {
+      if (frame) { stop(frame); frame = 0; }
       signal?.removeEventListener('abort', abort);
       error ? reject(error) : resolve();
     };
@@ -175,7 +356,12 @@ export function uploadMedia(slot, file, onProgress, signal) {
     xhr.timeout = 90000;
     xhr.setRequestHeader('content-type', file.type);
     if (slot.token) xhr.setRequestHeader('authorization', 'Bearer ' + slot.token);
-    xhr.upload.onprogress = (event) => { if (event.lengthComputable) onProgress(Math.min(99, Math.round(event.loaded / event.total * 100))); };
+    xhr.upload.onprogress = (event) => {
+      if (!event.lengthComputable) return;
+      percent = Math.min(99, Math.round(event.loaded / event.total * 100));
+      if (frame) return;
+      frame = tick(() => { frame = 0; if (percent >= 0) onProgress(percent); });
+    };
     xhr.onload = () => finish(xhr.status >= 200 && xhr.status < 300 ? null : new Error('upload_failed'));
     xhr.onerror = () => finish(new Error('upload_failed'));
     xhr.ontimeout = () => finish(new Error('upload_timeout'));
@@ -200,10 +386,10 @@ export async function downloadVideo(url, filename) {
   }
   const blob = new Blob(chunks, { type: 'video/mp4' });
   const header = new Uint8Array(await blob.slice(0, 12).arrayBuffer());
-  if (header.length < 12 || String.fromCharCode(...header.slice(4, 8)) !== 'ftyp') throw new Error('download_failed');
+  if (header.length < 12 || four(header, 4) !== 'ftyp') throw new Error('download_failed');
   const local = URL.createObjectURL(blob);
   const anchor = document.createElement('a'); anchor.href = local; anchor.download = filename;
   document.body.append(anchor); anchor.click(); anchor.remove();
-  window.setTimeout(() => URL.revokeObjectURL(local), 60000);
+  window.setTimeout(() => URL.revokeObjectURL(local), 0);
   return blob;
 }

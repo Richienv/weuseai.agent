@@ -22,6 +22,11 @@ test('unconfirmed stale status never claims upstream failure', () => {
   assert.equal(state.phase, 'stale')
   assert.equal(state.active, true)
 })
+test('fresh queued jobs stay in the queue after two minutes', () => {
+  const state = jobState({ ...job, status: 'queued', attempt: 0, updated_at: '2026-09-01T00:00:00Z' }, Date.parse('2026-09-01T00:03:00Z'))
+  assert.equal(state.phase, 'queued')
+  assert.equal(state.label, 'Dalam antrean')
+})
 test('cancellation is offered only before the provider accepts the job', () => {
   assert.equal(mayCancelJob({ ...job, can_cancel: true }), false)
   assert.equal(mayCancelJob({ ...job, status: 'submitted', can_cancel: true }), false)

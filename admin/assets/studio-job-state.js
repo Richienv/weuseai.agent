@@ -13,11 +13,15 @@ export function jobState(job, now = Date.now()) {
   }
   if (job.status === 'succeeded' && job.result_path) return { phase: 'ready', label: 'Video siap', detail: 'Video sudah tersimpan. Putar, unduh, atau simpan prompt ke library.', tone: 'success', step: 4, active: false };
   if (job.phase === 'saving' || job.result_url || job.status === 'succeeded') return { phase: 'saving', label: 'Menyimpan video', detail: 'Render selesai. Salinan video sedang disimpan agar bisa diakses kembali.', tone: 'progress', step: 3, active: true };
-  if (age > 120000 || job.error_code === 'operator_poll_unavailable') return { phase: 'stale', label: 'Menunggu kabar provider', detail: 'Belum ada pembaruan terbaru. Ini belum berarti gagal; jangan generate ulang dulu.', tone: 'warning', step: job.status === 'running' ? 2 : 1, active: true };
   if (job.status === 'queued' && job.attempt > 0) return { phase: 'sending', label: 'Mengirim ke provider', detail: 'Permintaan sedang dikirim. Tunggu konfirmasi sebelum membuat ulang.', tone: 'progress', step: 0, active: true };
+  if (job.status === 'queued') return { phase: 'queued', label: 'Dalam antrean', detail: job.error_code ? 'Ada kendala pada antrean. Status akan diperbarui setelah diperiksa.' : 'Job tersimpan dan menunggu dikirim ke provider.', tone: job.error_code ? 'warning' : 'progress', step: 0, active: true };
+  if (age > 120000 || job.error_code === 'operator_poll_unavailable') return { phase: 'stale', label: 'Menunggu kabar provider', detail: 'Belum ada pembaruan terbaru. Ini belum berarti gagal; jangan generate ulang dulu.', tone: 'warning', step: job.status === 'running' ? 2 : 1, active: true };
   if (job.status === 'running') return { phase: 'running', label: 'Sedang render', detail: 'Provider sedang membuat video. Proses biasanya membutuhkan beberapa menit.', tone: 'progress', step: 2, active: true };
   if (job.status === 'submitted') return { phase: 'submitted', label: 'Diterima provider', detail: 'Permintaan sudah diterima. Menunggu giliran render.', tone: 'progress', step: 1, active: true };
   return { phase: 'queued', label: 'Dalam antrean', detail: job.error_code ? 'Ada kendala pada antrean. Status akan diperbarui setelah diperiksa.' : 'Job tersimpan dan menunggu dikirim ke provider.', tone: job.error_code ? 'warning' : 'progress', step: 0, active: true };
+}
+export function historyLabel(job, now) {
+  return jobState(job, now).label;
 }
 export function isActiveJob(job) { return job && (['queued', 'submitted', 'running'].includes(job.status) || (job.status === 'succeeded' && !job.result_path)); }
 export function mayCancelJob(job) { return Boolean(job && job.status === 'queued' && job.can_cancel === true); }
