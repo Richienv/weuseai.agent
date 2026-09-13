@@ -1,7 +1,11 @@
-import { jobState, isActiveJob, mayCancelJob, elapsedTime } from './studio-job-state.js';
+import { jobState, isActiveJob, mayCancelJob, elapsedTime, JOB_STEPS, historyLabel } from './studio-job-state.js';
 import { referenceTagPrefix, missingReferenceTags, bindReferenceTags, SIMPLE_MODEL, SIMPLE_MODELS, SIMPLE_PROMPT_LIMIT, simpleModelSettings, simpleReferenceError, compileSimplePrompt, simplePromptText, simpleEstimate } from '../../api/_shared/ai-video-operator.ts';
 import { ReferencePrompt } from './studio-reference-editor.jsx';
-import { PHOTO_ACCEPT, AUDIO_ACCEPT, VIDEO_ACCEPT, mediaKind, prepareMedia, uploadMedia, downloadVideo, acceptForKind, looksLikeSheet, withLastFrameSentence, captureVideoFrame } from './studio-media.js';
+import { PHOTO_ACCEPT, AUDIO_ACCEPT, VIDEO_ACCEPT, mediaKind, prepareMedia, uploadMedia, acceptForKind, looksLikeSheet, withLastFrameSentence, captureVideoFrame } from './studio-media.js';
+import { bindVisualViewport, scrollIntoVisual } from './studio-phone-viewport.js';
+import { writePending, readPending, clearPending, writeJobSnapshot, readJobSnapshot } from './studio-phone-persist.js';
+import { rafProgress, bindPageLifecycle, markUploadingFailed } from './studio-phone-upload.js';
+import { saveVideoFile, teardownVideo, playerProps } from './studio-phone-save.js';
 
 const { useEffect, useRef, useState } = React;
 const DRAFT_KEY = 'weuseai.studio.draft';
@@ -107,6 +111,7 @@ function restoreRef(row) {
 }
 function StudioApp() {
   const [initial] = useState(() => readLocal(DRAFT_KEY, {}));
+  const [snapshot] = useState(() => readJobSnapshot());
   const [prompt, setPrompt] = useState(() => simplePromptText(String(initial.prompt || '')));
   const [model, setModel] = useState(SIMPLE_MODELS.includes(initial.selectedModel) ? initial.selectedModel : SIMPLE_MODEL);
   const modelRef = useRef(model);
@@ -123,13 +128,21 @@ function StudioApp() {
     const match = /^@(Image|Audio|Video)([1-9]\d{0,5})$/.exec(tag || '');
     if (match) tagSequence.current[match[1]] = Math.max(Number(tagSequence.current[match[1]]) || 0, Number(match[2]));
   }
-  const [selectedId, setSelectedId] = useState(() => new URLSearchParams(location.search).get('job_id') || initial.jobId || '');
-  const [view, setView] = useState(selectedId ? 'result' : 'create');
+  const [pendingId, setPendingId] = useState(() => readPending() || initial.pendingRequestId || '');
+  const [selectedId, setSelectedId] = useState(() => {
+    if (readPending() || initial.pendingRequestId) return '';
+    return new URLSearchParams(location.search).get('job_id') || snapshot?.id || initial.jobId || '';
+  });
+  const [view, setView] = useState(() => {
+    if (readPending() || initial.pendingRequestId) return 'create';
+    if (snapshot?.view === 'create' || snapshot?.view === 'result') return snapshot.view;
+    return (new URLSearchParams(location.search).get('job_id') || snapshot?.id || initial.jobId) ? 'result' : 'create';
+  });
   const [studio, setStudio] = useState(null);
   const [job, setJob] = useState(null);
   const [connection, setConnection] = useState('loading');
-  const [error, setError] = useState(initial.pendingRequestId ? 'submission_unknown' : '');
-  const [pendingId, setPendingId] = useState(initial.pendingRequestId || '');
+  const [error, setError] = useState(() => (readPending() || initial.pendingRequestId) ? 'submission_unknown' : '');
+  const [persistNotice, setPersistNotice] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [sheet, setSheet] = useState('');
   const [working, setWorking] = useState('');
@@ -142,9 +155,26 @@ function StudioApp() {
   const submittingRef = useRef(false), pendingRef = useRef(pendingId), selectedRef = useRef(selectedId), preflightRef = useRef(false);
   const refsRef = useRef(refs), cache = useRef(new Map()), uploads = useRef(new Map()), payloadDrafts = useRef(new Map());
   const loadRef = useRef(null), pollRef = useRef(null), failures = useRef(0), serial = useRef(0), alive = useRef(true);
+  const viewRef = useRef(view), jobRef = useRef(job);
   const tid = new URLSearchParams(location.search).get('tid') || '';
-  selectedRef.current = selectedId; refsRef.current = refs;
-  function rememberRequest(id) { pendingRef.current = id; setPendingId(id); writeLocal(DRAFT_KEY, { ...readLocal(DRAFT_KEY, {}), pendingRequestId: id }); }
+  selectedRef.current = selectedId; refsRef.current = refs; viewRef.current = view; jobRef.current = job;
+  function rememberRequest(id) {
+    pendingRef.current = id; setPendingId(id);
+    if (id) { if (writePending(id) === false) setPersistNotice(true); }
+    else clearPending();
+    writeLocal(DRAFT_KEY, { ...readLocal(DRAFT_KEY, {}), pendingRequestId: id });
+  }
+  function clearSelectedJob() {
+    selectedRef.current = ''; setSelectedId('');
+    const url = new URL(location.href);
+    url.searchParams.delete('job_id');
+    history.replaceState({}, '', url.pathname + url.search);
+  }
+  function showCreate() {
+    teardownVideo(player.current);
+    setView('create');
+    requestAnimationFrame(() => scrollIntoVisual(document.getElementById('studio-prompt')));
+  }
   function chooseJob(row) { selectedRef.current = row.id; setSelectedId(row.id); setJob(row); setView('result'); setSheet(''); setError(''); setDownloadState(''); }
   function changeModel(next) {
     setModel(next);
@@ -162,10 +192,24 @@ function StudioApp() {
   useEffect(() => {
     writeLocal(REFS_KEY, refs.map(({ path, name, kind, role, tag, seconds, thumb, status, lastFrame, width, height }) => ({ path, name, kind, role, tag, seconds, thumb, lastFrame: lastFrame === true, width: width || 0, height: height || 0, status: status === 'ready' ? 'ready' : 'failed' })));
   }, [refs]);
+  useEffect(() => {
+    if (!job?.id) return;
+    const next = jobState(job);
+    writeJobSnapshot({ ...job, view, label: next.label, phase: next.phase });
+  }, [job, view, job?.id, job?.status, job?.updated_at, job?.error_code]);
   useEffect(() => { const timer = setInterval(() => setClock(Date.now()), 1000); return () => clearInterval(timer); }, []);
   useEffect(() => () => { alive.current = false; uploads.current.forEach((controller) => controller.abort()); refsRef.current.forEach((row) => { if (row.preview?.startsWith('blob:')) URL.revokeObjectURL(row.preview); }); }, []);
   useEffect(() => { setPlaybackError(false); setDownloadState(''); }, [job?.id, job?.result_url]);
   useEffect(() => { preflightRef.current = false; }, [refs]);
+  useEffect(() => bindVisualViewport(), []);
+  useEffect(() => bindPageLifecycle({
+    onHide: () => {
+      markUploadingFailed(refsRef.current, patchRef);
+      const current = jobRef.current;
+      if (current?.id) writeJobSnapshot({ ...current, view: viewRef.current, label: jobState(current).label, phase: jobState(current).phase });
+    },
+    onShow: () => { loadRef.current?.(); },
+  }), []);
   async function post(action, extra = {}, signal) {
     let response;
     try {
@@ -200,7 +244,10 @@ function StudioApp() {
       const confirmed = pendingRef.current && body.jobs.find((row) => row.client_request_id === pendingRef.current);
       if (confirmed) { rememberRequest(''); setError(''); chooseJob(confirmed); }
       else if (submittingRef.current) { return; }
-      else if (selected) {
+      else if (pendingRef.current) {
+        const found = selected && (body.job?.id === selected ? body.job : body.jobs.find((row) => row.id === selected));
+        if (found && found.client_request_id === pendingRef.current) { rememberRequest(''); setError(''); chooseJob(found); }
+      } else if (selected) {
         const found = body.job?.id === selected ? body.job : body.jobs.find((row) => row.id === selected);
         if (found) setJob(found);
         else if (!submittingRef.current) { setJob(null); setView('create'); }
@@ -223,8 +270,8 @@ function StudioApp() {
     };
     const wake = () => { if (!document.hidden) run(); };
     pollRef.current = run; run();
-    addEventListener('online', wake); document.addEventListener('visibilitychange', wake);
-    return () => { stopped = true; clearTimeout(timer); removeEventListener('online', wake); document.removeEventListener('visibilitychange', wake); };
+    addEventListener('online', wake);
+    return () => { stopped = true; clearTimeout(timer); removeEventListener('online', wake); };
   }, []);
   useEffect(() => { loadRef.current(); }, [selectedId]);
   function patchRef(id, patch) { setRefs((rows) => rows.map((row) => row.id === id ? { ...row, ...patch } : row)); }
@@ -286,7 +333,7 @@ function StudioApp() {
       patchRef(row.id, { preview, thumb: prepared.thumb, seconds: prepared.seconds, width: prepared.width || 0, height: prepared.height || 0 });
       const response = await post('ai_video_generate_upload', { filenames: [prepared.file.name] }, controller.signal);
       const slot = response.uploads?.[0]; if (!slot?.path || !(slot.signed_url || slot.signedUrl)) throw new Error('upload_failed');
-      await uploadMedia(slot, prepared.file, (percent) => patchRef(row.id, { percent }), controller.signal);
+      await uploadMedia(slot, prepared.file, rafProgress((percent) => patchRef(row.id, { percent })), controller.signal);
       if (controller.signal.aborted) return;
       patchRef(row.id, { path: slot.path, status: 'ready', percent: 100, name: file.name, kind: prepared.kind });
     } catch (problem) { if (!controller.signal.aborted) patchRef(row.id, { status: 'failed', error: errorText(problem.message, modelRef.current) }); }
@@ -320,8 +367,54 @@ function StudioApp() {
     writeLocal(DRAFT_KEY, { ...readLocal(DRAFT_KEY, {}), tagSequence: tagSequence.current });
     refsRef.current = refsRef.current.concat(added.map(({ row }) => row));
     setRefs(refsRef.current);
-    // Bound concurrent memory use for full-resolution phone photos and decoded audio.
-    for (const { row, file } of added) await uploadOne(row, file);
+    const preparedRows = [];
+    for (const { row, file } of added) {
+      const controller = new AbortController(); uploads.current.set(row.id, controller);
+      if (!refsRef.current.some((item) => item.id === row.id)) { uploads.current.delete(row.id); continue; }
+      patchRef(row.id, { status: 'uploading', error: '', percent: 0 });
+      try {
+        const prepared = await prepareMedia(file);
+        if (controller.signal.aborted) continue;
+        if (modelRef.current === 'wan3.0' && prepared.kind === 'video' && /\.webm$/i.test(prepared.file.name)) throw new Error('video_format');
+        if (prepared.kind === 'audio' || prepared.kind === 'video') {
+          const ready = refsRef.current.filter((item) => item.id !== row.id && item.status === 'ready');
+          const referenceError = simpleReferenceError(modelRef.current, ready.concat({ role: 'reference_' + prepared.kind, seconds: prepared.seconds }), duration);
+          if (referenceError) throw new Error(referenceError);
+        }
+        const preview = prepared.kind === 'video' ? prepared.thumb : URL.createObjectURL(prepared.file);
+        if (row.preview?.startsWith('blob:')) URL.revokeObjectURL(row.preview);
+        patchRef(row.id, { preview, thumb: prepared.thumb, seconds: prepared.seconds, width: prepared.width || 0, height: prepared.height || 0 });
+        preparedRows.push({ row, file, prepared, controller });
+      } catch (problem) {
+        if (!controller.signal.aborted) patchRef(row.id, { status: 'failed', error: errorText(problem.message, modelRef.current) });
+        if (uploads.current.get(row.id) === controller) uploads.current.delete(row.id);
+      }
+    }
+    if (preparedRows.length) {
+      try {
+        const response = await post('ai_video_generate_upload', { filenames: preparedRows.map((item) => item.prepared.file.name) });
+        for (let i = 0; i < preparedRows.length; i++) {
+          const item = preparedRows[i];
+          const slot = response.uploads?.[i];
+          try {
+            if (item.controller.signal.aborted) continue;
+            if (!slot?.path || !(slot.signed_url || slot.signedUrl)) throw new Error('upload_failed');
+            await uploadMedia(slot, item.prepared.file, rafProgress((percent) => patchRef(item.row.id, { percent })), item.controller.signal);
+            if (item.controller.signal.aborted) continue;
+            patchRef(item.row.id, { path: slot.path, status: 'ready', percent: 100, name: item.file.name, kind: item.prepared.kind });
+          } catch (problem) {
+            if (!item.controller.signal.aborted) patchRef(item.row.id, { status: 'failed', error: errorText(problem.message, modelRef.current) });
+          } finally {
+            if (uploads.current.get(item.row.id) === item.controller) uploads.current.delete(item.row.id);
+          }
+        }
+      } catch (problem) {
+        for (const item of preparedRows) {
+          if (!item.controller.signal.aborted) patchRef(item.row.id, { status: 'failed', error: errorText(problem.message, modelRef.current) });
+          if (uploads.current.get(item.row.id) === item.controller) uploads.current.delete(item.row.id);
+        }
+      }
+    }
     return added.map(({ row }) => row);
   }
   const orderedRefs = refs.filter((row) => /^https:/.test(row.path)).concat(refs.filter((row) => !/^https:/.test(row.path)));
@@ -350,13 +443,18 @@ function StudioApp() {
   else if (length > SIMPLE_PROMPT_LIMIT) blocker = errorText('monid_prompt_limit');
   else if (studio && !studio.enabled) blocker = errorText('operator_probe_required');
   else if (studio?.wallet?.value != null && studio.wallet.value < estimate) blocker = 'Saldo belum cukup.';
-  const disabled = Boolean(submitting || pendingId || activeJob || blocker || connection !== 'online' || prompt.trim().length < 3);
+  const state = jobState(job, clock);
+  const canSync = Boolean(state.canSync);
+  const disabled = Boolean(submitting || pendingId || activeJob || blocker || canSync || prompt.trim().length < 3);
   async function start(event) {
     event?.preventDefault();
     if (disabled || submittingRef.current || pendingRef.current) return;
     if (firstFrameSheets.length && !preflightRef.current) { setSheet('preflight'); return; }
+    const requestId = crypto.randomUUID();
+    if (writePending(requestId) === false) setPersistNotice(true);
+    rememberRequest(requestId);
+    clearSelectedJob();
     submittingRef.current = true; setSubmitting(true); setError('');
-    const requestId = crypto.randomUUID(); rememberRequest(requestId);
     const remote = refs.filter((row) => /^https:/.test(row.path)), local = refs.filter((row) => !/^https:/.test(row.path));
     const ordered = remote.concat(local);
     const sentRatio = firstFrameOn && ratio === '21:9' ? '16:9' : ratio;
@@ -374,6 +472,7 @@ function StudioApp() {
     } finally { submittingRef.current = false; setSubmitting(false); pollRef.current?.(); }
   }
   async function reuse(row) {
+    teardownVideo(player.current);
     setWorking('reuse'); setError('');
     let current = row;
     try {
@@ -391,6 +490,7 @@ function StudioApp() {
       setDuration(current.duration_seconds || 6);
       setGenerateAudio(current.generate_audio !== false);
       setView('create'); setSheet(''); window.scrollTo({ top: 0, behavior: 'instant' });
+      requestAnimationFrame(() => scrollIntoVisual(document.getElementById('studio-prompt')));
     } catch (problem) { setError(problem.message); }
     finally { setWorking(''); }
   }
@@ -413,8 +513,16 @@ function StudioApp() {
   async function saveVideo() {
     if (!job?.result_path || !job.result_url || downloadState === 'loading') return;
     setDownloadState('loading');
-    try { await downloadVideo(job.result_url, 'weuseai-' + job.id.slice(0, 8) + '.mp4'); setDownloadState('started'); }
-    catch { setDownloadState('failed'); }
+    try {
+      const parsed = new URL(job.result_url, window.location.origin);
+      if (parsed.protocol !== 'https:' && parsed.origin !== window.location.origin) throw new Error('download_failed');
+      const response = await fetch(parsed.href, { signal: AbortSignal.timeout(60000) });
+      if (!response.ok) throw new Error('download_failed');
+      const blob = await response.blob();
+      const file = new File([blob], 'weuseai-' + job.id.slice(0, 8) + '.mp4', { type: 'video/mp4' });
+      const result = await saveVideoFile(file);
+      setDownloadState(result && result.ok ? 'started' : 'failed');
+    } catch { setDownloadState('failed'); }
   }
   async function attachResultVideo() {
     if (!job?.result_url || working) return;
@@ -427,7 +535,7 @@ function StudioApp() {
       const blob = await response.blob();
       const file = new File([blob], 'weuseai-' + job.id.slice(0, 8) + '.mp4', { type: 'video/mp4' });
       await attachFiles([file]);
-      setView('create'); window.scrollTo({ top: 0, behavior: 'instant' });
+      showCreate();
     } catch (problem) { setError(problem.message); }
     finally { setWorking(''); }
   }
@@ -437,19 +545,21 @@ function StudioApp() {
     try {
       const file = await captureVideoFrame(player.current, true);
       await attachFiles([file], { role: 'first_frame' });
-      setView('create'); window.scrollTo({ top: 0, behavior: 'instant' });
+      showCreate();
     } catch (problem) { setError(problem.message); }
     finally { setWorking(''); }
   }
-  const state = jobState(job, clock);
   const resultReady = state.phase === 'ready';
-  const heading = resultReady ? 'Video siap' : state.phase === 'failed' ? 'Video gagal' : state.phase === 'unconfirmed' ? 'Periksa pengiriman' : state.canSync ? 'Cek status video' : state.phase === 'cancelled' ? 'Dibatalkan' : state.phase === 'saving' ? 'Menyimpan video' : job ? 'Membuat video' : 'Hasil video';
-  const resultDetail = state.phase === 'unconfirmed' ? 'Permintaan mungkin sudah diterima dan memakai saldo.' : state.phase === 'failed' ? errorText(job?.error_code, job?.model) : state.canSync ? 'Status belum terkonfirmasi.' : state.phase === 'stale' ? 'Masih menunggu kabar terbaru.' : state.phase === 'saving' ? 'Hasil render sedang disimpan.' : state.active ? 'Biasanya beberapa menit.' : '';
+  const heading = state.label;
+  const resultDetail = state.phase === 'failed' ? errorText(job?.error_code, job?.model) : state.detail;
   const unknown = pendingId && !submitting;
+  const awaitingStatus = !job && Boolean(selectedId) && studio === null;
   const settingsLabel = (firstFrameOn ? 'ikut frame' : ratio) + (generateAudio ? '' : ' senyap') + ' ' + duration + ' dtk';
+  const connectionCopy = [connection === 'offline' ? 'Koneksi terputus.' : connection === 'delayed' ? 'Pembaruan status terlambat.' : '', canSync ? 'Cek run yang sama sebelum membuat video baru.' : ''].filter(Boolean).join(' ');
   return <div className="sv-app" data-view={view}>
-    <header className="sv-header"><a className="sv-brand" href="/admin" aria-label="Kembali ke admin"><img src="/assets/ads/logo-cat-mark.png" alt=""/><span>Video</span></a><div className="sv-header-actions">{job && view === 'create' ? <button className="sv-text-button sv-mobile-only" onClick={() => setView('result')}>{isActiveJob(job) ? <Icon name="spin" size={16}/> : null}Hasil</button> : null}<button className="sv-text-button" onClick={() => setSheet('history')}><Icon name="history" size={18}/>Riwayat</button></div></header>
-    {connection === 'offline' || connection === 'delayed' ? <div className="sv-connection" role="status"><Icon name="warning" size={17}/><span>{connection === 'offline' ? 'Koneksi terputus.' : 'Pembaruan status terlambat.'}</span><button onClick={() => pollRef.current?.()}>Cek lagi</button></div> : null}
+    <header className="sv-header"><a className="sv-brand" href="/admin" aria-label="Kembali ke admin"><img src="/assets/ads/logo-cat-mark.png" alt=""/><span>Video</span></a><div className="sv-header-actions">{view === 'result' ? <button className="sv-text-button sv-mobile-only" onClick={showCreate}>Prompt</button> : null}{job && view === 'create' ? <button className="sv-text-button sv-mobile-only" onClick={() => setView('result')}>{isActiveJob(job) ? <Icon name="spin" size={16}/> : null}Hasil</button> : null}<button className="sv-text-button" onClick={() => setSheet('history')}><Icon name="history" size={18}/>Riwayat</button></div></header>
+    {connection === 'offline' || connection === 'delayed' || canSync ? <div className="sv-connection" role="status"><Icon name="warning" size={17}/><span>{connectionCopy}</span>{canSync ? <button type="button" disabled={Boolean(working)} onClick={recover}>Cek run yang sama</button> : null}{connection === 'offline' || connection === 'delayed' ? <button type="button" onClick={() => pollRef.current?.()}>Cek lagi</button> : null}</div> : null}
+    {persistNotice ? <div className="sv-notice" role="status"><span>Status bisa hilang jika tab ditutup.</span><button className="sv-icon-button" aria-label="Tutup pesan" onClick={() => setPersistNotice(false)}><Icon name="close" size={18}/></button></div> : null}
     {error && !unknown ? <div className="sv-notice" role="alert"><span>{errorText(error, model)}</span><button className="sv-icon-button" aria-label="Tutup pesan" onClick={() => setError('')}><Icon name="close" size={18}/></button></div> : null}
     {unknown ? <div className="sv-uncertain" role="alert"><Icon name="warning"/><div><strong>Pengiriman belum terkonfirmasi</strong><p>Cek status sebelum membuat ulang.</p><button className="sv-small-button" onClick={() => pollRef.current?.()}>Cek status</button><button className="sv-text-button" onClick={() => setSheet('history')}>Lihat riwayat</button><details><summary>Opsi lain</summary><p>Permintaan sebelumnya mungkin sudah memakai saldo.</p><button className="sv-text-button" onClick={() => { rememberRequest(''); setError(''); }}>Mulai permintaan baru</button></details></div></div> : null}
     <main className="sv-workspace">
@@ -484,21 +594,22 @@ function StudioApp() {
           {activeJob && view === 'create' && job?.id ? <button type="button" className="sv-text-button sv-show-result" onClick={() => setView('result')}>Lihat prosesnya</button> : null}
         </form>
       </section>
-      <section className={'sv-result' + (!job ? ' is-empty' : '')} id="studio-result" aria-label="Hasil video" aria-busy={Boolean(state.active)}>
+      <section className={'sv-result' + (!job && !awaitingStatus ? ' is-empty' : '')} id="studio-result" aria-label="Hasil video" aria-busy={Boolean(state.active || awaitingStatus)}>
         {job ? <>
           <div className="sv-result-heading"><h2>{heading}</h2>{resultReady ? <Icon className="sv-success" name="check" size={22}/> : null}</div>
-          {resultReady && job.result_url ? <div className={'sv-player-frame ratio-' + String(job.ratio || '9:16').replace(':', '-')}><video ref={player} className="job-player" src={job.result_url} controls playsInline preload="metadata" onError={() => setPlaybackError(true)}/>{playbackError ? <div className="sv-player-error" role="alert"><p>Video belum bisa diputar.</p><button className="sv-small-button" disabled={working === 'player'} onClick={refreshVideo}>Muat ulang video</button></div> : null}</div> : <div className={'sv-result-placeholder ' + (state.phase === 'failed' ? 'is-error' : '')}><div className="sv-state-icon"><Icon name={state.active ? 'spin' : state.phase === 'failed' || state.canSync ? 'warning' : 'film'} size={38}/></div><p role="status">{resultDetail}</p>{state.active ? <small>{elapsedTime(job.created_at, clock)}</small> : null}{state.canSync ? <button className="sv-small-button" disabled={Boolean(working)} onClick={recover}>{working === 'sync' ? 'Memeriksa…' : 'Cek lagi'}</button> : null}</div>}
-          {state.phase === 'unconfirmed' ? <div className="sv-provider-check"><a className="sv-small-button sv-full" href="https://app.monid.ai" target="_blank" rel="noreferrer">Periksa di Monid</a><details><summary>Sudah diperiksa?</summary><button className="sv-text-button" onClick={() => { setCheckedRun(job.id); setView('create'); }}>Buat permintaan baru</button></details></div> : resultReady ? <div className="sv-result-actions"><button className="sv-download" onClick={saveVideo} disabled={!job.result_url || downloadState === 'loading'}><Icon name={downloadState === 'loading' ? 'spin' : 'download'}/>{downloadState === 'loading' ? 'Menyiapkan unduhan…' : 'Simpan video'}</button><button className="sv-small-button" disabled={Boolean(working)} onClick={() => reuse(job)}>Gunakan lagi</button><button className="sv-small-button" disabled={Boolean(working)} onClick={attachResultVideo}>{working === 'attach-video' ? 'Memasang…' : 'Pasang sebagai ' + nextVideoTag}</button><button className="sv-small-button" disabled={Boolean(working)} onClick={attachLastFrame}>{working === 'attach-frame' ? 'Mengambil frame…' : 'Ambil frame terakhir → frame awal'}</button></div> : state.phase === 'failed' || state.phase === 'cancelled' ? <button className="sv-small-button sv-full" disabled={Boolean(working)} onClick={() => reuse(job)}>Ubah prompt</button> : <div className="sv-result-tools"><button className="sv-text-button" onClick={() => pollRef.current?.()}>Cek status</button>{mayCancelJob(job) ? <button className="sv-text-button" disabled={Boolean(working)} onClick={cancel}>Batalkan</button> : null}<button className="sv-text-button sv-mobile-only" onClick={() => setView('create')}>Lihat prompt</button></div>}
+          {state.step >= 0 ? <ol className="sv-hint">{JOB_STEPS.map((label, index) => <li key={label} aria-current={index === state.step ? 'step' : undefined}>{label}</li>)}</ol> : null}
+          {resultReady && job.result_url ? <div className={'sv-player-frame ratio-' + String(job.ratio || '9:16').replace(':', '-')}><video ref={player} className="job-player" src={job.result_url} playsInline {...playerProps()} onError={() => setPlaybackError(true)}/>{playbackError ? <div className="sv-player-error" role="alert"><p>Video belum bisa diputar.</p><button className="sv-small-button" disabled={working === 'player'} onClick={refreshVideo}>Muat ulang video</button></div> : null}</div> : <div className={'sv-result-placeholder ' + (state.phase === 'failed' ? 'is-error' : '')}><div className="sv-state-icon"><Icon name={state.active ? 'spin' : state.phase === 'failed' || state.canSync ? 'warning' : 'film'} size={38}/></div><p role="status">{resultDetail}</p>{state.active ? <small>{elapsedTime(job.created_at, clock)}</small> : null}{state.canSync ? <button className="sv-small-button" disabled={Boolean(working)} onClick={recover}>{working === 'sync' ? 'Memeriksa…' : 'Cek lagi'}</button> : null}</div>}
+          {state.phase === 'unconfirmed' ? <div className="sv-provider-check"><a className="sv-small-button sv-full" href="https://app.monid.ai" target="_blank" rel="noreferrer">Periksa di Monid</a><details><summary>Sudah diperiksa?</summary><button className="sv-text-button" onClick={() => { setCheckedRun(job.id); setView('create'); }}>Buat permintaan baru</button></details></div> : resultReady ? <div className="sv-result-actions"><button className="sv-download" onClick={saveVideo} disabled={!job.result_url || downloadState === 'loading'}><Icon name={downloadState === 'loading' ? 'spin' : 'download'}/>{downloadState === 'loading' ? 'Menyiapkan unduhan…' : 'Simpan video'}</button><button className="sv-small-button" onClick={showCreate}>Lihat prompt</button><button className="sv-small-button" disabled={Boolean(working)} onClick={() => reuse(job)}>Gunakan lagi</button><details className="sv-full"><summary>Opsi lain</summary><button className="sv-small-button" disabled={Boolean(working)} onClick={attachResultVideo}>{working === 'attach-video' ? 'Memasang…' : 'Pasang sebagai ' + nextVideoTag}</button><button className="sv-small-button" disabled={Boolean(working)} onClick={attachLastFrame}>{working === 'attach-frame' ? 'Mengambil frame…' : 'Ambil frame terakhir → frame awal'}</button></details></div> : state.phase === 'failed' || state.phase === 'cancelled' ? <button className="sv-small-button sv-full" disabled={Boolean(working)} onClick={() => reuse(job)}>Ubah prompt</button> : <div className="sv-result-tools"><button className="sv-text-button" onClick={() => pollRef.current?.()}>Cek status</button>{mayCancelJob(job) ? <button className="sv-text-button" disabled={Boolean(working)} onClick={cancel}>Batalkan</button> : null}<button className="sv-text-button sv-mobile-only" onClick={showCreate}>Lihat prompt</button></div>}
           {downloadState === 'started' ? <p className="sv-download-note" role="status">Unduhan dimulai.</p> : null}
           {downloadState === 'failed' ? <p className="sv-download-note is-error" role="alert">Unduhan gagal. <a href={job.result_url} target="_blank" rel="noreferrer">Buka video</a></p> : null}
           {resultReady && !job.result_url ? <button className="sv-small-button" onClick={refreshVideo}>Muat video</button> : null}
           {state.phase === 'failed' || state.canSync ? <details className="sv-error-details"><summary>Detail error</summary><code>{job.error_code}</code><span>{job.id}</span></details> : null}
-        </> : <div className="sv-empty-preview"><Icon name="film" size={44}/><span>Videomu tampil di sini</span></div>}
+        </> : awaitingStatus ? <div className="sv-result-placeholder"><div className="sv-state-icon"><Icon name="spin" size={38}/></div><p role="status">Memuat status…</p></div> : <div className="sv-empty-preview"><Icon name="film" size={44}/><span>Videomu tampil di sini</span></div>}
       </section>
     </main>
     {sheet === 'settings' ? <Sheet title="Pengaturan video" close={() => setSheet('')}><fieldset><legend>Format</legend><div className="sv-choice-row">{firstFrameOn ? <button type="button" aria-pressed={true} disabled><span className="sv-format-shape ratio-adaptive"/><span>ikut frame</span></button> : formatOptions.map((item) => <button type="button" key={item} aria-pressed={ratio === item} onClick={() => setRatio(item)}><span className={'sv-format-shape ratio-' + item.replace(':', '-')}/><span>{item}</span></button>)}</div></fieldset><fieldset><legend>Durasi</legend><div className="sv-duration-row">{DURATIONS.map((item) => <button key={item} type="button" aria-pressed={duration === item} onClick={() => setDuration(item)}>{item} dtk</button>)}</div></fieldset><fieldset><legend>Suara</legend><button type="button" className="sv-toggle" aria-pressed={generateAudio} onClick={() => setGenerateAudio(!generateAudio)}>{generateAudio ? 'Suara hidup' : 'Tanpa suara'}</button>{refs.some((row) => row.kind === 'audio') ? <p className="sv-hint">Audio terpasang memaksa suara tetap hidup saat generate.</p> : null}</fieldset><div className="sv-settings-note"><span>{modelSettings.label} · 720p</span>{studio?.wallet?.value != null ? <span>Saldo {money(studio.wallet.value)}</span> : null}</div><button className="sv-download sv-full" onClick={() => setSheet('')}>Selesai</button></Sheet> : null}
     {sheet === 'preflight' ? <Sheet title="Periksa referensi" close={() => setSheet('')}><p className="sv-hint is-warn">Frame awal memakai gambar yang mirip character sheet. Seedance bisa merender plat panel, bukan shot.</p><button className="sv-download sv-full" onClick={() => { preflightRef.current = true; setSheet(''); start(); }}>Lanjut generate</button></Sheet> : null}
-    {sheet === 'history' ? <Sheet title="Riwayat video" close={() => setSheet('')}><div className="sv-history">{studio?.jobs?.length ? studio.jobs.map((row) => { const status = jobState(row); return <button key={row.id} className="sv-history-row" onClick={() => chooseJob(row)}><span className={'sv-history-symbol ' + status.tone}><Icon name={status.active ? 'spin' : status.phase === 'ready' ? 'play' : status.phase === 'failed' ? 'warning' : 'film'}/></span><span className="sv-history-copy"><span>{jobPrompt(row).slice(0, 100) || 'Video'}</span><small>{status.phase === 'ready' ? 'Selesai' : status.phase === 'failed' ? 'Gagal' : status.active ? 'Diproses' : status.label}</small></span><span className="sv-history-duration">{row.duration_seconds} dtk</span></button>; }) : <p className="sv-no-history">Belum ada video.</p>}</div></Sheet> : null}
+    {sheet === 'history' ? <Sheet title="Riwayat video" close={() => setSheet('')}><div className="sv-history">{studio?.jobs?.length ? studio.jobs.map((row) => { const status = jobState(row); return <button key={row.id} className="sv-history-row" onClick={() => chooseJob(row)}><span className={'sv-history-symbol ' + status.tone}><Icon name={status.active ? 'spin' : status.phase === 'ready' ? 'play' : status.phase === 'failed' ? 'warning' : 'film'}/></span><span className="sv-history-copy"><span>{jobPrompt(row).slice(0, 100) || 'Video'}</span><small>{historyLabel(row)}</small></span><span className="sv-history-duration">{row.duration_seconds} dtk</span></button>; }) : <p className="sv-no-history">Belum ada video.</p>}</div><button className="sv-download sv-full" onClick={() => setSheet('')}>Tutup</button></Sheet> : null}
   </div>;
 }
 ReactDOM.createRoot(document.getElementById('root')).render(<StudioApp/>);

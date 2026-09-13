@@ -64,7 +64,7 @@ test('simple studio keeps runtime local and isolates its stylesheet from the oth
 
 test('simple studio unlocks Seedance 2.5 without restoring the operator desk', () => {
   const media = readFileSync(new URL('../admin/assets/studio-media.js', import.meta.url), 'utf8')
-  assert.match(generateHtml, /seedance-1/)
+  assert.match(generateHtml, /phone-1/)
   assert.match(generateJsx, /\[4, 6, 8, 10, 15, 30\]/)
   assert.match(generateJsx, /21:9/)
   assert.match(generateJsx, /ikut frame/)
@@ -78,6 +78,15 @@ test('simple studio unlocks Seedance 2.5 without restoring the operator desk', (
   assert.match(media, /kind === 'video'/)
   assert.doesNotMatch(generateJsx, /last_frame|end_image|video_extension|SKILL_MODES|Satu take|Vault/)
   assert.doesNotMatch(media, /last_frame|end_image/)
+})
+
+test('an uncertain start stays pending and never sends a second start POST', () => {
+  const startPosts = generateJsx.match(/post\('ai_video_generate_start'/g) ?? []
+  assert.equal(startPosts.length, 1)
+  assert.match(generateJsx, /\(readPending\(\) \|\| initial\.pendingRequestId\) \? 'submission_unknown' : ''/)
+  assert.match(generateJsx, /pendingRef\.current && body\.jobs\.find\(\(row\) => row\.client_request_id === pendingRef\.current\)/)
+  assert.match(generateJsx, /if \(disabled \|\| submittingRef\.current \|\| pendingRef\.current\) return/)
+  assert.match(generateJsx, /if \(problem\.uncertain && !pendingRef\.current\) return/)
 })
 
 test('studio page never embeds merchant secrets or hype copy', () => {

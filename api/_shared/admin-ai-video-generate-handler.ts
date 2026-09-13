@@ -9,7 +9,6 @@ import {
   AI_VIDEO_OPERATOR_INFLIGHT_CAP,
   MONID_SEEDANCE_PROMPT_MAX,
   AI_VIDEO_OPERATOR_MAX_REFS,
-  AI_VIDEO_OPERATOR_NONTERMINAL,
   applyOperatorTransition,
   canCancelOperatorJob,
   isOperatorJobId,
@@ -89,6 +88,9 @@ export async function startAiVideoOperatorGenerate(
   store: AiVideoOperatorGenerateStore,
   env: ReturnType<typeof readOperatorGenerateEnv> = readOperatorGenerateEnv(),
 ) {
+  if (!isOperatorJobId(body.client_request_id)) {
+    return { error: 'invalid_operator_request_id' as const, status: 400 }
+  }
   const roles = Array.isArray(body.ref_roles) ? body.ref_roles : []
   const idea = typeof body.prompt === 'string' && body.prompt.trim() ? body.prompt : typeof body.idea === 'string' ? body.idea : ''
   const rawIdea = body.prompt_mode === 'simple' ? idea : sanitizeOperatorPrompt(idea)
@@ -151,19 +153,11 @@ export async function startAiVideoOperatorGenerate(
     orderId = order.id
   }
   const job = await store.createQueued({ ...input, orderId })
-  let current = job
-  if (store.submitQueued) {
-    try {
-      current = await store.submitQueued(job)
-    } catch {
-      current = job
-    }
-  }
   const workerWarning = await wakeOperatorWorker(store)
   return {
     worker_warning: workerWarning,
     ok: true as const,
-    job: presentAiVideoOperatorJob(current),
+    job: presentAiVideoOperatorJob(job),
     skill_mode: compiled.mode,
     skill_warnings: compiled.warnings,
   }
@@ -296,15 +290,7 @@ export async function listAiVideoOperatorGenerate(
   store: AiVideoOperatorGenerateStore,
   env: ReturnType<typeof readOperatorGenerateEnv> = readOperatorGenerateEnv(),
 ) {
-  let jobs = await store.listJobs()
-  let workerWarning: string | null = null
-  if (jobs.some((job) =>
-    (AI_VIDEO_OPERATOR_NONTERMINAL as readonly string[]).includes(job.status)
-    || (job.status === 'succeeded' && !job.resultPath)
-  )) {
-    workerWarning = await wakeOperatorWorker(store)
-    if (!workerWarning) jobs = await store.listJobs()
-  }
+  const jobs = await store.listJobs()
   let order = null
   if (input.tid) order = await store.findOrderByTid(input.tid.trim().toUpperCase())
   let selected = null
@@ -357,7 +343,7 @@ export async function listAiVideoOperatorGenerate(
     skill_stack: input.simple ? undefined : presentStudioSkillStack(),
     poll_seconds: 5,
     synced_at: new Date().toISOString(),
-    worker_warning: workerWarning,
+    worker_warning: null,
     limits: { prompt_characters: MONID_SEEDANCE_PROMPT_MAX },
   }
 }

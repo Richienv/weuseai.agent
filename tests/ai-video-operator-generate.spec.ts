@@ -125,6 +125,7 @@ function store(over: Partial<AiVideoOperatorGenerateStore> = {}): AiVideoOperato
 }
 
 const READY = { OPERATOR_GENERATE_ENABLED: 'true', MONID_API_KEY: 'monid-key-16chars' }
+const REQUEST_ID = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc'
 
 test('start is blocked until the Monid probe is enabled', async () => {
   const result = await startAiVideoOperatorGenerate({
@@ -134,18 +135,59 @@ test('start is blocked until the Monid probe is enabled', async () => {
   assert.equal(result.status, 409)
 })
 
-test('start submits to Monid immediately when the store can', async () => {
-  let kicked = false
+test('legacy shared start still waits for inline Monid', async () => {
+  let submitted = 0
   const result = await startAiVideoOperatorGenerate({
-    prompt: PROMPT, ratio: '9:16', duration_seconds: 6,
+    prompt: PROMPT,
+    ratio: '9:16',
+    duration_seconds: 6,
+    client_request_id: REQUEST_ID,
   }, store({
-    submitQueued: async (row) => job({ ...row, status: 'submitted', providerTaskId: 'run_1' }),
-    kickWorker: async () => { kicked = true },
+    submitQueued: async (row) => {
+      submitted += 1
+      return job({ ...row, status: 'submitted', providerTaskId: 'run_1' })
+    },
   }), READY)
   assert.equal(result.ok, true)
   if (!('job' in result)) throw new Error('missing job')
   assert.equal(result.job.status, 'submitted')
-  assert.equal(kicked, true)
+  assert.equal(submitted, 1)
+})
+
+test('start returns queued without inline Monid', async () => {
+  let submitted = 0
+  const result = await startCompiledGenerate({
+    prompt: PROMPT,
+    ratio: '9:16',
+    duration_seconds: 6,
+    client_request_id: REQUEST_ID,
+  }, store({
+    submitQueued: async (row) => {
+      submitted += 1
+      return job({ ...row, status: 'submitted', providerTaskId: 'run_1' })
+    },
+  }), READY)
+  assert.equal(result.ok, true)
+  if (!('job' in result)) throw new Error('missing job')
+  assert.equal(result.job.status, 'queued')
+  assert.equal(submitted, 0)
+})
+
+test('start without client_request_id returns 400', async () => {
+  let created = 0
+  const result = await startCompiledGenerate({
+    prompt: PROMPT,
+    ratio: '9:16',
+    duration_seconds: 6,
+  }, store({
+    createQueued: async () => {
+      created += 1
+      return job()
+    },
+  }), READY)
+  assert.equal(result.status, 400)
+  assert.equal(result.error, 'invalid_operator_request_id')
+  assert.equal(created, 0)
 })
 
 test('submit retries a queued job and no-ops after it leaves the queue', async () => {
@@ -174,7 +216,7 @@ test('submit retries a queued job and no-ops after it leaves the queue', async (
 
 test('start stays queued and still kicks if inline submit fails', async () => {
   const result = await startAiVideoOperatorGenerate({
-    prompt: PROMPT, ratio: '9:16', duration_seconds: 6,
+    prompt: PROMPT, ratio: '9:16', duration_seconds: 6, client_request_id: REQUEST_ID,
   }, store({
     submitQueued: async () => { throw new Error('monid_down') },
   }), READY)
@@ -186,7 +228,7 @@ test('start stays queued and still kicks if inline submit fails', async () => {
 test('start links a TID and kicks the worker', async () => {
   let kicked = false
   const result = await startAiVideoOperatorGenerate({
-    prompt: PROMPT, ratio: '9:16', duration_seconds: 6, tid: 'WU-9F2K', lesson: 'Keep rain louder.',
+    prompt: PROMPT, ratio: '9:16', duration_seconds: 6, tid: 'WU-9F2K', lesson: 'Keep rain louder.', client_request_id: REQUEST_ID,
   }, store({ kickWorker: async () => { kicked = true } }), READY)
   assert.equal(result.ok, true)
   if (!('job' in result)) throw new Error('missing job')
@@ -197,11 +239,11 @@ test('start links a TID and kicks the worker', async () => {
 
 test('inflight cap and missing order stay closed', async () => {
   const cap = await startAiVideoOperatorGenerate({
-    prompt: PROMPT, ratio: '9:16', duration_seconds: 6,
+    prompt: PROMPT, ratio: '9:16', duration_seconds: 6, client_request_id: REQUEST_ID,
   }, store({ countInflight: async () => 3 }), READY)
   assert.equal(cap.error, 'operator_inflight_cap')
   const missing = await startAiVideoOperatorGenerate({
-    prompt: PROMPT, ratio: '9:16', duration_seconds: 6, tid: 'WU-9F2K',
+    prompt: PROMPT, ratio: '9:16', duration_seconds: 6, tid: 'WU-9F2K', client_request_id: REQUEST_ID,
   }, store({ findOrderByTid: async () => null }), READY)
   assert.equal(missing.error, 'order_not_found')
 })
@@ -309,6 +351,7 @@ test('start forwards per-image roles and a library id to the store', async () =>
     ref_urls: ['https://example.com/sheet.png'],
     ref_roles: ['reference_image'],
     library_id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+    client_request_id: REQUEST_ID,
   }, store({
     createQueued: async (input) => {
       stored = { refRoles: input.refRoles, libraryId: input.libraryId }
@@ -322,18 +365,30 @@ test('start forwards per-image roles and a library id to the store', async () =>
   })
 })
 
-test('list kicks the worker when a job is still inflight', async () => {
-  let kicked = false
+test('list leaves a running job alone without waking the worker', async () => {
+  let kicked = 0
   const result = await listAiVideoOperatorGenerate({ tid: 'WU-9F2K' }, store({
     listJobs: async () => [job({ status: 'running' })],
-    kickWorker: async () => { kicked = true },
+    kickWorker: async () => { kicked += 1 },
   }), READY)
   assert.equal(result.ok, true)
   assert.equal(result.enabled, true)
   assert.equal(result.library.length, 1)
-  assert.equal(kicked, true)
+  assert.equal(kicked, 0)
   assert.match(result.wallet_note, /monid\.ai\/wallet/)
   assert.ok(result.skill_stack?.modes?.some((row) => row.id === 'one-take-locked'))
+})
+
+test('list with a queued leftover job does not wake the worker', async () => {
+  let kicked = 0
+  const queued = job({ status: 'queued' })
+  const result = await listAiVideoOperatorGenerate({}, store({
+    listJobs: async () => [queued],
+    kickWorker: async () => { kicked += 1 },
+  }), READY)
+  assert.equal(result.ok, true)
+  assert.equal(result.jobs[0].status, 'queued')
+  assert.equal(kicked, 0)
 })
 
 test('list ships the Monid wallet when the store can read it', async () => {
@@ -397,6 +452,7 @@ test('Higgsfield paste is sanitized and starts as written', async () => {
     prompt: pasted,
     ratio: '9:16',
     duration_seconds: 30,
+    client_request_id: REQUEST_ID,
   }, store({
     createQueued: async (input) => {
       stored = input.prompt
@@ -417,6 +473,7 @@ test('headed prompt beyond the provider limit is rejected before a job is create
     prompt: long,
     ratio: '9:16',
     duration_seconds: 6,
+    client_request_id: REQUEST_ID,
   }, store({
     createQueued: async (input) => {
       stored = input.prompt
@@ -447,6 +504,7 @@ test('compile locks a loose idea and start writes the compiled prompt', async ()
     character_name: 'Richie · Adidas tee',
     ratio: '9:16',
     duration_seconds: 6,
+    client_request_id: REQUEST_ID,
     ref_urls: ['https://example.com/sheet.png'],
     ref_roles: ['reference_image'],
   }, store({
@@ -461,6 +519,7 @@ test('compile locks a loose idea and start writes the compiled prompt', async ()
   const still = await startCompiledGenerate({
     prompt: 'Richie mid-sip at the diner window',
     output_kind: 'still',
+    client_request_id: REQUEST_ID,
     character_name: 'Richie',
     skill_mode: 'cinematic-reel',
     ratio: '16:9',
@@ -507,15 +566,20 @@ test('rechecking a paused job resumes polling without creating a provider run', 
   assert.equal('job' in result && result.job?.provider_task_id, 'existing-provider-run')
 })
 
-test('a worker failure is exposed alongside the last known job state', async () => {
-  const result = await listAiVideoOperatorGenerate({}, store({ listJobs: async () => [job({ status: 'running' })], kickWorker: async () => { throw new Error('down') } }), READY)
-  assert.equal(result.worker_warning, 'operator_worker_unavailable')
+test('list does not touch an unavailable worker', async () => {
+  let kicked = 0
+  const result = await listAiVideoOperatorGenerate({}, store({
+    listJobs: async () => [job({ status: 'running' })],
+    kickWorker: async () => { kicked += 1; throw new Error('down') },
+  }), READY)
+  assert.equal(result.worker_warning, null)
   assert.equal(result.jobs[0].status, 'running')
+  assert.equal(kicked, 0)
 })
 
 test('simple start bypasses the old skill compiler and binds every photo and audio', async () => {
   let saved: any
-  const result = await startCompiledGenerate({ prompt_mode: 'simple', prompt: 'Kucing lari', model: 'wan3.0', duration_seconds: 6, ratio: '9:16', ref_paths: ['operator/inbox/cat.jpg', 'operator/inbox/voice.wav'], ref_durations: [0, 3] }, store({ createQueued: async (input) => { saved = input; return job({ prompt: input.prompt, providerModelId: input.model }) } }), { OPERATOR_GENERATE_ENABLED: 'true', MONID_API_KEY: 'mock-monid-test-credential-123456' })
+  const result = await startCompiledGenerate({ prompt_mode: 'simple', prompt: 'Kucing lari', model: 'wan3.0', duration_seconds: 6, ratio: '9:16', client_request_id: REQUEST_ID, ref_paths: ['operator/inbox/cat.jpg', 'operator/inbox/voice.wav'], ref_durations: [0, 3] }, store({ createQueued: async (input) => { saved = input; return job({ prompt: input.prompt, providerModelId: input.model }) } }), { OPERATOR_GENERATE_ENABLED: 'true', MONID_API_KEY: 'mock-monid-test-credential-123456' })
   assert.equal(result.ok, true)
   assert.equal(saved.model, 'wan3.0')
   assert.equal(saved.generateAudio, true)

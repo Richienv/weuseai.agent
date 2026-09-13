@@ -61,7 +61,7 @@ test('pasted Higgsfield-style tags normalize while stable handles above provider
 test('the admin entry point validates handles before sanitizing or creating a paid job', async () => {
   let calls = 0
   const store = { countInflight: async () => 0, createQueued: async () => { calls++; throw new Error('must not create') } } as any
-  const result = await startAiVideoOperatorGenerate({ ...input, prompt: '@Image99 speaks.' }, store, { OPERATOR_GENERATE_ENABLED: 'true', MONID_API_KEY: key })
+  const result = await startAiVideoOperatorGenerate({ ...input, client_request_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', prompt: '@Image99 speaks.' }, store, { OPERATOR_GENERATE_ENABLED: 'true', MONID_API_KEY: key })
   assert.equal(result.error, 'invalid_operator_reference_tag')
   assert.equal(result.status, 400)
   assert.equal(calls, 0)
