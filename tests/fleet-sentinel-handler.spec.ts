@@ -81,11 +81,35 @@ test('Always-On idle VPS is exempt from suspend', () => {
   assert.equal(r.actions.length, 0)
 })
 
-test('never-active VPS uses created_at; suspended only once past the window', () => {
-  // created 60d ago, never any activity → idle by created_at.
-  const r = fleetSentinelHandler(snapshot([vps({ last_activity_at: null })]), CFG)
-  assert.equal(r.actions.length, 1)
-  assert.equal(r.actions[0].type, 'suspend')
+test('never-active VPS (null activity) is NEVER suspended, no matter how old', () => {
+  // Regression: last_activity_at is the ONLY idle signal. A box provisioned
+  // 60d ago with no recorded activity has UNKNOWN idleness — created_at is not
+  // a proxy for it — so the destructive suspend path must not fire. (Before the
+  // fix, idleMs fell back to created_at and this wrongly produced a suspend.)
+  const r = fleetSentinelHandler(snapshot([vps({ created_at: daysAgo(60), last_activity_at: null })]), CFG)
+  assert.equal(r.actions.length, 0)
+  assert.equal(r.alerts.filter((a) => a.kind === 'idle_suspend').length, 0)
+})
+
+test('old box (90d) but active today is NEVER suspended', () => {
+  // The core landmine: a daily-active customer whose VPS simply happens to be
+  // >30 days old must not be halted. idle is measured from activity, not age.
+  const r = fleetSentinelHandler(
+    snapshot([vps({ created_at: daysAgo(90), last_activity_at: hoursAgo(3) })]),
+    CFG,
+  )
+  assert.equal(r.actions.length, 0)
+  assert.equal(r.alerts.filter((a) => a.kind === 'idle_suspend').length, 0)
+})
+
+test('suspended VPS with NO recorded activity stays suspended (no created_at resume)', () => {
+  // A suspended box with null activity must not be resurrected off provisioning
+  // age — resume requires a real fresh-activity signal.
+  const r = fleetSentinelHandler(
+    snapshot([vps({ lifecycle_state: 'suspended', status: 'stopped', created_at: daysAgo(5), last_activity_at: null })]),
+    CFG,
+  )
+  assert.equal(r.actions.length, 0)
 })
 
 test('idle VPS on a non-active subscription is not suspended', () => {

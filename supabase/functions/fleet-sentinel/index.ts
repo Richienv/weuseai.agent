@@ -21,9 +21,12 @@
 // Optional env: SUPPORT_TELEGRAM_BOT_TOKEN + RICHIE_CHAT_ID (founder DM;
 //   no-op when unset), and the sentinel knobs below.
 //
-// FLEET_SENTINEL_DRY_RUN=true (recommended first run) → the handler emits
-// alerts but NO suspend/resume actions, so thresholds can be tuned against
-// the real fleet before the loop is given teeth.
+// FLEET_SENTINEL_DRY_RUN defaults to TRUE (safe): the handler emits alerts but
+// NO suspend/resume actions, so thresholds — and the not-yet-wired activity
+// signal (last_activity_at) — can be validated against the real fleet before
+// the loop is ever given teeth. The founder must set FLEET_SENTINEL_DRY_RUN=false
+// EXPLICITLY to enable real suspend/resume, and only after last_activity_at is
+// actually being written (see docs/design/2026-07-27-auto-suspend-status.md).
 
 // @ts-ignore — Deno-only import
 import { createClient } from 'jsr:@supabase/supabase-js@2'
@@ -69,7 +72,9 @@ const config: SentinelConfig = {
   orphanProvisionMinutes: numEnv('ORPHAN_PROVISION_MINUTES', DEFAULT_SENTINEL_CONFIG.orphanProvisionMinutes),
   deadAgentHours: numEnv('DEAD_AGENT_HOURS', DEFAULT_SENTINEL_CONFIG.deadAgentHours),
   runawayUsdCents: numEnv('RUNAWAY_USD_CENTS', DEFAULT_SENTINEL_CONFIG.runawayUsdCents),
-  dryRun: (Deno.env.get('FLEET_SENTINEL_DRY_RUN') ?? 'false') === 'true',
+  // Safe-by-default: only an EXPLICIT '=false' turns off dry-run and gives the
+  // loop teeth. Any other value (unset, typo, 'true') stays alert-only.
+  dryRun: (Deno.env.get('FLEET_SENTINEL_DRY_RUN') ?? 'true') !== 'false',
   stuckPendingMinutes: numEnv('STUCK_PENDING_MINUTES', DEFAULT_SENTINEL_CONFIG.stuckPendingMinutes),
   openrouterLowUsdCents: numEnv('OPENROUTER_LOW_USD_CENTS', DEFAULT_SENTINEL_CONFIG.openrouterLowUsdCents),
 }
