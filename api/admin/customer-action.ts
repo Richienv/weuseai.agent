@@ -11,6 +11,8 @@
  *   - restart_gateway     — STUB
  *   - mark_refunded       — STUB
  *   - escalate            — STUB
+ *   - ai_video_identity_* — verified identity lane (founder Karakter panel),
+ *                           proxied to the ai-video-identity Edge Function
  *
  * Consolidated to stay under the Vercel Hobby Functions limit. The
  * stubs return `{ ok: false, todo: ... }` matching the contract the
@@ -22,6 +24,13 @@ import { createHash } from 'node:crypto'
 import { requireAdminCookie } from '../_shared/admin-cookie-auth.js'
 import { aiVideoOpsConfigured, createAiVideoOpsStore, setAiVideoOpsFulfillment } from '../_shared/admin-ai-video-ops.js'
 import { aiVideoOperatorConfigured, createAiVideoOperatorGenerateStore } from '../_shared/admin-ai-video-generate.js'
+import {
+  AI_VIDEO_IDENTITY_ADMIN_ACTIONS,
+  aiVideoIdentityConfigured,
+  isAiVideoIdentityAdminAction,
+  proxyAiVideoIdentityAction,
+  type AiVideoIdentityAdminAction,
+} from '../_shared/admin-ai-video-identity.js'
 import {
   cancelAiVideoOperatorGenerate,
   compileAiVideoOperatorPrompt,
@@ -86,6 +95,7 @@ type ActionKind =
   | 'ai_video_prompt_save'
   | 'ai_video_character_save'
   | 'ai_video_prompt_compile'
+  | AiVideoIdentityAdminAction
 const ACTIONS: ActionKind[] = [
   'manual_provision',
   'manual_provision_v2',
@@ -104,6 +114,11 @@ const ACTIONS: ActionKind[] = [
   'ai_video_prompt_save',
   'ai_video_character_save',
   'ai_video_prompt_compile',
+  // Verified identity lane (founder Karakter panel) — proxied to the
+  // ai-video-identity Edge Function with the service-role bearer:
+  // ai_video_identity_list / _start / _restart / _upload_sign / _register /
+  // _status / _revoke / _quota.
+  ...AI_VIDEO_IDENTITY_ADMIN_ACTIONS,
 ]
 
 type Tier = 'starter' | 'pro' | 'studio'
@@ -992,6 +1007,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       res.status(200).json(result)
     } catch {
       res.status(502).json({ ok: false, error: 'fulfillment_failed' })
+    }
+    return
+  }
+  if (isAiVideoIdentityAdminAction(action)) {
+    if (!aiVideoIdentityConfigured()) {
+      res.status(500).json({ ok: false, error: 'misconfigured' })
+      return
+    }
+    try {
+      const result = await proxyAiVideoIdentityAction(action, body)
+      res.status(result.status).json(result.body)
+    } catch {
+      res.status(502).json({ ok: false, error: 'identity_failed' })
     }
     return
   }

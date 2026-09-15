@@ -89,6 +89,36 @@ test('an uncertain start stays pending and never sends a second start POST', () 
   assert.match(generateJsx, /if \(problem\.uncertain && !pendingRef\.current\) return/)
 })
 
+test('studio Karakter picker rides asset:// refs into ref_urls and unlocks 1080p only with a Karakter', () => {
+  // asset:// is a remote ref like https:, never a storage path.
+  assert.match(generateJsx, /function isRemotePath\(path\) \{ return \/\^\(https:\|asset:\)\/\.test\(path \|\| ''\); \}/)
+  assert.match(generateJsx, /const remote = refs\.filter\(\(row\) => isRemotePath\(row\.path\)\), local = refs\.filter\(\(row\) => !isRemotePath\(row\.path\)\)/)
+  assert.doesNotMatch(generateJsx, /refs\.filter\(\(row\) => \/\^https:\/\.test\(row\.path\)\)/)
+  // The picker reads the customer-data resource with the page tid and marks rows as asset refs.
+  assert.match(generateJsx, /resource=ai-video-identities&tid=' \+ encodeURIComponent\(tid\)/)
+  assert.match(generateJsx, /path: 'asset:\/\/' \+ asset\.asset_id/)
+  assert.match(generateJsx, /asset: true, status: 'ready'/)
+  assert.match(generateJsx, /preview: null, thumb: ASSET_AVATAR/)
+  assert.match(generateJsx, /name: assetLabel\(identity, asset\)/)
+  assert.match(generateJsx, /Karakter/)
+  // Resolution: 720p unless a Karakter is attached; the POST sends the effective value.
+  assert.match(generateJsx, /const sentResolution = hasCharacter \? resolution : '720p'/)
+  assert.match(generateJsx, /resolution: sentResolution, generate_audio: generateAudio/)
+  assert.match(generateJsx, /disabled=\{item === '1080p' && !hasCharacter\}/)
+  assert.doesNotMatch(generateJsx, /resolution: '720p', generate_audio/)
+  // Karakter forces Seedance 2.5 and the job card names the lane.
+  assert.match(generateJsx, /if \(hasCharacter && model !== 'seedance-2\.5'\) setModel\('seedance-2\.5'\)/)
+  assert.match(generateJsx, /job\.provider === 'byteplus_modelark' \? <span className="sv-chip">Lewat BytePlus<\/span>/)
+  assert.match(generateJsx, /identity_asset_not_active/)
+  const css = readFileSync(new URL('../admin/assets/studio-simple.css', import.meta.url), 'utf8')
+  assert.match(css, /\.sv-chip \{/)
+  assert.match(css, /\.sv-character-assets button\[aria-pressed=true\]/)
+  const jobState = readFileSync(new URL('../admin/assets/studio-job-state.js', import.meta.url), 'utf8')
+  assert.match(jobState, /modelark_submission_unknown/)
+  // No exclamation marks in the Studio copy.
+  assert.doesNotMatch(generateJsx, /[A-Za-z\u00C0-\u024F]![ '<]/)
+})
+
 test('studio page never embeds merchant secrets or hype copy', () => {
   assert.doesNotMatch(generate, /MODELARK_MERCHANT_API_KEY/)
   assert.doesNotMatch(generate, /MONID_API_KEY/)

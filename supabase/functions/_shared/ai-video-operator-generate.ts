@@ -6,13 +6,17 @@ import {
   applyOperatorTransition,
   canCancelOperatorJob,
   canSubmitOperatorJob,
+  identityAssetRefsError,
+  isOperatorAssetRef,
   isOperatorJobId,
+  operatorAssetIdFromRef,
   operatorGenerateReady,
   parseOperatorLibraryTitle,
   parseOperatorPromptSaveInput,
   parseOperatorStartInput,
   presentAiVideoOperatorJob,
   presentAiVideoOperatorLibrary,
+  type AiVideoIdentityAssetLink,
   type AiVideoOperatorCharacter,
   type AiVideoOperatorJob,
   type AiVideoOperatorLibraryItem,
@@ -28,12 +32,18 @@ export type AiVideoOperatorOrderLink = {
   photos: string[]
   paymentStatus?: string | null
   fulfillment?: string | null
+  // Owner of the order; lets a customer identity registered on an earlier
+  // order be reused on a later one from the same customer.
+  customerId?: string | null
 }
 
 export type AiVideoOperatorGenerateStore = {
   findByRequestId?(id: string): Promise<AiVideoOperatorJob | null>
   countInflight(): Promise<number>
   findOrderByTid(tid: string): Promise<AiVideoOperatorOrderLink | null>
+  // Identity assets by BytePlus asset id, joined to their identity. Absent
+  // store method + asset:// ref = fail closed (identity_asset_not_active).
+  findIdentityAssets?(assetIds: string[]): Promise<AiVideoIdentityAssetLink[]>
   createQueued(input: AiVideoOperatorStartInput & { orderId: string | null }): Promise<AiVideoOperatorJob>
   submitQueued?(job: AiVideoOperatorJob): Promise<AiVideoOperatorJob>
   getJob(id: string): Promise<AiVideoOperatorJob | null>
@@ -79,13 +89,14 @@ export async function startAiVideoOperatorGenerate(
   }
   const inflight = await store.countInflight()
   if (inflight >= AI_VIDEO_OPERATOR_INFLIGHT_CAP) return { error: 'operator_inflight_cap' as const, status: 429 }
-  let orderId: string | null = null
+  let order: AiVideoOperatorOrderLink | null = null
   if (input.tid) {
-    const order = await store.findOrderByTid(input.tid)
+    order = await store.findOrderByTid(input.tid)
     if (!order) return { error: 'order_not_found' as const, status: 404 }
-    orderId = order.id
   }
-  const job = await store.createQueued({ ...input, orderId })
+  const ownership = await checkIdentityAssetRefs(input, store, order)
+  if (ownership) return { error: ownership, status: 400 }
+  const job = await store.createQueued({ ...input, orderId: order?.id ?? null })
   let current = job
   if (store.submitQueued) {
     try {
@@ -174,6 +185,19 @@ export function canKickOperatorSubmit(job: AiVideoOperatorJob): boolean {
 
 export function hasInflightOperatorJobs(jobs: AiVideoOperatorJob[]): boolean {
   return jobs.some((job) => (AI_VIDEO_OPERATOR_NONTERMINAL as readonly string[]).includes(job.status))
+}
+
+// Mirrors checkIdentityAssetRefs in api/_shared/admin-ai-video-generate-handler.ts.
+async function checkIdentityAssetRefs(
+  input: AiVideoOperatorStartInput,
+  store: AiVideoOperatorGenerateStore,
+  order: AiVideoOperatorOrderLink | null,
+): Promise<'identity_asset_not_active' | 'invalid_operator_ref_role' | null> {
+  const assetRefs = input.refUrls.filter(isOperatorAssetRef)
+  if (!assetRefs.length) return null
+  if (!store.findIdentityAssets) return 'identity_asset_not_active'
+  const assets = await store.findIdentityAssets(assetRefs.map(operatorAssetIdFromRef))
+  return identityAssetRefsError(input, assets, order ? { id: order.id, customerId: order.customerId ?? null } : null)
 }
 
 function processEnv(): Record<string, string | undefined> {

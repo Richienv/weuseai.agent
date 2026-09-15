@@ -11,8 +11,11 @@ import {
   AI_VIDEO_OPERATOR_MAX_REFS,
   applyOperatorTransition,
   canCancelOperatorJob,
+  identityAssetRefsError,
+  isOperatorAssetRef,
   isOperatorJobId,
   isOperatorUploadName,
+  operatorAssetIdFromRef,
   operatorGenerateReady,
   operatorPromptHasHeadings,
   operatorPromptIsReady,
@@ -24,6 +27,7 @@ import {
   presentAiVideoOperatorCharacter,
   presentAiVideoOperatorJob,
   presentAiVideoOperatorLibrary,
+  type AiVideoIdentityAssetLink,
   type AiVideoOperatorCharacter,
   type AiVideoOperatorJob,
   type AiVideoOperatorLibraryItem,
@@ -39,12 +43,18 @@ export type AiVideoOperatorOrderLink = {
   photos: string[]
   paymentStatus?: string | null
   fulfillment?: string | null
+  // Owner of the order; lets a customer identity registered on an earlier
+  // order be reused on a later one from the same customer.
+  customerId?: string | null
 }
 
 export type AiVideoOperatorGenerateStore = {
   findByRequestId?(id: string): Promise<AiVideoOperatorJob | null>
   countInflight(): Promise<number>
   findOrderByTid(tid: string): Promise<AiVideoOperatorOrderLink | null>
+  // Identity assets by BytePlus asset id, joined to their identity. Absent
+  // store method + asset:// ref = fail closed (identity_asset_not_active).
+  findIdentityAssets?(assetIds: string[]): Promise<AiVideoIdentityAssetLink[]>
   createQueued(input: AiVideoOperatorStartInput & { orderId: string | null }): Promise<AiVideoOperatorJob>
   submitQueued?(job: AiVideoOperatorJob): Promise<AiVideoOperatorJob>
   resumePolling?(job: AiVideoOperatorJob): Promise<AiVideoOperatorJob>
@@ -146,13 +156,14 @@ export async function startAiVideoOperatorGenerate(
   }
   const inflight = await store.countInflight()
   if (inflight >= AI_VIDEO_OPERATOR_INFLIGHT_CAP) return { error: 'operator_inflight_cap' as const, status: 429 }
-  let orderId: string | null = null
+  let order: AiVideoOperatorOrderLink | null = null
   if (input.tid) {
-    const order = await store.findOrderByTid(input.tid)
+    order = await store.findOrderByTid(input.tid)
     if (!order) return { error: 'order_not_found' as const, status: 404 }
-    orderId = order.id
   }
-  const job = await store.createQueued({ ...input, orderId })
+  const ownership = await checkIdentityAssetRefs(input, store, order)
+  if (ownership) return { error: ownership, status: 400 }
+  const job = await store.createQueued({ ...input, orderId: order?.id ?? null })
   const workerWarning = await wakeOperatorWorker(store)
   return {
     worker_warning: workerWarning,
@@ -302,7 +313,8 @@ export async function listAiVideoOperatorGenerate(
       selected = {
         ...presentAiVideoOperatorJob(job), result_url: resultUrl,
         ...(input.includeReferences ? { reference_media: await Promise.all([
-          ...job.refUrls.map(async (url) => ({ path: url, url })),
+          // asset:// has no browser-loadable URL; the Studio shows its Karakter avatar.
+          ...job.refUrls.map(async (url) => ({ path: url, url: isOperatorAssetRef(url) ? null : url })),
           ...job.refPaths.map(async (path) => ({ path, url: store.signResult ? await store.signResult(path) : null })),
         ]) } : {}),
       }
@@ -351,4 +363,17 @@ export async function listAiVideoOperatorGenerate(
 async function wakeOperatorWorker(store: AiVideoOperatorGenerateStore): Promise<string | null> {
   try { await store.kickWorker(); return null }
   catch { return 'operator_worker_unavailable' }
+}
+
+// Mirrors checkIdentityAssetRefs in supabase/functions/_shared/ai-video-operator-generate.ts.
+async function checkIdentityAssetRefs(
+  input: AiVideoOperatorStartInput,
+  store: AiVideoOperatorGenerateStore,
+  order: AiVideoOperatorOrderLink | null,
+): Promise<'identity_asset_not_active' | 'invalid_operator_ref_role' | null> {
+  const assetRefs = input.refUrls.filter(isOperatorAssetRef)
+  if (!assetRefs.length) return null
+  if (!store.findIdentityAssets) return 'identity_asset_not_active'
+  const assets = await store.findIdentityAssets(assetRefs.map(operatorAssetIdFromRef))
+  return identityAssetRefsError(input, assets, order ? { id: order.id, customerId: order.customerId ?? null } : null)
 }

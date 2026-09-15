@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow, noarchive" />
+  <title>Influencer &amp; Karakter — weuseai.agent admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Instrument+Serif&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/admin/assets/admin.css?v=karakter1" />
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="/admin/assets/admin-shared.js"></script>
+</head>
+<body>
+  <!--
+    Influencer partner ledger (ref codes, fees, break-even) ships from the
+    ai-video funnel branch and mounts in #influencer-root. The Karakter panel
+    below is independent: vanilla JS in /admin/assets/ai-video-karakter.js,
+    mounted on [data-karakter-panel], talking to ai_video_identity_* actions.
+  -->
+  <div class="app-shell">
+    <div id="sidebar-root"></div>
+    <main class="app-main">
+      <div class="page-head">
+        <div>
+          <h1>Influencer &amp; Karakter</h1>
+          <p>Partner, tautan unik, dan karakter wajah terverifikasi untuk Studio.</p>
+        </div>
+      </div>
+
+      <div id="influencer-root"></div>
+
+      <section data-karakter-panel aria-labelledby="karakter-title"></section>
+    </main>
+  </div>
+
+  <script>
+    (function () {
+      var admin = window.WeUseAdmin;
+      if (!admin || !window.React || !window.ReactDOM) return;
+      ReactDOM.createRoot(document.getElementById('sidebar-root')).render(
+        React.createElement(admin.Sidebar, { activeHref: '/admin/ai-video-influencers' })
+      );
+    })();
+  </script>
+  <script src="/admin/assets/ai-video-karakter.js?v=karakter1"></script>
+</body>
+</html>

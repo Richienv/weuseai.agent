@@ -7,7 +7,7 @@ export function jobState(job, now = Date.now()) {
   const age = now - Date.parse(job.updated_at || job.created_at || '');
   if (job.status === 'cancelled') return { phase: 'cancelled', label: 'Dibatalkan', detail: job.provider_task_id ? 'Provider melaporkan proses dihentikan.' : 'Job dibatalkan sebelum dikirim ke provider.', tone: 'neutral', step: -1, active: false };
   if (job.status === 'failed') {
-    if (job.error_code === 'monid_submission_unknown') return { phase: 'unconfirmed', label: 'Periksa pengiriman', detail: 'Pengiriman ke provider belum terkonfirmasi.', tone: 'warning', step: -1, active: false };
+    if (job.error_code === 'monid_submission_unknown' || job.error_code === 'modelark_submission_unknown') return { phase: 'unconfirmed', label: 'Periksa pengiriman', detail: 'Pengiriman ke provider belum terkonfirmasi.', tone: 'warning', step: -1, active: false };
     const sync = job.can_sync === true || (job.provider_task_id && ['operator_sync_timeout', 'operator_result_store_failed'].includes(job.error_code));
     return { phase: sync ? 'sync-paused' : 'failed', label: sync ? 'Perlu cek status' : 'Generate gagal', detail: sync ? 'Pemantauan terhenti. Cek kembali run yang sama tanpa membuat video baru.' : '', tone: sync ? 'warning' : 'error', step: -1, active: false, canSync: Boolean(sync) };
   }

@@ -1,4 +1,8 @@
 export const AI_VIDEO_OPERATOR_PROVIDER = 'monid'
+// Jobs that carry a verified-identity asset:// ref run on BytePlus ModelArk;
+// everything else stays on Monid. Mirrors the DB CHECK in
+// 20260914010000_ai_video_identities.sql.
+export const AI_VIDEO_OPERATOR_PROVIDERS = ['monid', 'byteplus_modelark'] as const
 export const AI_VIDEO_OPERATOR_MIN_SECONDS = 4
 export const AI_VIDEO_OPERATOR_MAX_SECONDS = 30
 export const AI_VIDEO_OPERATOR_V20_MAX_SECONDS = 15
@@ -22,6 +26,13 @@ export const AI_VIDEO_OPERATOR_TITLE_MIN = 2
 export const AI_VIDEO_OPERATOR_TITLE_MAX = 80
 export const SEEDANCE_25_USD_PER_5S_720P = 1.156
 export const SEEDANCE_25_USD_PER_5S_480P = 0.52
+// BytePlus ModelArk Seedance 2.5 list prices, per output second. Placeholders
+// from the Sep 2026 pricing page (1080p about USD 0.41/s, 720p about USD 0.25/s);
+// 480p is derived with the same 480p/720p ratio Monid publishes. Replace with
+// the invoiced token rate once the first paid ModelArk job settles.
+export const ARK_SEEDANCE_25_USD_PER_SECOND_1080P = 0.41
+export const ARK_SEEDANCE_25_USD_PER_SECOND_720P = 0.25
+export const ARK_SEEDANCE_25_USD_PER_SECOND_480P = 0.11
 
 export const AI_VIDEO_OPERATOR_HEADINGS = [
   'SCENE',
@@ -39,7 +50,9 @@ export const AI_VIDEO_OPERATOR_RATIOS = ['9:16', '16:9', '21:9', '1:1'] as const
 export const AI_VIDEO_OPERATOR_MODELS = [
   'wan3.0', 'seedance-2.5', 'seedance-2.0', 'seedance-2.0-fast', 'seedance-2.0-mini',
 ] as const
-export const AI_VIDEO_OPERATOR_RESOLUTIONS = ['480p', '720p'] as const
+// 1080p is a ModelArk-only output; parseOperatorStartInput rejects it unless
+// the job resolves to provider 'byteplus_modelark' (an asset:// ref is present).
+export const AI_VIDEO_OPERATOR_RESOLUTIONS = ['480p', '720p', '1080p'] as const
 // Character sheets carry likeness, so they are reference_image. first_frame is
 // opt-in for scene stills only — a sheet as frame one puts the grey 4-panel
 // plate on screen and wrecks the shot.
@@ -57,6 +70,7 @@ export const AI_VIDEO_OPERATOR_STATUSES = [
 ] as const
 export const AI_VIDEO_OPERATOR_NONTERMINAL = ['queued', 'submitted', 'running'] as const
 
+export type AiVideoOperatorProvider = (typeof AI_VIDEO_OPERATOR_PROVIDERS)[number]
 export type AiVideoOperatorRatio = (typeof AI_VIDEO_OPERATOR_RATIOS)[number]
 export type AiVideoOperatorModel = (typeof AI_VIDEO_OPERATOR_MODELS)[number]
 export type AiVideoOperatorResolution = (typeof AI_VIDEO_OPERATOR_RESOLUTIONS)[number]
@@ -74,6 +88,9 @@ export type AiVideoOperatorCharacter = {
 
 export type AiVideoOperatorJob = {
   clientRequestId?: string | null
+  // Missing on rows mapped before the identity lane; presenters fall back to
+  // operatorJobProvider(refUrls).
+  provider?: AiVideoOperatorProvider | null
   id: string
   orderId: string | null
   exampleId: string | null
@@ -123,12 +140,30 @@ export type AiVideoOperatorStartInput = {
   generateAudio: boolean
   model: AiVideoOperatorModel
   resolution: AiVideoOperatorResolution
+  provider: AiVideoOperatorProvider
   exampleId: string | null
   libraryId: string | null
   tid: string | null
   refPaths: string[]
   refUrls: string[]
   refRoles: AiVideoOperatorRefRole[]
+}
+
+// One ai_video_identity_assets row joined to its ai_video_identities parent,
+// as the start handler needs it to decide whether an asset:// ref may be used.
+export type AiVideoIdentityAssetLink = {
+  assetId: string
+  assetType: 'Image' | 'Video' | 'Audio'
+  status: 'processing' | 'active' | 'failed'
+  deletedAt: string | null
+  identity: {
+    id: string
+    ownerKind: 'founder' | 'customer'
+    customerId: string | null
+    orderId: string | null
+    verificationStatus: string
+    revokedAt: string | null
+  }
 }
 
 export type AiVideoOperatorLibraryItem = {
@@ -149,7 +184,13 @@ export type AiVideoOperatorLibraryItem = {
 const RATIOS = new Set<string>(AI_VIDEO_OPERATOR_RATIOS)
 const MODELS = new Set<string>(AI_VIDEO_OPERATOR_MODELS)
 const RESOLUTIONS = new Set<string>(AI_VIDEO_OPERATOR_RESOLUTIONS)
+const PROVIDERS = new Set<string>(AI_VIDEO_OPERATOR_PROVIDERS)
 const STATUSES = new Set<string>(AI_VIDEO_OPERATOR_STATUSES)
+// Same shape as ARK_ASSET_URI_RE in ark-asset-client.ts. Inlined on purpose:
+// this file is bundled into the Studio UI and has no imports, and the twin
+// drift test pins both copies byte-identical. tests/ai-video-operator.spec.ts
+// pins the two regexes equal.
+const ASSET_URI_RE = /^asset:\/\/[A-Za-z0-9._-]{8,120}$/
 const TRANSITIONS: Record<AiVideoOperatorStatus, readonly AiVideoOperatorStatus[]> = {
   queued: ['submitted', 'failed', 'cancelled'],
   submitted: ['running', 'succeeded', 'failed', 'cancelled'],
@@ -188,6 +229,32 @@ export function isAiVideoOperatorResolution(value: unknown): value is AiVideoOpe
 
 export function isAiVideoOperatorStatus(value: unknown): value is AiVideoOperatorStatus {
   return typeof value === 'string' && STATUSES.has(value)
+}
+
+export function isAiVideoOperatorProvider(value: unknown): value is AiVideoOperatorProvider {
+  return typeof value === 'string' && PROVIDERS.has(value)
+}
+
+// asset://<id> points at a BytePlus ModelArk identity asset (verified real person).
+export function isOperatorAssetRef(value: unknown): value is string {
+  return typeof value === 'string' && ASSET_URI_RE.test(value)
+}
+
+export function operatorAssetIdFromRef(value: string): string {
+  if (!isOperatorAssetRef(value)) throw new Error('invalid_operator_ref_url')
+  return value.slice('asset://'.length)
+}
+
+// Any asset:// ref forces the ModelArk lane; the DB CHECK enforces the same rule.
+export function operatorJobProvider(refUrls: readonly string[]): AiVideoOperatorProvider {
+  return refUrls.some(isOperatorAssetRef) ? 'byteplus_modelark' : 'monid'
+}
+
+// An asset:// ref has no extension, so its media kind follows the declared role.
+export function operatorRefKindForRole(role: AiVideoOperatorRefRole): 'image' | 'video' | 'audio' {
+  if (role === 'reference_video') return 'video'
+  if (role === 'reference_audio') return 'audio'
+  return 'image'
 }
 
 export function operatorModelMaxSeconds(model: AiVideoOperatorModel): number {
@@ -277,6 +344,7 @@ export function isOperatorRefRole(value: unknown): value is AiVideoOperatorRefRo
 
 export function isOperatorRefUrl(value: unknown): value is string {
   if (typeof value !== 'string' || value.length > 2000) return false
+  if (isOperatorAssetRef(value)) return true
   try {
     const url = new URL(value)
     return url.protocol === 'https:'
@@ -336,7 +404,16 @@ export function estimateOperatorCostUsd(
   resolution: AiVideoOperatorResolution = '720p',
   model: string = 'seedance-2.5',
   referenceSeconds = 0,
+  provider: AiVideoOperatorProvider = 'monid',
 ): number {
+  if (provider === 'byteplus_modelark') {
+    // Direct ModelArk lane (Seedance 2.5 only). Reference clips are not billed
+    // separately on Ark; output seconds set the price.
+    const perSecond = resolution === '1080p'
+      ? ARK_SEEDANCE_25_USD_PER_SECOND_1080P
+      : resolution === '480p' ? ARK_SEEDANCE_25_USD_PER_SECOND_480P : ARK_SEEDANCE_25_USD_PER_SECOND_720P
+    return Math.round(durationSeconds * perSecond * 1000) / 1000
+  }
   if (model === 'wan3.0') return Math.round((durationSeconds + referenceSeconds) * (resolution === '480p' ? .05 : .10) * 1000) / 1000
   const perFive = resolution === '480p' ? SEEDANCE_25_USD_PER_5S_480P : SEEDANCE_25_USD_PER_5S_720P
   const rate = ({ 'seedance-2.5': 10.7, 'seedance-2.0': 7, 'seedance-2.0-fast': 5.6, 'seedance-2.0-mini': 3.5 } as Record<string, number>)[model] ?? 10.7
@@ -455,17 +532,25 @@ export function parseOperatorStartInput(body: Record<string, unknown>): AiVideoO
     if (!isOperatorRefUrl(url)) throw new Error('invalid_operator_ref_url')
     return url
   })
+  const provider = operatorJobProvider(refUrls)
+  // Identity assets live in the ModelArk asset library; only Seedance 2.5 on
+  // Ark can read them. Any other model with an asset:// ref is a bad ref.
+  if (provider === 'byteplus_modelark' && model !== 'seedance-2.5') throw new Error('invalid_operator_ref_url')
+  if (resolution === '1080p' && provider !== 'byteplus_modelark') throw new Error('invalid_operator_resolution')
   if (refPaths.length + refUrls.length > operatorMaxRefs(model)) throw new Error('operator_ref_cap')
   const declaredRoles = asStringList(body.ref_roles)
   if (declaredRoles.length && declaredRoles.length !== refPaths.length + refUrls.length) {
     throw new Error('invalid_operator_ref_role')
   }
   const sources = [...refUrls, ...refPaths]
+  const assetFlags = sources.map(isOperatorAssetRef)
   const refRoles = sources.map((source, index) => {
     const declared = declaredRoles[index] ?? null
     if (declared && !isOperatorRefRole(declared)) throw new Error('invalid_operator_ref_role')
     const role = inferOperatorRefRole(source, declared)
-    const kind = operatorRefKindFromName(source)
+    // asset:// carries no extension: the declared role names the media kind,
+    // and the start handler checks it against the registered asset_type.
+    const kind = assetFlags[index] ? operatorRefKindForRole(role) : operatorRefKindFromName(source)
     if (role === 'reference_video' && kind !== 'video') throw new Error('invalid_operator_ref_role')
     if (role === 'reference_audio' && kind !== 'audio') throw new Error('invalid_operator_ref_role')
     if ((role === 'first_frame' || role === 'reference_image') && kind !== 'image') {
@@ -503,9 +588,11 @@ export function parseOperatorStartInput(body: Record<string, unknown>): AiVideoO
   }
   if (simple && model === 'seedance-2.5') {
     const durations = Array.isArray(body.ref_durations) ? body.ref_durations : []
-    const referenceError = simpleReferenceError(model, refRoles.map((role, index) => ({ role, seconds: durations[index] })), durationSeconds)
+    // Identity assets were measured by BytePlus at registration; the UI has no
+    // duration for them, so they are exempt from the clip-length checks.
+    const referenceError = simpleReferenceError(model, refRoles.map((role, index) => ({ role, seconds: durations[index], asset: assetFlags[index] })), durationSeconds)
     if (referenceError) throw new Error('invalid_operator_media_duration')
-    referenceSeconds = refRoles.reduce((total, role, index) => total + (role === 'reference_audio' || role === 'reference_video' ? durations[index] : 0), 0)
+    referenceSeconds = refRoles.reduce((total, role, index) => total + (role === 'reference_audio' || role === 'reference_video' ? (Number(durations[index]) || 0) : 0), 0)
   }
   let binding: ReturnType<typeof bindReferenceTags> | undefined
   if (simple) {
@@ -525,6 +612,7 @@ export function parseOperatorStartInput(body: Record<string, unknown>): AiVideoO
     generateAudio: generateAudio || audioCount > 0,
     model,
     resolution,
+    provider,
     exampleId,
     libraryId,
     tid: tidRaw || null,
@@ -536,9 +624,11 @@ export function parseOperatorStartInput(body: Record<string, unknown>): AiVideoO
 
 export function presentAiVideoOperatorJob(job: AiVideoOperatorJob) {
   const resolution = isAiVideoOperatorResolution(job.resolution) ? job.resolution : '720p'
+  const provider = isAiVideoOperatorProvider(job.provider) ? job.provider : operatorJobProvider(job.refUrls)
   return {
     id: job.id,
     client_request_id: job.clientRequestId ?? null,
+    provider,
     order_id: job.orderId,
     example_id: job.exampleId,
     library_id: job.libraryId,
@@ -565,7 +655,7 @@ export function presentAiVideoOperatorJob(job: AiVideoOperatorJob) {
     ref_urls: job.refUrls,
     ref_roles: job.refRoles,
     result_path: job.resultPath,
-    estimate_usd: estimateOperatorCostUsd(job.durationSeconds, resolution, job.providerModelId ?? 'seedance-2.5', Number(job.usage.reference_seconds) || 0),
+    estimate_usd: estimateOperatorCostUsd(job.durationSeconds, resolution, job.providerModelId ?? 'seedance-2.5', Number(job.usage.reference_seconds) || 0, provider),
     cost_usd: operatorCostFromUsage(job.usage),
     created_at: job.createdAt,
     updated_at: job.updatedAt,
@@ -628,6 +718,36 @@ export function isOperatorJobId(value: unknown): value is string {
   return typeof value === 'string' && UUID_RE.test(value)
 }
 
+// Ownership gate for asset:// refs. Every asset must be active, undeleted, on a
+// verified and unrevoked identity, and either founder-owned or tied to the
+// order behind the job's claim code (by order_id or customer_id). The declared
+// role must also match the registered asset_type. Returns an error code or null.
+export function identityAssetRefsError(
+  input: { refUrls: readonly string[]; refRoles: readonly string[] },
+  assets: readonly AiVideoIdentityAssetLink[],
+  order: { id: string; customerId?: string | null } | null,
+): 'identity_asset_not_active' | 'invalid_operator_ref_role' | null {
+  const byId = new Map(assets.map((asset) => [asset.assetId, asset]))
+  for (let index = 0; index < input.refUrls.length; index += 1) {
+    const ref = input.refUrls[index]
+    if (!isOperatorAssetRef(ref)) continue
+    const asset = byId.get(operatorAssetIdFromRef(ref))
+    if (!asset || asset.status !== 'active' || asset.deletedAt) return 'identity_asset_not_active'
+    const identity = asset.identity
+    if (identity.revokedAt || identity.verificationStatus !== 'verified') return 'identity_asset_not_active'
+    if (identity.ownerKind !== 'founder') {
+      if (!order) return 'identity_asset_not_active'
+      const sameOrder = Boolean(identity.orderId) && identity.orderId === order.id
+      const sameCustomer = Boolean(identity.customerId) && Boolean(order.customerId) && identity.customerId === order.customerId
+      if (!sameOrder && !sameCustomer) return 'identity_asset_not_active'
+    }
+    const role = input.refRoles[index] ?? 'reference_image'
+    const expected = asset.assetType === 'Video' ? 'video' : asset.assetType === 'Audio' ? 'audio' : 'image'
+    if (!isOperatorRefRole(role) || operatorRefKindForRole(role) !== expected) return 'invalid_operator_ref_role'
+  }
+  return null
+}
+
 function asStringList(value: unknown): string[] {
   if (!Array.isArray(value)) return []
   return value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
@@ -649,7 +769,9 @@ export function simpleModelSettings(model: string) {
   }
 }
 
-export function simpleReferenceError(model: string, refs: readonly { role: string; seconds?: number }[], outputSeconds: number): string {
+// `asset: true` marks a verified-identity asset:// ref; its clip length is
+// unknown to the UI and already validated by BytePlus, so it skips the checks.
+export function simpleReferenceError(model: string, refs: readonly { role: string; seconds?: number; asset?: boolean }[], outputSeconds: number): string {
   const settings = simpleModelSettings(model)
   const photos = refs.filter((ref) => ref.role === 'reference_image' || ref.role === 'first_frame')
   const audio = refs.filter((ref) => ref.role === 'reference_audio')
@@ -658,6 +780,7 @@ export function simpleReferenceError(model: string, refs: readonly { role: strin
   if (audio.length > settings.audioLimit) return 'audio_limit'
   if (videos.length > settings.videoLimit) return 'video_limit'
   for (const ref of [...audio, ...videos]) {
+    if (ref.asset === true) continue
     if (typeof ref.seconds !== 'number' || !Number.isFinite(ref.seconds) || ref.seconds < settings.minClipSeconds || ref.seconds > settings.maxClipSeconds) return ref.role === 'reference_audio' ? 'audio_duration' : 'video_duration'
   }
   const audioSeconds = audio.reduce((total, ref) => total + (ref.seconds || 0), 0)
@@ -749,6 +872,12 @@ export function compileSimplePrompt(prompt: string, roles: readonly string[] = [
   return source + GUIDANCE + lines.join('\n')
 }
 
-export function simpleEstimate(duration: number, referenceSeconds = 0, model: string = SIMPLE_MODEL): number {
-  return estimateOperatorCostUsd(duration, '720p', model, referenceSeconds)
+export function simpleEstimate(
+  duration: number,
+  referenceSeconds = 0,
+  model: string = SIMPLE_MODEL,
+  resolution: AiVideoOperatorResolution = '720p',
+  provider: AiVideoOperatorProvider = 'monid',
+): number {
+  return estimateOperatorCostUsd(duration, resolution, model, referenceSeconds, provider)
 }

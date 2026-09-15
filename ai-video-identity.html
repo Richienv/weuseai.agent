@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0a0a0a">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="supabase-functions-origin" content="https://gtjgsligllbjcisiyrah.supabase.co/functions/v1">
+  <link rel="icon" href="/assets/ads/logo-cat.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/ai-video-identity.css?v=identity1">
+  <title>Buat karakter — weuseai</title>
+</head>
+<body>
+  <p class="local-badge" id="local-badge" hidden></p>
+  <main class="scene" id="identity-page" data-step="0">
+    <header class="id-top">
+      <a class="id-lockup" href="/ai-video/welcome" aria-label="weuseai, kembali ke receipt">
+        <img class="id-cat" src="/assets/ads/logo-cat.png" width="24" height="24" alt="">
+        <span class="id-wordmark">weuseai</span>
+      </a>
+      <ol class="steps" id="steps" aria-label="Langkah membuat karakter">
+        <li data-step="1"><span class="step-dot" aria-hidden="true"></span><span class="step-name">Persetujuan</span></li>
+        <li data-step="2"><span class="step-dot" aria-hidden="true"></span><span class="step-name">Verifikasi</span></li>
+        <li data-step="3"><span class="step-dot" aria-hidden="true"></span><span class="step-name">Foto</span></li>
+        <li data-step="4"><span class="step-dot" aria-hidden="true"></span><span class="step-name">Diproses</span></li>
+        <li data-step="5"><span class="step-dot" aria-hidden="true"></span><span class="step-name">Siap</span></li>
+      </ol>
+    </header>
+
+    <p class="status-line" id="status-line" role="status" aria-live="polite"></p>
+
+    <section class="card gate" id="gate" hidden>
+      <p class="kicker">Karakter video</p>
+      <h1 class="title" id="gate-title" tabindex="-1">Halaman ini untuk pelanggan yang sudah bayar</h1>
+      <p class="body" id="gate-note">Buka halaman ini dari receipt pembayaran, atau selesaikan pembayaran dulu.</p>
+      <div class="actions">
+        <button class="btn btn-primary" id="gate-retry" type="button" hidden>Coba lagi</button>
+        <a class="btn btn-primary" id="gate-receipt" href="/ai-video/welcome">Lihat receipt</a>
+        <a class="btn ghost" href="/ai-video">Ke halaman pesanan</a>
+      </div>
+    </section>
+
+    <section class="card step" id="step-consent" data-step="1" hidden>
+      <p class="kicker">Langkah 1 dari 5 · Persetujuan</p>
+      <h1 class="title" tabindex="-1">Buat karakter kamu</h1>
+      <p class="body">Karakter ini dipakai Richie untuk memasukkan wajah kamu ke video pesanan. Supaya hasilnya tetap kamu, wajahmu perlu diverifikasi sekali.</p>
+      <p class="body">Verifikasi wajah dan pemrosesan foto dilakukan oleh BytePlus (ByteDance) di server mereka, mengikuti aturan mereka. Kami menyimpan hanya ID hasil verifikasi dan foto yang kamu unggah sendiri.</p>
+      <p class="body">Foto dan karakter dihapus 30 hari setelah pesanan selesai, atau lebih cepat kalau kamu minta hapus. Kamu bisa menghapusnya sendiri dari halaman ini kapan saja.</p>
+      <form id="consent-form" novalidate>
+        <div class="field">
+          <label class="label" for="display-name">Nama karakter</label>
+          <input class="input" id="display-name" name="display_name" type="text" maxlength="80" autocomplete="name" placeholder="Contoh: Richie" required>
+          <p class="hint" id="display-name-hint">Nama ini hanya untuk membedakan karakter di pesanan kamu.</p>
+        </div>
+        <label class="check" for="consent-check">
+          <input id="consent-check" name="consent" type="checkbox" required>
+          <span id="consent-text">Saya setuju wajah saya diverifikasi dan diproses oleh BytePlus (ByteDance) untuk membuat karakter video ini. Saya paham data ini bisa saya hapus kapan saja.</span>
+        </label>
+        <p class="field-error" id="consent-error" role="alert" hidden></p>
+        <div class="actions">
+          <button class="btn btn-primary" id="consent-submit" type="submit">Setuju dan lanjut</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="card step" id="step-verify" data-step="2" hidden>
+      <p class="kicker">Langkah 2 dari 5 · Verifikasi wajah</p>
+      <h1 class="title" tabindex="-1">Verifikasi wajah, sekitar satu menit</h1>
+      <p class="body">Kamu akan dibawa ke halaman BytePlus. Halamannya berbahasa Inggris, dan prosesnya sekitar satu menit.</p>
+      <p class="body">Cari cahaya yang cukup dan lepas topi atau masker. Pastikan hanya kamu yang ada di depan kamera.</p>
+      <p class="body">Setelah selesai, kamu otomatis kembali ke halaman ini.</p>
+      <p class="note" id="verify-timer" hidden>Link berlaku 30 menit, sampai <time id="verify-deadline"></time>.</p>
+      <p class="note note-warn" id="verify-note" hidden></p>
+      <div class="actions">
+        <button class="btn btn-primary" id="verify-open" type="button" hidden>Buka verifikasi BytePlus</button>
+        <button class="btn ghost" id="verify-check" type="button" hidden>Cek hasil</button>
+        <button class="btn ghost" id="verify-restart" type="button" hidden>Mulai ulang</button>
+      </div>
+    </section>
+
+    <section class="card step" id="step-upload" data-step="3" hidden>
+      <p class="kicker">Langkah 3 dari 5 · Unggah foto</p>
+      <h1 class="title" tabindex="-1">Dua foto kamu</h1>
+      <p class="body">Pakai foto dengan satu wajah saja, tanpa filter berat. Ukuran 300 sampai 6000 piksel per sisi, di bawah 30 MB, format JPG, PNG, WEBP, atau HEIC.</p>
+      <p class="body">Foto yang kamu unggah dicocokkan dengan wajah hasil verifikasi. Kalau wajahnya orang lain, foto akan ditolak.</p>
+      <p class="note" id="quota-note" hidden></p>
+      <div class="slots" id="slots">
+        <div class="slot" data-slot="full_body">
+          <label class="slot-label" for="file-full_body">
+            <span class="slot-title">Foto seluruh badan</span>
+            <span class="slot-desc">Menghadap depan, format potret, dari kepala sampai kaki.</span>
+            <span class="slot-state" data-role="state">Belum ada foto</span>
+          </label>
+          <input class="sr-only" id="file-full_body" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif" data-slot="full_body">
+          <progress class="slot-progress" data-role="progress" max="100" value="0" hidden></progress>
+          <p class="field-error" data-role="error" role="alert" hidden></p>
+        </div>
+        <div class="slot" data-slot="close_up">
+          <label class="slot-label" for="file-close_up">
+            <span class="slot-title">Foto wajah dekat</span>
+            <span class="slot-desc">Ekspresi netral, dari bahu ke atas.</span>
+            <span class="slot-state" data-role="state">Belum ada foto</span>
+          </label>
+          <input class="sr-only" id="file-close_up" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif" data-slot="close_up">
+          <progress class="slot-progress" data-role="progress" max="100" value="0" hidden></progress>
+          <p class="field-error" data-role="error" role="alert" hidden></p>
+        </div>
+        <div class="slot slot-optional" data-slot="voice">
+          <label class="slot-label" for="file-voice">
+            <span class="slot-title">Klip suara <em>opsional</em></span>
+            <span class="slot-desc">MP3 atau WAV, 2 sampai 30 detik, di bawah 15 MB. Suara kamu sendiri, tanpa musik.</span>
+            <span class="slot-state" data-role="state">Belum ada klip</span>
+          </label>
+          <input class="sr-only" id="file-voice" type="file" accept="audio/mpeg,audio/wav,audio/x-wav,.mp3,.wav" data-slot="voice">
+          <progress class="slot-progress" data-role="progress" max="100" value="0" hidden></progress>
+          <p class="field-error" data-role="error" role="alert" hidden></p>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn btn-primary" id="upload-next" type="button" disabled>Lanjut ke proses</button>
+      </div>
+    </section>
+
+    <section class="card step" id="step-processing" data-step="4" hidden>
+      <p class="kicker">Langkah 4 dari 5 · Diproses</p>
+      <h1 class="title" tabindex="-1">BytePlus sedang mencocokkan foto</h1>
+      <p class="body">Biasanya 1 sampai 10 menit. Halaman ini mengecek sendiri setiap 15 detik, kamu boleh tetap di sini.</p>
+      <ul class="assets" id="asset-list" aria-label="Status foto"></ul>
+      <div class="actions">
+        <button class="btn ghost" id="processing-refresh" type="button">Cek sekarang</button>
+      </div>
+    </section>
+
+    <section class="card step" id="step-ready" data-step="5" hidden>
+      <p class="kicker">Langkah 5 dari 5 · Siap</p>
+      <h1 class="title" tabindex="-1">Karakter kamu siap</h1>
+      <article class="character" aria-label="Kartu karakter">
+        <div class="character-head">
+          <p class="character-name" id="ready-name">—</p>
+          <span class="badge badge-ready">Siap dipakai</span>
+        </div>
+        <ul class="character-assets" id="ready-assets" aria-label="Isi karakter"></ul>
+      </article>
+      <p class="body">Richie memakai karakter ini saat membuat video pesanan kamu, sehingga wajah di video tetap wajah kamu. Karakter ini tidak dipakai untuk pesanan orang lain.</p>
+      <p class="body">Kalau kamu berubah pikiran, hapus karakter dari sini. Foto dan hasil verifikasi ikut dihapus dari BytePlus dan dari kami.</p>
+      <div class="actions">
+        <a class="btn btn-primary" id="ready-wa" href="https://wa.me/6282154902561">Kabari Richie</a>
+        <button class="btn btn-danger" id="revoke-btn" type="button">Hapus karakter</button>
+      </div>
+    </section>
+
+    <footer class="dock">
+      <a class="ghost" id="chat-link" href="https://wa.me/6282154902561">Chat Richie</a>
+      <a class="ghost" id="receipt-link" href="/ai-video/welcome">Kembali ke receipt</a>
+    </footer>
+  </main>
+  <script type="module" src="/assets/ai-video-identity.js?v=identity1"></script>
+</body>
+</html>

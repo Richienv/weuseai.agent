@@ -2,7 +2,7 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { isServiceRoleCaller } from '../_shared/admin-auth.ts'
 import { handleCors, withCors } from '../_shared/cors.ts'
-import { createAiVideoOperatorRuntime, runAiVideoOperatorWorker } from '../_shared/ai-video-operator-runtime.ts'
+import { asOperatorDeliveryJob, createAiVideoOperatorRuntime, runAiVideoOperatorWorker } from '../_shared/ai-video-operator-runtime.ts'
 import { createAiVideoProviderRuntime } from '../_shared/ai-video-provider-runtime.ts'
 import { runAiVideoRenderWorker } from '../_shared/ai-video-render-worker-handler.ts'
 import { resolveModelArkConfig } from '../_shared/modelark-client.ts'
@@ -21,6 +21,9 @@ const runtime = createAiVideoProviderRuntime({
 })
 const operator = createAiVideoOperatorRuntime({
   supabase, apiKey: Deno.env.get('MONID_API_KEY') ?? '',
+  // Verified-identity (asset://) jobs go straight to Ark with the merchant key.
+  modelArkApiKey: Deno.env.get('MODELARK_MERCHANT_API_KEY') ?? '',
+  modelArkBaseUrl: Deno.env.get('BYTEPLUS_MODELARK_API_BASE'),
 })
 
 Deno.serve(async (req) => {
@@ -36,21 +39,9 @@ Deno.serve(async (req) => {
         async claim(limit, leaseSeconds) {
           const { data, error } = await supabase.rpc('claim_due_ai_video_operator_jobs', { p_limit: limit, p_lease_seconds: leaseSeconds })
           if (error) throw error
-          return ((data ?? []) as Array<Record<string, unknown>>).map((row) => ({
-            id: String(row.id),
-            status: row.status as 'queued' | 'submitted' | 'running' | 'succeeded' | 'failed' | 'cancelled',
-            prompt: String(row.prompt ?? ''),
-            ratio: row.ratio as '9:16' | '16:9' | '21:9' | '1:1',
-            durationSeconds: Number(row.duration_seconds) || 6,
-            generateAudio: row.generate_audio === true,
-            providerTaskId: row.provider_task_id ? String(row.provider_task_id) : null,
-            providerModelId: row.provider_model_id ? String(row.provider_model_id) : null,
-            resolution: row.resolution ? String(row.resolution) : '720p',
-            refUrls: Array.isArray(row.ref_urls) ? row.ref_urls.map(String) : [],
-            refRoles: Array.isArray(row.ref_roles) ? row.ref_roles.map(String) : [],
-            resultPath: row.result_path ? String(row.result_path) : null,
-            attempt: Number(row.attempt) || 0,
-          }))
+          // One row mapper (incl. provider) shared with the runtime, so the
+          // claim path cannot drift from findJobById.
+          return ((data ?? []) as Array<Record<string, unknown>>).map(asOperatorDeliveryJob)
         },
         processor: operator,
       })

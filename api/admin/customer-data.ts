@@ -22,6 +22,7 @@ import { requireAdminCookie } from '../_shared/admin-cookie-auth.js'
 import { aiVideoOpsConfigured, createAiVideoOpsStore, listAiVideoOps } from '../_shared/admin-ai-video-ops.js'
 import { aiVideoOperatorConfigured, createAiVideoOperatorGenerateStore } from '../_shared/admin-ai-video-generate.js'
 import { listAiVideoOperatorGenerate } from '../_shared/admin-ai-video-generate-handler.js'
+import { aiVideoIdentityReadConfigured, createAiVideoIdentityReadStore, listAiVideoIdentitiesForPicker } from '../_shared/admin-ai-video-identity-read.js'
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? ''
 const SUPABASE_SERVICE_KEY =
@@ -172,6 +173,26 @@ export default async function handler(
       res.status(200).json(result)
     } catch (error) {
       res.status(502).json({ error: 'fetch_failed', detail: error instanceof Error ? error.message : 'ai_video_generate' })
+    }
+    return
+  }
+  // Studio Karakter picker: verified identities (founder + the tid's customer)
+  // with their active BytePlus assets. Read-only; ownership is re-checked on start.
+  if ((u.searchParams.get('resource') ?? '').trim() === 'ai-video-identities') {
+    if (!aiVideoIdentityReadConfigured()) {
+      res.status(500).json({ error: 'misconfigured', detail: 'SUPABASE_URL / SUPABASE_SECRET_KEY unset' })
+      return
+    }
+    try {
+      const result = await listAiVideoIdentitiesForPicker({ tid: u.searchParams.get('tid') ?? '' }, createAiVideoIdentityReadStore())
+      if ('error' in result) {
+        res.status(result.status).json({ error: result.error })
+        return
+      }
+      res.setHeader('Cache-Control', 'no-store')
+      res.status(200).json(result)
+    } catch (error) {
+      res.status(502).json({ error: 'fetch_failed', detail: error instanceof Error ? error.message : 'ai_video_identities' })
     }
     return
   }

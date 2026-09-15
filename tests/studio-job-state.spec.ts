@@ -42,4 +42,7 @@ test('unknown provider submission is not mislabeled as a failed render', () => {
   assert.equal(state.phase, 'unconfirmed')
   assert.equal(state.tone, 'warning')
   assert.equal(state.canSync, undefined)
+  const ark = jobState({ ...job, status: 'failed', error_code: 'modelark_submission_unknown' })
+  assert.equal(ark.phase, 'unconfirmed')
+  assert.equal(ark.tone, 'warning')
 })

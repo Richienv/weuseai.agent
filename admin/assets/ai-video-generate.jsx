@@ -12,10 +12,18 @@ const DRAFT_KEY = 'weuseai.studio.draft';
 const REFS_KEY = 'weuseai.studio.refs';
 const RATIOS = ['9:16', '16:9', '1:1', '21:9'];
 const DURATIONS = [4, 6, 8, 10, 15, 30];
+const RESOLUTIONS = ['720p', '1080p'];
+// Verified Karakter assets live in the BytePlus library as asset://<id>; the
+// Studio never has pixels for them, so every asset ref shows this avatar.
+const ASSET_AVATAR = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#23262d"/><circle cx="32" cy="25" r="10" fill="#4d5566"/><path d="M14 54a18 18 0 0 1 36 0z" fill="#4d5566"/></svg>');
 const money = (value) => '$' + Number(value || 0).toFixed(2);
 function readLocal(key, fallback) { try { return JSON.parse(localStorage.getItem(key)) || fallback; } catch { return fallback; } }
 function writeLocal(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch {} }
 function imageRole(role) { return role === 'first_frame' ? 'first_frame' : 'reference_image'; }
+function isAssetPath(path) { return /^asset:\/\//.test(path || ''); }
+function isRemotePath(path) { return /^(https:|asset:)/.test(path || ''); }
+function assetKind(assetType) { return assetType === 'Audio' ? 'audio' : assetType === 'Video' ? 'video' : 'image'; }
+function assetLabel(identity, asset) { return identity.display_name + ' · ' + asset.slot; }
 function errorText(code, model = SIMPLE_MODEL) {
   const settings = simpleModelSettings(model);
   const clipRange = settings.minClipSeconds + '–' + settings.maxClipSeconds;
@@ -46,6 +54,15 @@ function errorText(code, model = SIMPLE_MODEL) {
     invalid_operator_audio_format: 'Upload ulang audio agar formatnya sesuai.',
     invalid_operator_ref_combination: 'Referensi ini tidak bisa digabung. Frame awal Wan harus sendirian.',
     download_failed: 'Unduhan gagal. Coba lagi atau buka videonya.',
+    identity_asset_not_active: 'Karakter ini belum aktif atau bukan milik pesanan ini. Lepas Karakter lalu coba lagi.',
+    invalid_operator_ref_url: 'Karakter hanya bisa dipakai dengan Seedance 2.5.',
+    invalid_operator_resolution: '1080p hanya tersedia saat Karakter terpasang.',
+    modelark_not_configured: 'Jalur BytePlus belum aktif. Hubungi admin.',
+    modelark_moderation_rejected: 'Prompt atau referensi ditolak BytePlus. Periksa lalu ubah.',
+    modelark_unauthorized: 'Koneksi ke BytePlus perlu diperbaiki.', modelark_rate_limited: 'BytePlus sedang penuh. Coba beberapa menit lagi.',
+    modelark_prompt_limit: 'Prompt terlalu panjang untuk BytePlus. Ringkas sedikit.',
+    modelark_generation_failed: 'BytePlus belum berhasil merender. Ubah prompt lalu coba lagi.',
+    modelark_submission_unknown: 'Pengiriman ke BytePlus belum terkonfirmasi. Periksa status sebelum membuat ulang.',
   };
   return messages[code] || 'Video belum berhasil dibuat. Periksa prompt dan referensi lalu coba lagi.';
 }
@@ -65,6 +82,7 @@ function Icon({ name, size = 20, className = '' }) {
     warning: <><circle cx="12" cy="12" r="9"/><path d="M12 7v6m0 4h.01"/></>,
     check: <path d="m5 12 4 4L19 6"/>,
     spin: <path d="M21 12a9 9 0 1 1-9-9"/>,
+    person: <><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></>,
   };
   return <svg className={className + (name === 'spin' ? ' sv-spin' : '')} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name] || paths.film}</svg>;
 }
@@ -93,21 +111,33 @@ function taggedReferences(rows) {
   });
 }
 function jobPrompt(row) { return simplePromptText(row.source_prompt ?? row.prompt ?? ''); }
-function refsFromJob(job) {
+// Karakter name for an asset:// path, when the picker list is loaded.
+function assetName(path, identities) {
+  const id = String(path || '').replace(/^asset:\/\//, '');
+  for (const identity of identities || []) {
+    const asset = (identity.assets || []).find((item) => item.asset_id === id);
+    if (asset) return assetLabel(identity, asset);
+  }
+  return 'Karakter';
+}
+function refsFromJob(job, identities) {
   const values = [...(job.ref_urls || []), ...(job.ref_paths || [])];
   return taggedReferences(values.map((path, i) => {
     const media = (job.reference_media || []).find((item) => item.path === path);
     const old = readLocal(REFS_KEY, []).find((item) => item.path === path);
     const role = job.ref_roles?.[i] || 'reference_image';
     const kind = role === 'reference_audio' ? 'audio' : role === 'reference_video' ? 'video' : 'image';
+    const asset = isAssetPath(path);
     const lastFrame = kind === 'image' && new RegExp((job.ref_tags?.[i] || '') + ' is the last frame', 'i').test(jobPrompt(job));
-    return { id: crypto.randomUUID(), tag: job.ref_tags?.[i], path, name: path.split('/').pop().split('?')[0], kind, role: kind === 'image' ? imageRole(role) : role, lastFrame, seconds: job.ref_durations?.[i] || old?.seconds || 0, width: old?.width || 0, height: old?.height || 0, preview: media?.url || old?.thumb || (/^https:/.test(path) ? path : ''), thumb: old?.thumb || '', status: 'ready', percent: 100 };
+    const name = asset ? (old?.name || assetName(path, identities)) : path.split('/').pop().split('?')[0];
+    return { id: crypto.randomUUID(), tag: job.ref_tags?.[i], path, name, kind, role: kind === 'image' ? imageRole(role) : role, lastFrame, asset, seconds: job.ref_durations?.[i] || old?.seconds || 0, width: old?.width || 0, height: old?.height || 0, preview: asset ? null : media?.url || old?.thumb || (/^https:/.test(path) ? path : ''), thumb: asset ? ASSET_AVATAR : old?.thumb || '', status: 'ready', percent: 100 };
   }));
 }
 function restoreRef(row) {
   const kind = row.kind || (row.role === 'reference_audio' ? 'audio' : row.role === 'reference_video' ? 'video' : 'image');
   const role = kind === 'audio' || row.role === 'reference_audio' ? 'reference_audio' : kind === 'video' || row.role === 'reference_video' ? 'reference_video' : imageRole(row.role);
-  return { ...row, id: crypto.randomUUID(), kind, role, lastFrame: row.lastFrame === true, width: row.width || 0, height: row.height || 0, status: row.status === 'failed' || !row.path || /^pending:/.test(row.path) ? 'failed' : 'ready', error: row.error || 'Upload belum selesai. Hapus dan pilih ulang file.', preview: row.thumb || '' };
+  const asset = isAssetPath(row.path);
+  return { ...row, id: crypto.randomUUID(), kind, role, asset, lastFrame: row.lastFrame === true, width: row.width || 0, height: row.height || 0, status: row.status === 'failed' || !row.path || /^pending:/.test(row.path) ? 'failed' : 'ready', error: row.error || 'Upload belum selesai. Hapus dan pilih ulang file.', preview: asset ? null : row.thumb || '', thumb: asset ? ASSET_AVATAR : row.thumb };
 }
 function StudioApp() {
   const [initial] = useState(() => readLocal(DRAFT_KEY, {}));
@@ -120,8 +150,14 @@ function StudioApp() {
   const [ratio, setRatio] = useState(RATIOS.includes(initial.ratio) ? initial.ratio : '9:16');
   const [duration, setDuration] = useState(Number(initial.duration) >= 4 && Number(initial.duration) <= 30 ? Number(initial.duration) : 6);
   const [generateAudio, setGenerateAudio] = useState(initial.generateAudio !== false);
+  const [resolution, setResolution] = useState(RESOLUTIONS.includes(initial.resolution) ? initial.resolution : '720p');
   const [refs, setRefs] = useState(() => taggedReferences(readLocal(REFS_KEY, []).filter((row) => row && (row.path || row.name)).map(restoreRef)));
+  // Verified Karakter list for the picker; null until the first fetch settles.
+  const [identities, setIdentities] = useState(null);
   const firstFrameOn = refs.some((row) => row.role === 'first_frame');
+  // Any asset:// ref routes the job through BytePlus, which is the only lane with 1080p.
+  const hasCharacter = refs.some((row) => row.asset);
+  const sentResolution = hasCharacter ? resolution : '720p';
   const formatOptions = model === 'wan3.0' || firstFrameOn ? RATIOS.filter((item) => item !== '21:9') : RATIOS;
   const tagSequence = useRef({ ...initial.tagSequence });
   for (const tag of refs.map((row) => row.tag)) {
@@ -184,14 +220,28 @@ function StudioApp() {
     if ((model === 'wan3.0' || firstFrameOn) && ratio === '21:9') setRatio('16:9');
   }, [model, firstFrameOn, ratio]);
   useEffect(() => {
-    writeLocal(DRAFT_KEY, { ...readLocal(DRAFT_KEY, {}), prompt, selectedModel: model, ratio, duration, generateAudio, jobId: selectedId, tid, pendingRequestId: pendingRef.current, tagSequence: tagSequence.current, version: 5 });
+    writeLocal(DRAFT_KEY, { ...readLocal(DRAFT_KEY, {}), prompt, selectedModel: model, ratio, duration, generateAudio, resolution, jobId: selectedId, tid, pendingRequestId: pendingRef.current, tagSequence: tagSequence.current, version: 5 });
     const url = new URL(location.href);
     selectedId ? url.searchParams.set('job_id', selectedId) : url.searchParams.delete('job_id');
     history.replaceState({}, '', url.pathname + url.search);
-  }, [prompt, model, ratio, duration, generateAudio, selectedId]);
+  }, [prompt, model, ratio, duration, generateAudio, resolution, selectedId]);
   useEffect(() => {
     writeLocal(REFS_KEY, refs.map(({ path, name, kind, role, tag, seconds, thumb, status, lastFrame, width, height }) => ({ path, name, kind, role, tag, seconds, thumb, lastFrame: lastFrame === true, width: width || 0, height: height || 0, status: status === 'ready' ? 'ready' : 'failed' })));
   }, [refs]);
+  // Karakter forces Seedance 2.5; Wan cannot read asset:// refs.
+  useEffect(() => { if (hasCharacter && model !== 'seedance-2.5') setModel('seedance-2.5'); }, [hasCharacter, model]);
+  useEffect(() => {
+    const controller = new AbortController();
+    (async () => {
+      try {
+        const response = await fetch('/api/admin/customer-data?resource=ai-video-identities&tid=' + encodeURIComponent(tid), { credentials: 'same-origin', signal: controller.signal });
+        if (response.status === 401) { location.assign('/admin/login'); return; }
+        const body = response.ok ? await response.json() : null;
+        if (!controller.signal.aborted) setIdentities(Array.isArray(body?.identities) ? body.identities : []);
+      } catch { if (!controller.signal.aborted) setIdentities([]); }
+    })();
+    return () => controller.abort();
+  }, [tid]);
   useEffect(() => {
     if (!job?.id) return;
     const next = jobState(job);
@@ -275,6 +325,29 @@ function StudioApp() {
   }, []);
   useEffect(() => { loadRef.current(); }, [selectedId]);
   function patchRef(id, patch) { setRefs((rows) => rows.map((row) => row.id === id ? { ...row, ...patch } : row)); }
+  function assetRef(asset) { return refsRef.current.find((row) => row.path === 'asset://' + asset.asset_id); }
+  // One reference row per Karakter asset. Same photo/audio/video caps as uploads;
+  // no upload happens, the path is the BytePlus asset id and the row is ready at once.
+  function toggleAsset(identity, asset) {
+    if (submittingRef.current) return;
+    const existing = assetRef(asset);
+    if (existing) { removeRef(existing); return; }
+    setError('');
+    const kind = assetKind(asset.asset_type);
+    const count = refsRef.current.filter((row) => row.kind === kind).length;
+    const limit = kind === 'image' ? modelSettings.photoLimit : kind === 'audio' ? modelSettings.audioLimit : modelSettings.videoLimit;
+    if (count >= limit) { setError(kind === 'image' ? 'photo_limit' : kind + '_limit'); return; }
+    if (kind !== 'image') {
+      const ready = refsRef.current.filter((row) => row.status === 'ready');
+      const referenceError = simpleReferenceError('seedance-2.5', ready.concat({ role: 'reference_' + kind, asset: true }), duration);
+      if (referenceError) { setError(referenceError); return; }
+    }
+    const prefix = referenceTagPrefix('reference_' + kind);
+    tagSequence.current[prefix] = (Number(tagSequence.current[prefix]) || 0) + 1;
+    writeLocal(DRAFT_KEY, { ...readLocal(DRAFT_KEY, {}), tagSequence: tagSequence.current });
+    const row = { id: crypto.randomUUID(), tag: '@' + prefix + tagSequence.current[prefix], name: assetLabel(identity, asset), kind, role: 'reference_' + kind, lastFrame: false, asset: true, status: 'ready', percent: 100, seconds: 0, width: 0, height: 0, preview: null, thumb: ASSET_AVATAR, path: 'asset://' + asset.asset_id };
+    refsRef.current = refsRef.current.concat(row); setRefs(refsRef.current);
+  }
   function removeRef(row) {
     uploads.current.get(row.id)?.abort(); uploads.current.delete(row.id); payloadDrafts.current.delete(row.id);
     if (row.preview?.startsWith('blob:')) URL.revokeObjectURL(row.preview);
@@ -417,10 +490,10 @@ function StudioApp() {
     }
     return added.map(({ row }) => row);
   }
-  const orderedRefs = refs.filter((row) => /^https:/.test(row.path)).concat(refs.filter((row) => !/^https:/.test(row.path)));
+  const orderedRefs = refs.filter((row) => isRemotePath(row.path)).concat(refs.filter((row) => !isRemotePath(row.path)));
   const roleList = orderedRefs.map((row) => row.role);
   const clipSeconds = refs.filter((row) => row.kind !== 'image').reduce((sum, row) => sum + (row.seconds || 0), 0);
-  const estimate = simpleEstimate(duration, clipSeconds, model);
+  const estimate = simpleEstimate(duration, clipSeconds, model, sentResolution, hasCharacter ? 'byteplus_modelark' : 'monid');
   const activeJob = (isActiveJob(job) ? job : studio?.jobs?.find(isActiveJob)) || (submitting ? { id: '' } : null);
   const busyRefs = refs.some((row) => row.status === 'uploading');
   const failedRefs = refs.some((row) => row.status === 'failed');
@@ -433,7 +506,8 @@ function StudioApp() {
   const length = compileSimplePrompt(binding?.prompt || prompt, roleList).length;
   const referenceError = simpleReferenceError(model, refs, duration);
   let blocker = '';
-  if (job?.error_code === 'monid_submission_unknown' && checkedRun !== job.id) blocker = 'Periksa pengiriman sebelumnya sebelum membuat ulang.';
+  if ((job?.error_code === 'monid_submission_unknown' || job?.error_code === 'modelark_submission_unknown') && checkedRun !== job.id) blocker = 'Periksa pengiriman sebelumnya sebelum membuat ulang.';
+  else if (hasCharacter && model !== 'seedance-2.5') blocker = errorText('invalid_operator_ref_url');
   else if (busyRefs) blocker = 'Menyiapkan referensi…';
   else if (failedRefs) blocker = 'Upload ulang atau hapus file yang gagal.';
   else if (missingTags.length) blocker = 'Tag ' + missingTags.join(', ') + ' belum terhubung. Pilih referensi atau hapus tag.';
@@ -455,13 +529,14 @@ function StudioApp() {
     rememberRequest(requestId);
     clearSelectedJob();
     submittingRef.current = true; setSubmitting(true); setError('');
-    const remote = refs.filter((row) => /^https:/.test(row.path)), local = refs.filter((row) => !/^https:/.test(row.path));
+    // asset:// rides in ref_urls next to https: refs; only storage paths go to ref_paths.
+    const remote = refs.filter((row) => isRemotePath(row.path)), local = refs.filter((row) => !isRemotePath(row.path));
     const ordered = remote.concat(local);
     const sentRatio = firstFrameOn && ratio === '21:9' ? '16:9' : ratio;
-    const optimistic = { id: '', status: 'queued', created_at: new Date().toISOString(), model, ratio: sentRatio, duration_seconds: duration, estimate_usd: estimate };
+    const optimistic = { id: '', status: 'queued', created_at: new Date().toISOString(), model, ratio: sentRatio, duration_seconds: duration, estimate_usd: estimate, provider: hasCharacter ? 'byteplus_modelark' : 'monid' };
     setJob(optimistic); setView('result'); window.scrollTo({ top: 0, behavior: 'instant' });
     try {
-      const body = await post('ai_video_generate_start', { prompt_mode: 'simple', prompt, model, ratio: sentRatio, duration_seconds: duration, resolution: '720p', generate_audio: generateAudio, tid: tid || null, client_request_id: requestId, ref_urls: remote.map((row) => row.path), ref_paths: local.map((row) => row.path), ref_roles: ordered.map((row) => row.role), ref_tags: ordered.map((row) => row.tag), ref_durations: ordered.map((row) => row.seconds || 0) });
+      const body = await post('ai_video_generate_start', { prompt_mode: 'simple', prompt, model, ratio: sentRatio, duration_seconds: duration, resolution: sentResolution, generate_audio: generateAudio, tid: tid || null, client_request_id: requestId, ref_urls: remote.map((row) => row.path), ref_paths: local.map((row) => row.path), ref_roles: ordered.map((row) => row.role), ref_tags: ordered.map((row) => row.tag), ref_durations: ordered.map((row) => row.seconds || 0) });
       if (!body.job?.id) throw Object.assign(new Error('submission_unknown'), { uncertain: true });
       rememberRequest(''); chooseJob(body.job);
       if (body.worker_warning) setConnection('delayed');
@@ -481,7 +556,7 @@ function StudioApp() {
         if (!response.ok) throw new Error('operator_reference_unavailable');
         const body = await response.json(); if (body.job?.id !== row.id) throw new Error('operator_reference_unavailable'); current = body.job;
       }
-      const attached = refsFromJob(current);
+      const attached = refsFromJob(current, identities);
       refsRef.current.forEach((item) => { if (item.preview?.startsWith('blob:')) URL.revokeObjectURL(item.preview); });
       const nextModel = simpleModelSettings(current.model).id;
       const allowed = nextModel === 'wan3.0' || attached.some((item) => item.role === 'first_frame') ? RATIOS.filter((item) => item !== '21:9') : RATIOS;
@@ -489,6 +564,7 @@ function StudioApp() {
       setRatio(allowed.includes(current.ratio) ? current.ratio : '16:9');
       setDuration(current.duration_seconds || 6);
       setGenerateAudio(current.generate_audio !== false);
+      setResolution(RESOLUTIONS.includes(current.resolution) && attached.some((item) => item.asset) ? current.resolution : '720p');
       setView('create'); setSheet(''); window.scrollTo({ top: 0, behavior: 'instant' });
       requestAnimationFrame(() => scrollIntoVisual(document.getElementById('studio-prompt')));
     } catch (problem) { setError(problem.message); }
@@ -568,24 +644,25 @@ function StudioApp() {
         {tid ? <p className="sv-order-label">Pesanan {tid}</p> : null}
         <form onSubmit={start}>
           <div className={'sv-prompt-box' + (dropOver ? ' is-dragging' : '')} onDragOver={(event) => { event.preventDefault(); setDropOver(true); }} onDragLeave={() => setDropOver(false)} onDrop={(event) => { event.preventDefault(); setDropOver(false); attachFiles(event.dataTransfer.files); }}>
-            {refs.length ? <div className="sv-references" aria-label="Referensi terpasang">{refs.map((row) => <div className={'sv-reference ' + row.kind + (row.status === 'failed' ? ' is-failed' : '')} key={row.id} data-status={row.status} data-tag={row.tag} data-role={row.role} data-last-frame={row.lastFrame ? '1' : '0'}>
-              <button type="button" className="sv-reference-preview" aria-label={'Sisipkan ' + row.tag} disabled={submitting || row.status !== 'ready'} onClick={() => promptInput.current?.insert(row.tag)}>{row.kind !== 'audio' && row.preview ? <img src={row.preview} alt={row.name}/> : <Icon name={row.kind === 'audio' ? 'audio' : row.kind === 'video' ? 'film' : 'photo'} size={20}/>}<span className="sv-ref-tag">{row.tag}</span></button>
-              <button type="button" className="sv-ref-name" aria-label={'Ganti ' + row.name} title={'Ganti ' + row.name} disabled={submitting || row.status === 'uploading'} onClick={() => chooseReplacement(row)}><span>{row.name}</span><Icon name="edit" size={13}/></button>
-              {row.kind === 'image' && row.status === 'ready' ? <div className="sv-ref-roles"><button type="button" aria-pressed={row.role === 'first_frame'} disabled={submitting} onClick={() => setFirstFrame(row)}>Frame awal</button><button type="button" aria-pressed={row.lastFrame === true} disabled={submitting} onClick={() => setLastFrame(row)}>Frame akhir</button></div> : null}
-              {row.status === 'uploading' ? <small role="status">{row.percent ? 'Upload ' + row.percent + '%' : 'Menyiapkan…'}</small> : row.status === 'failed' ? <small>{row.error}</small> : row.kind !== 'image' ? <small>{Number(row.seconds || 0).toFixed(1)} dtk</small> : row.role === 'first_frame' ? <small>Frame awal</small> : row.lastFrame ? <small>Frame akhir</small> : null}
+            {refs.length ? <div className="sv-references" aria-label="Referensi terpasang">{refs.map((row) => <div className={'sv-reference ' + row.kind + (row.status === 'failed' ? ' is-failed' : '') + (row.asset ? ' is-asset' : '')} key={row.id} data-status={row.status} data-tag={row.tag} data-role={row.role} data-last-frame={row.lastFrame ? '1' : '0'} data-asset={row.asset ? '1' : '0'}>
+              <button type="button" className="sv-reference-preview" aria-label={'Sisipkan ' + row.tag} disabled={submitting || row.status !== 'ready'} onClick={() => promptInput.current?.insert(row.tag)}>{row.asset ? <img className="sv-ref-avatar" src={ASSET_AVATAR} alt=""/> : row.kind !== 'audio' && row.preview ? <img src={row.preview} alt={row.name}/> : <Icon name={row.kind === 'audio' ? 'audio' : row.kind === 'video' ? 'film' : 'photo'} size={20}/>}<span className="sv-ref-tag">{row.tag}</span></button>
+              {row.asset ? <span className="sv-ref-name" title={row.name}><span>{row.name}</span></span> : <button type="button" className="sv-ref-name" aria-label={'Ganti ' + row.name} title={'Ganti ' + row.name} disabled={submitting || row.status === 'uploading'} onClick={() => chooseReplacement(row)}><span>{row.name}</span><Icon name="edit" size={13}/></button>}
+              {row.kind === 'image' && row.status === 'ready' && !row.asset ? <div className="sv-ref-roles"><button type="button" aria-pressed={row.role === 'first_frame'} disabled={submitting} onClick={() => setFirstFrame(row)}>Frame awal</button><button type="button" aria-pressed={row.lastFrame === true} disabled={submitting} onClick={() => setLastFrame(row)}>Frame akhir</button></div> : null}
+              {row.status === 'uploading' ? <small role="status">{row.percent ? 'Upload ' + row.percent + '%' : 'Menyiapkan…'}</small> : row.status === 'failed' ? <small>{row.error}</small> : row.asset ? <small>Karakter terverifikasi</small> : row.kind !== 'image' ? <small>{Number(row.seconds || 0).toFixed(1)} dtk</small> : row.role === 'first_frame' ? <small>Frame awal</small> : row.lastFrame ? <small>Frame akhir</small> : null}
               {row.kind === 'audio' && row.preview && row.status === 'ready' ? <audio controls preload="none" src={row.preview} aria-label={'Putar ' + row.name}/> : null}
               {row.status === 'failed' && payloadDrafts.current.has(row.id) ? <button type="button" className="sv-text-button" disabled={submitting} onClick={() => uploadOne(row, payloadDrafts.current.get(row.id))}>Ulangi</button> : null}
               <button type="button" className="sv-icon-button sv-ref-remove" aria-label={'Hapus ' + row.name} disabled={submitting} onClick={() => removeRef(row)}><Icon name="close" size={16}/></button>
               {row.status === 'uploading' ? <div className="sv-upload-progress" style={{ width: row.percent + '%' }}/> : null}
             </div>)}</div> : null}
             <ReferencePrompt ref={promptInput} value={prompt} onChange={setPrompt} references={refs} disabled={submitting} onSubmit={start} onFiles={attachFiles}/>
-            <div className="sv-attach-bar"><button type="button" className="sv-attach-button" disabled={submitting || refs.filter((row) => row.kind === 'image').length >= modelSettings.photoLimit} onClick={() => photoInput.current.click()}><Icon name="photo"/>Foto</button><button type="button" className="sv-attach-button" disabled={submitting || refs.filter((row) => row.kind === 'video').length >= modelSettings.videoLimit} onClick={() => videoInput.current.click()}><Icon name="film"/>Video</button><button type="button" className="sv-attach-button" disabled={submitting || refs.filter((row) => row.kind === 'audio').length >= modelSettings.audioLimit} onClick={() => audioInput.current.click()}><Icon name="audio"/>Audio</button>{length > SIMPLE_PROMPT_LIMIT * .8 ? <span className={'sv-count' + (length > SIMPLE_PROMPT_LIMIT ? ' is-error' : '')}>{length.toLocaleString('id-ID')} / 6.000</span> : null}</div>
+            <div className="sv-attach-bar"><button type="button" className="sv-attach-button" disabled={submitting || refs.filter((row) => row.kind === 'image').length >= modelSettings.photoLimit} onClick={() => photoInput.current.click()}><Icon name="photo"/>Foto</button><button type="button" className="sv-attach-button" disabled={submitting || refs.filter((row) => row.kind === 'video').length >= modelSettings.videoLimit} onClick={() => videoInput.current.click()}><Icon name="film"/>Video</button><button type="button" className="sv-attach-button" disabled={submitting || refs.filter((row) => row.kind === 'audio').length >= modelSettings.audioLimit} onClick={() => audioInput.current.click()}><Icon name="audio"/>Audio</button>{identities?.length ? <button type="button" className="sv-attach-button sv-attach-character" aria-pressed={hasCharacter} disabled={submitting} onClick={() => setSheet('karakter')}><Icon name="person"/>Karakter{hasCharacter ? <span className="sv-attach-count">{refs.filter((row) => row.asset).length}</span> : null}</button> : null}{length > SIMPLE_PROMPT_LIMIT * .8 ? <span className={'sv-count' + (length > SIMPLE_PROMPT_LIMIT ? ' is-error' : '')}>{length.toLocaleString('id-ID')} / 6.000</span> : null}</div>
           </div>
           <input ref={replaceInput} className="sv-sr-only" type="file" tabIndex={-1} aria-label="Ganti file referensi" onChange={(event) => { replaceFile(event.target.files?.[0]); event.target.value = ''; }}/>
           <input ref={photoInput} className="sv-sr-only" type="file" accept={PHOTO_ACCEPT} multiple tabIndex={-1} aria-label="Upload foto" onChange={(event) => { attachFiles(event.target.files); event.target.value = ''; }}/>
           <input ref={videoInput} className="sv-sr-only" type="file" accept={VIDEO_ACCEPT} multiple tabIndex={-1} aria-label="Upload video" onChange={(event) => { attachFiles(event.target.files); event.target.value = ''; }}/>
           <input ref={audioInput} className="sv-sr-only" type="file" accept={AUDIO_ACCEPT} multiple tabIndex={-1} aria-label="Upload audio" onChange={(event) => { attachFiles(event.target.files); event.target.value = ''; }}/>
-          <div className="sv-options"><div className="sv-model"><select aria-label="Model video" value={model} disabled={submitting} onChange={(event) => changeModel(event.target.value)}>{SIMPLE_MODELS.map((id) => <option key={id} value={id}>{simpleModelSettings(id).label}</option>)}</select><Icon name="chevron" size={16}/></div><button type="button" className="sv-text-button" onClick={() => setSheet('settings')} disabled={submitting}><Icon name="settings" size={18}/>{settingsLabel}</button></div>
+          <div className="sv-options"><div className="sv-model"><select aria-label="Model video" value={model} disabled={submitting} onChange={(event) => changeModel(event.target.value)}>{SIMPLE_MODELS.map((id) => <option key={id} value={id} disabled={hasCharacter && id !== 'seedance-2.5'}>{simpleModelSettings(id).label}</option>)}</select><Icon name="chevron" size={16}/></div><button type="button" className="sv-text-button" onClick={() => setSheet('settings')} disabled={submitting}><Icon name="settings" size={18}/>{settingsLabel}</button></div>
+          {hasCharacter ? <p className="sv-hint">Karakter terverifikasi dirender lewat BytePlus. Resolusi 1080p tersedia di pengaturan.</p> : null}
           {readyPhotos.length >= 2 ? <p className="sv-hint">@Image1 = wajah, jangan campur background.</p> : null}
           {readyPhotos.length ? <p className="sv-hint">Foto wajah nyata bisa ditolak Seedance. Character sheet hasil generate biasanya aman.</p> : null}
           {firstFrameSheets.length ? <p className="sv-hint is-warn">Frame awal memakai gambar yang mirip character sheet.</p> : null}
@@ -596,10 +673,10 @@ function StudioApp() {
       </section>
       <section className={'sv-result' + (!job && !awaitingStatus ? ' is-empty' : '')} id="studio-result" aria-label="Hasil video" aria-busy={Boolean(state.active || awaitingStatus)}>
         {job ? <>
-          <div className="sv-result-heading"><h2>{heading}</h2>{resultReady ? <Icon className="sv-success" name="check" size={22}/> : null}</div>
+          <div className="sv-result-heading"><h2>{heading}</h2>{job.provider === 'byteplus_modelark' ? <span className="sv-chip">Lewat BytePlus</span> : null}{resultReady ? <Icon className="sv-success" name="check" size={22}/> : null}</div>
           {state.step >= 0 ? <ol className="sv-hint">{JOB_STEPS.map((label, index) => <li key={label} aria-current={index === state.step ? 'step' : undefined}>{label}</li>)}</ol> : null}
           {resultReady && job.result_url ? <div className={'sv-player-frame ratio-' + String(job.ratio || '9:16').replace(':', '-')}><video ref={player} className="job-player" src={job.result_url} playsInline {...playerProps()} onError={() => setPlaybackError(true)}/>{playbackError ? <div className="sv-player-error" role="alert"><p>Video belum bisa diputar.</p><button className="sv-small-button" disabled={working === 'player'} onClick={refreshVideo}>Muat ulang video</button></div> : null}</div> : <div className={'sv-result-placeholder ' + (state.phase === 'failed' ? 'is-error' : '')}><div className="sv-state-icon"><Icon name={state.active ? 'spin' : state.phase === 'failed' || state.canSync ? 'warning' : 'film'} size={38}/></div><p role="status">{resultDetail}</p>{state.active ? <small>{elapsedTime(job.created_at, clock)}</small> : null}{state.canSync ? <button className="sv-small-button" disabled={Boolean(working)} onClick={recover}>{working === 'sync' ? 'Memeriksa…' : 'Cek lagi'}</button> : null}</div>}
-          {state.phase === 'unconfirmed' ? <div className="sv-provider-check"><a className="sv-small-button sv-full" href="https://app.monid.ai" target="_blank" rel="noreferrer">Periksa di Monid</a><details><summary>Sudah diperiksa?</summary><button className="sv-text-button" onClick={() => { setCheckedRun(job.id); setView('create'); }}>Buat permintaan baru</button></details></div> : resultReady ? <div className="sv-result-actions"><button className="sv-download" onClick={saveVideo} disabled={!job.result_url || downloadState === 'loading'}><Icon name={downloadState === 'loading' ? 'spin' : 'download'}/>{downloadState === 'loading' ? 'Menyiapkan unduhan…' : 'Simpan video'}</button><button className="sv-small-button" onClick={showCreate}>Lihat prompt</button><button className="sv-small-button" disabled={Boolean(working)} onClick={() => reuse(job)}>Gunakan lagi</button><details className="sv-full"><summary>Opsi lain</summary><button className="sv-small-button" disabled={Boolean(working)} onClick={attachResultVideo}>{working === 'attach-video' ? 'Memasang…' : 'Pasang sebagai ' + nextVideoTag}</button><button className="sv-small-button" disabled={Boolean(working)} onClick={attachLastFrame}>{working === 'attach-frame' ? 'Mengambil frame…' : 'Ambil frame terakhir → frame awal'}</button></details></div> : state.phase === 'failed' || state.phase === 'cancelled' ? <button className="sv-small-button sv-full" disabled={Boolean(working)} onClick={() => reuse(job)}>Ubah prompt</button> : <div className="sv-result-tools"><button className="sv-text-button" onClick={() => pollRef.current?.()}>Cek status</button>{mayCancelJob(job) ? <button className="sv-text-button" disabled={Boolean(working)} onClick={cancel}>Batalkan</button> : null}<button className="sv-text-button sv-mobile-only" onClick={showCreate}>Lihat prompt</button></div>}
+          {state.phase === 'unconfirmed' ? <div className="sv-provider-check">{job.provider === 'byteplus_modelark' ? <a className="sv-small-button sv-full" href="https://console.byteplus.com/" target="_blank" rel="noreferrer">Periksa di BytePlus</a> : <a className="sv-small-button sv-full" href="https://app.monid.ai" target="_blank" rel="noreferrer">Periksa di Monid</a>}<details><summary>Sudah diperiksa?</summary><button className="sv-text-button" onClick={() => { setCheckedRun(job.id); setView('create'); }}>Buat permintaan baru</button></details></div> : resultReady ? <div className="sv-result-actions"><button className="sv-download" onClick={saveVideo} disabled={!job.result_url || downloadState === 'loading'}><Icon name={downloadState === 'loading' ? 'spin' : 'download'}/>{downloadState === 'loading' ? 'Menyiapkan unduhan…' : 'Simpan video'}</button><button className="sv-small-button" onClick={showCreate}>Lihat prompt</button><button className="sv-small-button" disabled={Boolean(working)} onClick={() => reuse(job)}>Gunakan lagi</button><details className="sv-full"><summary>Opsi lain</summary><button className="sv-small-button" disabled={Boolean(working)} onClick={attachResultVideo}>{working === 'attach-video' ? 'Memasang…' : 'Pasang sebagai ' + nextVideoTag}</button><button className="sv-small-button" disabled={Boolean(working)} onClick={attachLastFrame}>{working === 'attach-frame' ? 'Mengambil frame…' : 'Ambil frame terakhir → frame awal'}</button></details></div> : state.phase === 'failed' || state.phase === 'cancelled' ? <button className="sv-small-button sv-full" disabled={Boolean(working)} onClick={() => reuse(job)}>Ubah prompt</button> : <div className="sv-result-tools"><button className="sv-text-button" onClick={() => pollRef.current?.()}>Cek status</button>{mayCancelJob(job) ? <button className="sv-text-button" disabled={Boolean(working)} onClick={cancel}>Batalkan</button> : null}<button className="sv-text-button sv-mobile-only" onClick={showCreate}>Lihat prompt</button></div>}
           {downloadState === 'started' ? <p className="sv-download-note" role="status">Unduhan dimulai.</p> : null}
           {downloadState === 'failed' ? <p className="sv-download-note is-error" role="alert">Unduhan gagal. <a href={job.result_url} target="_blank" rel="noreferrer">Buka video</a></p> : null}
           {resultReady && !job.result_url ? <button className="sv-small-button" onClick={refreshVideo}>Muat video</button> : null}
@@ -607,7 +684,8 @@ function StudioApp() {
         </> : awaitingStatus ? <div className="sv-result-placeholder"><div className="sv-state-icon"><Icon name="spin" size={38}/></div><p role="status">Memuat status…</p></div> : <div className="sv-empty-preview"><Icon name="film" size={44}/><span>Videomu tampil di sini</span></div>}
       </section>
     </main>
-    {sheet === 'settings' ? <Sheet title="Pengaturan video" close={() => setSheet('')}><fieldset><legend>Format</legend><div className="sv-choice-row">{firstFrameOn ? <button type="button" aria-pressed={true} disabled><span className="sv-format-shape ratio-adaptive"/><span>ikut frame</span></button> : formatOptions.map((item) => <button type="button" key={item} aria-pressed={ratio === item} onClick={() => setRatio(item)}><span className={'sv-format-shape ratio-' + item.replace(':', '-')}/><span>{item}</span></button>)}</div></fieldset><fieldset><legend>Durasi</legend><div className="sv-duration-row">{DURATIONS.map((item) => <button key={item} type="button" aria-pressed={duration === item} onClick={() => setDuration(item)}>{item} dtk</button>)}</div></fieldset><fieldset><legend>Suara</legend><button type="button" className="sv-toggle" aria-pressed={generateAudio} onClick={() => setGenerateAudio(!generateAudio)}>{generateAudio ? 'Suara hidup' : 'Tanpa suara'}</button>{refs.some((row) => row.kind === 'audio') ? <p className="sv-hint">Audio terpasang memaksa suara tetap hidup saat generate.</p> : null}</fieldset><div className="sv-settings-note"><span>{modelSettings.label} · 720p</span>{studio?.wallet?.value != null ? <span>Saldo {money(studio.wallet.value)}</span> : null}</div><button className="sv-download sv-full" onClick={() => setSheet('')}>Selesai</button></Sheet> : null}
+    {sheet === 'settings' ? <Sheet title="Pengaturan video" close={() => setSheet('')}><fieldset><legend>Format</legend><div className="sv-choice-row">{firstFrameOn ? <button type="button" aria-pressed={true} disabled><span className="sv-format-shape ratio-adaptive"/><span>ikut frame</span></button> : formatOptions.map((item) => <button type="button" key={item} aria-pressed={ratio === item} onClick={() => setRatio(item)}><span className={'sv-format-shape ratio-' + item.replace(':', '-')}/><span>{item}</span></button>)}</div></fieldset><fieldset><legend>Durasi</legend><div className="sv-duration-row">{DURATIONS.map((item) => <button key={item} type="button" aria-pressed={duration === item} onClick={() => setDuration(item)}>{item} dtk</button>)}</div></fieldset><fieldset><legend>Suara</legend><button type="button" className="sv-toggle" aria-pressed={generateAudio} onClick={() => setGenerateAudio(!generateAudio)}>{generateAudio ? 'Suara hidup' : 'Tanpa suara'}</button>{refs.some((row) => row.kind === 'audio') ? <p className="sv-hint">Audio terpasang memaksa suara tetap hidup saat generate.</p> : null}</fieldset><fieldset><legend>Resolusi</legend><div className="sv-duration-row sv-resolution-row">{RESOLUTIONS.map((item) => <button key={item} type="button" aria-pressed={sentResolution === item} disabled={item === '1080p' && !hasCharacter} onClick={() => setResolution(item)}>{item}</button>)}</div>{hasCharacter ? null : <p className="sv-hint">1080p tersedia saat Karakter terpasang.</p>}</fieldset><div className="sv-settings-note"><span>{modelSettings.label} · {sentResolution}</span>{studio?.wallet?.value != null ? <span>Saldo {money(studio.wallet.value)}</span> : null}</div><button className="sv-download sv-full" onClick={() => setSheet('')}>Selesai</button></Sheet> : null}
+    {sheet === 'karakter' ? <Sheet title="Karakter" close={() => setSheet('')}><p className="sv-hint">Wajah dan suara terverifikasi. Ketuk aset untuk memasang atau melepas.</p><div className="sv-characters">{(identities || []).map((identity) => <div className="sv-character" key={identity.id}><div className="sv-character-head"><img className="sv-ref-avatar" src={ASSET_AVATAR} alt=""/><span><strong>{identity.display_name}</strong><small>{identity.owner_kind === 'founder' ? 'Founder' : 'Pelanggan'}</small></span></div><div className="sv-character-assets">{identity.assets.map((asset) => { const on = Boolean(assetRef(asset)); return <button key={asset.id} type="button" className={assetKind(asset.asset_type)} aria-pressed={on} disabled={submitting} onClick={() => toggleAsset(identity, asset)}><Icon name={asset.asset_type === 'Audio' ? 'audio' : asset.asset_type === 'Video' ? 'film' : 'photo'} size={16}/><span>{asset.slot}</span></button>; })}</div></div>)}</div><button className="sv-download sv-full" onClick={() => setSheet('')}>Selesai</button></Sheet> : null}
     {sheet === 'preflight' ? <Sheet title="Periksa referensi" close={() => setSheet('')}><p className="sv-hint is-warn">Frame awal memakai gambar yang mirip character sheet. Seedance bisa merender plat panel, bukan shot.</p><button className="sv-download sv-full" onClick={() => { preflightRef.current = true; setSheet(''); start(); }}>Lanjut generate</button></Sheet> : null}
     {sheet === 'history' ? <Sheet title="Riwayat video" close={() => setSheet('')}><div className="sv-history">{studio?.jobs?.length ? studio.jobs.map((row) => { const status = jobState(row); return <button key={row.id} className="sv-history-row" onClick={() => chooseJob(row)}><span className={'sv-history-symbol ' + status.tone}><Icon name={status.active ? 'spin' : status.phase === 'ready' ? 'play' : status.phase === 'failed' ? 'warning' : 'film'}/></span><span className="sv-history-copy"><span>{jobPrompt(row).slice(0, 100) || 'Video'}</span><small>{historyLabel(row)}</small></span><span className="sv-history-duration">{row.duration_seconds} dtk</span></button>; }) : <p className="sv-no-history">Belum ada video.</p>}</div><button className="sv-download sv-full" onClick={() => setSheet('')}>Tutup</button></Sheet> : null}
   </div>;

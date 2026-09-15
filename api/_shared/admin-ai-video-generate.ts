@@ -4,11 +4,14 @@ import { isAiVideoClaimCode } from './ai-video-claim-code.js'
 import {
   inferOperatorRefRole,
   isAiVideoOperatorModel,
+  isAiVideoOperatorProvider,
   isAiVideoOperatorResolution,
   isOperatorRefRole,
   isOperatorUploadName,
+  operatorJobProvider,
   parseOperatorLibraryTitle,
   SEEDANCE_25_PROMPT_HINT,
+  type AiVideoIdentityAssetLink,
   type AiVideoOperatorCharacter,
   type AiVideoOperatorJob,
   type AiVideoOperatorLibraryItem,
@@ -30,6 +33,28 @@ function supabaseHeaders(prefer?: string): Record<string, string> {
   }
 }
 
+function mapIdentityAssetLink(row: Record<string, unknown>): AiVideoIdentityAssetLink | null {
+  const rawIdentity = row.ai_video_identities
+  const identity = (Array.isArray(rawIdentity) ? rawIdentity[0] : rawIdentity) as Record<string, unknown> | null | undefined
+  if (!row.asset_id || !identity?.id) return null
+  const assetType = row.asset_type === 'Video' || row.asset_type === 'Audio' ? row.asset_type : 'Image'
+  const status = row.status === 'active' || row.status === 'failed' ? row.status : 'processing'
+  return {
+    assetId: String(row.asset_id),
+    assetType,
+    status,
+    deletedAt: row.deleted_at ? String(row.deleted_at) : null,
+    identity: {
+      id: String(identity.id),
+      ownerKind: identity.owner_kind === 'founder' ? 'founder' : 'customer',
+      customerId: identity.customer_id ? String(identity.customer_id) : null,
+      orderId: identity.order_id ? String(identity.order_id) : null,
+      verificationStatus: String(identity.verification_status ?? ''),
+      revokedAt: identity.revoked_at ? String(identity.revoked_at) : null,
+    },
+  }
+}
+
 function mapJob(row: Record<string, unknown>): AiVideoOperatorJob {
   const resolution = isAiVideoOperatorResolution(row.resolution) ? row.resolution : '720p'
   return {
@@ -45,6 +70,7 @@ function mapJob(row: Record<string, unknown>): AiVideoOperatorJob {
     generateAudio: row.generate_audio === true,
     resolution,
     status: row.status as AiVideoOperatorJob['status'],
+    provider: isAiVideoOperatorProvider(row.provider) ? row.provider : null,
     providerModelId: row.provider_model_id ? String(row.provider_model_id) : null,
     providerTaskId: row.provider_task_id ? String(row.provider_task_id) : null,
     providerVideoUrl: row.provider_video_url ? String(row.provider_video_url) : null,
@@ -143,7 +169,7 @@ export function createAiVideoOperatorGenerateStore(): AiVideoOperatorGenerateSto
     async findOrderByTid(tid) {
       if (!isAiVideoClaimCode(tid)) return null
       const response = await fetch(
-        `${SUPABASE_URL}/rest/v1/ai_video_orders?select=id,claim_code,status,fulfillment_status,customers(email)&claim_code=eq.${tid}&limit=1`,
+        `${SUPABASE_URL}/rest/v1/ai_video_orders?select=id,claim_code,status,fulfillment_status,customer_id,customers(email)&claim_code=eq.${tid}&limit=1`,
         { headers: supabaseHeaders() },
       )
       if (!response.ok) throw new Error(`operator_order ${response.status}`)
@@ -152,6 +178,7 @@ export function createAiVideoOperatorGenerateStore(): AiVideoOperatorGenerateSto
         claim_code?: string
         status?: string
         fulfillment_status?: string | null
+        customer_id?: string | null
         customers?: { email?: string } | { email?: string }[] | null
       }>
       const row = rows[0]
@@ -180,7 +207,21 @@ export function createAiVideoOperatorGenerateStore(): AiVideoOperatorGenerateSto
         photos,
         paymentStatus: row.status ?? null,
         fulfillment: row.fulfillment_status ?? null,
+        customerId: row.customer_id ? String(row.customer_id) : null,
       } satisfies AiVideoOperatorOrderLink
+    },
+    async findIdentityAssets(assetIds) {
+      // Same shape the migration CHECKs on asset_id; anything else cannot exist.
+      const ids = assetIds.filter((id) => /^[A-Za-z0-9._-]{1,120}$/.test(id))
+      if (!ids.length) return []
+      const select = 'asset_id,asset_type,status,deleted_at,ai_video_identities!inner(id,owner_kind,customer_id,order_id,verification_status,revoked_at)'
+      const response = await fetch(
+        `${SUPABASE_URL}/rest/v1/ai_video_identity_assets?select=${select}&asset_id=in.(${ids.map((id) => `"${id}"`).join(',')})`,
+        { headers: supabaseHeaders() },
+      )
+      if (!response.ok) throw new Error(`identity_assets ${response.status}`)
+      const rows = await response.json() as Array<Record<string, unknown>>
+      return rows.map(mapIdentityAssetLink).filter((link): link is AiVideoIdentityAssetLink => link !== null)
     },
     async createQueued(input) {
       const response = await fetch(`${SUPABASE_URL}/rest/v1/ai_video_operator_jobs?on_conflict=client_request_id`, {
@@ -197,7 +238,8 @@ export function createAiVideoOperatorGenerateStore(): AiVideoOperatorGenerateSto
           duration_seconds: input.durationSeconds,
           generate_audio: input.generateAudio,
           resolution: input.resolution,
-          provider: 'monid',
+          // asset:// refs force BytePlus; the DB CHECK rejects any other pairing.
+          provider: input.provider ?? operatorJobProvider(input.refUrls),
           provider_model_id: input.model,
           usage: { reference_seconds: input.referenceSeconds ?? 0, reference_durations: input.refDurations ?? [], ...(input.sourcePrompt !== undefined ? { source_prompt: input.sourcePrompt, reference_tags: input.refTags ?? [] } : {}) },
           status: 'queued',
@@ -225,6 +267,9 @@ export function createAiVideoOperatorGenerateStore(): AiVideoOperatorGenerateSto
     },
     async submitQueued(job) {
       if (job.status !== 'queued' || job.providerTaskId) return job
+      // BytePlus jobs are dispatched only by the render worker, which holds the
+      // merchant key and the asset:// passthrough; the fast path stays Monid.
+      if ((job.provider ?? operatorJobProvider(job.refUrls)) === 'byteplus_modelark') return job
       const key = process.env.MONID_API_KEY ?? ''
       if (key.trim().length < 16) throw new Error('invalid_monid_api_key')
       if (job.prompt.trim().length > SEEDANCE_25_PROMPT_HINT) {

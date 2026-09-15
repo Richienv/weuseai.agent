@@ -210,6 +210,13 @@ verify_jwt = false
 [functions.ai-video-session]
 verify_jwt = false
 
+# Verified identity lane. Three caller shapes: the customer page proves itself
+# with x-ai-video-capability (no Supabase JWT), the liveness callback page
+# calls `confirm` with only a single-use nonce, and the Vercel admin proxy +
+# pg_cron gc send the service-role bearer, checked in-handler.
+[functions.ai-video-identity]
+verify_jwt = false
+
 # Provider render callback (Monid/ModelArk) is server-to-server; the caller
 # cannot send a Supabase JWT. The handler never trusts the callback payload:
 # it re-fetches authoritative task state from the provider and verifies the

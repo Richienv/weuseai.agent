@@ -588,6 +588,97 @@ test('simple start bypasses the old skill compiler and binds every photo and aud
   assert.deepEqual(saved.refRoles, ['reference_image', 'reference_audio'])
 })
 
+const RICHIE_FACE = 'asset://Asset-20260914100001-fghij'
+const ORDER_ID = '11111111-1111-4111-8111-111111111111'
+const CUSTOMER_ID = '33333333-3333-4333-8333-333333333333'
+function founderAsset(over: Record<string, unknown> = {}) {
+  return {
+    assetId: 'Asset-20260914100001-fghij', assetType: 'Image' as const, status: 'active' as const, deletedAt: null,
+    identity: { id: '22222222-2222-4222-8222-222222222222', ownerKind: 'founder' as const, customerId: null, orderId: null, verificationStatus: 'verified', revokedAt: null },
+    ...over,
+  }
+}
+const ASSET_START = { prompt_mode: 'simple', prompt: 'Richie melambai', model: 'seedance-2.5', duration_seconds: 6, ratio: '9:16', resolution: '1080p', client_request_id: REQUEST_ID, ref_urls: [RICHIE_FACE], ref_roles: ['reference_image'] }
+
+test('asset:// start fails closed without an identity store and never creates a job', async () => {
+  for (const start of [startCompiledGenerate, startAiVideoOperatorGenerate]) {
+    let created = 0
+    const result = await start(ASSET_START, store({ createQueued: async () => { created++; return job() } }), READY)
+    assert.equal('error' in result && result.error, 'identity_asset_not_active')
+    assert.equal('status' in result && result.status, 400)
+    assert.equal(created, 0)
+  }
+})
+
+test('asset:// start checks ownership, keeps asset refs unsigned, and inserts provider byteplus_modelark', async () => {
+  for (const start of [startCompiledGenerate, startAiVideoOperatorGenerate]) {
+    let saved: any, looked: string[] = []
+    const result = await start(ASSET_START, store({
+      findIdentityAssets: async (ids) => { looked = ids; return [founderAsset()] },
+      createQueued: async (input) => { saved = input; return job({ provider: input.provider, refUrls: input.refUrls, resolution: input.resolution }) },
+      signUpload: async () => { throw new Error('asset refs are not storage paths') },
+    }), READY)
+    assert.equal(result.ok, true)
+    assert.deepEqual(looked, ['Asset-20260914100001-fghij'])
+    assert.equal(saved.provider, 'byteplus_modelark')
+    assert.deepEqual(saved.refUrls, [RICHIE_FACE])
+    assert.deepEqual(saved.refPaths, [])
+    assert.equal(saved.resolution, '1080p')
+    assert.equal('job' in result && result.job?.provider, 'byteplus_modelark')
+  }
+})
+
+test('asset:// start rejects a customer identity from another order and an inactive asset', async () => {
+  for (const start of [startCompiledGenerate, startAiVideoOperatorGenerate]) {
+    let created = 0
+    const otherOrder = founderAsset({ identity: { id: 'x', ownerKind: 'customer', customerId: '55555555-5555-4555-8555-555555555555', orderId: '44444444-4444-4444-8444-444444444444', verificationStatus: 'verified', revokedAt: null } })
+    const rejected = await start({ ...ASSET_START, tid: 'WU-9F2K' }, store({
+      findOrderByTid: async () => ({ id: ORDER_ID, tid: 'WU-9F2K', email: 'a@b.co', idea: null, photos: [], customerId: CUSTOMER_ID }),
+      findIdentityAssets: async () => [otherOrder],
+      createQueued: async () => { created++; return job() },
+    }), READY)
+    assert.equal('error' in rejected && rejected.error, 'identity_asset_not_active')
+    const sameCustomer = founderAsset({ identity: { ...otherOrder.identity, customerId: CUSTOMER_ID } })
+    const accepted = await start({ ...ASSET_START, tid: 'WU-9F2K' }, store({
+      findOrderByTid: async () => ({ id: ORDER_ID, tid: 'WU-9F2K', email: 'a@b.co', idea: null, photos: [], customerId: CUSTOMER_ID }),
+      findIdentityAssets: async () => [sameCustomer],
+      createQueued: async (input) => { created++; return job({ provider: input.provider, orderId: input.orderId }) },
+    }), READY)
+    assert.equal(accepted.ok, true)
+    assert.equal('job' in accepted && accepted.job?.order_id, ORDER_ID)
+    const processing = await start(ASSET_START, store({
+      findIdentityAssets: async () => [founderAsset({ status: 'processing' })],
+      createQueued: async () => { created++; return job() },
+    }), READY)
+    assert.equal('error' in processing && processing.error, 'identity_asset_not_active')
+    const wrongRole = await start({ ...ASSET_START, ref_roles: ['reference_video'] }, store({
+      findIdentityAssets: async () => [founderAsset()],
+      createQueued: async () => { created++; return job() },
+    }), READY)
+    assert.equal('error' in wrongRole && wrongRole.error, 'invalid_operator_ref_role')
+    assert.equal(created, 1)
+  }
+})
+
+test('https-only start never touches the identity store and stays on Monid', async () => {
+  for (const start of [startCompiledGenerate, startAiVideoOperatorGenerate]) {
+    let saved: any
+    const result = await start({ ...ASSET_START, resolution: '720p', ref_urls: ['https://example.com/face.jpg'] }, store({
+      findIdentityAssets: async () => { throw new Error('unnecessary identity lookup') },
+      createQueued: async (input) => { saved = input; return job({ provider: input.provider }) },
+    }), READY)
+    assert.equal(result.ok, true)
+    assert.equal(saved.provider, 'monid')
+  }
+})
+
+test('list hides asset:// refs behind a null url so the Studio shows its avatar', async () => {
+  const row = job({ refUrls: [RICHIE_FACE, 'https://example.com/face.jpg'], refRoles: ['reference_image', 'reference_image'], provider: 'byteplus_modelark' })
+  const body = await listAiVideoOperatorGenerate({ simple: true, jobId: row.id, includeReferences: true }, store({ listJobs: async () => [row], getJob: async () => row }), READY)
+  assert.deepEqual(body.job?.reference_media?.map((item: { path: string; url: string | null }) => [item.path, item.url]), [[RICHIE_FACE, null], ['https://example.com/face.jpg', 'https://example.com/face.jpg']])
+  assert.equal(body.job?.provider, 'byteplus_modelark')
+})
+
 test('simple polling skips catalog/library work and only signs references when requested', async () => {
   let signed: string[] = []
   const row = job({ refPaths: ['operator/inbox/cat.jpg'] })

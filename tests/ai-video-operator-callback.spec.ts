@@ -163,6 +163,18 @@ test('network failure after submission remains ambiguous and stops paid retries'
   assert.deepEqual(failed, ['monid_submission_unknown'])
 })
 
+test('BytePlus identity jobs namespace an ambiguous submit as modelark_submission_unknown', async () => {
+  const failed: string[] = []
+  await runAiVideoOperatorWorker({
+    claim: async () => [operatorJob({ provider: 'byteplus_modelark', refUrls: ['asset://Asset-20260914100001-fghij'] })],
+    processor: operatorDeps({
+      submit: async () => { throw new TypeError('fetch failed') },
+      markFailed: async (_id, code) => { failed.push(code) },
+    }),
+  })
+  assert.deepEqual(failed, ['modelark_submission_unknown'])
+})
+
 test('poll failures preserve the run identity and can be retried', async () => {
   let markedFailed = false; const syncErrors: string[] = []
   await runAiVideoOperatorWorker({ claim: async () => [operatorJob({ status: 'running', providerTaskId: 'task-1' })], processor: operatorDeps({

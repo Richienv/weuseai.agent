@@ -22,6 +22,10 @@ function job(status = scenario) {
 function reply(res, body, status = 200) { res.writeHead(status, { 'content-type': 'application/json' }); res.end(JSON.stringify(body)); }
 const server = createServer(async (req, res) => {
   const url = new URL(req.url, 'http://localhost');
+  if (url.pathname === '/api/admin/customer-data' && url.searchParams.get('resource') === 'ai-video-identities') {
+    // Karakter picker feed (verified founder identity fixture). Not a job poll.
+    reply(res, { identities: [{ id: 'fixture-identity', display_name: 'Richie', owner_kind: 'founder', assets: [{ id: 'fixture-face', asset_id: 'Asset-20260914100001-fghij', asset_type: 'Image', slot: 'wajah' }] }] }); return;
+  }
   if (url.pathname === '/api/admin/customer-data') {
     polls++;
     if (holdPoll) await new Promise((resolve) => setTimeout(resolve, 800));

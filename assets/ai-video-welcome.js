@@ -41,6 +41,7 @@ const barcodeEl = document.querySelector('#ticket-barcode')
 const retryBtn = document.querySelector('#retry-btn')
 const chatLink = document.querySelector('#chat-link')
 const waLink = document.querySelector('#wa-link')
+const identityLink = document.querySelector('#identity-link')
 const localBadge = document.querySelector('#local-badge')
 const noteEl = document.querySelector('#receipt-note')
 
@@ -124,6 +125,8 @@ const setStage = (stage) => {
   retryBtn.hidden = stage !== 'processing'
   chatLink.hidden = stage !== 'processing'
   waLink.hidden = stage !== 'complete'
+  // Karakter (verified identity) is for paid orders only; it appears with the receipt.
+  if (identityLink) identityLink.hidden = stage !== 'complete'
 }
 
 const paintTicket = (order, preview = false) => {

@@ -96,6 +96,8 @@ export async function createMonidSeedanceRun(input: {
   if (!isAiVideoOperatorModel(input.plan.model)) throw new Error('invalid_operator_model')
   if (!isAiVideoOperatorRatio(input.plan.ratio)) throw new Error('invalid_operator_ratio')
   if (!isAiVideoOperatorResolution(input.plan.resolution)) throw new Error('invalid_operator_resolution')
+  // 1080p is a BytePlus-only tier (verified-identity lane); Monid stays at 720p.
+  if (input.plan.resolution === '1080p') throw new Error('invalid_operator_resolution')
   const maxSeconds = operatorModelMaxSeconds(input.plan.model)
   if (
     !Number.isInteger(input.plan.durationSeconds)

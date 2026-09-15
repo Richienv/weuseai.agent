@@ -3,6 +3,13 @@ import {
   type AiVideoPromptCategory,
   type AiVideoRatio,
 } from './ai-video-prompt-catalog.ts'
+import {
+  AI_VIDEO_OPERATOR_MAX_AUDIO_REFS,
+  AI_VIDEO_OPERATOR_MAX_IMAGE_REFS,
+  AI_VIDEO_OPERATOR_MAX_VIDEO_REFS,
+  inferOperatorRefRole,
+} from './ai-video-operator.ts'
+import { isArkAssetUri } from './ark-asset-client.ts'
 
 export type ModelArkConfig = {
   baseUrl: string
@@ -47,10 +54,49 @@ export type OperatorSeedancePlan = {
   generateAudio: boolean
 }
 
+// Seedance 2.5 direct-to-Ark path (verified-identity lane). Poll-only, no callback.
+export const ARK_SEEDANCE_25_MODEL_ID = 'dreamina-seedance-2-5-260628'
+export const ARK_SEEDANCE_RATIOS = ['9:16', '16:9', '21:9', '1:1', 'adaptive'] as const
+export const ARK_SEEDANCE_RESOLUTIONS = ['480p', '720p', '1080p'] as const
+export const ARK_SEEDANCE_MIN_SECONDS = 2
+export const ARK_SEEDANCE_MAX_SECONDS = 30
+export const ARK_SEEDANCE_PROMPT_MAX = 6_000
+
+export type ArkSeedanceRatio = (typeof ARK_SEEDANCE_RATIOS)[number]
+export type ArkSeedanceResolution = (typeof ARK_SEEDANCE_RESOLUTIONS)[number]
+
+export type ArkVideoConfig = {
+  baseUrl: string
+  modelId: string
+}
+
+export type ArkSeedancePlan = {
+  prompt: string
+  ratio: ArkSeedanceRatio
+  durationSeconds: number
+  resolution: ArkSeedanceResolution
+  generateAudio: boolean
+  model?: string
+}
+
+export type ArkSeedanceRef = {
+  url: string
+  role?: string | null
+}
+
+export type ArkSeedanceContentItem =
+  | { type: 'text'; text: string }
+  | { type: 'image_url'; image_url: { url: string }; role: 'first_frame' | 'reference_image' }
+  | { type: 'video_url'; video_url: { url: string }; role: 'reference_video' }
+  | { type: 'audio_url'; audio_url: { url: string }; role: 'reference_audio' }
+
 type FetchLike = (input: string, init?: RequestInit) => Promise<Response>
 const ALLOWED_HOSTS = new Set(['ark.ap-southeast.bytepluses.com', 'ark.eu-west.bytepluses.com'])
 const RATIOS = new Set<AiVideoRatio>(['9:16', '16:9', '1:1', 'adaptive'])
 const OPERATOR_RATIOS = new Set(['9:16', '16:9', '21:9', '1:1'])
+const ARK_RATIOS = new Set<string>(ARK_SEEDANCE_RATIOS)
+const ARK_RESOLUTIONS = new Set<string>(ARK_SEEDANCE_RESOLUTIONS)
+const ARK_MODEL_ID_RE = /^[A-Za-z0-9._-]{3,120}$/
 const EMPTY_USAGE: SeedanceUsage = { completionTokens: null, raw: null }
 
 export function resolveModelArkConfig(input: {
@@ -227,6 +273,97 @@ export async function getOperatorSeedanceTask(
   fetchImpl: FetchLike = fetch,
 ): Promise<SeedanceTask> {
   return getSeedanceTask(taskId, apiKey, { ...config, promptModelId: 'unused' }, fetchImpl)
+}
+
+export function resolveArkVideoConfig(input: { baseUrl?: string; modelId?: string } = {}): ArkVideoConfig {
+  const baseUrl = (input.baseUrl ?? 'https://ark.ap-southeast.bytepluses.com/api/v3').replace(/\/+$/, '')
+  const parsed = new URL(baseUrl)
+  if (parsed.protocol !== 'https:' || !ALLOWED_HOSTS.has(parsed.hostname) || parsed.pathname !== '/api/v3') {
+    throw new Error('invalid_modelark_base_url')
+  }
+  const modelId = input.modelId?.trim() || ARK_SEEDANCE_25_MODEL_ID
+  if (!ARK_MODEL_ID_RE.test(modelId)) throw new Error('missing_modelark_model_config')
+  return { baseUrl, modelId }
+}
+
+// Same ref role mapping as monid-run.ts. Refs may be https: or asset:// (verified identity assets).
+export function arkSeedanceContentItem(ref: ArkSeedanceRef): Exclude<ArkSeedanceContentItem, { type: 'text' }> {
+  const url = typeof ref.url === 'string' ? ref.url.trim() : ''
+  const assetRef: boolean = isArkAssetUri(url)
+  if (!assetRef) {
+    let parsed: URL
+    try { parsed = new URL(url) } catch { throw new Error('invalid_ai_video_input_url') }
+    if (parsed.protocol !== 'https:' || url.length > 2000) throw new Error('invalid_ai_video_input_url')
+  }
+  const role = inferOperatorRefRole(url, ref.role ?? null)
+  if (role === 'reference_video') return { type: 'video_url', video_url: { url }, role: 'reference_video' }
+  if (role === 'reference_audio') return { type: 'audio_url', audio_url: { url }, role: 'reference_audio' }
+  return { type: 'image_url', image_url: { url }, role: role === 'first_frame' ? 'first_frame' : 'reference_image' }
+}
+
+export async function createArkSeedanceTask(input: {
+  plan: ArkSeedancePlan
+  refs?: readonly ArkSeedanceRef[]
+}, apiKey: string, config: ArkVideoConfig = resolveArkVideoConfig(), fetchImpl: FetchLike = fetch): Promise<{ id: string }> {
+  assertApiKey(apiKey)
+  const plan = input.plan
+  if (!ARK_RATIOS.has(plan.ratio)) throw new Error('invalid_operator_ratio')
+  if (!ARK_RESOLUTIONS.has(plan.resolution)) throw new Error('invalid_operator_resolution')
+  if (
+    !Number.isInteger(plan.durationSeconds)
+    || plan.durationSeconds < ARK_SEEDANCE_MIN_SECONDS
+    || plan.durationSeconds > ARK_SEEDANCE_MAX_SECONDS
+  ) {
+    throw new Error('invalid_operator_duration')
+  }
+  if (typeof plan.generateAudio !== 'boolean') throw new Error('invalid_operator_audio_flag')
+  const model = (plan.model ?? config.modelId).trim()
+  if (!ARK_MODEL_ID_RE.test(model)) throw new Error('invalid_operator_model')
+  const prompt = typeof plan.prompt === 'string' ? plan.prompt.trim() : ''
+  if (!prompt) throw new Error('invalid_operator_prompt')
+  if (prompt.length > ARK_SEEDANCE_PROMPT_MAX) throw new Error('modelark_prompt_limit')
+  const media = [...(input.refs ?? [])].map(arkSeedanceContentItem)
+  const images = media.filter((item) => item.type === 'image_url').length
+  const videos = media.filter((item) => item.type === 'video_url').length
+  const audios = media.filter((item) => item.type === 'audio_url').length
+  if (images > AI_VIDEO_OPERATOR_MAX_IMAGE_REFS) throw new Error('operator_ref_cap')
+  if (videos > AI_VIDEO_OPERATOR_MAX_VIDEO_REFS) throw new Error('operator_video_cap')
+  if (audios > AI_VIDEO_OPERATOR_MAX_AUDIO_REFS) throw new Error('operator_audio_cap')
+  const hasFirstFrame = media.some((item) => item.role === 'first_frame')
+  if (plan.ratio === '21:9' && hasFirstFrame) throw new Error('invalid_operator_ratio')
+  const content: ArkSeedanceContentItem[] = [{ type: 'text', text: prompt }, ...media]
+  const response = await fetchImpl(`${config.baseUrl}/contents/generations/tasks`, {
+    method: 'POST',
+    signal: AbortSignal.timeout(25_000),
+    headers: { authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' },
+    body: JSON.stringify({
+      model,
+      content,
+      generate_audio: plan.generateAudio,
+      ratio: hasFirstFrame ? 'adaptive' : plan.ratio,
+      duration: plan.durationSeconds,
+      resolution: plan.resolution,
+    }),
+  })
+  if (!response.ok) throw new Error(mapUpstreamError(response.status))
+  const body = await safeJson(response) as Record<string, unknown>
+  const id = typeof body.id === 'string' ? body.id : typeof body.task_id === 'string' ? body.task_id : ''
+  if (!id || id.length > 200) throw new Error('modelark_invalid_task')
+  return { id }
+}
+
+export async function getArkSeedanceTask(
+  taskId: string,
+  apiKey: string,
+  config: ArkVideoConfig = resolveArkVideoConfig(),
+  fetchImpl: FetchLike = fetch,
+): Promise<SeedanceTask> {
+  return getSeedanceTask(taskId, apiKey, {
+    baseUrl: config.baseUrl,
+    seedanceModelId: config.modelId,
+    promptModelId: 'unused',
+    callbackUrl: '',
+  }, fetchImpl)
 }
 
 export async function deleteSeedanceTask(taskId: string, apiKey: string, config: ModelArkConfig, fetchImpl: FetchLike = fetch): Promise<void> {

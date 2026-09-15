@@ -13,6 +13,8 @@ export type AiVideoOperatorDeliveryJob = {
   durationSeconds: number
   generateAudio: boolean
   resolution?: string | null
+  // 'monid' | 'byteplus_modelark'; null on rows written before the identity lane.
+  provider?: string | null
   providerTaskId: string | null
   providerModelId: string | null
   refUrls: string[]

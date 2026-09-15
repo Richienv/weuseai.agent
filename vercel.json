@@ -73,6 +73,10 @@
     {
       "source": "/admin/ai-video-generate",
       "destination": "/admin/ai-video-generate.html"
+    },
+    {
+      "source": "/admin/ai-video-influencers",
+      "destination": "/admin/ai-video-influencers.html"
     }
   ],
   "redirects": [
@@ -165,6 +169,15 @@
     },
     {
       "source": "/ai-video/welcome",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/ai-video-identity",
       "headers": [
         {
           "key": "Cache-Control",
