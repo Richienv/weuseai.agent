@@ -155,16 +155,31 @@ function StudioApp() {
   const [refs, setRefs] = useState(() => taggedReferences(readLocal(REFS_KEY, []).filter((row) => row && (row.path || row.name)).map(restoreRef)));
   // Verified Karakter list for the picker; null until the first fetch settles.
   const [identities, setIdentities] = useState(null);
+  // Saved character sheets (Monid-native, plain reference images — NOT the
+  // BytePlus asset:// lane). These render on Seedance 2.5 today.
+  const [characters, setCharacters] = useState([]);
+  const [savingCharacter, setSavingCharacter] = useState('');
+  const [characterName, setCharacterName] = useState('');
   const firstFrameOn = refs.some((row) => row.role === 'first_frame');
   // Any asset:// ref routes the job through BytePlus, which is the only lane with 1080p.
   const hasCharacter = refs.some((row) => row.asset);
   const sentResolution = hasCharacter ? resolution : '720p';
   const formatOptions = model === 'wan3.0' || firstFrameOn ? RATIOS.filter((item) => item !== '21:9') : RATIOS;
-  const tagSequence = useRef({ ...initial.tagSequence });
+  // Derived fresh from the rows on screen, NOT carried across sessions. As a
+  // monotonic persisted counter this labelled the ONLY attached photo @Image2
+  // (or @Image7) whenever Studio had been used before, or a photo was attached,
+  // removed and re-attached — while the hint below the prompt still told the
+  // founder to write @Image1. That typed tag then failed to bind and Generate
+  // stayed greyed out with "Tag @Image1 belum terhubung". Every row is created
+  // carrying its own tag, so max-of-current-rows is the correct next ordinal,
+  // and bindReferenceTags renumbers to submit order server-side anyway.
+  const tagSequence = useRef({});
+  const derivedTagSequence = {};
   for (const tag of refs.map((row) => row.tag)) {
     const match = /^@(Image|Audio|Video)([1-9]\d{0,5})$/.exec(tag || '');
-    if (match) tagSequence.current[match[1]] = Math.max(Number(tagSequence.current[match[1]]) || 0, Number(match[2]));
+    if (match) derivedTagSequence[match[1]] = Math.max(Number(derivedTagSequence[match[1]]) || 0, Number(match[2]));
   }
+  tagSequence.current = derivedTagSequence;
   const [pendingId, setPendingId] = useState(() => readPending() || initial.pendingRequestId || '');
   const [selectedId, setSelectedId] = useState(() => {
     if (readPending() || initial.pendingRequestId) return '';
@@ -221,13 +236,13 @@ function StudioApp() {
     if ((model === 'wan3.0' || firstFrameOn) && ratio === '21:9') setRatio('16:9');
   }, [model, firstFrameOn, ratio]);
   useEffect(() => {
-    writeLocal(DRAFT_KEY, { ...readLocal(DRAFT_KEY, {}), prompt, selectedModel: model, ratio, duration, generateAudio, resolution, jobId: selectedId, tid, pendingRequestId: pendingRef.current, tagSequence: tagSequence.current, version: 5 });
+    writeLocal(DRAFT_KEY, { ...readLocal(DRAFT_KEY, {}), prompt, selectedModel: model, ratio, duration, generateAudio, resolution, jobId: selectedId, tid, pendingRequestId: pendingRef.current, version: 5 });
     const url = new URL(location.href);
     selectedId ? url.searchParams.set('job_id', selectedId) : url.searchParams.delete('job_id');
     history.replaceState({}, '', url.pathname + url.search);
   }, [prompt, model, ratio, duration, generateAudio, resolution, selectedId]);
   useEffect(() => {
-    writeLocal(REFS_KEY, refs.map(({ path, name, kind, role, tag, seconds, thumb, status, lastFrame, width, height }) => ({ path, name, kind, role, tag, seconds, thumb, lastFrame: lastFrame === true, width: width || 0, height: height || 0, status: status === 'ready' ? 'ready' : 'failed' })));
+    writeLocal(REFS_KEY, refs.map(({ path, name, kind, role, tag, seconds, thumb, status, lastFrame, width, height, character }) => ({ path, name, kind, role, tag, seconds, thumb, lastFrame: lastFrame === true, character: character === true, width: width || 0, height: height || 0, status: status === 'ready' ? 'ready' : 'failed' })));
   }, [refs]);
   // Karakter forces Seedance 2.5; Wan cannot read asset:// refs.
   useEffect(() => { if (hasCharacter && model !== 'seedance-2.5') setModel('seedance-2.5'); }, [hasCharacter, model]);
@@ -243,6 +258,21 @@ function StudioApp() {
     })();
     return () => controller.abort();
   }, [tid]);
+  // Saved character sheets. Fetched explicitly (include_characters=1), never on
+  // the 5s poll — each row costs a signed URL server-side.
+  async function loadCharacters(signal) {
+    try {
+      const response = await fetch('/api/admin/customer-data?resource=ai-video-generate&simple=1&include_characters=1', { credentials: 'same-origin', signal: signal || AbortSignal.timeout(20000) });
+      if (response.status === 401) { location.assign('/admin/login'); return; }
+      const body = response.ok ? await response.json() : null;
+      if (alive.current) setCharacters(Array.isArray(body?.characters) ? body.characters : []);
+    } catch { /* keep whatever we already have; the sheet still opens */ }
+  }
+  useEffect(() => {
+    const controller = new AbortController();
+    loadCharacters(controller.signal);
+    return () => controller.abort();
+  }, []);
   useEffect(() => {
     if (!job?.id) return;
     const next = jobState(job);
@@ -345,9 +375,42 @@ function StudioApp() {
     }
     const prefix = referenceTagPrefix('reference_' + kind);
     tagSequence.current[prefix] = (Number(tagSequence.current[prefix]) || 0) + 1;
-    writeLocal(DRAFT_KEY, { ...readLocal(DRAFT_KEY, {}), tagSequence: tagSequence.current });
     const row = { id: crypto.randomUUID(), tag: '@' + prefix + tagSequence.current[prefix], name: assetLabel(identity, asset), kind, role: 'reference_' + kind, lastFrame: false, asset: true, status: 'ready', percent: 100, seconds: 0, width: 0, height: 0, preview: null, thumb: ASSET_AVATAR, path: 'asset://' + asset.asset_id };
     refsRef.current = refsRef.current.concat(row); setRefs(refsRef.current);
+  }
+  // Attach a saved character sheet as an ordinary reference image. Its
+  // sheet_path is already `operator/...`, which is exactly what REF_PATH_RE
+  // accepts, so it signs and submits like any uploaded photo — Seedance 2.5,
+  // no BytePlus, no asset:// passthrough.
+  function attachCharacter(character) {
+    if (submitting || !character?.sheet_path) return;
+    if (refsRef.current.some((row) => row.path === character.sheet_path)) { setSheet(''); return; }
+    if (refsRef.current.filter((row) => row.kind === 'image').length >= modelSettings.photoLimit) { setError('photo_limit'); return; }
+    const prefix = referenceTagPrefix('reference_image');
+    tagSequence.current[prefix] = (Number(tagSequence.current[prefix]) || 0) + 1;
+    const row = {
+      id: crypto.randomUUID(), tag: '@' + prefix + tagSequence.current[prefix],
+      name: character.name, kind: 'image', role: 'reference_image', lastFrame: false,
+      character: true, status: 'ready', percent: 100, seconds: 0, width: 0, height: 0,
+      preview: character.sheet_url || '', thumb: character.sheet_url || '', path: character.sheet_path,
+    };
+    refsRef.current = refsRef.current.concat(row); setRefs(refsRef.current);
+    setSheet('');
+    promptInput.current?.insert(row.tag);
+  }
+  // Save an already-uploaded photo as a reusable character sheet.
+  async function saveAsCharacter(row, name) {
+    const clean = String(name || '').trim();
+    if (!row?.path || working) return;
+    if (clean.length < 2 || clean.length > 60) { setError('invalid_operator_character_name'); return; }
+    setWorking('character');
+    try {
+      const body = await post('ai_video_character_save', { name: clean, sheet_path: row.path });
+      if (body?.character) setCharacters((list) => [body.character, ...list.filter((item) => item.id !== body.character.id)]);
+      else await loadCharacters();
+      setSavingCharacter(''); setCharacterName('');
+    } catch (problem) { setError(problem.message || 'character_save_failed'); }
+    finally { setWorking(''); }
   }
   function removeRef(row) {
     uploads.current.get(row.id)?.abort(); uploads.current.delete(row.id); payloadDrafts.current.delete(row.id);
@@ -438,7 +501,6 @@ function StudioApp() {
       refsRef.current = refsRef.current.map((item) => item.role === 'first_frame' ? { ...item, role: 'reference_image' } : item);
       if (ratio === '21:9') setRatio('16:9');
     }
-    writeLocal(DRAFT_KEY, { ...readLocal(DRAFT_KEY, {}), tagSequence: tagSequence.current });
     refsRef.current = refsRef.current.concat(added.map(({ row }) => row));
     setRefs(refsRef.current);
     const preparedRows = [];
@@ -656,14 +718,17 @@ function StudioApp() {
               <button type="button" className="sv-reference-preview" aria-label={'Sisipkan ' + row.tag} disabled={submitting || row.status !== 'ready'} onClick={() => promptInput.current?.insert(row.tag)}>{row.asset ? <img className="sv-ref-avatar" src={ASSET_AVATAR} alt=""/> : row.kind !== 'audio' && row.preview ? <img src={row.preview} alt={row.name}/> : <Icon name={row.kind === 'audio' ? 'audio' : row.kind === 'video' ? 'film' : 'photo'} size={20}/>}<span className="sv-ref-tag">{row.tag}</span></button>
               {row.asset ? <span className="sv-ref-name" title={row.name}><span>{row.name}</span></span> : <button type="button" className="sv-ref-name" aria-label={'Ganti ' + row.name} title={'Ganti ' + row.name} disabled={submitting || row.status === 'uploading'} onClick={() => chooseReplacement(row)}><span>{row.name}</span><Icon name="edit" size={13}/></button>}
               {row.kind === 'image' && row.status === 'ready' && !row.asset ? <div className="sv-ref-roles"><button type="button" aria-pressed={row.role === 'first_frame'} disabled={submitting} onClick={() => setFirstFrame(row)}>Frame awal</button><button type="button" aria-pressed={row.lastFrame === true} disabled={submitting} onClick={() => setLastFrame(row)}>Frame akhir</button></div> : null}
-              {row.status === 'uploading' ? <small role="status">{row.percent ? 'Upload ' + row.percent + '%' : 'Menyiapkan…'}</small> : row.status === 'failed' ? <small>{row.error}</small> : row.asset ? <small>Karakter terverifikasi</small> : row.kind !== 'image' ? <small>{Number(row.seconds || 0).toFixed(1)} dtk</small> : row.role === 'first_frame' ? <small>Frame awal</small> : row.lastFrame ? <small>Frame akhir</small> : null}
+              {row.kind === 'image' && row.status === 'ready' && !row.asset && !row.character ? (savingCharacter === row.id
+                ? <div className="sv-character-save"><input value={characterName} onChange={(event) => setCharacterName(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); saveAsCharacter(row, characterName); } }} autoFocus maxLength={60} placeholder="Nama karakter" aria-label="Nama karakter"/><button type="button" className="sv-text-button" disabled={working === 'character'} onClick={() => saveAsCharacter(row, characterName)}>{working === 'character' ? 'Menyimpan…' : 'Simpan'}</button><button type="button" className="sv-text-button" onClick={() => { setSavingCharacter(''); setCharacterName(''); }}>Batal</button></div>
+                : <button type="button" className="sv-text-button" disabled={submitting} onClick={() => setSavingCharacter(row.id)}>Simpan karakter</button>) : null}
+              {row.status === 'uploading' ? <small role="status">{row.percent ? 'Upload ' + row.percent + '%' : 'Menyiapkan…'}</small> : row.status === 'failed' ? <small>{row.error}</small> : row.asset ? <small>Karakter terverifikasi</small> : row.character ? <small>Karakter tersimpan</small> : row.kind !== 'image' ? <small>{Number(row.seconds || 0).toFixed(1)} dtk</small> : row.role === 'first_frame' ? <small>Frame awal</small> : row.lastFrame ? <small>Frame akhir</small> : null}
               {row.kind === 'audio' && row.preview && row.status === 'ready' ? <audio controls preload="none" src={row.preview} aria-label={'Putar ' + row.name}/> : null}
               {row.status === 'failed' && payloadDrafts.current.has(row.id) ? <button type="button" className="sv-text-button" disabled={submitting} onClick={() => uploadOne(row, payloadDrafts.current.get(row.id))}>Ulangi</button> : null}
               <button type="button" className="sv-icon-button sv-ref-remove" aria-label={'Hapus ' + row.name} disabled={submitting} onClick={() => removeRef(row)}><Icon name="close" size={16}/></button>
               {row.status === 'uploading' ? <div className="sv-upload-progress" style={{ width: row.percent + '%' }}/> : null}
             </div>)}</div> : null}
             <ReferencePrompt ref={promptInput} value={prompt} onChange={setPrompt} references={refs} disabled={submitting} onSubmit={start} onFiles={attachFiles}/>
-            <div className="sv-attach-bar"><button type="button" className="sv-attach-button" disabled={submitting || refs.filter((row) => row.kind === 'image').length >= modelSettings.photoLimit} onClick={() => photoInput.current.click()}><Icon name="photo"/>Foto</button><button type="button" className="sv-attach-button" disabled={submitting || refs.filter((row) => row.kind === 'video').length >= modelSettings.videoLimit} onClick={() => videoInput.current.click()}><Icon name="film"/>Video</button><button type="button" className="sv-attach-button" disabled={submitting || refs.filter((row) => row.kind === 'audio').length >= modelSettings.audioLimit} onClick={() => audioInput.current.click()}><Icon name="audio"/>Audio</button>{identities?.length ? <button type="button" className="sv-attach-button sv-attach-character" aria-pressed={hasCharacter} disabled={submitting} onClick={() => setSheet('karakter')}><Icon name="person"/>Karakter{hasCharacter ? <span className="sv-attach-count">{refs.filter((row) => row.asset).length}</span> : null}</button> : null}{length > SIMPLE_PROMPT_LIMIT * .8 ? <span className={'sv-count' + (length > SIMPLE_PROMPT_LIMIT ? ' is-error' : '')}>{length.toLocaleString('id-ID')} / 6.000</span> : null}</div>
+            <div className="sv-attach-bar"><button type="button" className="sv-attach-button" disabled={submitting || refs.filter((row) => row.kind === 'image').length >= modelSettings.photoLimit} onClick={() => photoInput.current.click()}><Icon name="photo"/>Foto</button><button type="button" className="sv-attach-button" disabled={submitting || refs.filter((row) => row.kind === 'video').length >= modelSettings.videoLimit} onClick={() => videoInput.current.click()}><Icon name="film"/>Video</button><button type="button" className="sv-attach-button" disabled={submitting || refs.filter((row) => row.kind === 'audio').length >= modelSettings.audioLimit} onClick={() => audioInput.current.click()}><Icon name="audio"/>Audio</button><button type="button" className="sv-attach-button sv-attach-character" disabled={submitting || refs.filter((row) => row.kind === 'image').length >= modelSettings.photoLimit} onClick={() => setSheet('library')}><Icon name="person"/>Karakter{characters.length ? <span className="sv-attach-count">{characters.length}</span> : null}</button>{identities?.length ? <button type="button" className="sv-attach-button sv-attach-character" aria-pressed={hasCharacter} disabled={submitting} onClick={() => setSheet('karakter')}><Icon name="person"/>BytePlus{hasCharacter ? <span className="sv-attach-count">{refs.filter((row) => row.asset).length}</span> : null}</button> : null}{length > SIMPLE_PROMPT_LIMIT * .8 ? <span className={'sv-count' + (length > SIMPLE_PROMPT_LIMIT ? ' is-error' : '')}>{length.toLocaleString('id-ID')} / 6.000</span> : null}</div>
           </div>
           <input ref={replaceInput} className="sv-sr-only" type="file" tabIndex={-1} aria-label="Ganti file referensi" onChange={(event) => { replaceFile(event.target.files?.[0]); event.target.value = ''; }}/>
           <input ref={photoInput} className="sv-sr-only" type="file" accept={PHOTO_ACCEPT} multiple tabIndex={-1} aria-label="Upload foto" onChange={(event) => { attachFiles(event.target.files); event.target.value = ''; }}/>
@@ -694,7 +759,8 @@ function StudioApp() {
       </section>
     </main>
     {sheet === 'settings' ? <Sheet title="Pengaturan video" close={() => setSheet('')}><fieldset><legend>Format</legend><div className="sv-choice-row">{firstFrameOn ? <button type="button" aria-pressed={true} disabled><span className="sv-format-shape ratio-adaptive"/><span>ikut frame</span></button> : formatOptions.map((item) => <button type="button" key={item} aria-pressed={ratio === item} onClick={() => setRatio(item)}><span className={'sv-format-shape ratio-' + item.replace(':', '-')}/><span>{item}</span></button>)}</div></fieldset><fieldset><legend>Durasi</legend><div className="sv-duration-row">{DURATIONS.map((item) => <button key={item} type="button" aria-pressed={duration === item} onClick={() => setDuration(item)}>{item} dtk</button>)}</div></fieldset><fieldset><legend>Suara</legend><button type="button" className="sv-toggle" aria-pressed={generateAudio} onClick={() => setGenerateAudio(!generateAudio)}>{generateAudio ? 'Suara hidup' : 'Tanpa suara'}</button>{refs.some((row) => row.kind === 'audio') ? <p className="sv-hint">Audio terpasang memaksa suara tetap hidup saat generate.</p> : null}</fieldset><fieldset><legend>Resolusi</legend><div className="sv-duration-row sv-resolution-row">{RESOLUTIONS.map((item) => <button key={item} type="button" aria-pressed={sentResolution === item} disabled={item === '1080p' && !hasCharacter} onClick={() => setResolution(item)}>{item}</button>)}</div>{hasCharacter ? null : <p className="sv-hint">1080p tersedia saat Karakter terpasang.</p>}</fieldset><div className="sv-settings-note"><span>{modelSettings.label} · {sentResolution}</span>{studio?.wallet?.value != null ? <span>Saldo {money(studio.wallet.value)}</span> : null}</div><button className="sv-download sv-full" onClick={() => setSheet('')}>Selesai</button></Sheet> : null}
-    {sheet === 'karakter' ? <Sheet title="Karakter" close={() => setSheet('')}><p className="sv-hint">Wajah dan suara terverifikasi. Ketuk aset untuk memasang atau melepas.</p><div className="sv-characters">{(identities || []).map((identity) => <div className="sv-character" key={identity.id}><div className="sv-character-head"><img className="sv-ref-avatar" src={ASSET_AVATAR} alt=""/><span><strong>{identity.display_name}</strong><small>{identity.owner_kind === 'founder' ? 'Founder' : 'Pelanggan'}</small></span></div><div className="sv-character-assets">{identity.assets.map((asset) => { const on = Boolean(assetRef(asset)); return <button key={asset.id} type="button" className={assetKind(asset.asset_type)} aria-pressed={on} disabled={submitting} onClick={() => toggleAsset(identity, asset)}><Icon name={asset.asset_type === 'Audio' ? 'audio' : asset.asset_type === 'Video' ? 'film' : 'photo'} size={16}/><span>{asset.slot}</span></button>; })}</div></div>)}</div><button className="sv-download sv-full" onClick={() => setSheet('')}>Selesai</button></Sheet> : null}
+    {sheet === 'library' ? <Sheet title="Karakter" close={() => setSheet('')}><p className="sv-hint">Karakter tersimpan dipakai ulang sebagai referensi wajah lewat Seedance 2.5. Ketuk untuk memasang ke prompt.</p>{characters.length ? <div className="sv-character-grid">{characters.map((item) => <button key={item.id} type="button" className="sv-character-pick" disabled={submitting} onClick={() => attachCharacter(item)}>{item.sheet_url ? <img src={item.sheet_url} alt=""/> : <Icon name="photo" size={20}/>}<span>{item.name}</span></button>)}</div> : <p className="sv-hint">Belum ada karakter tersimpan. Upload foto — sheet karakter lebih aman daripada wajah asli — lalu pilih <strong>Simpan karakter</strong> pada foto itu.</p>}<button className="sv-download sv-full" onClick={() => setSheet('')}>Selesai</button></Sheet> : null}
+    {sheet === 'karakter' ? <Sheet title="Karakter BytePlus" close={() => setSheet('')}><p className="sv-hint">Wajah dan suara terverifikasi. Ketuk aset untuk memasang atau melepas.</p><div className="sv-characters">{(identities || []).map((identity) => <div className="sv-character" key={identity.id}><div className="sv-character-head"><img className="sv-ref-avatar" src={ASSET_AVATAR} alt=""/><span><strong>{identity.display_name}</strong><small>{identity.owner_kind === 'founder' ? 'Founder' : 'Pelanggan'}</small></span></div><div className="sv-character-assets">{identity.assets.map((asset) => { const on = Boolean(assetRef(asset)); return <button key={asset.id} type="button" className={assetKind(asset.asset_type)} aria-pressed={on} disabled={submitting} onClick={() => toggleAsset(identity, asset)}><Icon name={asset.asset_type === 'Audio' ? 'audio' : asset.asset_type === 'Video' ? 'film' : 'photo'} size={16}/><span>{asset.slot}</span></button>; })}</div></div>)}</div><button className="sv-download sv-full" onClick={() => setSheet('')}>Selesai</button></Sheet> : null}
     {sheet === 'preflight' ? <Sheet title="Periksa referensi" close={() => setSheet('')}><p className="sv-hint is-warn">Frame awal memakai gambar yang mirip character sheet. Seedance bisa merender plat panel, bukan shot.</p><button className="sv-download sv-full" onClick={() => { preflightRef.current = true; setSheet(''); start(); }}>Lanjut generate</button></Sheet> : null}
     {sheet === 'history' ? <Sheet title="Riwayat video" close={() => setSheet('')}><div className="sv-history">{studio?.jobs?.length ? studio.jobs.map((row) => { const status = jobState(row); return <button key={row.id} className="sv-history-row" onClick={() => chooseJob(row)}><span className={'sv-history-symbol ' + status.tone}><Icon name={status.active ? 'spin' : status.phase === 'ready' ? 'play' : status.phase === 'failed' ? 'warning' : 'film'}/></span><span className="sv-history-copy"><span>{jobPrompt(row).slice(0, 100) || 'Video'}</span><small>{historyLabel(row)}</small></span><span className="sv-history-duration">{row.duration_seconds} dtk</span></button>; }) : <p className="sv-no-history">Belum ada video.</p>}</div><button className="sv-download sv-full" onClick={() => setSheet('')}>Tutup</button></Sheet> : null}
   </div>;

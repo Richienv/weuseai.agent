@@ -69,7 +69,10 @@ test('simple studio keeps runtime local and isolates its stylesheet from the oth
 
 test('simple studio unlocks Seedance 2.5 without restoring the operator desk', () => {
   const media = readFileSync(new URL('../admin/assets/studio-media.js', import.meta.url), 'utf8')
-  assert.match(generateHtml, /result-1/)
+  // Cache-buster pin: bumped deliberately with each shipped asset change so a
+  // stale bundle or stylesheet can never be served. karakter-1 covers the
+  // Karakter library plus the depth pass on studio-simple.css.
+  assert.match(generateHtml, /karakter-1/)
   assert.match(generateJsx, /\[4, 6, 8, 10, 15, 30\]/)
   assert.match(generateJsx, /21:9/)
   assert.match(generateJsx, /ikut frame/)

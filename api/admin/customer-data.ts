@@ -174,6 +174,7 @@ export default async function handler(
         jobId: u.searchParams.get('job_id') ?? '',
         simple: u.searchParams.get('simple') === '1',
         includeReferences: u.searchParams.get('include_refs') === '1',
+        includeCharacters: u.searchParams.get('include_characters') === '1',
       }, createAiVideoOperatorGenerateStore())
       res.setHeader('Cache-Control', 'no-store')
       res.status(200).json(result)

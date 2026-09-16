@@ -314,7 +314,7 @@ export function presentOperatorReady(env: ReturnType<typeof readOperatorGenerate
 }
 
 export async function listAiVideoOperatorGenerate(
-  input: { tid?: string; jobId?: string; simple?: boolean; includeReferences?: boolean },
+  input: { tid?: string; jobId?: string; simple?: boolean; includeReferences?: boolean; includeCharacters?: boolean },
   store: AiVideoOperatorGenerateStore,
   env: ReturnType<typeof readOperatorGenerateEnv> = readOperatorGenerateEnv(),
 ) {
@@ -359,7 +359,13 @@ export async function listAiVideoOperatorGenerate(
     const resultUrl = item.resultPath && store.signResult ? await store.signResult(item.resultPath) : null
     presentedLibrary.push({ ...presentAiVideoOperatorLibrary(item), result_url: resultUrl })
   }
-  const characters = !input.simple && store.listCharacters ? await store.listCharacters() : []
+  // The simple Studio needs the character library too, but NOT on its 5s poll —
+  // each row costs a signResult, and that is exactly the kind of per-tick work
+  // that blows the client's 20s budget. So it asks for them explicitly, once on
+  // load and after a save, via include_characters=1.
+  const characters = (!input.simple || input.includeCharacters) && store.listCharacters
+    ? await store.listCharacters()
+    : []
   const presentedCharacters = []
   for (const item of characters) {
     const sheetUrl = item.sheetPath && store.signResult ? await store.signResult(item.sheetPath) : null
