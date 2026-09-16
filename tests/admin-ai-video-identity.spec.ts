@@ -266,6 +266,9 @@ test('proxy maps a network failure to 502 identity_unavailable', async () => {
 test('karakter panel rides the admin rails: rewrite, sidebar, shared css, vanilla JS mount', () => {
   assert.match(vercel, /"source": "\/admin\/ai-video-influencers",\s*"destination": "\/admin\/ai-video-influencers\.html"/)
   assert.match(adminShared, /href: '\/admin\/ai-video-influencers'/)
+  assert.match(adminShared, /href: '\/admin\/ai-video-generate'/)
+  assert.match(panelHtml, /\/admin\/ai-video-generate/)
+  assert.match(panelJs, /\/admin\/ai-video-generate/)
   assert.match(panelHtml, /\/admin\/assets\/admin\.css/)
   assert.match(panelHtml, /\/admin\/assets\/admin-shared\.js/)
   assert.match(panelHtml, /data-karakter-panel/)

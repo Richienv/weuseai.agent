@@ -154,13 +154,16 @@ test('legacy shared start still waits for inline Monid', async () => {
   assert.equal(submitted, 1)
 })
 
-test('start returns queued without inline Monid', async () => {
+test('admin start submits Monid inline including storage refs', async () => {
   let submitted = 0
   const result = await startCompiledGenerate({
-    prompt: PROMPT,
+    prompt_mode: 'simple',
+    prompt: 'Kucing lari',
     ratio: '9:16',
     duration_seconds: 6,
     client_request_id: REQUEST_ID,
+    ref_paths: ['operator/inbox/cat.jpg', 'operator/inbox/voice.wav'],
+    ref_durations: [0, 3],
   }, store({
     submitQueued: async (row) => {
       submitted += 1
@@ -169,8 +172,15 @@ test('start returns queued without inline Monid', async () => {
   }), READY)
   assert.equal(result.ok, true)
   if (!('job' in result)) throw new Error('missing job')
-  assert.equal(result.job.status, 'queued')
-  assert.equal(submitted, 0)
+  assert.equal(result.job.status, 'submitted')
+  assert.equal(submitted, 1)
+})
+
+test('admin start is ready with only the Monid key', async () => {
+  const result = await startCompiledGenerate({
+    prompt: PROMPT, ratio: '9:16', duration_seconds: 6, client_request_id: REQUEST_ID,
+  }, store(), { MONID_API_KEY: 'monid-key-16chars' })
+  assert.equal(result.ok, true)
 })
 
 test('start without client_request_id returns 400', async () => {
@@ -658,6 +668,20 @@ test('asset:// start rejects a customer identity from another order and an inact
     assert.equal('error' in wrongRole && wrongRole.error, 'invalid_operator_ref_role')
     assert.equal(created, 1)
   }
+})
+
+test('admin start keeps asset:// jobs queued without inline Monid', async () => {
+  let submitted = 0
+  const result = await startCompiledGenerate(ASSET_START, store({
+    findIdentityAssets: async () => [founderAsset()],
+    submitQueued: async () => { submitted += 1; throw new Error('should_not_submit_byteplus') },
+    createQueued: async (input) => job({ provider: input.provider, refUrls: input.refUrls, status: 'queued' }),
+  }), READY)
+  assert.equal(result.ok, true)
+  if (!('job' in result)) throw new Error('missing job')
+  assert.equal(result.job.status, 'queued')
+  assert.equal(result.job.provider, 'byteplus_modelark')
+  assert.equal(submitted, 0)
 })
 
 test('https-only start never touches the identity store and stays on Monid', async () => {

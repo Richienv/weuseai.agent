@@ -164,11 +164,22 @@ export async function startAiVideoOperatorGenerate(
   const ownership = await checkIdentityAssetRefs(input, store, order)
   if (ownership) return { error: ownership, status: 400 }
   const job = await store.createQueued({ ...input, orderId: order?.id ?? null })
+  let current = job
+  // Photo/audio storage refs stay on Monid. Submit them here so Studio does
+  // not sit in queued waiting for the render worker or BytePlus identity.
+  // asset:// Karakter jobs stay queued for the worker that holds the merchant key.
+  if (store.submitQueued && !input.refUrls.some(isOperatorAssetRef)) {
+    try {
+      current = await store.submitQueued(job)
+    } catch {
+      current = await store.getJob(job.id) ?? job
+    }
+  }
   const workerWarning = await wakeOperatorWorker(store)
   return {
     worker_warning: workerWarning,
     ok: true as const,
-    job: presentAiVideoOperatorJob(job),
+    job: presentAiVideoOperatorJob(current),
     skill_mode: compiled.mode,
     skill_warnings: compiled.warnings,
   }
