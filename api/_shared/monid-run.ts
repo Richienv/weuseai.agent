@@ -163,3 +163,130 @@ export async function createMonidSeedanceRun(input: {
   if (!id) throw new Error('monid_invalid_run')
   return { id }
 }
+
+export type MonidTask = {
+  id: string
+  status: 'queued' | 'running' | 'succeeded' | 'failed' | 'cancelled'
+  videoUrl: string | null
+  failureCode: string | null
+  usage: Record<string, unknown>
+}
+
+const STATUS_MAP: Record<string, MonidTask['status']> = {
+  ready: 'queued',
+  queued: 'queued',
+  pending: 'queued',
+  running: 'running',
+  completed: 'succeeded',
+  succeeded: 'succeeded',
+  failed: 'failed',
+  blocked: 'failed',
+  timed_out: 'failed',
+  time_out: 'failed',
+  timeout: 'failed',
+  stopped: 'cancelled',
+  cancelled: 'cancelled',
+  canceled: 'cancelled',
+}
+
+export async function getMonidRun(
+  runId: string,
+  apiKey: string,
+  config: { baseUrl: string } = resolveMonidConfig(),
+  fetchImpl: typeof fetch = fetch,
+): Promise<MonidTask> {
+  if (typeof apiKey !== 'string' || apiKey.trim().length < 16 || apiKey.length > 1000) {
+    throw new Error('invalid_monid_api_key')
+  }
+  if (!/^[A-Za-z0-9._:-]{1,200}$/.test(runId)) throw new Error('invalid_monid_run_id')
+  const response = await fetchImpl(`${config.baseUrl}/v1/runs/${encodeURIComponent(runId)}`, {
+    method: 'GET',
+    signal: AbortSignal.timeout(15_000),
+    headers: { authorization: `Bearer ${apiKey}`, accept: 'application/json' },
+  })
+  if (!response.ok) throw new Error(mapUpstreamError(response.status))
+  let body: Record<string, unknown> = {}
+  try {
+    body = await response.json() as Record<string, unknown>
+  } catch {
+    throw new Error('monid_invalid_response')
+  }
+  return presentMonidRun(body, runId)
+}
+
+export function presentMonidRun(raw: unknown, fallbackId = ''): MonidTask {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('monid_invalid_run')
+  const body = raw as Record<string, unknown>
+  const id = runIdOf(body) || fallbackId
+  if (!id) throw new Error('monid_invalid_run')
+  const videoUrl = extractVideoUrl(body)
+  const mapped = STATUS_MAP[String(body.status ?? '').toLowerCase().replace(/-/g, '_')]
+  if (!mapped) throw new Error('monid_invalid_run_status')
+  const status = mapped === 'succeeded' && !videoUrl ? 'failed' : mapped
+  return {
+    id,
+    status,
+    videoUrl: status === 'succeeded' ? videoUrl : null,
+    failureCode: failureCodeOf(body, status),
+    usage: extractUsage(body),
+  }
+}
+
+function extractVideoUrl(body: Record<string, unknown>): string | null {
+  const candidates = [
+    lookupString(body, ['output', 'content', 'video_url']),
+    lookupString(body, ['output', 'video_url']),
+    lookupString(body, ['output', 'output', 'video_url']),
+    lookupString(body, ['providerResponse', 'output', 'video_url']),
+    lookupString(body, ['providerResponse', 'data', 'output', 'video_url']),
+    lookupString(body, ['output', 'url']),
+    lookupString(body, ['providerResponse', 'data', 'video_url']),
+    lookupString(body, ['providerResponse', 'data', 'content', 'video_url']),
+    lookupString(body, ['providerResponse', 'video_url']),
+    typeof body.video_url === 'string' ? body.video_url : null,
+  ]
+  for (const raw of candidates) {
+    if (!raw) continue
+    try {
+      const parsed = new URL(raw)
+      if (parsed.protocol === 'https:') return parsed.toString()
+    } catch { /* skip */ }
+  }
+  return null
+}
+
+function extractUsage(body: Record<string, unknown>): Record<string, unknown> {
+  const raw = body.usage && typeof body.usage === 'object' && !Array.isArray(body.usage)
+    ? body.usage as Record<string, unknown>
+    : {}
+  const cost = body.cost && typeof body.cost === 'object' && !Array.isArray(body.cost)
+    ? body.cost as Record<string, unknown>
+    : null
+  return {
+    ...raw,
+    ...(cost ? { cost: cost, cost_usd: typeof cost.value === 'number' ? cost.value : undefined } : {}),
+  }
+}
+
+function failureCodeOf(body: Record<string, unknown>, status: MonidTask['status']): string | null {
+  const rawStatus = String(body.status ?? '').toUpperCase()
+  if (rawStatus === 'BLOCKED') return 'monid_blocked'
+  if (rawStatus === 'TIMED_OUT' || rawStatus === 'TIME_OUT' || rawStatus === 'TIMEOUT') return 'monid_timeout'
+  if (rawStatus === 'STOPPED') return 'monid_stopped'
+  if (status !== 'failed') return null
+  const providerCode = lookupString(body, ['providerResponse', 'error', 'code'])
+  if (providerCode) {
+    if (/sensitive|privacy|real.?person/i.test(providerCode)) return 'monid_privacy'
+    return `monid_${providerCode.replace(/[^A-Za-z0-9._-]/g, '_').slice(0, 80)}`
+  }
+  return lookupString(body, ['providerResponse', 'error', 'message']) ? 'monid_rejected' : 'monid_result_missing'
+}
+
+function lookupString(value: unknown, path: string[]): string | null {
+  let current: unknown = value
+  for (const key of path) {
+    if (!current || typeof current !== 'object' || Array.isArray(current)) return null
+    current = (current as Record<string, unknown>)[key]
+  }
+  return typeof current === 'string' ? current : null
+}

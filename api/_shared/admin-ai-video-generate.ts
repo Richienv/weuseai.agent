@@ -16,7 +16,7 @@ import {
   type AiVideoOperatorJob,
   type AiVideoOperatorLibraryItem,
 } from './ai-video-operator.js'
-import { createMonidSeedanceRun, resolveMonidConfig } from './monid-run.js'
+import { createMonidSeedanceRun, getMonidRun, resolveMonidConfig } from './monid-run.js'
 import type { AiVideoOperatorGenerateStore, AiVideoOperatorOrderLink } from './admin-ai-video-generate-handler.js'
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? ''
@@ -129,6 +129,56 @@ async function storageList(prefix: string): Promise<Array<Record<string, unknown
   if (!response.ok) return []
   const rows = await response.json() as unknown
   return Array.isArray(rows) ? rows as Array<Record<string, unknown>> : []
+}
+
+async function patchOperatorJob(id: string, body: Record<string, unknown>): Promise<AiVideoOperatorJob | null> {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/ai_video_operator_jobs?id=eq.${id}`, {
+    method: 'PATCH',
+    headers: { ...supabaseHeaders('return=representation'), 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (!response.ok) return null
+  const rows = await response.json() as Array<Record<string, unknown>>
+  return rows[0] ? mapJob(rows[0]) : null
+}
+
+async function storeMonidResult(job: AiVideoOperatorJob, videoUrl: string): Promise<AiVideoOperatorJob | null> {
+  try {
+    const parsed = new URL(videoUrl)
+    if (parsed.protocol !== 'https:') return null
+    const download = await fetch(videoUrl, { signal: AbortSignal.timeout(8_000) })
+    if (!download.ok) return null
+    const declaredSize = Number(download.headers.get('content-length'))
+    if (declaredSize > 80 * 1024 * 1024) return null
+    const bytes = new Uint8Array(await download.arrayBuffer())
+    if (bytes.byteLength < 32 || bytes.byteLength > 80 * 1024 * 1024) return null
+    if (String.fromCharCode(...bytes.slice(4, 8)) !== 'ftyp') return null
+    const path = `operator/${job.id}/result.mp4`
+    const upload = await fetch(`${SUPABASE_URL}/storage/v1/object/ai-video-inputs/${path}`, {
+      method: 'POST',
+      headers: {
+        ...supabaseHeaders(),
+        'content-type': 'video/mp4',
+        'x-upsert': 'true',
+      },
+      body: bytes,
+      signal: AbortSignal.timeout(8_000),
+    })
+    if (!upload.ok) return null
+    const now = new Date().toISOString()
+    return await patchOperatorJob(job.id, {
+      status: 'succeeded',
+      error_code: null,
+      result_bucket: 'ai-video-inputs',
+      result_path: path,
+      provider_video_url: videoUrl,
+      completed_at: now,
+      lease_until: null,
+      updated_at: now,
+    })
+  } catch {
+    return null
+  }
 }
 
 async function signPath(path: string): Promise<string | null> {
@@ -396,6 +446,54 @@ export function createAiVideoOperatorGenerateStore(): AiVideoOperatorGenerateSto
         // Preserve known provider identity in the response even if persistence is unavailable.
         return { ...job, status: 'failed', errorCode: code, providerTaskId: createdTaskId ?? job.providerTaskId }
       }
+    },
+    async syncMonidJob(job) {
+      if (job.resultPath || !job.providerTaskId) return job
+      if ((job.provider ?? operatorJobProvider(job.refUrls)) === 'byteplus_modelark') return job
+      if (!['queued', 'submitted', 'running', 'succeeded'].includes(job.status)) return job
+      // A provider URL is already enough for the player. Do not re-download
+      // on every 5s Studio poll — that can miss the UI timeout and look hung.
+      if (job.status === 'succeeded' && job.providerVideoUrl) return job
+      const key = process.env.MONID_API_KEY ?? ''
+      if (key.trim().length < 16) return job
+      const task = await getMonidRun(job.providerTaskId, key, resolveMonidConfig())
+      const now = new Date().toISOString()
+      if (task.status === 'queued' || task.status === 'running') {
+        return await patchOperatorJob(job.id, {
+          status: task.status === 'running' ? 'running' : 'submitted',
+          error_code: null,
+          updated_at: now,
+        }) ?? job
+      }
+      if (task.status === 'cancelled' || task.status === 'failed') {
+        return await patchOperatorJob(job.id, {
+          status: task.status === 'cancelled' ? 'cancelled' : 'failed',
+          error_code: task.failureCode ?? 'monid_failed',
+          completed_at: now,
+          lease_until: null,
+          updated_at: now,
+        }) ?? job
+      }
+      if (task.status !== 'succeeded' || !task.videoUrl) {
+        return await patchOperatorJob(job.id, {
+          status: 'failed',
+          error_code: task.failureCode ?? 'monid_result_missing',
+          completed_at: now,
+          lease_until: null,
+          updated_at: now,
+        }) ?? job
+      }
+      const playable = await patchOperatorJob(job.id, {
+        status: 'succeeded',
+        provider_video_url: task.videoUrl,
+        error_code: null,
+        usage: { ...job.usage, ...task.usage },
+        completed_at: now,
+        lease_until: null,
+        updated_at: now,
+      }) ?? { ...job, status: 'succeeded' as const, providerVideoUrl: task.videoUrl }
+      const stored = await storeMonidResult(playable, task.videoUrl)
+      return stored ?? playable
     },
     async resumePolling(job) {
       const response = await fetch(

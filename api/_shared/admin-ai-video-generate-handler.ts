@@ -58,6 +58,9 @@ export type AiVideoOperatorGenerateStore = {
   createQueued(input: AiVideoOperatorStartInput & { orderId: string | null }): Promise<AiVideoOperatorJob>
   submitQueued?(job: AiVideoOperatorJob): Promise<AiVideoOperatorJob>
   resumePolling?(job: AiVideoOperatorJob): Promise<AiVideoOperatorJob>
+  // Studio list polls Monid for the selected run so a finished video does not
+  // wait on EdgeRuntime.waitUntil or the cron worker.
+  syncMonidJob?(job: AiVideoOperatorJob): Promise<AiVideoOperatorJob>
   getJob(id: string): Promise<AiVideoOperatorJob | null>
   listJobs(): Promise<AiVideoOperatorJob[]>
   cancelJob(id: string): Promise<AiVideoOperatorJob | null>
@@ -318,9 +321,25 @@ export async function listAiVideoOperatorGenerate(
   const jobs = await store.listJobs()
   let order = null
   if (input.tid) order = await store.findOrderByTid(input.tid.trim().toUpperCase())
+  const listed = [...jobs]
+  const pending = (input.jobId && isOperatorJobId(input.jobId)
+    ? listed.find((row) => row.id === input.jobId) ?? await store.getJob(input.jobId)
+    : listed.find((row) => (
+      (['queued', 'submitted', 'running'].includes(row.status) || (row.status === 'succeeded' && !row.resultPath))
+      && Boolean(row.providerTaskId)
+      && (row.provider ?? 'monid') !== 'byteplus_modelark'
+    ))) ?? null
+  if (pending && store.syncMonidJob && (pending.provider ?? 'monid') !== 'byteplus_modelark') {
+    try {
+      const synced = await store.syncMonidJob(pending)
+      const index = listed.findIndex((row) => row.id === synced.id)
+      if (index >= 0) listed[index] = synced
+      else listed.unshift(synced)
+    } catch { /* keep the last known row; the next poll retries */ }
+  }
   let selected = null
   if (input.jobId && isOperatorJobId(input.jobId)) {
-    const job = jobs.find((row) => row.id === input.jobId) ?? await store.getJob(input.jobId)
+    const job = listed.find((row) => row.id === input.jobId) ?? await store.getJob(input.jobId)
     if (job) {
       const signed = job.resultPath && store.signResult ? await store.signResult(job.resultPath) : null
       const resultUrl = signed || job.providerVideoUrl
@@ -346,8 +365,8 @@ export async function listAiVideoOperatorGenerate(
     const sheetUrl = item.sheetPath && store.signResult ? await store.signResult(item.sheetPath) : null
     presentedCharacters.push(presentAiVideoOperatorCharacter(item, sheetUrl))
   }
-  const lastCost = jobs.map((job) => presentAiVideoOperatorJob(job).cost_usd).find((value) => value != null) ?? null
-  const presentedJobs = await Promise.all(jobs.map(async (job) => {
+  const lastCost = listed.map((job) => presentAiVideoOperatorJob(job).cost_usd).find((value) => value != null) ?? null
+  const presentedJobs = await Promise.all(listed.map(async (job) => {
     // Only the selected video's URL is needed by the simple history list.
     const signed = input.simple ? (job.id === selected?.id ? selected.result_url : null)
       : job.resultPath && store.signResult ? await store.signResult(job.resultPath) : null

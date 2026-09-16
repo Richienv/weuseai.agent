@@ -46,6 +46,7 @@ export type AiVideoOperatorGenerateStore = {
   findIdentityAssets?(assetIds: string[]): Promise<AiVideoIdentityAssetLink[]>
   createQueued(input: AiVideoOperatorStartInput & { orderId: string | null }): Promise<AiVideoOperatorJob>
   submitQueued?(job: AiVideoOperatorJob): Promise<AiVideoOperatorJob>
+  syncMonidJob?(job: AiVideoOperatorJob): Promise<AiVideoOperatorJob>
   getJob(id: string): Promise<AiVideoOperatorJob | null>
   listJobs(): Promise<AiVideoOperatorJob[]>
   cancelJob(id: string): Promise<AiVideoOperatorJob | null>

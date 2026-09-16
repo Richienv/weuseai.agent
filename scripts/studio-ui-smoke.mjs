@@ -14,10 +14,12 @@ let scenario = 'empty', polls = 0, posts = [], brokenMedia = false, failUpload =
 const uploaded = new Map();
 const fixturePrompt = 'Kucing berjalan di meja, kamera mengikuti dari samping.';
 function job(status = scenario) {
+  const saving = status === 'saving';
+  const real = saving ? 'succeeded' : status;
   const model = latest?.model || 'seedance-2.5', duration = latest?.duration_seconds || 6;
   const refSeconds = (latest?.ref_durations || []).reduce((total, seconds) => total + seconds, 0);
   const estimate = Math.round((model === 'wan3.0' ? (duration + refSeconds) * .1 : duration * 1.156 / 5) * 1000) / 1000;
-  return { id, client_request_id: latest?.client_request_id, prompt: compiledInput?.prompt || latest?.prompt || fixturePrompt, source_prompt: compiledInput?.sourcePrompt, ref_tags: compiledInput?.refTags, model, status, ratio: latest?.ratio || '9:16', duration_seconds: duration, resolution: '720p', generate_audio: true, estimate_usd: estimate, cost_usd: status === 'succeeded' ? estimate : null, error_code: status === 'failed' ? fixtureError || 'monid_privacy' : null, result_path: status === 'succeeded' ? 'operator/' + id + '/result.mp4' : null, result_url: status === 'succeeded' ? '/fixture-video.mp4?signature=' + polls : null, ref_paths: latest?.ref_paths || [], ref_urls: latest?.ref_urls || [], ref_roles: latest?.ref_roles || [], ref_durations: latest?.ref_durations || [], reference_media: (latest?.ref_paths || []).map((path) => ({ path, url: '/uploaded/' + path.split('/').pop() })), can_cancel: status === 'queued', created_at: new Date(startedAt || Date.now() - 180000).toISOString(), updated_at: new Date().toISOString() };
+  return { id, client_request_id: latest?.client_request_id, prompt: compiledInput?.prompt || latest?.prompt || fixturePrompt, source_prompt: compiledInput?.sourcePrompt, ref_tags: compiledInput?.refTags, model, status: real, phase: saving ? 'saving' : undefined, ratio: latest?.ratio || '9:16', duration_seconds: duration, resolution: '720p', generate_audio: true, estimate_usd: estimate, cost_usd: real === 'succeeded' ? estimate : null, error_code: real === 'failed' ? fixtureError || 'monid_privacy' : null, result_path: real === 'succeeded' && !saving ? 'operator/' + id + '/result.mp4' : null, result_url: real === 'succeeded' ? '/fixture-video.mp4?signature=' + polls : null, ref_paths: latest?.ref_paths || [], ref_urls: latest?.ref_urls || [], ref_roles: latest?.ref_roles || [], ref_durations: latest?.ref_durations || [], reference_media: (latest?.ref_paths || []).map((path) => ({ path, url: '/uploaded/' + path.split('/').pop() })), can_cancel: real === 'queued', created_at: new Date(startedAt || Date.now() - 180000).toISOString(), updated_at: new Date().toISOString() };
 }
 function reply(res, body, status = 200) { res.writeHead(status, { 'content-type': 'application/json' }); res.end(JSON.stringify(body)); }
 const server = createServer(async (req, res) => {
@@ -502,6 +504,14 @@ try {
   assert.deepEqual(posts.find((row) => row.action === 'ai_video_generate_start')?.ref_roles, ['reference_image', 'reference_audio']);
   assert.equal(posts.find((row) => row.action === 'ai_video_generate_start')?.ref_urls?.some((url) => String(url).startsWith('asset://')) || false, false);
   passed.push('generate-with-refs stays on Seedance and auto-submits a queued Monid job without BytePlus');
+  scenario = 'saving';
+  await page.getByRole('button', { name: 'Cek status', exact: true }).click();
+  await page.locator('.job-player').waitFor();
+  assert.match(String(await page.locator('.job-player').getAttribute('src')), /fixture-video\.mp4/);
+  await page.locator('.job-player').evaluate(async (video) => { video.muted = true; await video.play(); });
+  await page.waitForFunction(() => document.querySelector('.job-player')?.readyState >= 2);
+  await page.screenshot({ path: out + '/provider-url-player.png', fullPage: true, animations: 'disabled' });
+  passed.push('Monid provider URL plays before the result is copied into storage');
 
   assert.deepEqual(errors, []);
   console.log(JSON.stringify({ passed, skipped, screenshots: out }, null, 2));
