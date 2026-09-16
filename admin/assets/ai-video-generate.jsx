@@ -160,11 +160,21 @@ function StudioApp() {
   const hasCharacter = refs.some((row) => row.asset);
   const sentResolution = hasCharacter ? resolution : '720p';
   const formatOptions = model === 'wan3.0' || firstFrameOn ? RATIOS.filter((item) => item !== '21:9') : RATIOS;
-  const tagSequence = useRef({ ...initial.tagSequence });
+  // Derived fresh from the rows on screen, NOT carried across sessions. As a
+  // monotonic persisted counter this labelled the ONLY attached photo @Image2
+  // (or @Image7) whenever Studio had been used before, or a photo was attached,
+  // removed and re-attached — while the hint below the prompt still told the
+  // founder to write @Image1. That typed tag then failed to bind and Generate
+  // stayed greyed out with "Tag @Image1 belum terhubung". Every row is created
+  // carrying its own tag, so max-of-current-rows is the correct next ordinal,
+  // and bindReferenceTags renumbers to submit order server-side anyway.
+  const tagSequence = useRef({});
+  const derivedTagSequence = {};
   for (const tag of refs.map((row) => row.tag)) {
     const match = /^@(Image|Audio|Video)([1-9]\d{0,5})$/.exec(tag || '');
-    if (match) tagSequence.current[match[1]] = Math.max(Number(tagSequence.current[match[1]]) || 0, Number(match[2]));
+    if (match) derivedTagSequence[match[1]] = Math.max(Number(derivedTagSequence[match[1]]) || 0, Number(match[2]));
   }
+  tagSequence.current = derivedTagSequence;
   const [pendingId, setPendingId] = useState(() => readPending() || initial.pendingRequestId || '');
   const [selectedId, setSelectedId] = useState(() => {
     if (readPending() || initial.pendingRequestId) return '';
@@ -221,7 +231,7 @@ function StudioApp() {
     if ((model === 'wan3.0' || firstFrameOn) && ratio === '21:9') setRatio('16:9');
   }, [model, firstFrameOn, ratio]);
   useEffect(() => {
-    writeLocal(DRAFT_KEY, { ...readLocal(DRAFT_KEY, {}), prompt, selectedModel: model, ratio, duration, generateAudio, resolution, jobId: selectedId, tid, pendingRequestId: pendingRef.current, tagSequence: tagSequence.current, version: 5 });
+    writeLocal(DRAFT_KEY, { ...readLocal(DRAFT_KEY, {}), prompt, selectedModel: model, ratio, duration, generateAudio, resolution, jobId: selectedId, tid, pendingRequestId: pendingRef.current, version: 5 });
     const url = new URL(location.href);
     selectedId ? url.searchParams.set('job_id', selectedId) : url.searchParams.delete('job_id');
     history.replaceState({}, '', url.pathname + url.search);
@@ -345,7 +355,6 @@ function StudioApp() {
     }
     const prefix = referenceTagPrefix('reference_' + kind);
     tagSequence.current[prefix] = (Number(tagSequence.current[prefix]) || 0) + 1;
-    writeLocal(DRAFT_KEY, { ...readLocal(DRAFT_KEY, {}), tagSequence: tagSequence.current });
     const row = { id: crypto.randomUUID(), tag: '@' + prefix + tagSequence.current[prefix], name: assetLabel(identity, asset), kind, role: 'reference_' + kind, lastFrame: false, asset: true, status: 'ready', percent: 100, seconds: 0, width: 0, height: 0, preview: null, thumb: ASSET_AVATAR, path: 'asset://' + asset.asset_id };
     refsRef.current = refsRef.current.concat(row); setRefs(refsRef.current);
   }
@@ -438,7 +447,6 @@ function StudioApp() {
       refsRef.current = refsRef.current.map((item) => item.role === 'first_frame' ? { ...item, role: 'reference_image' } : item);
       if (ratio === '21:9') setRatio('16:9');
     }
-    writeLocal(DRAFT_KEY, { ...readLocal(DRAFT_KEY, {}), tagSequence: tagSequence.current });
     refsRef.current = refsRef.current.concat(added.map(({ row }) => row));
     setRefs(refsRef.current);
     const preparedRows = [];

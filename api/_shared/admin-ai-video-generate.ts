@@ -24,6 +24,12 @@ const SUPABASE_SERVICE_KEY =
   process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY ?? ''
 const SUPABASE_FUNCTIONS_URL = process.env.SUPABASE_FUNCTIONS_URL ?? ''
 
+// Warm-instance wallet cache. The balance only gates a pre-submit blocker, so a
+// slightly stale value is fine and far cheaper than a third-party round trip on
+// every 5s Studio poll.
+const WALLET_TTL_MS = 60_000
+let walletCache: { at: number; value: { value: number | null; currency: string; held: number | null } } | null = null
+
 function supabaseHeaders(prefer?: string): Record<string, string> {
   return {
     apikey: SUPABASE_SERVICE_KEY,
@@ -132,11 +138,19 @@ async function storageList(prefix: string): Promise<Array<Record<string, unknown
 }
 
 async function patchOperatorJob(id: string, body: Record<string, unknown>): Promise<AiVideoOperatorJob | null> {
-  const response = await fetch(`${SUPABASE_URL}/rest/v1/ai_video_operator_jobs?id=eq.${id}`, {
-    method: 'PATCH',
-    headers: { ...supabaseHeaders('return=representation'), 'content-type': 'application/json' },
-    body: JSON.stringify(body),
-  })
+  // Bounded: this runs inside the Studio poll, which the browser aborts at 20s.
+  // A stalled Supabase leg used to be able to consume that budget on its own.
+  let response: Response
+  try {
+    response = await fetch(`${SUPABASE_URL}/rest/v1/ai_video_operator_jobs?id=eq.${id}`, {
+      method: 'PATCH',
+      signal: AbortSignal.timeout(8_000),
+      headers: { ...supabaseHeaders('return=representation'), 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+  } catch {
+    return null
+  }
   if (!response.ok) return null
   const rows = await response.json() as Array<Record<string, unknown>>
   return rows[0] ? mapJob(rows[0]) : null
@@ -146,7 +160,11 @@ async function storeMonidResult(job: AiVideoOperatorJob, videoUrl: string): Prom
   try {
     const parsed = new URL(videoUrl)
     if (parsed.protocol !== 'https:') return null
-    const download = await fetch(videoUrl, { signal: AbortSignal.timeout(8_000) })
+    // 8s each was too tight for a 720p MP4 and the copy silently gave up, so
+    // result_path never landed: the video played but "Simpan video" stayed
+    // disabled and the heading sat on "Menyimpan video" forever. This runs on a
+    // poll nothing is blocked on, inside maxDuration = 60, so it can afford more.
+    const download = await fetch(videoUrl, { signal: AbortSignal.timeout(20_000) })
     if (!download.ok) return null
     const declaredSize = Number(download.headers.get('content-length'))
     if (declaredSize > 80 * 1024 * 1024) return null
@@ -162,7 +180,7 @@ async function storeMonidResult(job: AiVideoOperatorJob, videoUrl: string): Prom
         'x-upsert': 'true',
       },
       body: bytes,
-      signal: AbortSignal.timeout(8_000),
+      signal: AbortSignal.timeout(20_000),
     })
     if (!upload.ok) return null
     const now = new Date().toISOString()
@@ -540,7 +558,7 @@ export function createAiVideoOperatorGenerateStore(): AiVideoOperatorGenerateSto
     async listJobs() {
       const response = await fetch(
         `${SUPABASE_URL}/rest/v1/ai_video_operator_jobs?select=*&order=created_at.desc&limit=40`,
-        { headers: supabaseHeaders() },
+        { headers: supabaseHeaders(), signal: AbortSignal.timeout(8_000) },
       )
       if (!response.ok) throw new Error(`operator_list ${response.status}`)
       const rows = await response.json() as Array<Record<string, unknown>>
@@ -701,9 +719,24 @@ export function createAiVideoOperatorGenerateStore(): AiVideoOperatorGenerateSto
     async getWallet() {
       const key = process.env.MONID_API_KEY ?? ''
       if (key.trim().length < 16) return null
-      const response = await fetch('https://api.monid.ai/v1/wallet/balance', {
-        headers: { authorization: `Bearer ${key}`, accept: 'application/json' },
-      })
+      // This is awaited on the Studio's 5s simple poll, which the browser aborts
+      // at 20s. Unbounded, a slow or blackholed Monid burned the whole request:
+      // the client saw "Koneksi terputus" and no player, even when the row
+      // already had provider_video_url. The sibling run-status call was capped
+      // for exactly this reason (monid-run.ts); this call site was missed.
+      // Cached briefly so a warm instance does not re-pay per poll — the balance
+      // only gates a pre-submit blocker, so slightly stale is fine.
+      const now = Date.now()
+      if (walletCache && now - walletCache.at < WALLET_TTL_MS) return walletCache.value
+      let response: Response
+      try {
+        response = await fetch('https://api.monid.ai/v1/wallet/balance', {
+          signal: AbortSignal.timeout(3_000),
+          headers: { authorization: `Bearer ${key}`, accept: 'application/json' },
+        })
+      } catch {
+        return null
+      }
       if (!response.ok) return null
       const body = await response.json() as {
         balance?: { value?: unknown; currency?: unknown }
@@ -712,7 +745,7 @@ export function createAiVideoOperatorGenerateStore(): AiVideoOperatorGenerateSto
       const value = typeof body.balance?.value === 'number' && Number.isFinite(body.balance.value)
         ? body.balance.value
         : null
-      return {
+      const wallet = {
         value,
         currency: typeof body.balance?.currency === 'string' && body.balance.currency.trim()
           ? body.balance.currency
@@ -721,6 +754,8 @@ export function createAiVideoOperatorGenerateStore(): AiVideoOperatorGenerateSto
           ? body.held.value
           : null,
       }
+      walletCache = { at: now, value: wallet }
+      return wallet
     },
     async saveCharacter({ name, sheetPath, notes }) {
       const response = await fetch(`${SUPABASE_URL}/rest/v1/ai_video_operator_characters`, {
