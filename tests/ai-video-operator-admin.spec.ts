@@ -52,6 +52,9 @@ test('studio rides the existing admin rails, no new Vercel functions', () => {
   assert.match(generateStore, /from '\.\/monid-run\.js'/)
   assert.match(generateStore, /syncMonidJob/)
   assert.match(generateStore, /getMonidRun/)
+  assert.match(generateStore, /monid_key_missing/)
+  assert.match(data, /export const maxDuration = 60/)
+  assert.match(action, /export const maxDuration = 60/)
   // Queued errors are real jobs until the worker resolves them to a terminal state.
   assert.match(generateStore, /status=in\.\(queued,submitted,running\)/)
   assert.match(generateStore, /SEEDANCE_25_PROMPT_HINT/)

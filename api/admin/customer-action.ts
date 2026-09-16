@@ -958,6 +958,10 @@ async function handleResendOnboarding(customerId: string, res: VercelResponse): 
 
 // ─── Entry ──────────────────────────────────────────────────────────────
 
+// Generate start/submit can wait on Monid (create timeout 25s). Without this
+// the function inherits Vercel's short default and dies before the task id lands.
+export const maxDuration = 60
+
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   if ((req.method ?? 'GET').toUpperCase() !== 'POST') {
     res.status(405).json({ error: 'method_not_allowed' })
