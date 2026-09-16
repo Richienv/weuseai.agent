@@ -41,6 +41,7 @@ function errorText(code, model = SIMPLE_MODEL) {
     monid_privacy: 'Provider menolak referensi wajah ini. Ganti referensinya.',
     monid_rejected: 'Prompt atau referensi ditolak. Periksa lalu ubah.',
     monid_blocked: 'Saldo atau batas pemakaian tidak mencukupi.', monid_unauthorized: 'Koneksi ke layanan video perlu diperbaiki.',
+    monid_key_missing: 'Kunci layanan video belum dipasang di server ini. Hubungi admin.',
     monid_prompt_limit: 'Prompt terlalu panjang setelah referensi ditambahkan. Ringkas sedikit.',
     invalid_operator_prompt: 'Tulis prompt minimal 3 karakter.', invalid_skill_idea: 'Tulis prompt minimal 3 karakter.',
     operator_probe_required: 'Layanan generate belum aktif.', operator_inflight_cap: 'Masih ada video diproses. Tunggu selesai.',

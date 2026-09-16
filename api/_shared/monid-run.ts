@@ -201,7 +201,10 @@ export async function getMonidRun(
   if (!/^[A-Za-z0-9._:-]{1,200}$/.test(runId)) throw new Error('invalid_monid_run_id')
   const response = await fetchImpl(`${config.baseUrl}/v1/runs/${encodeURIComponent(runId)}`, {
     method: 'GET',
-    signal: AbortSignal.timeout(15_000),
+    // Studio aborts its poll at 20s (AbortSignal.timeout(20000) in the JSX), and
+    // this read shares that budget with the Supabase round trips around it. 15s
+    // left no room — the browser gave up before the status could be written.
+    signal: AbortSignal.timeout(10_000),
     headers: { authorization: `Bearer ${apiKey}`, accept: 'application/json' },
   })
   if (!response.ok) throw new Error(mapUpstreamError(response.status))

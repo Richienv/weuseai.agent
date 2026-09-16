@@ -451,11 +451,29 @@ export function createAiVideoOperatorGenerateStore(): AiVideoOperatorGenerateSto
       if (job.resultPath || !job.providerTaskId) return job
       if ((job.provider ?? operatorJobProvider(job.refUrls)) === 'byteplus_modelark') return job
       if (!['queued', 'submitted', 'running', 'succeeded'].includes(job.status)) return job
-      // A provider URL is already enough for the player. Do not re-download
-      // on every 5s Studio poll — that can miss the UI timeout and look hung.
-      if (job.status === 'succeeded' && job.providerVideoUrl) return job
       const key = process.env.MONID_API_KEY ?? ''
-      if (key.trim().length < 16) return job
+      if (key.trim().length < 16) {
+        // Silently returning the unchanged job here made a missing key look
+        // identical to "still rendering" — a forever spinner with no error.
+        // Surface it instead so Studio can say something actionable.
+        return await patchOperatorJob(job.id, {
+          status: 'failed',
+          error_code: 'monid_key_missing',
+          completed_at: new Date().toISOString(),
+          lease_until: null,
+          updated_at: new Date().toISOString(),
+        }) ?? { ...job, status: 'failed' as const, errorCode: 'monid_key_missing' }
+      }
+      // A provider URL is already enough for the player, so the first poll that
+      // sees success returns immediately and the video appears. The storage copy
+      // is retried on a LATER poll: doing it inline on the success poll spent the
+      // whole function budget (8s download + 8s upload) on the one request the
+      // user is waiting for, and if it overran, result_path was never written and
+      // "Simpan video" stayed disabled forever.
+      if (job.status === 'succeeded' && job.providerVideoUrl) {
+        const copied = await storeMonidResult(job, job.providerVideoUrl)
+        return copied ?? job
+      }
       const task = await getMonidRun(job.providerTaskId, key, resolveMonidConfig())
       const now = new Date().toISOString()
       if (task.status === 'queued' || task.status === 'running') {
@@ -492,8 +510,10 @@ export function createAiVideoOperatorGenerateStore(): AiVideoOperatorGenerateSto
         lease_until: null,
         updated_at: now,
       }) ?? { ...job, status: 'succeeded' as const, providerVideoUrl: task.videoUrl }
-      const stored = await storeMonidResult(playable, task.videoUrl)
-      return stored ?? playable
+      // Return as soon as the URL is persisted — the player only needs this.
+      // The MP4 copy happens on the next poll (guard above), so the request the
+      // user is actively waiting on never pays for the download+upload.
+      return playable
     },
     async resumePolling(job) {
       const response = await fetch(
