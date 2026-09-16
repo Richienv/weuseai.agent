@@ -341,13 +341,18 @@ test('prompt saver keeps the full prompt and a cover image', () => {
   }), /invalid_operator_prompt/)
 })
 
-test('generate stays off until the Monid flag and key exist', () => {
+test('generate opens when the Monid key is present unless explicitly disabled', () => {
   assert.equal(operatorGenerateReady({}), false)
   assert.equal(operatorGenerateReady({ OPERATOR_GENERATE_ENABLED: 'true' }), false)
+  assert.equal(operatorGenerateReady({ MONID_API_KEY: 'monid-key-16chars' }), true)
   assert.equal(operatorGenerateReady({
     OPERATOR_GENERATE_ENABLED: 'true',
     MONID_API_KEY: 'monid-key-16chars',
   }), true)
+  assert.equal(operatorGenerateReady({
+    OPERATOR_GENERATE_ENABLED: 'false',
+    MONID_API_KEY: 'monid-key-16chars',
+  }), false)
 })
 
 test('estimate is the published 720p 5s rate scaled by duration', () => {

@@ -154,13 +154,16 @@ test('legacy shared start still waits for inline Monid', async () => {
   assert.equal(submitted, 1)
 })
 
-test('start returns queued without inline Monid', async () => {
+test('admin start submits Monid inline including storage refs', async () => {
   let submitted = 0
   const result = await startCompiledGenerate({
-    prompt: PROMPT,
+    prompt_mode: 'simple',
+    prompt: 'Kucing lari',
     ratio: '9:16',
     duration_seconds: 6,
     client_request_id: REQUEST_ID,
+    ref_paths: ['operator/inbox/cat.jpg', 'operator/inbox/voice.wav'],
+    ref_durations: [0, 3],
   }, store({
     submitQueued: async (row) => {
       submitted += 1
@@ -168,9 +171,16 @@ test('start returns queued without inline Monid', async () => {
     },
   }), READY)
   assert.equal(result.ok, true)
-  if (!('job' in result)) throw new Error('missing job')
-  assert.equal(result.job.status, 'queued')
-  assert.equal(submitted, 0)
+  if (!('job' in result) || !result.job) throw new Error('missing job')
+  assert.equal(result.job.status, 'submitted')
+  assert.equal(submitted, 1)
+})
+
+test('admin start is ready with only the Monid key', async () => {
+  const result = await startCompiledGenerate({
+    prompt: PROMPT, ratio: '9:16', duration_seconds: 6, client_request_id: REQUEST_ID,
+  }, store(), { OPERATOR_GENERATE_ENABLED: undefined, MONID_API_KEY: 'monid-key-16chars' })
+  assert.equal(result.ok, true)
 })
 
 test('start without client_request_id returns 400', async () => {
@@ -377,6 +387,90 @@ test('list leaves a running job alone without waking the worker', async () => {
   assert.equal(kicked, 0)
   assert.match(result.wallet_note, /monid\.ai\/wallet/)
   assert.ok(result.skill_stack?.modes?.some((row) => row.id === 'one-take-locked'))
+})
+
+test('list syncs the selected Monid job so a finished run becomes playable', async () => {
+  let synced = 0
+  const pending = job({
+    status: 'submitted',
+    provider: 'monid',
+    providerTaskId: 'run_live',
+    providerVideoUrl: null,
+    resultPath: null,
+  })
+  const ready = job({
+    status: 'succeeded',
+    provider: 'monid',
+    providerTaskId: 'run_live',
+    providerVideoUrl: 'https://cdn.example/result.mp4',
+    resultPath: 'operator/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/result.mp4',
+  })
+  const result = await listAiVideoOperatorGenerate({
+    simple: true,
+    jobId: pending.id,
+  }, store({
+    listJobs: async () => [pending],
+    getJob: async () => pending,
+    syncMonidJob: async (row: AiVideoOperatorJob) => {
+      synced += 1
+      assert.equal(row.id, pending.id)
+      return ready
+    },
+    kickWorker: async () => { throw new Error('must_not_kick') },
+    signResult: async () => 'https://signed.example/result.mp4',
+  }), READY)
+  assert.equal(result.ok, true)
+  assert.equal(synced, 1)
+  assert.equal(result.job?.status, 'succeeded')
+  assert.equal(result.job?.result_url, 'https://signed.example/result.mp4')
+  assert.equal(result.jobs[0].status, 'succeeded')
+})
+
+test('list can play a Monid URL before the file is copied into storage', async () => {
+  const pending = job({
+    status: 'submitted',
+    provider: 'monid',
+    providerTaskId: 'run_live',
+  })
+  const playable = job({
+    status: 'succeeded',
+    provider: 'monid',
+    providerTaskId: 'run_live',
+    providerVideoUrl: 'https://cdn.example/result.mp4',
+    resultPath: null,
+  })
+  const result = await listAiVideoOperatorGenerate({
+    simple: true,
+    jobId: pending.id,
+  }, store({
+    listJobs: async () => [pending],
+    getJob: async () => pending,
+    syncMonidJob: async () => playable,
+    kickWorker: async () => { throw new Error('must_not_kick') },
+  }), READY)
+  assert.equal(result.job?.status, 'succeeded')
+  assert.equal(result.job?.phase, 'saving')
+  assert.equal(result.job?.result_url, 'https://cdn.example/result.mp4')
+  assert.equal(result.job?.result_path, null)
+})
+
+test('list never syncs a BytePlus job and still does not kick the worker', async () => {
+  let synced = 0
+  const ark = job({
+    status: 'submitted',
+    provider: 'byteplus_modelark',
+    providerTaskId: 'ark_1',
+    refUrls: ['asset://Asset-20260914100001-fghij'],
+  })
+  const result = await listAiVideoOperatorGenerate({ simple: true, jobId: ark.id }, store({
+    listJobs: async () => [ark],
+    getJob: async () => ark,
+    syncMonidJob: async () => { synced += 1; return ark },
+    kickWorker: async () => { throw new Error('must_not_kick') },
+  }), READY)
+  assert.equal(result.ok, true)
+  assert.equal(synced, 0)
+  assert.equal(result.job?.status, 'submitted')
 })
 
 test('list with a queued leftover job does not wake the worker', async () => {
@@ -658,6 +752,20 @@ test('asset:// start rejects a customer identity from another order and an inact
     assert.equal('error' in wrongRole && wrongRole.error, 'invalid_operator_ref_role')
     assert.equal(created, 1)
   }
+})
+
+test('admin start keeps asset:// jobs queued without inline Monid', async () => {
+  let submitted = 0
+  const result = await startCompiledGenerate(ASSET_START, store({
+    findIdentityAssets: async () => [founderAsset()],
+    submitQueued: async () => { submitted += 1; throw new Error('should_not_submit_byteplus') },
+    createQueued: async (input) => job({ provider: input.provider, refUrls: input.refUrls, status: 'queued' }),
+  }), READY)
+  assert.equal(result.ok, true)
+  if (!('job' in result) || !result.job) throw new Error('missing job')
+  assert.equal(result.job.status, 'queued')
+  assert.equal(result.job.provider, 'byteplus_modelark')
+  assert.equal(submitted, 0)
 })
 
 test('https-only start never touches the identity store and stays on Monid', async () => {

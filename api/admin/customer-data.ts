@@ -121,6 +121,12 @@ async function detailCustomer(id: string, res: VercelResponse): Promise<void> {
   })
 }
 
+// The ai-video-generate branch polls Monid and may copy an MP4 into storage.
+// Without this, the function inherits Vercel's short default, which is BELOW
+// the 15s Monid read timeout alone — the function died mid-poll, the provider
+// URL was never persisted, and Studio span forever.
+export const maxDuration = 60
+
 export default async function handler(
   req: VercelRequest,
   res: VercelResponse,

@@ -3,6 +3,7 @@ import { test } from 'node:test'
 
 import {
   createMonidSeedanceRun as createApiMonidSeedanceRun,
+  getMonidRun as getApiMonidRun,
   MONID_ENDPOINTS as apiMonidEndpoints,
 } from '../api/_shared/monid-run.ts'
 import {
@@ -224,6 +225,18 @@ test('run statuses map onto existing job statuses and keep cost', () => {
 
 test('Vercel list path uses a Node-safe Monid twin, not the Edge .ts import', () => {
   assert.deepEqual(apiMonidEndpoints, MONID_ENDPOINTS)
+})
+
+test('Vercel getMonidRun reads a completed Seedance URL', async () => {
+  const task = await getApiMonidRun('01TESTMONIDRUN0009', 'monid-key-16chars+', resolveMonidConfig(), async () => (
+    new Response(JSON.stringify({
+      runId: '01TESTMONIDRUN0009',
+      status: 'COMPLETED',
+      output: { content: { video_url: 'https://cdn.example/clip.mp4' } },
+    }))
+  ))
+  assert.equal(task.status, 'succeeded')
+  assert.equal(task.videoUrl, 'https://cdn.example/clip.mp4')
 })
 
 

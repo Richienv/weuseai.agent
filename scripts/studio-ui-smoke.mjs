@@ -10,14 +10,16 @@ const out = process.env.STUDIO_SMOKE_OUTPUT || '/private/tmp/weuseai-studio-simp
 await mkdir(out, { recursive: true });
 const id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const previousId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
-let scenario = 'empty', polls = 0, posts = [], brokenMedia = false, failUpload = false, holdUpload = false, holdPoll = false, exposePreviousReady = false, startedAt = 0, latest = null, compiledInput = null, fixtureError = null;
+let scenario = 'empty', polls = 0, posts = [], brokenMedia = false, failUpload = false, holdUpload = false, holdPoll = false, exposePreviousReady = false, queueStart = false, startedAt = 0, latest = null, compiledInput = null, fixtureError = null;
 const uploaded = new Map();
 const fixturePrompt = 'Kucing berjalan di meja, kamera mengikuti dari samping.';
 function job(status = scenario) {
+  const saving = status === 'saving';
+  const real = saving ? 'succeeded' : status;
   const model = latest?.model || 'seedance-2.5', duration = latest?.duration_seconds || 6;
   const refSeconds = (latest?.ref_durations || []).reduce((total, seconds) => total + seconds, 0);
   const estimate = Math.round((model === 'wan3.0' ? (duration + refSeconds) * .1 : duration * 1.156 / 5) * 1000) / 1000;
-  return { id, client_request_id: latest?.client_request_id, prompt: compiledInput?.prompt || latest?.prompt || fixturePrompt, source_prompt: compiledInput?.sourcePrompt, ref_tags: compiledInput?.refTags, model, status, ratio: latest?.ratio || '9:16', duration_seconds: duration, resolution: '720p', generate_audio: true, estimate_usd: estimate, cost_usd: status === 'succeeded' ? estimate : null, error_code: status === 'failed' ? fixtureError || 'monid_privacy' : null, result_path: status === 'succeeded' ? 'operator/' + id + '/result.mp4' : null, result_url: status === 'succeeded' ? '/fixture-video.mp4?signature=' + polls : null, ref_paths: latest?.ref_paths || [], ref_urls: latest?.ref_urls || [], ref_roles: latest?.ref_roles || [], ref_durations: latest?.ref_durations || [], reference_media: (latest?.ref_paths || []).map((path) => ({ path, url: '/uploaded/' + path.split('/').pop() })), can_cancel: status === 'queued', created_at: new Date(startedAt || Date.now() - 180000).toISOString(), updated_at: new Date().toISOString() };
+  return { id, client_request_id: latest?.client_request_id, prompt: compiledInput?.prompt || latest?.prompt || fixturePrompt, source_prompt: compiledInput?.sourcePrompt, ref_tags: compiledInput?.refTags, model, status: real, phase: saving ? 'saving' : undefined, ratio: latest?.ratio || '9:16', duration_seconds: duration, resolution: '720p', generate_audio: true, estimate_usd: estimate, cost_usd: real === 'succeeded' ? estimate : null, error_code: real === 'failed' ? fixtureError || 'monid_privacy' : null, result_path: real === 'succeeded' && !saving ? 'operator/' + id + '/result.mp4' : null, result_url: real === 'succeeded' ? '/fixture-video.mp4?signature=' + polls : null, ref_paths: latest?.ref_paths || [], ref_urls: latest?.ref_urls || [], ref_roles: latest?.ref_roles || [], ref_durations: latest?.ref_durations || [], reference_media: (latest?.ref_paths || []).map((path) => ({ path, url: '/uploaded/' + path.split('/').pop() })), can_cancel: real === 'queued', created_at: new Date(startedAt || Date.now() - 180000).toISOString(), updated_at: new Date().toISOString() };
 }
 function reply(res, body, status = 200) { res.writeHead(status, { 'content-type': 'application/json' }); res.end(JSON.stringify(body)); }
 const server = createServer(async (req, res) => {
@@ -49,7 +51,11 @@ const server = createServer(async (req, res) => {
     if (input.action === 'ai_video_generate_start') {
       if (scenario === 'submit-lost') { reply(res, { error: 'upstream_lost' }, 502); return; }
       try { compiledInput = parseOperatorStartInput(input); } catch (error) { reply(res, { error: error.message }, 400); return; }
-      latest = input; scenario = 'submitted'; startedAt = Date.now();
+      latest = input; startedAt = Date.now();
+      scenario = queueStart ? 'queued' : 'submitted';
+    }
+    if (input.action === 'ai_video_generate_submit') {
+      if (latest) scenario = 'submitted';
     }
     if (input.action === 'ai_video_generate_cancel') scenario = 'cancelled';
     reply(res, { ok: true, job: job() }); return;
@@ -92,7 +98,7 @@ const promptField = page.getByRole('textbox', { name: 'Prompt video' });
 const generate = page.getByRole('button', { name: /^Generate video/ });
 const modelSelect = page.getByRole('combobox', { name: 'Model video', exact: true });
 async function fresh() {
-  scenario = 'empty'; latest = null; compiledInput = null; startedAt = 0; posts = []; holdPoll = false; exposePreviousReady = false;
+  scenario = 'empty'; latest = null; compiledInput = null; startedAt = 0; posts = []; holdPoll = false; exposePreviousReady = false; queueStart = false;
   await page.goto(base + '/admin/ai-video-generate');
   await page.evaluate(() => { localStorage.clear(); sessionStorage.clear(); });
   await page.reload();
@@ -476,6 +482,37 @@ try {
     passed.push('result player follows ratio and can attach as @Video1');
     softSkip('last-frame still attach', String(error.message || error).slice(0, 120));
   }
+  await fresh();
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  assert.match(await page.locator('.sv-composer').innerText(), /Karakter BytePlus tidak wajib/);
+  assert.equal(await page.getByRole('button', { name: 'Karakter', exact: true }).count(), 1);
+  await page.getByLabel('Upload foto', { exact: true }).setInputFiles({ name: 'ref-face.png', mimeType: 'image/png', buffer: Buffer.from(imageBytes, 'base64') });
+  await page.waitForFunction(() => document.querySelector('.sv-reference.image')?.dataset.status === 'ready');
+  await page.getByLabel('Upload audio', { exact: true }).setInputFiles({ name: 'ref-voice.wav', mimeType: 'audio/wav', buffer: wav(3) });
+  await page.waitForFunction(() => document.querySelector('.sv-reference.audio')?.dataset.status === 'ready');
+  assert.equal(await generate.isEnabled(), true);
+  queueStart = true; posts = [];
+  await generate.click();
+  await page.getByRole('heading', { name: /Diterima provider|Mengirim permintaan|Dalam antrean/ }).waitFor();
+  for (let i = 0; i < 30 && !posts.some((row) => row.action === 'ai_video_generate_submit'); i += 1) {
+    await page.waitForTimeout(100);
+  }
+  const queuedPosts = posts.map((row) => row.action);
+  assert.ok(queuedPosts.includes('ai_video_generate_start'));
+  assert.ok(queuedPosts.includes('ai_video_generate_submit'));
+  assert.equal(posts.find((row) => row.action === 'ai_video_generate_start')?.model, 'seedance-2.5');
+  assert.deepEqual(posts.find((row) => row.action === 'ai_video_generate_start')?.ref_roles, ['reference_image', 'reference_audio']);
+  assert.equal(posts.find((row) => row.action === 'ai_video_generate_start')?.ref_urls?.some((url) => String(url).startsWith('asset://')) || false, false);
+  passed.push('generate-with-refs stays on Seedance and auto-submits a queued Monid job without BytePlus');
+  scenario = 'saving';
+  await page.getByRole('button', { name: 'Cek status', exact: true }).click();
+  await page.locator('.job-player').waitFor();
+  assert.match(String(await page.locator('.job-player').getAttribute('src')), /fixture-video\.mp4/);
+  await page.locator('.job-player').evaluate(async (video) => { video.muted = true; await video.play(); });
+  await page.waitForFunction(() => document.querySelector('.job-player')?.readyState >= 2);
+  await page.screenshot({ path: out + '/provider-url-player.png', fullPage: true, animations: 'disabled' });
+  passed.push('Monid provider URL plays before the result is copied into storage');
+
   assert.deepEqual(errors, []);
   console.log(JSON.stringify({ passed, skipped, screenshots: out }, null, 2));
 } catch (error) {

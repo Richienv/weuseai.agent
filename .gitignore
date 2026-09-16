@@ -11,6 +11,8 @@
 
 # Node
 node_modules/
+__pycache__/
+*.pyc
 dist/
 *.log
 *.tsbuildinfo

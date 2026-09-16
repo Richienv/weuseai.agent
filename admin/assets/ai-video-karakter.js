@@ -492,7 +492,11 @@
     var children = [
       el('div', { className: 'section-head' }, [
         el('h2', { id: 'karakter-title', text: 'Karakter' }),
-        el('span', { className: 'meta', text: 'Wajah asli yang diverifikasi BytePlus, dipakai Studio sebagai referensi asset://' }),
+        el('span', { className: 'meta', text: 'Opsional. Generate foto dan audio sekarang lewat Studio, tanpa halaman ini.' }),
+      ]),
+      el('div', { className: 'alert info karakter-studio-note' }, [
+        el('span', { text: 'Studio memakai Seedance 2.5 dengan @Image1 / @Audio1. Karakter BytePlus tidak wajib untuk generate.' }),
+        el('a', { href: '/admin/ai-video-generate', className: 'action-btn primary', text: 'Buka Studio' }),
       ]),
       renderQuota(),
       renderNewForm(),

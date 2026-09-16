@@ -50,6 +50,11 @@ test('studio rides the existing admin rails, no new Vercel functions', () => {
   assert.doesNotMatch(generateStore, /supabase\/functions\/_shared\/monid-client/)
   assert.doesNotMatch(data, /monid-client\.ts/)
   assert.match(generateStore, /from '\.\/monid-run\.js'/)
+  assert.match(generateStore, /syncMonidJob/)
+  assert.match(generateStore, /getMonidRun/)
+  assert.match(generateStore, /monid_key_missing/)
+  assert.match(data, /export const maxDuration = 60/)
+  assert.match(action, /export const maxDuration = 60/)
   // Queued errors are real jobs until the worker resolves them to a terminal state.
   assert.match(generateStore, /status=in\.\(queued,submitted,running\)/)
   assert.match(generateStore, /SEEDANCE_25_PROMPT_HINT/)
@@ -64,7 +69,7 @@ test('simple studio keeps runtime local and isolates its stylesheet from the oth
 
 test('simple studio unlocks Seedance 2.5 without restoring the operator desk', () => {
   const media = readFileSync(new URL('../admin/assets/studio-media.js', import.meta.url), 'utf8')
-  assert.match(generateHtml, /phone-1/)
+  assert.match(generateHtml, /result-1/)
   assert.match(generateJsx, /\[4, 6, 8, 10, 15, 30\]/)
   assert.match(generateJsx, /21:9/)
   assert.match(generateJsx, /ikut frame/)
@@ -117,6 +122,22 @@ test('studio Karakter picker rides asset:// refs into ref_urls and unlocks 1080p
   assert.match(jobState, /modelark_submission_unknown/)
   // No exclamation marks in the Studio copy.
   assert.doesNotMatch(generateJsx, /[A-Za-z\u00C0-\u024F]![ '<]/)
+})
+
+test('studio generate-with-refs stays on Monid and is reachable from admin', () => {
+  const shared = readFileSync(new URL('../admin/assets/admin-shared.js', import.meta.url), 'utf8')
+  const media = readFileSync(new URL('../admin/assets/studio-media.js', import.meta.url), 'utf8')
+  const sales = readFileSync(new URL('../admin/ai-video.html', import.meta.url), 'utf8')
+  assert.match(shared, /href: '\/admin\/ai-video-generate', label: 'Studio'/)
+  assert.match(sales, /href="\/admin\/ai-video-generate"/)
+  assert.match(generateJsx, /Karakter BytePlus tidak wajib/)
+  assert.match(generateJsx, /Kirim ke Seedance/)
+  assert.match(generateJsx, /body\.job\.status === 'queued' && body\.job\.provider !== 'byteplus_modelark'/)
+  assert.match(generateJsx, /post\('ai_video_generate_submit'/)
+  assert.match(generateJsx, /const canPlay = Boolean\(job\?\.result_url\) && \(resultReady \|\| state\.phase === 'saving'\)/)
+  assert.match(generateJsx, /\{canPlay \?/)
+  assert.match(media, /withTimeout\(preparePhoto/)
+  assert.match(media, /withTimeout\(prepareAudio/)
 })
 
 test('studio page never embeds merchant secrets or hype copy', () => {

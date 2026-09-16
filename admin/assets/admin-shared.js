@@ -21,6 +21,7 @@
     { href: '/admin/cost',             label: 'Cost Monitoring' },
     { href: '/admin/templates',        label: 'Template no-match' },
     { href: '/admin/proposals',        label: 'Library Proposals' },
+    { href: '/admin/ai-video-generate', label: 'Studio' },
     { href: '/admin/ai-video',         label: 'AI Video' },
     { href: '/admin/ai-video-influencers', label: 'Karakter' },
   ];

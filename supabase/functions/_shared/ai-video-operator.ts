@@ -436,7 +436,10 @@ export function operatorGenerateReady(env: {
   MONID_API_KEY?: string
 }): boolean {
   const key = env.MONID_API_KEY ?? ''
-  return env.OPERATOR_GENERATE_ENABLED === 'true' && key.trim().length >= 16
+  if (key.trim().length < 16) return false
+  // A live Monid key is enough to open Studio. The old probe flag still
+  // disables generate when it is explicitly false.
+  return env.OPERATOR_GENERATE_ENABLED !== 'false'
 }
 
 export function parseOperatorLesson(value: unknown): string | null {

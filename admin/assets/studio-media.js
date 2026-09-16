@@ -332,11 +332,20 @@ export async function captureVideoFrame(video, atEnd = true) {
   if (!blob) throw new Error('photo_decode');
   return new File([blob], 'frame-awal.jpg', { type: 'image/jpeg' });
 }
+function withTimeout(task, ms, code) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(code)), ms);
+    Promise.resolve(task).then(
+      (value) => { clearTimeout(timer); resolve(value); },
+      (error) => { clearTimeout(timer); reject(error); },
+    );
+  });
+}
 export async function prepareMedia(file) {
   const kind = mediaKind(file);
-  if (kind === 'image') return { ...(await preparePhoto(file)), kind };
-  if (kind === 'audio') return { ...(await prepareAudio(file)), kind };
-  if (kind === 'video') return { ...(await prepareVideo(file)), kind };
+  if (kind === 'image') return { ...(await withTimeout(preparePhoto(file), 30000, 'upload_timeout')), kind };
+  if (kind === 'audio') return { ...(await withTimeout(prepareAudio(file), 30000, 'upload_timeout')), kind };
+  if (kind === 'video') return { ...(await withTimeout(prepareVideo(file), 30000, 'upload_timeout')), kind };
   throw new Error('unsupported_media');
 }
 export function uploadMedia(slot, file, onProgress, signal) {
