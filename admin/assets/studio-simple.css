@@ -53,6 +53,7 @@ svg { flex-shrink:0; }
 
 .sv-prompt-box textarea::placeholder { color:#8a909b; }
 .sv-attach-bar { display:flex; align-items:center; flex-wrap:wrap; gap:8px; padding:12px 16px 16px; }
+.sv-attach-bar { gap:6px; }
 .sv-attach-button { display:inline-flex; align-items:center; gap:8px; border:1px solid #383c45; padding:9px 12px; border-radius:10px; min-height:44px; background:transparent; font-size:13px; }
 .sv-attach-button:hover:not(:disabled) { background:#ffffff09; }
 .sv-count { font-size:11px; margin-left:auto; color:var(--sv-muted); white-space:nowrap; }
@@ -252,3 +253,125 @@ body:has(dialog[open]) { overflow:hidden; }
 .sv-character-save input { flex:1 1 120px; min-width:0; min-height:36px; padding:6px 10px; border:1px solid var(--sv-line); border-radius:9px; background:#0f1113; color:inherit; font-size:13px; }
 .sv-resolution-row { grid-template-columns:repeat(2,1fr); margin-bottom:8px; }
 .sv-resolution-row button:disabled { opacity:.45; }
+
+/* ============================================================
+   DEPTH PASS (2026-09-16)
+   The Studio read flat: one near-black fill everywhere, 1px
+   borders doing all the separating, and no elevation. This adds
+   a layering system — gradient surfaces, an inset top highlight
+   that reads as a lit edge, and real shadows — plus presence on
+   the primary action and life in the empty states. Colour stays
+   on the existing cool palette; no new hues, only depth.
+   ============================================================ */
+:root {
+  --sv-raise:      linear-gradient(180deg,#1b1e24 0%,#131519 100%);
+  --sv-raise-hi:   linear-gradient(180deg,#22262e 0%,#181b21 100%);
+  --sv-edge:       inset 0 1px 0 #ffffff0f;
+  --sv-sh-1:       0 1px 2px #00000040, 0 1px 3px #0000002e;
+  --sv-sh-2:       0 2px 6px #00000047, 0 10px 24px #0000003d;
+  --sv-sh-3:       0 8px 20px #00000052, 0 26px 60px #00000047;
+  --sv-glow:       0 6px 22px #829aff2e;
+}
+
+/* Ambient ground — a faint brand-side glow so the page is not a dead slab. */
+body::before {
+  content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
+  background:
+    radial-gradient(900px 420px at 18% -8%, #3a2f6b1a, transparent),
+    radial-gradient(760px 380px at 82% -4%, #829aff10, transparent);
+}
+.sv-app { position:relative; z-index:1; }
+
+/* Composer: a raised card, not an outlined rectangle. */
+.sv-prompt-box {
+  background:var(--sv-raise); box-shadow:var(--sv-edge), var(--sv-sh-2);
+  border-color:#31353f; transition:border-color .18s, box-shadow .18s;
+}
+.sv-prompt-box:focus-within, .sv-prompt-box.is-dragging {
+  border-color:#6b78a8; box-shadow:var(--sv-edge), var(--sv-sh-3), 0 0 0 3px #829aff1f;
+}
+
+/* Attach chips: raised, colour-keyed by what they attach. */
+.sv-attach-button {
+  background:var(--sv-raise-hi); border-color:#3a3f4a;
+  box-shadow:var(--sv-edge), var(--sv-sh-1);
+  padding:9px 10px; gap:6px;
+  transition:transform .14s, box-shadow .18s, border-color .18s, background .18s;
+}
+.sv-attach-button svg { color:var(--sv-image); }
+.sv-attach-button:nth-of-type(2) svg { color:var(--sv-video); }
+.sv-attach-button:nth-of-type(3) svg { color:var(--sv-audio); }
+.sv-attach-character svg { color:var(--sv-signal); }
+@media (hover:hover) {
+  .sv-attach-button:not(:disabled):hover {
+    background:#262b34; border-color:#4a5161; transform:translateY(-1px);
+    box-shadow:var(--sv-edge), var(--sv-sh-2);
+  }
+}
+.sv-attach-button:not(:disabled):active { transform:translateY(0); box-shadow:var(--sv-edge), var(--sv-sh-1); }
+.sv-attach-count { min-width:18px; padding:0 5px; border-radius:999px; background:#829aff; color:#0c0f18; font-size:11px; font-weight:600; line-height:18px; text-align:center; }
+
+/* Reference cards: lift them off the composer floor. */
+.sv-reference {
+  background:var(--sv-raise); border-color:#333843;
+  box-shadow:var(--sv-edge), var(--sv-sh-1);
+  transition:transform .14s, box-shadow .18s, border-color .18s;
+}
+@media (hover:hover) {
+  .sv-reference:hover { border-color:#454c5c; box-shadow:var(--sv-edge), var(--sv-sh-2); transform:translateY(-1px); }
+}
+.sv-reference-preview { background:linear-gradient(160deg,#272b33,#1b1e24); box-shadow:inset 0 0 0 1px #ffffff0a; }
+.sv-ref-tag { box-shadow:0 1px 4px #0000006b; font-weight:500; }
+
+/* Primary action: the one control that should feel pressable. */
+.sv-generate:not(:disabled), .sv-download:not(:disabled) {
+  background:linear-gradient(180deg,#ffffff 0%,#dfe3ee 100%);
+  box-shadow:0 1px 0 #ffffff80 inset, var(--sv-sh-2), var(--sv-glow);
+  transition:transform .14s, box-shadow .2s, filter .18s;
+}
+@media (hover:hover) {
+  .sv-generate:not(:disabled):hover, .sv-download:not(:disabled):hover {
+    transform:translateY(-1px); filter:brightness(1.03);
+    box-shadow:0 1px 0 #ffffff80 inset, var(--sv-sh-3), 0 10px 30px #829aff3d;
+  }
+}
+.sv-generate:not(:disabled):active, .sv-download:not(:disabled):active { transform:translateY(0); box-shadow:0 1px 0 #ffffff80 inset, var(--sv-sh-1); }
+/* Disabled read as "not yet", not as broken. */
+.sv-generate:disabled { background:#1c1f25; color:#7e8492; box-shadow:var(--sv-edge), inset 0 0 0 1px #ffffff08; }
+
+.sv-small-button { background:var(--sv-raise-hi); border-color:#3a404c; box-shadow:var(--sv-edge), var(--sv-sh-1); transition:transform .14s, box-shadow .18s, background .18s; }
+@media (hover:hover) { .sv-small-button:not(:disabled):hover { background:#262b34; transform:translateY(-1px); box-shadow:var(--sv-edge), var(--sv-sh-2); } }
+
+/* Result: give the empty state texture so it is a stage, not a void. */
+.sv-result-placeholder, .sv-empty-preview {
+  position:relative; overflow:hidden;
+  background:
+    radial-gradient(420px 220px at 50% 22%, #829aff14, transparent 70%),
+    linear-gradient(160deg,#1a1d23,#0e1013);
+  box-shadow:var(--sv-edge), var(--sv-sh-2);
+}
+.sv-result-placeholder::before, .sv-empty-preview::before {
+  content:''; position:absolute; inset:0; pointer-events:none; opacity:.5;
+  background-image:radial-gradient(#ffffff0d 1px, transparent 1px);
+  background-size:22px 22px;
+  -webkit-mask-image:radial-gradient(70% 60% at 50% 40%, #000 10%, transparent 78%);
+  mask-image:radial-gradient(70% 60% at 50% 40%, #000 10%, transparent 78%);
+}
+.sv-result-placeholder > *, .sv-empty-preview > * { position:relative; }
+.sv-state-icon { filter:drop-shadow(0 4px 14px #829aff4d); }
+.sv-player-frame { box-shadow:var(--sv-sh-3), 0 0 0 1px #ffffff12; }
+
+/* Sheets and the character library. */
+.sv-character-pick { background:var(--sv-raise); box-shadow:var(--sv-edge), var(--sv-sh-1); transition:transform .14s, box-shadow .18s, border-color .18s; }
+@media (hover:hover) { .sv-character-pick:not(:disabled):hover { transform:translateY(-2px); box-shadow:var(--sv-edge), var(--sv-sh-2); } }
+.sv-character-pick img { box-shadow:inset 0 0 0 1px #ffffff12; }
+
+/* Header lifts off the content once the page scrolls under it. */
+.sv-header { position:sticky; top:0; z-index:20; }
+/* Full-bleed backdrop: .sv-app is max-width capped, so painting the background
+   on .sv-header alone left a floating band with visible side edges. */
+.sv-header::after {
+  content:''; position:absolute; inset:0 calc(50% - 50vw); z-index:-1;
+  background:#090a0ccc; backdrop-filter:blur(14px) saturate(160%);
+  -webkit-backdrop-filter:blur(14px) saturate(160%); box-shadow:0 1px 0 #ffffff0d;
+}
