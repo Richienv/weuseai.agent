@@ -73,7 +73,10 @@ export type AiVideoOperatorGenerateStore = {
   getWallet?(): Promise<{ value: number | null; currency: string; held: number | null } | null>
 }
 
-export function readOperatorGenerateEnv(env: NodeJS.ProcessEnv = process.env) {
+export function readOperatorGenerateEnv(env: NodeJS.ProcessEnv = process.env): {
+  OPERATOR_GENERATE_ENABLED?: string
+  MONID_API_KEY?: string
+} {
   return {
     OPERATOR_GENERATE_ENABLED: env.OPERATOR_GENERATE_ENABLED,
     MONID_API_KEY: env.MONID_API_KEY,

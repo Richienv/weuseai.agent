@@ -117,7 +117,10 @@ export function generateAiVideoRecoveryToken(): string {
 
 export async function hashAiVideoRecoveryToken(raw: string): Promise<string> {
   if (!RECOVERY_RE.test(raw)) throw new Error('invalid_ai_video_recovery_token')
-  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', decode(raw)))
+  const bytes = decode(raw)
+  const copy = new ArrayBuffer(bytes.byteLength)
+  new Uint8Array(copy).set(bytes)
+  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', copy))
   return [...digest].map((byte) => byte.toString(16).padStart(2, '0')).join('')
 }
 

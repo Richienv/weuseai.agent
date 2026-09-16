@@ -171,7 +171,7 @@ test('admin start submits Monid inline including storage refs', async () => {
     },
   }), READY)
   assert.equal(result.ok, true)
-  if (!('job' in result)) throw new Error('missing job')
+  if (!('job' in result) || !result.job) throw new Error('missing job')
   assert.equal(result.job.status, 'submitted')
   assert.equal(submitted, 1)
 })
@@ -179,7 +179,7 @@ test('admin start submits Monid inline including storage refs', async () => {
 test('admin start is ready with only the Monid key', async () => {
   const result = await startCompiledGenerate({
     prompt: PROMPT, ratio: '9:16', duration_seconds: 6, client_request_id: REQUEST_ID,
-  }, store(), { MONID_API_KEY: 'monid-key-16chars' })
+  }, store(), { OPERATOR_GENERATE_ENABLED: undefined, MONID_API_KEY: 'monid-key-16chars' })
   assert.equal(result.ok, true)
 })
 
@@ -678,7 +678,7 @@ test('admin start keeps asset:// jobs queued without inline Monid', async () => 
     createQueued: async (input) => job({ provider: input.provider, refUrls: input.refUrls, status: 'queued' }),
   }), READY)
   assert.equal(result.ok, true)
-  if (!('job' in result)) throw new Error('missing job')
+  if (!('job' in result) || !result.job) throw new Error('missing job')
   assert.equal(result.job.status, 'queued')
   assert.equal(result.job.provider, 'byteplus_modelark')
   assert.equal(submitted, 0)

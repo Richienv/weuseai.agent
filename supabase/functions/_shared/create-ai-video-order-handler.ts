@@ -223,7 +223,7 @@ export async function handleCreateAiVideoOrder(req: Request, deps: CreateAiVideo
           errorUrl: `${base}/ai-video?payment=failed&sku=${encodeURIComponent(sku.code)}`,
         })
         redirectUrl = created.redirectUrl
-        await deps.store.completeSnapCreation(order.id, redirectUrl)
+        await deps.store.completeSnapCreation(order.id, created.redirectUrl)
       } catch {
         await deps.store.releasePromo(order.id)
         await deps.store.markOrderFailed(order.provider_order_id)
